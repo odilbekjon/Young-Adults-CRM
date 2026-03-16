@@ -1,0 +1,5 @@
+export const Course = () => (
+    <>
+        Course
+    </>
+)

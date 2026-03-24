@@ -28,7 +28,7 @@ import { IoSearchOutline } from "react-icons/io5";
 import { GoPlus } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { useState } from "react";
-import { initialTeachers } from "../../constants";
+import { Teachers as initialTeachers } from "../../constants";
 
 // Branch options
 // const BRANCHES = ["Branch A", "Branch B", "Branch C"];

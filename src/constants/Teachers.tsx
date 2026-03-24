@@ -1,5 +1,12 @@
- // Static data
- export const initialTeachers = [
+interface Teacher { 
+  id: number;
+  fullName: string;
+  phone: string;
+  groups: number;
+}
+
+// Static data
+ export const Teachers : Teacher[] = [
     {
       id: 1,
       fullName: "John Doe",

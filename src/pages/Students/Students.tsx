@@ -11,19 +11,19 @@ import {
   TableCell,
   TableBody,
   IconButton,
-  Avatar,
   Chip,
   Select,
   FormControl,
   InputLabel,
   Menu,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  // Dialog,
+  // DialogTitle,
+  // DialogContent,
+  // DialogActions,
 } from "@mui/material";
 import { MdMoreVert } from "react-icons/md";
 import { students as studentData } from "../../constants/Students";
+import { AddStudentDialog } from "../../components/AddStudent/AddStudent";
 
 export const Students = () => {
   const [students, setStudents] = useState(studentData);
@@ -54,10 +54,6 @@ export const Students = () => {
     setStudents((prev) => prev.filter((s) => s.id !== selectedStudent?.id));
     handleMenuClose();
   };
-
-  // === Add new student modal ===
-  const handleOpenDialog = () => setOpenDialog(true);
-  const handleCloseDialog = () => setOpenDialog(false);
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f5f7fb", p: 4 }}>
@@ -99,7 +95,7 @@ export const Students = () => {
           </Select>
         </FormControl>
         <Button variant="outlined">Reset Filter</Button>
-        <Button variant="contained" color="primary" onClick={handleOpenDialog}>
+        <Button variant="contained" color="primary" onClick={() => setOpenDialog(true)}>
           + Add new student
         </Button>
       </Box>
@@ -126,9 +122,7 @@ export const Students = () => {
               >
                 <TableCell>{index + 1}</TableCell>
                 <TableCell sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Avatar>
-                    {student.name[0] + (student.name.split(" ")[1] ? student.name.split(" ")[1][0] : "")}
-                  </Avatar>
+
                   {student.name}
                 </TableCell>
                 <TableCell>{student.phone}</TableCell>
@@ -164,21 +158,10 @@ export const Students = () => {
         <MenuItem onClick={handleDelete}>Delete</MenuItem>
       </Menu>
 
-      {/* ===== ADD STUDENT DIALOG ===== */}
-      <Dialog open={openDialog} onClose={handleCloseDialog}>
-        <DialogTitle>Add New Student</DialogTitle>
-        <DialogContent>
-          <TextField fullWidth label="Full Name" sx={{ mt: 2 }} />
-          <TextField fullWidth label="Phone Number" sx={{ mt: 2 }} />
-          {/* Qo‘shimcha form fields */}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button variant="contained" color="primary">
-            Add
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <AddStudentDialog 
+        open={openDialog} 
+        onClose={() => setOpenDialog(false)} 
+      />
 
       {/* ===== PAGINATION ===== */}
       <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between" }}>

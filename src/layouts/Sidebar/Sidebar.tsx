@@ -88,7 +88,7 @@ export const Sidebar = () => {
 
         
       <Box sx={{}}>
-          <Link to={'/notification'} className='w-full relative'>
+          <Link to={'/notifications'} className='w-full relative'>
             <Button sx={{borderRadius:0, display:'flex', justifyContent:'start', gap:"12px", paddingY:1.5, paddingLeft:4 , textTransform:'none', color:"dimgray"}}
             fullWidth
             startIcon={<IoNotifications size={18} color='dimgray' />  }

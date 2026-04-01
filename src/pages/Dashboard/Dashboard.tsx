@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
+import { Schedule } from "../../components/ScheduleDashboard/ScheduleDashboard";
 
 const data = [
   { month: "Jan", payment: 20000000, profit: 12000000 },
@@ -144,6 +145,8 @@ export const Dashboard = () => {
         </ResponsiveContainer>
       </Box>
     </Paper>
+
+    <Schedule />
 
       {/* ===== INFO BLOCK ===== */}
       <Paper

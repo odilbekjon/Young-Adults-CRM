@@ -27,6 +27,8 @@ interface Course {
   revenue: number;
 }
 
+
+
 // Sample data
 const students: Student[] = [
   { id: 1, name: "Ali Raxmatov", attendance: 80 },
@@ -92,7 +94,7 @@ const Report: React.FC = () => {
                   outerRadius={80}
                   label
                 >
-                  {revenueData.map((entry, index) => (
+                  {revenueData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

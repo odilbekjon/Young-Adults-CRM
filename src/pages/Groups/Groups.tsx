@@ -34,7 +34,7 @@ interface Group {
   days: string;
   room: string;
   students: number;
-  status: StatusType;
+  status?: StatusType;
   startDate: string;
   endDate: string;
 }

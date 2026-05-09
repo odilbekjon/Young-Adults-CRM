@@ -51,7 +51,7 @@ const studentAttendanceData = students.map(s => ({
   attendance: s.attendance,
 }));
 
-const Report: React.FC = () => {
+export const Report: React.FC = () => {
   return (
     <Box sx={{ p: 4, minHeight: "100vh", backgroundColor: "#f5f7fb" }}>
       <Typography variant="h4" fontWeight={700} mb={4}>
@@ -137,5 +137,3 @@ const Report: React.FC = () => {
     </Box>
   );
 };
-
-export default Report;

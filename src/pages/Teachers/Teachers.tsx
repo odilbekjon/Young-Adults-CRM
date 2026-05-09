@@ -1,4 +1,9 @@
+// src/pages/teachers/Teachers.tsx
+
 import {
+  Drawer,
+  Box,
+  Typography,
   Button,
   Dialog,
   DialogActions,
@@ -13,7 +18,6 @@ import {
   TableBody,
   TableCell,
   TableContainer,
-  TableHead,
   TableRow,
   TextField,
   Menu,
@@ -21,306 +25,378 @@ import {
   Radio,
   RadioGroup,
   FormControl,
-  FormLabel,
+  InputAdornment,
+  Collapse,
 } from "@mui/material";
 import { IoSearchOutline } from "react-icons/io5";
 import { GoPlus } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { useState } from "react";
-import { Teachers as initialTeachers } from "../../constants";
+import { MdDownload, MdCalendarToday, MdClose } from "react-icons/md";
+import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { type Teacher } from "../../constants/Teachers";
+import { useBranch } from "../../Context/BranchContext";
 
-// Branch options
-// const BRANCHES = ["Branch A", "Branch B", "Branch C"];
+const EMPTY_FORM = {
+  fullName: "",
+  telegram: "",
+  phone: "",
+  password: "",
+  percent: "",
+  dob: "",
+  gender: "",
+  branch: "",
+  photo: null as File | null,
+};
+
+/* shared input style */
+const inputSx = {
+  "& .MuiOutlinedInput-root": {
+    borderRadius: "10px",
+    bgcolor: "#f9fafb",
+    "& fieldset": { borderColor: "#e5e7eb" },
+    "&:hover fieldset": { borderColor: "#9ca3af" },
+    "&.Mui-focused fieldset": { borderColor: "#5b8def" },
+  },
+  "& .MuiInputBase-input": { fontSize: 14 },
+};
 
 export const Teachers = () => {
-  const [searchValue, setSearchValue] = useState("");
-  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const { teachers: branchTeachers, branchLabel } = useBranch();
 
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(
-    null
-  );
-  const openMenu = Boolean(anchorEl);
+  const [searchValue, setSearchValue]             = useState("");
+  const [open, setOpen]                           = useState(false);
+  const [isEdit, setIsEdit]                       = useState(false);
+  const [anchorEl, setAnchorEl]                   = useState<null | HTMLElement>(null);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(null);
+  const [localTeachers, setLocalTeachers]         = useState<Teacher[]>([]);
+  const [form, setForm]                           = useState(EMPTY_FORM);
+  const [deleteOpen, setDeleteOpen]               = useState(false);
+  const [showPassword, setShowPassword]           = useState(false);
+  const [photoPreview, setPhotoPreview]           = useState<string | null>(null);
+  const fileInputRef                              = useRef<HTMLInputElement>(null);
+  const [, setErrors]                       = useState<Record<string, string>>({});
 
-  const handleClick = (event: React.MouseEvent<HTMLElement>, id: number) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedTeacherId(id);
-  };
-  const handleCloseMenu = () => setAnchorEl(null);
+  const openMenu    = Boolean(anchorEl);
+  const allTeachers = [...branchTeachers, ...localTeachers];
 
-  interface Teacher {
-  id: number;
-  fullName: string;
-  phone: string;
-  telegram?: string;
-  percent?: string;
-  avatar?: string;
-  branches?: string[];
-  groups?: number;
-  dob?: string;
-  gender?: string;
-}
-
-const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
-
-  const [form, setForm] = useState({
-    fullName: "",
-    telegram: "",
-    phone: "",
-    password: "",
-    percent: "",
-    avatar: "",
-    branches: [] as string[],
-    dob: "",
-    gender: "",
-  });
-
-  const filteredTeachers = teachers.filter((t) =>
+  const filteredTeachers = allTeachers.filter((t) =>
     t.fullName.toLowerCase().includes(searchValue.toLowerCase())
   );
 
-  const handleEdit = () => {
-    const teacher = teachers.find((t) => t.id === selectedTeacherId) || null;
-      if (teacher) {
-        setForm({
-          fullName: teacher.fullName,
-          telegram: teacher.telegram || "",
-          phone: teacher.phone,
-          password: "",
-          percent: teacher.percent || "",
-          avatar: teacher.avatar || "",
-          branches: teacher.branches || [],
-          dob: teacher.dob || "",
-          gender: teacher.gender || "",
-        });
-        setOpen(true);
-      }
-      handleCloseMenu();
+  /* ── menu ── */
+  const handleMenuOpen  = (e: React.MouseEvent<HTMLElement>, id: number) => { e.stopPropagation(); setAnchorEl(e.currentTarget); setSelectedTeacherId(id); };
+  const handleCloseMenu = () => setAnchorEl(null);
+
+  /* ── open drawer ── */
+  const openAdd = () => {
+    setIsEdit(false);
+    setSelectedTeacherId(null);
+    setForm(EMPTY_FORM);
+    setPhotoPreview(null);
+    setShowPassword(false);
+    setErrors({});
+    setOpen(true);
   };
 
-  const handleDelete = () => {
-    setTeachers((prev) => prev.filter((t) => t.id !== selectedTeacherId));
+  const openEditDrawer = () => {
+    const t = allTeachers.find((t) => t.id === selectedTeacherId);
+    if (t) {
+      setIsEdit(true);
+      setForm({ fullName: t.fullName, telegram: t.telegram || "", phone: t.phone,
+        password: "", percent: t.percent || "", dob: t.dob || "",
+        gender: t.gender || "", branch: t.branch || "", photo: null });
+      setPhotoPreview(null);
+      setShowPassword(false);
+      setOpen(true);
+      setErrors({});
+    }
     handleCloseMenu();
   };
-  
 
-
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const target = e.target as HTMLInputElement;
-    const { name, value, type, checked, files } = target;
-
-    if (name === "branches") {
-      let updatedBranches = [...form.branches];
-      if (checked) updatedBranches.push(value);
-      else updatedBranches = updatedBranches.filter((b) => b !== value);
-      setForm({ ...form, branches: updatedBranches });
-    } else if (type === "file") {
-      const file = files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          setForm({ ...form, avatar: reader.result as string });
-        };
-        reader.readAsDataURL(file);
-      }
-    } else {
-      setForm({ ...form, [name]: value });
-    }
+  /* ── form ── */
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAddTeacher = () => {
-    if (selectedTeacherId) {
-      // Edit teacher
-      setTeachers((prev) =>
-        prev.map((t) =>
-          t.id === selectedTeacherId
-            ? { ...t, ...form, groups: t.groups || 0 }
-            : t
-        )
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) { setForm((prev) => ({ ...prev, photo: file })); setPhotoPreview(URL.createObjectURL(file)); }
+  };
+
+  /* ── validate ── */
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.phone.trim())    e.phone    = "Phone is required";
+    if (!form.fullName.trim()) e.fullName = "Name is required";
+    if (!form.dob)             e.dob      = "Date of birth is required";
+    if (!form.gender)          e.gender   = "Gender is required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  /* ── submit ── */
+  const handleSubmit = () => {
+    if (!validate()) return;
+    if (isEdit && selectedTeacherId) {
+      setLocalTeachers((prev) =>
+        prev.map((t) => t.id === selectedTeacherId
+          ? { ...t, fullName: form.fullName, phone: form.phone, telegram: form.telegram,
+              percent: form.percent, dob: form.dob, gender: form.gender, branch: form.branch }
+          : t)
       );
     } else {
-      // Add new
-      const newTeacher = {
-        id: teachers.length + 1,
-        fullName: form.fullName,
-        telegram: form.telegram,
-        phone: form.phone,
-        groups: 0,
-        percent: form.percent,
-        branches: form.branches,
-        dob: form.dob,
-        gender: form.gender,
-      };
-      setTeachers([...teachers, newTeacher]);
+      setLocalTeachers((prev) => [...prev, {
+        id: Date.now(), fullName: form.fullName, phone: form.phone, telegram: form.telegram,
+        uid: String(Date.now()).slice(-7), role: "Teacher", branch: form.branch,
+        percent: form.percent, dob: form.dob, gender: form.gender, groups: [],
+      }]);
     }
-    setForm({
-      fullName: "",
-      telegram: "",
-      phone: "",
-      password: "",
-      percent: "",
-      avatar: "",
-      branches: [],
-      dob: "",
-      gender: "",
-    });
+    setErrors({});
+    setForm(EMPTY_FORM);
     setOpen(false);
     setSelectedTeacherId(null);
   };
 
+  /* ── delete ── */
+  const handleDelete     = () => { setDeleteOpen(true); handleCloseMenu(); };
+  const handleConfirmDel = () => { setLocalTeachers((prev) => prev.filter((t) => t.id !== selectedTeacherId)); setDeleteOpen(false); setSelectedTeacherId(null); };
+
+  /* ════════════════════════════════════════════════════════ */
   return (
-    <div className="mt-4">
-      {/* Search + Add Button */}
-      <Stack direction="row" sx={{ pb: 4 }} justifyContent="space-between">
-        <Paper
-          sx={{
-            p: "2px 4px",
-            display: "flex",
-            alignItems: "center",
-            width: 400,
-          }}
-        >
-          <InputBase
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            sx={{ ml: 1, flex: 1, boxShadow: "none" }}
-            placeholder="Search Teacher"
-          />
-          <IconButton type="button" sx={{ p: "10px" }} aria-label="search">
-            <IoSearchOutline size={20} />
-          </IconButton>
+    <div style={{ padding: "20px" }}>
+
+      {/* Header */}
+      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+        <Stack direction="row" alignItems="baseline" spacing={1}>
+          <span style={{ fontSize: 22, fontWeight: 500 }}>Teachers</span>
+          <span style={{ fontSize: 14, color: "#888" }}>{branchLabel} — {filteredTeachers.length} ta</span>
+        </Stack>
+        <Stack direction="row" spacing={1}>
+          <Button variant="contained" startIcon={<GoPlus />} onClick={openAdd}
+            sx={{ borderRadius: "20px", background: "#1a3a5c", boxShadow: "none", textTransform: "none", fontWeight: 500, px: 3 }}>
+            ADD NEW
+          </Button>
+          <Button variant="outlined" startIcon={<MdDownload />}
+            sx={{ borderRadius: "20px", textTransform: "none", color: "inherit", borderColor: "#ccc" }}>
+            Import
+          </Button>
+        </Stack>
+      </Stack>
+
+      {/* Alert */}
+      <div style={{ background: "#f0f9f4", border: "1px solid #b6dfc8", borderRadius: 8,
+        padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+        <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1d9e75",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#fff", fontSize: 13 }}>✓</div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#0f6e56" }}>Attention!</div>
+          <div style={{ fontSize: 12, color: "#1d9e75" }}>CEO profiles can link teachers to other branches.</div>
+        </div>
+      </div>
+
+      {/* Search */}
+      <Stack direction="row" sx={{ pb: 2 }}>
+        <Paper sx={{ p: "2px 4px", display: "flex", alignItems: "center", width: 320, boxShadow: "none", border: "1px solid #e0e0e0" }}>
+          <InputBase value={searchValue} onChange={(e) => setSearchValue(e.target.value)} sx={{ ml: 1, flex: 1 }} placeholder="Search Teacher" />
+          <IconButton sx={{ p: "8px" }}><IoSearchOutline size={18} /></IconButton>
         </Paper>
-        <Button
-          startIcon={<GoPlus />}
-          variant="contained"
-          color="primary"
-          sx={{ boxShadow: "none", textTransform: "none", mr: 2 }}
-          onClick={handleOpen}
-        >
-          Add new teacher
-        </Button>
       </Stack>
 
       {/* Table */}
-      <TableContainer sx={{ borderRadius: "8px", border: "1px solid #ccc" }}>
-        <Table sx={{ minWidth: 650, bgcolor: "#fff" }}>
-          <TableHead>
-            <TableRow>
-              <TableCell>#</TableCell>
-              <TableCell>Full name</TableCell>
-              <TableCell>Phone</TableCell>
-              <TableCell align="center">Groups</TableCell>
-              <TableCell align="center">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+      <TableContainer sx={{ borderRadius: "10px", border: "1px solid #e0e0e0" }}>
+        <Table sx={{ bgcolor: "#fff" }}>
+          <TableBody sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", padding: "12px" }}>
             {filteredTeachers.map((t, index) => (
-              <TableRow key={t.id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <span>{t.fullName}</span>
-                  </Stack>
-                </TableCell>
-                <TableCell>{t.phone}</TableCell>
-                <TableCell align="center">{t.groups}</TableCell>
-                <TableCell align="center">
-                  <div
-                    onClick={(e) => handleClick(e, t.id)}
-                    style={{ display: "flex", justifyContent: "center", cursor: "pointer" }}
-                  >
-                    <BsThreeDotsVertical />
-                  </div>
-                  <Menu
-                    anchorEl={anchorEl}
-                    open={openMenu}
-                    onClose={handleCloseMenu}
-                    anchorOrigin={{
-                      vertical: "bottom",
-                      horizontal: "center",
-                    }}
-                    transformOrigin={{
-                      vertical: "top",
-                      horizontal: "center",
-                    }}
-                  >
-                    <MenuItem onClick={handleEdit}>✏️ Edit</MenuItem>
-                    <MenuItem onClick={handleDelete}>🗑 Delete</MenuItem>
+              <TableRow key={t.id} onClick={() => navigate(`/teachers/${t.id}`)}
+                sx={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+                  border: "1px solid #e8e8e8", borderRadius: "10px", cursor: "pointer",
+                  "&:hover": { bgcolor: "#f9f9f9" }, "& td": { border: 0 } }}>
+                <TableCell sx={{ color: "#aaa", fontSize: 14, minWidth: 28, py: 1.8 }}>{index + 1}</TableCell>
+                <TableCell sx={{ fontWeight: 500, fontSize: 14, flex: 1, py: 1.8 }}>{t.fullName}</TableCell>
+                <TableCell sx={{ color: "#185FA5", fontSize: 14, minWidth: 110, textAlign: "center", py: 1.8 }}>{t.phone}</TableCell>
+                <TableCell sx={{ fontSize: 14, color: "#888", minWidth: 80, textAlign: "center", py: 1.8 }}>{t.groups.length} groups</TableCell>
+                <TableCell align="center" sx={{ py: 1.8 }} onClick={(e) => e.stopPropagation()}>
+                  <IconButton size="small" onClick={(e) => handleMenuOpen(e, t.id)}>
+                    <BsThreeDotsVertical size={16} />
+                  </IconButton>
+                  <Menu anchorEl={anchorEl} open={openMenu && selectedTeacherId === t.id} onClose={handleCloseMenu}
+                    anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+                    transformOrigin={{ vertical: "top", horizontal: "center" }}>
+                    <MenuItem onClick={openEditDrawer}>✏️ Edit</MenuItem>
+                    <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>🗑 Delete</MenuItem>
                   </Menu>
                 </TableCell>
               </TableRow>
             ))}
             {filteredTeachers.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} align="center">
-                  No data available
-                </TableCell>
+              <TableRow sx={{ "& td": { border: 0 } }}>
+                <TableCell colSpan={5} align="center" sx={{ color: "#aaa", py: 4 }}>No data available</TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </TableContainer>
 
-      {/* Add/Edit Teacher Modal */}
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{selectedTeacherId ? "Edit Teacher" : "Add New Teacher"}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} mt={1}>
-            <TextField
-              label="Phone"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              fullWidth
-            />
-            <TextField
-              label="Name"
-              name="fullName"
-              value={form.fullName}
-              onChange={handleChange}
-              fullWidth
-            />
-            <TextField
-              label="Date of Birth"
-              name="dob"
-              type="date"
-              value={form.dob}
-              onChange={handleChange}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <FormControl>
-              <FormLabel>Gender</FormLabel>
-              <RadioGroup
-                row
-                name="gender"
-                value={form.gender}
-                onChange={handleChange}
-              >
-                <FormControlLabel value="Male" control={<Radio />} label="Male" />
-                <FormControlLabel value="Female" control={<Radio />} label="Female" />
-              </RadioGroup>
-            </FormControl>
-           
-            <Button
-              variant="outlined"
-              type="button"
-              onClick={() => setForm({ ...form, password: "" })}
-            >
-              + Set password
-            </Button>
+      {/* ══════════════════════════════════════════════════════
+          DRAWER
+      ══════════════════════════════════════════════════════ */}
+      <Drawer anchor="right" open={open} onClose={() => setOpen(false)}
+        PaperProps={{ sx: { width: 460, display: "flex", flexDirection: "column", bgcolor: "#fff" } }}>
+
+        {/* header */}
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+          px: 3, py: 2.5, borderBottom: "1px solid #f0f0f0" }}>
+          <Typography fontWeight={700} fontSize={17} color="#1a1a2e">
+            {isEdit ? "Edit Teacher" : "Add New Teacher"}
+          </Typography>
+          <IconButton onClick={() => setOpen(false)} size="small" sx={{ color: "#9ca3af" }}>
+            <MdClose size={20} />
+          </IconButton>
+        </Box>
+
+        {/* scrollable body */}
+        <Box sx={{ flex: 1, overflowY: "auto", px: 3, py: 3 }}>
+          <Stack spacing={2.5}>
+
+            {/* Phone */}
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>Phone</Typography>
+              <TextField name="phone" value={form.phone} onChange={handleChange}
+                fullWidth size="small" placeholder="XX XXX XX XX"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5,
+                        borderRight: "1px solid #e5e7eb", pr: 1.2, mr: 0.5,
+                        fontSize: 13, color: "#374151", fontWeight: 500, whiteSpace: "nowrap" }}>
+                        🇺🇿 +998
+                      </Box>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={inputSx}
+              />
+            </Box>
+
+            {/* Name */}
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>Name</Typography>
+              <TextField name="fullName" value={form.fullName} onChange={handleChange}
+                fullWidth size="small" placeholder="Full name" sx={inputSx} />
+            </Box>
+
+            {/* Branch — faqat Edit rejimida */}
+            {isEdit && (
+              <Box>
+                <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>Branch</Typography>
+                <TextField name="branch" value={form.branch} onChange={handleChange}
+                  fullWidth size="small" placeholder="Branch name" sx={inputSx} />
+              </Box>
+            )}
+
+            {/* Date of birth */}
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>Date of birth</Typography>
+              <TextField name="dob" type="date" value={form.dob} onChange={handleChange}
+                fullWidth size="small" InputLabelProps={{ shrink: true }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <MdCalendarToday size={15} color="#9ca3af" />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  ...inputSx,
+                  "& input[type='date']::-webkit-calendar-picker-indicator": {
+                    opacity: 0, position: "absolute", right: 0, width: "100%", cursor: "pointer",
+                  },
+                }}
+              />
+            </Box>
+
+            {/* Gender */}
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>Gender</Typography>
+              <FormControl>
+                <RadioGroup row name="gender" value={form.gender} onChange={handleChange}>
+                  <FormControlLabel value="Male"
+                    control={<Radio size="small" sx={{ color: "#9ca3af", "&.Mui-checked": { color: "#5b8def" } }} />}
+                    label={<Typography fontSize={14}>Male</Typography>} />
+                  <FormControlLabel value="Female"
+                    control={<Radio size="small" sx={{ color: "#9ca3af", "&.Mui-checked": { color: "#5b8def" } }} />}
+                    label={<Typography fontSize={14}>Female</Typography>} />
+                </RadioGroup>
+              </FormControl>
+            </Box>
+
+            {/* Photo */}
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>Photo</Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                {photoPreview && (
+                  <Box component="img" src={photoPreview} alt="preview"
+                    sx={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: "2px solid #e5e7eb", flexShrink: 0 }} />
+                )}
+                <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between",
+                  border: "1px solid #e5e7eb", borderRadius: "10px", bgcolor: "#f9fafb", px: 1.5, py: 0.9 }}>
+                  <Typography fontSize={13} color="#9ca3af" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {form.photo ? form.photo.name : "No file chosen"}
+                  </Typography>
+                  <Button size="small" variant="outlined" onClick={() => fileInputRef.current?.click()}
+                    sx={{ fontSize: 12, borderRadius: "8px", borderColor: "#d1d5db", color: "#374151",
+                      textTransform: "none", py: 0.3, px: 1.5, minWidth: 0, flexShrink: 0 }}>
+                    Browse
+                  </Button>
+                </Box>
+                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handlePhotoChange} />
+              </Box>
+            </Box>
+
+            {/* Set password */}
+            <Box>
+              <Button onClick={() => setShowPassword((v) => !v)}
+                sx={{ fontSize: 13, color: "#5b8def", textTransform: "none", p: 0, fontWeight: 500,
+                  "&:hover": { background: "none", textDecoration: "underline" } }}>
+                {showPassword ? "− Hide password" : "+ Set password"}
+              </Button>
+              <Collapse in={showPassword}>
+                <TextField name="password" type="password" value={form.password} onChange={handleChange}
+                  fullWidth size="small" placeholder="Enter password" sx={{ ...inputSx, mt: 1.5 }} />
+              </Collapse>
+            </Box>
+
           </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleAddTeacher}>
+        </Box>
+
+        {/* footer */}
+        <Box sx={{ px: 3, py: 2.5, borderTop: "1px solid #f0f0f0" }}>
+          <Button fullWidth variant="contained" onClick={handleSubmit}
+            sx={{
+              borderRadius: "24px", py: 1.3, fontSize: 15, fontWeight: 600,
+              textTransform: "none", bgcolor: "#4f7ec4",
+              boxShadow: "0 4px 12px rgba(79,126,196,0.35)",
+              "&:hover": { bgcolor: "#3b6ab0" },
+            }}>
             Submit
           </Button>
+        </Box>
+      </Drawer>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} PaperProps={{ sx: { borderRadius: 3, width: 360 } }}>
+        <DialogTitle sx={{ fontWeight: 600 }}>Delete Teacher</DialogTitle>
+        <DialogContent>
+          <Typography fontSize={14} color="text.secondary">
+            Are you sure you want to delete this teacher? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 2 }}>
+          <Button onClick={() => setDeleteOpen(false)} sx={{ textTransform: "none", color: "#667085" }}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleConfirmDel} sx={{ borderRadius: 2, textTransform: "none" }}>Delete</Button>
         </DialogActions>
       </Dialog>
     </div>

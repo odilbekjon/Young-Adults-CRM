@@ -1,4 +1,4 @@
-import { Teachers } from "../../../../constants";
+import { TEACHERS_DATA } from "../../../../constants";
 import { useTheme } from "@mui/material/styles";
 
 import {
@@ -66,7 +66,7 @@ export const Income = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {Teachers.map((teacher) => (
+            {TEACHERS_DATA.map((teacher) => (
               <TableRow
                 key={teacher.fullName}
                 sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
@@ -75,7 +75,7 @@ export const Income = () => {
                   {teacher.fullName}
                 </TableCell>
                 <TableCell >{teacher.phone}</TableCell>
-                <TableCell >{teacher.groups}</TableCell>
+                <TableCell >{teacher.groups.length}</TableCell>
                 <TableCell sx={{ml:10}}>...</TableCell>
               </TableRow>
             ))}

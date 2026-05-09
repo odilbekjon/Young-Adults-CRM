@@ -1,4 +1,4 @@
-import { Teachers } from "../../../../constants";
+import { TEACHERS_DATA } from "../../../../constants";
 import {
   Table,
   TableBody,
@@ -21,7 +21,7 @@ export const Expense = () => (
           </TableRow>
         </TableHead>
         <TableBody>
-          {Teachers.map((teacher) => (
+          {TEACHERS_DATA.map((teacher) => (
             <TableRow
               key={teacher.fullName}
               sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
@@ -30,7 +30,7 @@ export const Expense = () => (
                 {teacher.fullName}
               </TableCell>
               <TableCell align="right">{teacher.phone}</TableCell>
-              <TableCell align="right">{teacher.groups}</TableCell>
+              <TableCell align="right">{teacher.groups.length}</TableCell>
               <TableCell align="right"></TableCell>
             </TableRow>
           ))}

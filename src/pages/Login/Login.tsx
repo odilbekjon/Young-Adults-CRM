@@ -1,165 +1,171 @@
-import { Box, Grid, Typography, TextField, Button } from "@mui/material";
+import { Box, Button, TextField, Typography, Alert, InputAdornment, IconButton } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import loginImage from "../../assets/login.png"; // rasm yo'lini moslashtir
+import { FiEye, FiEyeOff } from "react-icons/fi";
+import logo from "../../assets/logo_ya.png";
+import blackLogo from "../../assets/logo_ya_black.png"
 
-interface LoginForm {
-  phone: string;
-  password: string;
-}
+
+const LANGS = ["EN", "RU", "UZ", "ID"];
+
+const CORRECT_PHONE = "915179774";
+const CORRECT_PASSWORD = "1111";
 
 const LoginPage = () => {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState<LoginForm>({
-    phone: "",
-    password: "",
-  });
+  const [lang, setLang] = useState("EN");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleChange =
-    (field: keyof LoginForm) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setForm((prev) => ({
-        ...prev,
-        [field]: e.target.value,
-      }));
-    };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log("Login data:", form);
+  const handleLogin = () => {
+    const cleaned = phone.replace(/\s/g, "");
+    if (cleaned === CORRECT_PHONE && password === CORRECT_PASSWORD) {
+      setError("");
+      navigate("/dashboard");
+    } else {
+      setError("Telefon raqam yoki parol noto'g'ri. Qaytadan urinib ko'ring.");
+    }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        mt: 5,
-      }}
-    >
-      <Grid
-        container
-        sx={{
-          maxWidth: 1100,
-          borderRadius: 3,
-          overflow: "hidden",
-        }}
-      >
-        {/* ===== LEFT SIDE ===== */}
-        <Grid item xs={12} md={5}>
-          <Box
-            sx={{
-              p: 5,
-              height: "80%",
-              border: "3px solid #1976d2",
-              borderRadius: 2,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              mr: { md: 4 },
-            }}
-          >
-            {/* Language button */}
-            <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button
-                variant="outlined"
-                size="small"
-                sx={{ textTransform: "none" }}
-              >
-                Eng
-              </Button>
-            </Box>
+    <div className="flex items-center justify-center min-h-screen bg-[#b0bec5]">
+      <Box sx={{ width:"50%",  bgcolor: "transparent", display: "flex", flexDirection: "column", mx: "auto",   }}>
 
-            <Typography
-              variant="h5"
+      
+      <Box className="bg-gray-800 w-full h-36 rounded-2xl">
+          <img className="block mx-auto mt-5" src={logo} width={300} alt="Logo" />
+      </Box>
+
+  
+      <Box sx={{ bgcolor: "white", mt: 1.5, px: 2.5, py: 2, borderRadius: 3 }}>
+        <Typography sx={{ fontWeight: 600, fontSize: 15 }}>Young Adults LLC</Typography>
+        <Typography sx={{ fontSize: 14, color: "text.secondary", mt: 0.5 }}>Always step ahead !</Typography>
+      </Box>
+
+      {/* LOGIN CARD */}
+      <Box sx={{ bgcolor: "white",  mt: 1, mb: 3, px: 2.5, py: 3, borderRadius: 3 }}>
+
+       
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mb: 2 }}>
+          {LANGS.map((l) => (
+            <Button
+              key={l}
+              onClick={() => setLang(l)}
+              size="small"
               sx={{
-                textAlign: "center",
-                mt: 4,
-                mb: 4,
-                fontWeight: 600,
-                color: "#1976d2",
+                minWidth: 0,
+                px: 1,
+                py: 0.2,
+                fontSize: 13,
+                fontWeight: lang === l ? 700 : 400,
+                color: lang === l ? "#1e2a3a" : "text.secondary",
+                textTransform: "none",
+                bgcolor: "transparent",
+                "&:hover": { bgcolor: "transparent" },
               }}
             >
-              Sign in
-            </Typography>
+              {l}
+            </Button>
+          ))}
+        </Box>
 
-            {/* 🔥 FORM */}
-            <Box component="form" onSubmit={handleSubmit}>
-              <TextField
-                fullWidth
-                label="Phone number"
-                placeholder="+998"
-                required
-                margin="normal"
-                value={form.phone}
-                onChange={handleChange("phone")}
-              />
-
-              <TextField
-                fullWidth
-                type="password"
-                label="Password"
-                required
-                margin="normal"
-                value={form.password}
-                onChange={handleChange("password")}
-              />
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{
-                  mt: 3,
-                  py: 1.3,
-                  borderRadius: 2,
-                }}
-              >
-                Next
-              </Button>
-            </Box>
-
-            <Typography
-              sx={{
-                mt: 3,
-                fontSize: 14,
-              }}
-            >
-              Don’t have an account?{" "}
-              <Box
-                component="span"
-                sx={{
-                  color: "#1976d2",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-                onClick={() => navigate("/signup")}
-              >
-                Fill out an application
-              </Box>
-            </Typography>
+        <Box sx={{ display: "flex", gap: 3 }}>
+          
+          <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 1, flexShrink: 0, pt: 1 }}>
+            <img src={blackLogo} width={100} alt="logo" />
+            
           </Box>
-        </Grid>
 
-        {/* ===== RIGHT SIDE ===== */}
-        <Grid item xs={false} md={7}>
-          <Box
-            component="img"
-            src={loginImage}
-            alt="login"
-            sx={{
-              width: "100%",
-              height: "80%",
-              objectFit: "cover",
-              borderRadius: 2,
-            }}
-          />
-        </Grid>
-      </Grid>
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ fontWeight: 600, fontSize: 18, mb: 2 }}>Login</Typography>
+            
+            {error && (
+              <Alert severity="error" sx={{ mb: 2, fontSize: 13 }}>
+                {error}
+              </Alert>
+            )}
+
+          
+            <TextField
+              fullWidth
+              label="Phone"
+              required
+              size="small"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="99 891 51 79"
+              inputProps={{ maxLength: 12 }}
+              sx={{ mb: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Box
+                      sx={{
+                        pr: 1.5,
+                        mr: 0.5,
+                        borderRight: "1px solid",
+                        borderColor: "divider",
+                        fontSize: 14,
+                        fontWeight: 500,
+                        color: "text.primary",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      +998
+                    </Box>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+           
+            <TextField
+              fullWidth
+              label="Password"
+              required
+              size="small"
+              type={showPass ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              sx={{ mb: 2.5 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setShowPass((p) => !p)} edge="end">
+                      {showPass ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <Button
+              variant="contained"
+              onClick={handleLogin}
+              sx={{
+                bgcolor: "#1e3a5f",
+                color: "white",
+                borderRadius: "24px",
+                px: 4,
+                py: 1.2,
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                "&:hover": { bgcolor: "#1565c0" },
+              }}
+            >
+              Login
+            </Button>
+          </Box>
+        </Box>
+      </Box>
     </Box>
+    </div>
   );
 };
 

@@ -71,7 +71,7 @@ const SUBMENUS: Record<string, SubMenuItem[]> = {
     { label: "Debtors",        path: "/finance/debtors",         icon: "user", dividerBefore: true },
   ],
   "/reports": [
-    { label: "Conversion reports",    path: "/reports/conversion",       icon: "userCheck" },
+    { label: "Conversion reports",    path: "/reports/conversation",       icon: "userCheck" },
     { label: "Attendance reports",    path: "/reports/attendance",       icon: "userCheck" },
     { label: "Leads reports",         path: "/reports/leads",            icon: "userCheck" },
     { label: "Students left the group", path: "/reports/students-left", icon: "trending" },
@@ -82,7 +82,7 @@ const SUBMENUS: Record<string, SubMenuItem[]> = {
         { label: "Workly Report", path: "/reports/logs/workly",   icon: "user" },
         { label: "Sent SMS log",  path: "/reports/logs/sms",      icon: "smartphone" },
         { label: "Call log",      path: "/reports/logs/call",     icon: "phone" },
-        { label: "Logs",          path: "/reports/logs/all",      icon: "list" },
+        { label: "Logs",          path: "/reports/logs/log",      icon: "list" },
       ],
     },
   ],

@@ -17,6 +17,25 @@ import { Rating } from "./pages/Rating";
 import { TeacherAttendanceReport } from "./pages/TeacherAddanceReport";
 import { AttendanceReport } from "./pages/AttandanceReport";
 import { Settings } from "./pages/Settings/Settings";
+import { SettingsSms } from "./pages/Settings/pages/sms";
+import { Grade } from "./pages/Settings/pages/grade";
+import { Voip } from "./pages/Settings/pages/voip";
+import { CEO } from "./pages/Settings/ceo/ceo";
+import { General } from "./pages/General";
+import { Staff } from "./pages/Settings/ceo/pages/staff";
+import { Roadmap } from "./pages/Settings/ceo/pages/roadmap";
+import { Billing } from "./pages/Settings/ceo/pages/billing";
+import { Office } from "./pages/Settings/office/office";
+import { Courses } from "./pages/Settings/office/pages";
+import { Rooms } from "./pages/Settings/office/pages";
+import { Holidays } from "./pages/Settings/office/pages";
+import { StudentLeft } from "./pages/Settings/office/pages";
+import { Archive } from "./pages/Settings/office/pages";
+import { Forms } from "./pages/Settings/forms";
+import { Lists } from "./pages/Settings/forms/pages";
+import { Blog } from "./pages/Settings/blog";
+import { WhatsNew } from "./pages/Settings/blog/pages";
+
 import { Finance } from "./pages/Finance/Finance";
 import { AllPayments } from "./pages/Finance/pages/AllPayments";
 import { Withdraw } from "./pages/Finance/pages/Withdraw";
@@ -24,8 +43,8 @@ import { TotalExpenses } from "./pages/Finance/pages/TotalExpenses";
 import { Salaries } from "./pages/Finance/pages/Salaries";
 import { Debtors } from "./pages/Finance/pages/Debtors";
 import { Reports } from "./pages/Reports/Reports";
-import { AttandanceReports } from "./pages/Reports/pages/AttendenceReports";
-import { ConversationReports } from "./pages/Reports/pages/ConversationReports";
+import { AttendanceReports } from "./pages/Reports/pages/AttendenceReports";
+import { ConversionReports } from "./pages/Reports/pages/ConversationReports";
 import { LeadsReports } from "./pages/Reports/pages/LeadsReports";
 import { StudentsLeftGroup } from "./pages/Reports/pages/StudentsLeftGroup";       
 import { Logs } from "./pages/Reports/logs/Logs";
@@ -33,6 +52,10 @@ import { Workly } from "./pages/Reports/logs/pages/workly";
 import { Sms } from "./pages/Reports/logs/pages/sms";
 import { Call } from "./pages/Reports/logs/pages/call";
 import { Log } from "./pages/Reports/logs/pages/log";
+import { Tags } from "./pages/Settings/tags";
+import { Tag } from "./pages/Settings/tags/pages";
+
+
 
 
 
@@ -55,7 +78,41 @@ export const AppRouter = () => {
         <Route path="/attendance-reports" element={<Layout><AttendanceReport/></Layout>} />
         <Route path="/teacher-attendance-reports" element={<Layout><TeacherAttendanceReport/></Layout>} />
         <Route path="/notifications" element={<Layout><Notifications/></Layout>} />
-        <Route path="/settings" element={<Layout><Settings/></Layout>} />
+
+        <Route path="/settings" element={<Layout><Settings/></Layout>} >
+            <Route path="sms" element={<SettingsSms/>}/>
+            <Route path="grade" element={<Grade/>}/>
+            <Route path="voip" element={<Voip/>}/>
+
+            <Route path="ceo"             element={<CEO />} >
+                <Route path="general"      element={<General />} />
+                <Route path="roadmap"      element={<Roadmap />} />
+                <Route path="staff"        element={<Staff />} />
+                <Route path="billing"      element={<Billing />} />
+            </Route>
+
+            <Route path="office"             element={<Office />} >
+                <Route path="courses"      element={<Courses />} />
+                <Route path="archive"      element={<Archive />} />
+                <Route path="rooms"      element={<Rooms />} />
+                <Route path="holidays"        element={<Holidays />} />
+                <Route path="students-left-group"      element={<StudentLeft />} />
+            </Route>
+
+            <Route path="forms"             element={<Forms />} >
+                <Route path="list"      element={<Lists />} />
+            </Route>
+
+            <Route path="blog"             element={<Blog />} >
+                <Route path="whats-new"      element={<WhatsNew />} />
+            </Route>
+
+            <Route path="tags"             element={<Tags />} >
+                <Route path="list"      element={<Tag />} />
+            </Route>
+
+        </Route>
+
         <Route path="/finance" element={<Layout><Finance/></Layout>}>
             <Route path="all-payments"   element={<AllPayments />} />
             <Route path="withdraw"       element={<Withdraw />} />
@@ -63,9 +120,10 @@ export const AppRouter = () => {
             <Route path="salaries"       element={<Salaries />} />
             <Route path="debtors"        element={<Debtors />} />
         </Route>
+
         <Route path="/reports" element={<Layout><Reports/></Layout>}>
-            <Route path="attendance"     element={<AttandanceReports />} />
-            <Route path="conversation"   element={<ConversationReports />} />
+            <Route path="conversation"   element={<ConversionReports />} />
+            <Route path="attendance"     element={<AttendanceReports />} />
             <Route path="leads"            element={<LeadsReports />} />
             <Route path="students-left"    element={<StudentsLeftGroup />} />
 
@@ -77,6 +135,7 @@ export const AppRouter = () => {
             </Route>
 
         </Route>
+
 
     </Routes>
    )

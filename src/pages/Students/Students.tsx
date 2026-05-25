@@ -1,3 +1,4 @@
+// src/pages/Students.tsx
 import React, { useState, useMemo } from "react";
 import {
   Avatar,
@@ -30,37 +31,22 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-// import { GoPlus } from "react-icons/go";
-import { MdDelete, MdMail } from "react-icons/md";
+import { MdDelete, MdMail, MdEdit, MdPayment } from "react-icons/md";
 import { BsThreeDotsVertical, BsFolder2 } from "react-icons/bs";
 import { TbAdjustmentsHorizontal, TbColumns3, TbCalendar } from "react-icons/tb";
 import { HiChevronDown } from "react-icons/hi";
 import { IoClose, IoSearchOutline } from "react-icons/io5";
-import { MdEdit, MdPayment } from "react-icons/md";
-import { TEACHERS_DATA, ALL_GROUPS, formatDate } from "../../constants/Teachers";
-import { AddStudentDrawer } from "../../components/AddStudent/AddStudent";
+import {
+  FiPhone, FiKey, FiUser, FiMail, FiSend,
+  FiBookOpen, FiMapPin, FiCreditCard,
+} from "react-icons/fi";
 
-/* ================= TYPES ================= */
+// ✅ TEACHERS_DATA dan import
+import { buildFlatStudents, FlatStudent, formatDate } from "../../constants/FlatStudents";
+import { TEACHERS_DATA } from "../../constants/Teachers";
+import { useNavigate } from "react-router-dom";
 
-interface FlatStudent {
-  uid: string;
-  id: number;
-  name: string;
-  phone: string;
-  active: boolean;
-  groupId: number;
-  groupName: string;
-  groupSchedule: string;
-  groupBadge: string;
-  groupBadgeColor: "blue" | "green" | "amber";
-  course: string;
-  teacher: string;
-  teacherId: number;
-  startDate: string;
-  endDate: string;
-  balance?: number;
-}
-
+/* ─── TYPES ─────────────────────────────────────────── */
 type SortDir = "asc" | "desc";
 type SortKey = keyof FlatStudent | "";
 
@@ -73,9 +59,17 @@ interface Filters {
   endDate: string;
 }
 
-/* ================= STATIC ================= */
+/* ─── STATIC ─────────────────────────────────────────── */
 
-const COURSES = [...new Set(ALL_GROUPS.map((g) => g.course))];
+// Kurslar TEACHERS_DATA dan olinadi
+const COURSES = [...new Set(
+  TEACHERS_DATA.flatMap((t) => t.groups.map((g) => g.course))
+)];
+
+// O'qituvchilar TEACHERS_DATA dan olinadi
+const TEACHERS = [...new Set(
+  TEACHERS_DATA.map((t) => t.fullName)
+)];
 
 const ALL_COLUMNS = [
   { key: "photo", label: "Photo" },
@@ -98,63 +92,32 @@ const PAY_METHODS = [
   { value: "payme", label: "Payme" },
 ];
 
-/* ================= HELPERS ================= */
-
-const buildFlatStudents = (): FlatStudent[] => {
-  const result: FlatStudent[] = [];
-  TEACHERS_DATA.forEach((teacher) => {
-    teacher.groups.forEach((group) => {
-      group.students.forEach((student) => {
-        result.push({
-          uid: `${group.id}-${student.id}`,
-          id: student.id,
-          name: student.name,
-          phone: student.phone,
-          active: student.active,
-          groupId: group.id,
-          groupName: group.name,
-          groupSchedule: group.schedule,
-          groupBadge: group.badge,
-          groupBadgeColor: group.badgeColor,
-          course: group.course,
-          teacher: teacher.fullName,
-          teacherId: teacher.id,
-          startDate: group.startDate,
-          endDate: group.endDate,
-          balance: Math.floor(Math.random() * -700000) - 100000,
-        });
-      });
-    });
-  });
-  return result;
-};
-
-const INITIAL_STUDENTS = buildFlatStudents();
-
-const badgeColorMap = {
-  blue: { bg: "#dbeafe", color: "#1d4ed8" },
-  green: { bg: "#dcfce7", color: "#15803d" },
-  amber: { bg: "#fef9c3", color: "#b45309" },
-};
-
-const stringToColor = (str: string) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return `hsl(${Math.abs(hash) % 360}, 50%, 45%)`;
-};
-
-const initials = (name: string) =>
-  name
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase();
+const CONTACT_ICONS = [
+  { icon: <FiPhone size={16} />, label: "Phone" },
+  { icon: <FiKey size={16} />, label: "Key" },
+  { icon: <FiUser size={16} />, label: "Profile" },
+  { icon: <FiMail size={16} />, label: "Email" },
+  { icon: <FiSend size={16} />, label: "Telegram" },
+  { icon: <FiBookOpen size={16} />, label: "Education" },
+  { icon: <FiMapPin size={16} />, label: "Location" },
+  { icon: <FiCreditCard size={16} />, label: "Card" },
+];
 
 const todayISO = new Date().toISOString().slice(0, 10);
 
-/* ================= DROPDOWN FILTER ================= */
+/* ─── STYLES ─────────────────────────────────────────── */
+const inputSx = {
+  "& .MuiOutlinedInput-root": {
+    borderRadius: "6px",
+    fontSize: 13,
+    bgcolor: "white",
+    "& fieldset": { borderColor: "#d0d5dd" },
+    "&:hover fieldset": { borderColor: "#a0aec0" },
+    "&.Mui-focused fieldset": { borderColor: "#5c7fa3" },
+  },
+};
 
+/* ─── DROPDOWN FILTER ────────────────────────────────── */
 interface DropdownProps {
   label: string;
   value: string;
@@ -173,48 +136,37 @@ const DropdownFilter = ({ label, value, options, onChange, onClear }: DropdownPr
         endIcon={!value ? <HiChevronDown size={13} /> : undefined}
         onClick={(e) => setAnchor(e.currentTarget)}
         sx={{
-          borderRadius: "8px",
-          borderColor: value ? "primary.main" : "#d0d5dd",
-          color: value ? "primary.main" : "#667085",
-          bgcolor: value ? "#eff8ff" : "white",
+          borderRadius: "6px",
+          borderColor: value ? "#5c7fa3" : "#d0d5dd",
+          color: value ? "#5c7fa3" : "#667085",
+          bgcolor: value ? "#eef4f9" : "white",
           fontWeight: 400,
           fontSize: 13,
           px: 1.5,
-          py: 0.7,
+          py: 0.6,
           textTransform: "none",
           whiteSpace: "nowrap",
-          "&:hover": { borderColor: "primary.main", bgcolor: "#eff8ff" },
+          "&:hover": { borderColor: "#5c7fa3", bgcolor: "#eef4f9" },
         }}
       >
         {value ? (
           <Stack direction="row" alignItems="center" gap={0.5}>
             <span>{options.find((o) => o.value === value)?.label || value}</span>
-            <IoClose
-              size={13}
-              onClick={(e) => {
-                e.stopPropagation();
-                onClear();
-              }}
-            />
+            <IoClose size={13} onClick={(e) => { e.stopPropagation(); onClear(); }} />
           </Stack>
-        ) : (
-          label
-        )}
+        ) : label}
       </Button>
       <Menu
         anchorEl={anchor}
         open={Boolean(anchor)}
         onClose={() => setAnchor(null)}
-        PaperProps={{ sx: { borderRadius: 2, minWidth: 160, mt: 0.5 } }}
+        PaperProps={{ sx: { borderRadius: 2, minWidth: 160, mt: 0.5, boxShadow: "0 4px 16px rgba(0,0,0,0.1)" } }}
       >
         {options.map((o) => (
           <MenuItem
             key={o.value}
             selected={value === o.value}
-            onClick={() => {
-              onChange(o.value);
-              setAnchor(null);
-            }}
+            onClick={() => { onChange(o.value); setAnchor(null); }}
             sx={{ fontSize: 13 }}
           >
             {o.label}
@@ -225,213 +177,76 @@ const DropdownFilter = ({ label, value, options, onChange, onClear }: DropdownPr
   );
 };
 
-/* ================= ADD PAYMENT DRAWER ================= */
-
-interface PaymentDrawerProps {
-  open: boolean;
-  student: FlatStudent | null;
-  onClose: () => void;
-}
-
-const AddPaymentDrawer = ({ open, student, onClose }: PaymentDrawerProps) => {
-
+/* ─── ADD PAYMENT DRAWER ─────────────────────────────── */
+const AddPaymentDrawer = ({
+  open, student, onClose,
+}: {
+  open: boolean; student: FlatStudent | null; onClose: () => void;
+}) => {
   const [payMethod, setPayMethod] = useState("cash");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayISO);
   const [comment, setComment] = useState("");
-  const [groupId, setGroupId] = useState("");
 
-  React.useEffect(() => {
-    if (student) setGroupId(String(student.groupId));
-  }, [student]);
-
-  const handleSubmit = () => {
-    // Submit logic here
-    onClose();
-    setAmount("");
-    setComment("");
-  };
+  const handleSubmit = () => { onClose(); setAmount(""); setComment(""); };
 
   return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        sx: { width: 420, p: 0, borderRadius: "16px 0 0 16px" },
-      }}
+    <Drawer anchor="right" open={open} onClose={onClose}
+      PaperProps={{ sx: { width: 420 } }}
     >
-      {/* Header */}
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ px: 3, py: 2.5, borderBottom: "1px solid #f0f0f0" }}
+      <Stack direction="row" justifyContent="space-between" alignItems="center"
+        sx={{ px: 3, py: 2.5, borderBottom: "1px solid #eaecf0", bgcolor: "white" }}
       >
-        <Typography fontWeight={700} fontSize={17}>
-          Add payment
-        </Typography>
-        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}>
-          <IoClose size={20} />
-        </IconButton>
+        <Typography fontWeight={700} fontSize={17}>Add payment</Typography>
+        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}><IoClose size={20} /></IconButton>
       </Stack>
-
-      {/* Body */}
-      <Box sx={{ px: 3, py: 2.5, overflowY: "auto", flex: 1 }}>
-        {/* Student */}
+      <Box sx={{ px: 3, py: 2.5, overflowY: "auto", flex: 1, bgcolor: "#f8f9fa" }}>
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>
-            Student
-          </Typography>
-          <Box
-            sx={{
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-              px: 1.5,
-              py: 1.1,
-              bgcolor: "#f9fafb",
-              fontSize: 13,
-              color: "#6b7280",
-            }}
-          >
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Student</Typography>
+          <Box sx={{ border: "1px solid #d0d5dd", borderRadius: "6px", px: 1.5, py: 1.1, bgcolor: "white", fontSize: 13, color: "#6b7280" }}>
             {student?.name || "—"}
           </Box>
         </Box>
-
-        {/* Balance */}
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>
-            Balance
-          </Typography>
-          <Box
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              bgcolor: "#1a3a4a",
-              color: "white",
-              borderRadius: "20px",
-              px: 2,
-              py: 0.4,
-              fontSize: 13,
-              fontWeight: 600,
-            }}
-          >
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Balance</Typography>
+          <Box sx={{ display: "inline-flex", alignItems: "center", bgcolor: "#2d4a5a", color: "white", borderRadius: "20px", px: 2, py: 0.4, fontSize: 13, fontWeight: 600 }}>
             {student?.balance?.toLocaleString("ru-RU") ?? 0} UZS
           </Box>
         </Box>
-
-        {/* Group */}
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>
-            Group
-          </Typography>
-          <TextField
-            select
-            fullWidth
-            size="small"
-            value={groupId}
-            onChange={(e) => setGroupId(e.target.value)}
-            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 13 } }}
-          >
-            {ALL_GROUPS.map((g) => (
-              <MenuItem key={g.id} value={String(g.id)} sx={{ fontSize: 13 }}>
-                {g.name} ({g.schedule?.split("• ")[1] || g.schedule})
-              </MenuItem>
-            ))}
-          </TextField>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Group</Typography>
+          <Box sx={{ border: "1px solid #d0d5dd", borderRadius: "6px", px: 1.5, py: 1.1, bgcolor: "white", fontSize: 13, color: "#374151" }}>
+            {student?.groupName} — {student?.groupSchedule}
+          </Box>
         </Box>
-
-        {/* Method pay */}
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={1}>
-            Method pay
-          </Typography>
-          <RadioGroup
-            value={payMethod}
-            onChange={(e) => setPayMethod(e.target.value)}
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={1}>Method pay</Typography>
+          <RadioGroup value={payMethod} onChange={(e) => setPayMethod(e.target.value)}
             sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0.5 }}
           >
             {PAY_METHODS.map((m) => (
-              <FormControlLabel
-                key={m.value}
-                value={m.value}
-                control={
-                  <Radio
-                    size="small"
-                    sx={{
-                      color: "#d0d5dd",
-                      "&.Mui-checked": { color: "#1a3a4a" },
-                      p: 0.5,
-                    }}
-                  />
-                }
+              <FormControlLabel key={m.value} value={m.value}
+                control={<Radio size="small" sx={{ color: "#d0d5dd", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
                 label={<Typography fontSize={13} color="#374151">{m.label}</Typography>}
                 sx={{ m: 0, gap: 0.5 }}
               />
             ))}
           </RadioGroup>
         </Box>
-
-        {/* Amount */}
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>
-            Amount
-          </Typography>
-          <TextField
-            fullWidth
-            size="small"
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 13 } }}
-          />
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Amount</Typography>
+          <TextField fullWidth size="small" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} sx={inputSx} />
         </Box>
-
-        {/* Date */}
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>
-            Date
-          </Typography>
-          <TextField
-            fullWidth
-            size="small"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 13 } }}
-          />
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Date</Typography>
+          <TextField fullWidth size="small" type="date" value={date} onChange={(e) => setDate(e.target.value)} sx={inputSx} />
         </Box>
-
-        {/* Comment */}
         <Box mb={3}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>
-            Comment
-          </Typography>
-          <TextField
-            fullWidth
-            size="small"
-            multiline
-            rows={3}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 13 } }}
-          />
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Comment</Typography>
+          <TextField fullWidth size="small" multiline rows={3} value={comment} onChange={(e) => setComment(e.target.value)} sx={inputSx} />
         </Box>
-
-        {/* Submit */}
-        <Button
-          variant="contained"
-          fullWidth
-          onClick={handleSubmit}
-          sx={{
-            borderRadius: "10px",
-            py: 1.3,
-            fontWeight: 600,
-            fontSize: 14,
-            bgcolor: "#1a3a4a",
-            "&:hover": { bgcolor: "#122a38" },
-            boxShadow: "none",
-          }}
+        <Button variant="contained" fullWidth onClick={handleSubmit}
+          sx={{ borderRadius: "20px", py: 1.2, fontWeight: 600, fontSize: 14, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" }, boxShadow: "none", textTransform: "none" }}
         >
           Submit
         </Button>
@@ -440,268 +255,78 @@ const AddPaymentDrawer = ({ open, student, onClose }: PaymentDrawerProps) => {
   );
 };
 
-/* ================= EDIT STUDENT DRAWER ================= */
-
-interface EditDrawerProps {
-  open: boolean;
-  student: FlatStudent | null;
-  onClose: () => void;
+/* ─── EDIT STUDENT DRAWER ────────────────────────────── */
+const EditStudentDrawer = ({
+  open, student, onClose, onSave,
+}: {
+  open: boolean; student: FlatStudent | null; onClose: () => void;
   onSave: (uid: string, data: { name: string; phone: string }) => void;
-}
-
-const EditStudentDrawer = ({ open, student, onClose, onSave }: EditDrawerProps) => {
+}) => {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("male");
 
   React.useEffect(() => {
-    if (student) {
-      setName(student.name);
-      setPhone(student.phone.replace("+998 ", "").replace("+998", ""));
-      setGender("male");
-    }
+    if (student) { setName(student.name); setPhone(student.phone); }
   }, [student]);
 
-  const handleSubmit = () => {
-    if (student) {
-      onSave(student.uid, { name, phone: `+998 ${phone}` });
-    }
-    onClose();
-  };
-
   return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        sx: { width: 420, p: 0, borderRadius: "16px 0 0 16px" },
-      }}
+    <Drawer anchor="right" open={open} onClose={onClose}
+      PaperProps={{ sx: { width: 420 } }}
     >
-      {/* Header */}
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ px: 3, py: 2.5, borderBottom: "1px solid #f0f0f0" }}
+      <Stack direction="row" justifyContent="space-between" alignItems="center"
+        sx={{ px: 3, py: 2.5, borderBottom: "1px solid #eaecf0", bgcolor: "white" }}
       >
-        <Typography fontWeight={700} fontSize={17}>
-          Edit Student
-        </Typography>
-        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}>
-          <IoClose size={20} />
-        </IconButton>
+        <Typography fontWeight={700} fontSize={17}>Edit Student</Typography>
+        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}><IoClose size={20} /></IconButton>
       </Stack>
-
-      {/* Body */}
-      <Box sx={{ px: 3, py: 2.5, overflowY: "auto", flex: 1 }}>
-        {/* Phone */}
+      <Box sx={{ px: 3, py: 2.5, overflowY: "auto", flex: 1, bgcolor: "#f8f9fa" }}>
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>
-            Phone
-          </Typography>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Phone</Typography>
           <Stack direction="row" gap={1}>
-            <Box
-              sx={{
-                border: "1px solid #e5e7eb",
-                borderRadius: "8px",
-                px: 1.5,
-                py: 1.1,
-                bgcolor: "#f9fafb",
-                fontSize: 13,
-                color: "#374151",
-                whiteSpace: "nowrap",
-                minWidth: 60,
-                textAlign: "center",
-              }}
-            >
-              +998
-            </Box>
-            <TextField
-              fullWidth
-              size="small"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="93 650 87 92"
-              sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 13 } }}
-            />
+            <Box sx={{ border: "1px solid #d0d5dd", borderRadius: "6px", px: 1.5, display: "flex", alignItems: "center", bgcolor: "white", fontSize: 13, color: "#374151", whiteSpace: "nowrap", minWidth: 60, justifyContent: "center" }}>+998</Box>
+            <TextField fullWidth size="small" value={phone} onChange={(e) => setPhone(e.target.value)} sx={inputSx} />
           </Stack>
         </Box>
-
-        {/* Name */}
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>
-            Name
-          </Typography>
-          <TextField
-            fullWidth
-            size="small"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 13 } }}
-          />
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Name</Typography>
+          <TextField fullWidth size="small" value={name} onChange={(e) => setName(e.target.value)} sx={inputSx} />
         </Box>
-
-        {/* Date of birth */}
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>
-            Date of birth
-          </Typography>
-          <TextField
-            fullWidth
-            size="small"
-            type="date"
-            value={dob}
-            onChange={(e) => setDob(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            placeholder="No date selected"
-            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 13 } }}
-          />
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Date of birth</Typography>
+          <TextField fullWidth size="small" type="date" value={dob} onChange={(e) => setDob(e.target.value)} InputLabelProps={{ shrink: true }} sx={inputSx} />
         </Box>
-
-        {/* Gender */}
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={1}>
-            Gender
-          </Typography>
-          <RadioGroup
-            row
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            sx={{ gap: 3 }}
-          >
-            <FormControlLabel
-              value="male"
-              control={
-                <Radio
-                  size="small"
-                  sx={{ color: "#d0d5dd", "&.Mui-checked": { color: "#1a3a4a" }, p: 0.5 }}
-                />
-              }
-              label={<Typography fontSize={13} color="#374151">Male</Typography>}
-              sx={{ m: 0, gap: 0.5 }}
-            />
-            <FormControlLabel
-              value="female"
-              control={
-                <Radio
-                  size="small"
-                  sx={{ color: "#d0d5dd", "&.Mui-checked": { color: "#1a3a4a" }, p: 0.5 }}
-                />
-              }
-              label={<Typography fontSize={13} color="#374151">Female</Typography>}
-              sx={{ m: 0, gap: 0.5 }}
-            />
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Gender</Typography>
+          <RadioGroup row value={gender} onChange={(e) => setGender(e.target.value)} sx={{ gap: 3 }}>
+            {["Male", "Female"].map((g) => (
+              <FormControlLabel key={g} value={g.toLowerCase()}
+                control={<Radio size="small" sx={{ color: "#d0d5dd", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
+                label={<Typography fontSize={13} color="#374151">{g}</Typography>}
+                sx={{ m: 0, gap: 0.5 }}
+              />
+            ))}
           </RadioGroup>
         </Box>
-
-        {/* Photo */}
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>
-            Photo
-          </Typography>
-          <Stack direction="row" gap={1}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="No file chosen"
-              InputProps={{ readOnly: true }}
-              sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 13 } }}
-            />
-            <Button
-              variant="outlined"
-              component="label"
-              sx={{
-                borderRadius: "8px",
-                borderColor: "#e5e7eb",
-                color: "#374151",
-                fontSize: 13,
-                textTransform: "none",
-                whiteSpace: "nowrap",
-                px: 2,
-              }}
-            >
-              Browse
-              <input type="file" hidden accept="image/*" />
-            </Button>
-          </Stack>
-        </Box>
-
-        {/* Additional contacts */}
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={1}>
-            additional contacts
-          </Typography>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={1}>Additional contacts</Typography>
           <Stack direction="row" gap={1} flexWrap="wrap">
-            {["📞", "🔑", "👤", "✉️", "✈️", "🎓", "📍", "🪪"].map((icon, i) => (
-              <Box
-                key={i}
-                sx={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: "50%",
-                  border: "1.5px solid #e5e7eb",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 16,
-                  cursor: "pointer",
-                  "&:hover": { borderColor: "#1a3a4a" },
-                }}
-              >
-                {icon}
-              </Box>
+            {CONTACT_ICONS.map((item, i) => (
+              <Tooltip key={i} title={item.label} arrow>
+                <IconButton size="small" sx={{ width: 40, height: 40, border: "1.5px solid #c5d4e3", borderRadius: "50%", color: "#5c7fa3", bgcolor: "white" }}>
+                  {item.icon}
+                </IconButton>
+              </Tooltip>
             ))}
           </Stack>
         </Box>
-
-        {/* Tags */}
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>
-            Tags
-          </Typography>
-          <TextField
-            select
-            fullWidth
-            size="small"
-            defaultValue=""
-            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 13 } }}
-          >
-            <MenuItem value="" disabled sx={{ fontSize: 13 }}>
-              Add new tags
-            </MenuItem>
-            <MenuItem value="new" sx={{ fontSize: 13 }}>New</MenuItem>
-            <MenuItem value="vip" sx={{ fontSize: 13 }}>VIP</MenuItem>
-            <MenuItem value="risk" sx={{ fontSize: 13 }}>At risk</MenuItem>
-          </TextField>
-        </Box>
-
-        {/* Set password */}
-        <Box mb={3} textAlign="right">
-          <Button
-            variant="text"
-            size="small"
-            sx={{ fontSize: 13, color: "#1a3a4a", textDecoration: "underline", textTransform: "none" }}
-          >
-            + Set password
-          </Button>
-        </Box>
-
-        {/* Submit */}
-        <Button
-          variant="contained"
-          fullWidth
-          onClick={handleSubmit}
-          sx={{
-            borderRadius: "10px",
-            py: 1.3,
-            fontWeight: 600,
-            fontSize: 14,
-            bgcolor: "#1a3a4a",
-            "&:hover": { bgcolor: "#122a38" },
-            boxShadow: "none",
-          }}
+        <Stack alignItems="flex-end" gap={0.5} mb={3}>
+          <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>+ Add to the group</Button>
+          <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>+ Set password</Button>
+        </Stack>
+        <Button variant="contained" fullWidth onClick={() => { if (student) onSave(student.uid, { name, phone }); onClose(); }}
+          sx={{ borderRadius: "20px", py: 1.2, fontWeight: 600, fontSize: 14, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" }, boxShadow: "none", textTransform: "none" }}
         >
           Submit
         </Button>
@@ -710,10 +335,99 @@ const EditStudentDrawer = ({ open, student, onClose, onSave }: EditDrawerProps) 
   );
 };
 
-/* ================= MAIN COMPONENT ================= */
+/* ─── ADD STUDENT DRAWER ─────────────────────────────── */
+const AddStudentDrawer = ({
+  open, onClose, onSubmit,
+}: {
+  open: boolean; onClose: () => void;
+  onSubmit: (data: { phone: string; name: string; dob: string; gender: string; comment: string }) => void;
+}) => {
+  const [phone, setPhone] = useState("");
+  const [name, setName] = useState("");
+  const [dob, setDob] = useState("");
+  const [gender, setGender] = useState("male");
+  const [comment, setComment] = useState("");
+
+  const handleSubmit = () => {
+    onSubmit({ phone: `+998 ${phone}`, name, dob, gender, comment });
+    setPhone(""); setName(""); setDob(""); setGender("male"); setComment("");
+    onClose();
+  };
+
+  return (
+    <Drawer anchor="right" open={open} onClose={onClose}
+      PaperProps={{ sx: { width: 420, bgcolor: "#f8f9fa" } }}
+    >
+      <Stack direction="row" justifyContent="space-between" alignItems="center"
+        sx={{ px: 3, py: 2.5, bgcolor: "white", borderBottom: "1px solid #eaecf0" }}
+      >
+        <Typography fontWeight={600} fontSize={17} color="#111827">Add New Student</Typography>
+        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}><IoClose size={20} /></IconButton>
+      </Stack>
+      <Box sx={{ px: 3, py: 3, overflowY: "auto", flex: 1 }}>
+        <Box mb={2.5}>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Phone</Typography>
+          <Stack direction="row" gap={1}>
+            <Box sx={{ border: "1px solid #d0d5dd", borderRadius: "6px", px: 1.5, display: "flex", alignItems: "center", bgcolor: "white", fontSize: 14, color: "#374151", whiteSpace: "nowrap", minWidth: 64, justifyContent: "center" }}>+998</Box>
+            <TextField fullWidth size="small" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="93 650 87 92" sx={inputSx} />
+          </Stack>
+        </Box>
+        <Box mb={2.5}>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Name</Typography>
+          <TextField fullWidth size="small" value={name} onChange={(e) => setName(e.target.value)} sx={inputSx} />
+        </Box>
+        <Box mb={2.5}>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Date of birth</Typography>
+          <TextField fullWidth size="small" type="date" value={dob} onChange={(e) => setDob(e.target.value)} InputLabelProps={{ shrink: true }} sx={inputSx} />
+        </Box>
+        <Box mb={2.5}>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Gender</Typography>
+          <RadioGroup row value={gender} onChange={(e) => setGender(e.target.value)} sx={{ gap: 3 }}>
+            {["Male", "Female"].map((g) => (
+              <FormControlLabel key={g} value={g.toLowerCase()}
+                control={<Radio size="small" sx={{ color: "#d0d5dd", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
+                label={<Typography fontSize={14} color="#374151">{g}</Typography>}
+                sx={{ m: 0, gap: 0.5 }}
+              />
+            ))}
+          </RadioGroup>
+        </Box>
+        <Box mb={2.5}>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Comment</Typography>
+          <TextField fullWidth size="small" multiline rows={3} value={comment} onChange={(e) => setComment(e.target.value)} sx={inputSx} />
+        </Box>
+        <Box mb={2.5}>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={1.2}>Additional contacts</Typography>
+          <Stack direction="row" gap={1} flexWrap="wrap">
+            {CONTACT_ICONS.map((item, i) => (
+              <Tooltip key={i} title={item.label} arrow>
+                <IconButton size="small" sx={{ width: 40, height: 40, border: "1.5px solid #c5d4e3", borderRadius: "50%", color: "#5c7fa3", bgcolor: "white" }}>
+                  {item.icon}
+                </IconButton>
+              </Tooltip>
+            ))}
+          </Stack>
+        </Box>
+        <Stack alignItems="flex-end" gap={0.5} mb={3}>
+          <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>+ Add to the group</Button>
+          <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>+ Set password</Button>
+        </Stack>
+        <Button variant="contained" onClick={handleSubmit}
+          sx={{ borderRadius: "20px", py: 1.2, px: 4, fontWeight: 600, fontSize: 14, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" }, boxShadow: "none", textTransform: "none" }}
+        >
+          Submit
+        </Button>
+      </Box>
+    </Drawer>
+  );
+};
+
 
 export const Students = () => {
-  const [students, setStudents] = useState<FlatStudent[]>(INITIAL_STUDENTS);
+  const navigate = useNavigate();
+  // ✅ Data TEACHERS_DATA dan olinadi
+  const [students, setStudents] = useState<FlatStudent[]>(() => buildFlatStudents());
+
   const [selected, setSelected] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -721,23 +435,13 @@ export const Students = () => {
   const [columnsAnchor, setColumnsAnchor] = useState<null | HTMLElement>(null);
   const [actionMenu, setActionMenu] = useState<{ el: HTMLElement; uid: string } | null>(null);
   const [deleteUid, setDeleteUid] = useState<string | null>(null);
-  const [openAdd, setOpenAdd] = useState(false);
-  const [newStudent, setNewStudent] = useState({ name: "", phone: "", groupId: "" });
-
   const [addDrawerOpen, setAddDrawerOpen] = useState(false);
-
-  // Drawer states
   const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [activeStudent, setActiveStudent] = useState<FlatStudent | null>(null);
 
   const [filters, setFilters] = useState<Filters>({
-    search: "",
-    course: "",
-    status: "",
-    teacher: "",
-    startDate: "",
-    endDate: "",
+    search: "", course: "", status: "", teacher: "", startDate: "", endDate: "",
   });
 
   const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) =>
@@ -745,10 +449,7 @@ export const Students = () => {
 
   const clearAll = () =>
     setFilters({ search: "", course: "", status: "", teacher: "", startDate: "", endDate: "" });
-
   const hasFilters = Object.values(filters).some(Boolean);
-
-  /* === FILTERED + SORTED === */
 
   const filtered = useMemo(() => {
     return students
@@ -773,20 +474,13 @@ export const Students = () => {
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
+    else { setSortKey(key); setSortDir("asc"); }
   };
-
-  /* === SELECT === */
 
   const allSelected = filtered.length > 0 && filtered.every((s) => selected.includes(s.uid));
   const toggleAll = () => setSelected(allSelected ? [] : filtered.map((s) => s.uid));
   const toggleOne = (uid: string) =>
     setSelected((p) => (p.includes(uid) ? p.filter((x) => x !== uid) : [...p, uid]));
-
-  /* === DELETE === */
 
   const handleDeleteConfirm = () => {
     if (deleteUid) {
@@ -796,13 +490,6 @@ export const Students = () => {
     }
   };
 
-  const handleDeleteSelected = () => {
-    setStudents((p) => p.filter((s) => !selected.includes(s.uid)));
-    setSelected([]);
-  };
-
-  /* === ACTION MENU HANDLERS === */
-
   const openActionMenu = (e: React.MouseEvent<HTMLButtonElement>, uid: string) => {
     e.stopPropagation();
     const student = students.find((s) => s.uid === uid) || null;
@@ -810,43 +497,21 @@ export const Students = () => {
     setActionMenu(actionMenu?.uid === uid ? null : { el: e.currentTarget, uid });
   };
 
-  const handleOpenPayment = () => {
-    setActionMenu(null);
-    setPaymentDrawerOpen(true);
-  };
-
-  const handleOpenEdit = () => {
-    setActionMenu(null);
-    setEditDrawerOpen(true);
-  };
-
-  const handleOpenDelete = (uid: string) => {
-    setActionMenu(null);
-    setDeleteUid(uid);
-  };
-
-  /* === EDIT SAVE === */
-
   const handleSaveEdit = (uid: string, data: { name: string; phone: string }) => {
-    setStudents((prev) =>
-      prev.map((s) => (s.uid === uid ? { ...s, name: data.name, phone: data.phone } : s))
-    );
+    setStudents((prev) => prev.map((s) => (s.uid === uid ? { ...s, ...data } : s)));
   };
 
-  /* === ADD STUDENT === */
-
-  const handleAddStudent = () => {
-    const group = ALL_GROUPS.find((g) => g.id === Number(newStudent.groupId));
-    const teacher = TEACHERS_DATA.find((t) =>
-      t.groups.some((g) => g.id === Number(newStudent.groupId))
-    );
-    if (!group || !teacher || !newStudent.name) return;
-
+  const handleAddStudent = (data: {
+    phone: string; name: string; dob: string; gender: string; comment: string;
+  }) => {
+    // Yangi student birinchi guruhga qo'shiladi (demo)
+    const allGroups = TEACHERS_DATA.flatMap((t) => t.groups);
+    const group = allGroups[0];
     const newEntry: FlatStudent = {
       uid: `${group.id}-${Date.now()}`,
       id: Date.now(),
-      name: newStudent.name,
-      phone: newStudent.phone,
+      name: data.name || "Yangi O'quvchi",
+      phone: data.phone,
       active: true,
       groupId: group.id,
       groupName: group.name,
@@ -854,88 +519,65 @@ export const Students = () => {
       groupBadge: group.badge,
       groupBadgeColor: group.badgeColor,
       course: group.course,
-      teacher: teacher.fullName,
-      teacherId: teacher.id,
+      teacher: group.teacher,
+      teacherId: group.teacherId,
       startDate: group.startDate,
       endDate: group.endDate,
+      branch: group.branch ?? "",
+      room: group.room,
+      price: group.price ?? 0,
       balance: 0,
     };
-    setStudents((p) => [...p, newEntry]);
-    setNewStudent({ name: "", phone: "", groupId: "" });
-    setOpenAdd(false);
+    setStudents((p) => [newEntry, ...p]);
   };
 
   const col = (key: string) => visibleCols.includes(key);
 
-  /* ================= UI ================= */
+  /* ── BADGE COLOR ── */
+  const badgeColors = {
+    blue:  { bg: "#dbeafe", color: "#1d4ed8" },
+    green: { bg: "#dcfce7", color: "#15803d" },
+    amber: { bg: "#fef3c7", color: "#92400e" },
+  };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3, bgcolor: "#f8f9fa", minHeight: "100vh" }}>
       {/* HEADER */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
         <Stack direction="row" alignItems="baseline" gap={1.5}>
-          <Typography variant="h5" fontWeight={700} fontSize={26}>
-            Students
-          </Typography>
-          <Typography fontSize={14} color="text.secondary">
-            Quantity — {filtered.length}
-          </Typography>
+          <Typography variant="h5" fontWeight={700} fontSize={26} color="#111827">Students</Typography>
+          <Typography fontSize={14} color="#6b7280">Quantity — {filtered.length}</Typography>
         </Stack>
-        <Button sx={{background: "#5c7fa3", color: "white", padding: "10px 20px"}} onClick={() => setAddDrawerOpen(true)}>
-        Add New
-      </Button>
-      </Stack>
-
-      <AddStudentDrawer
-        open={addDrawerOpen}
-        onClose={() => setAddDrawerOpen(false)}
-        onSubmit={(data) => {
-          console.log("NEW STUDENT:", data);
-
-          // keyin shu yerda studentsga push qilasan
-        }}
-      />
-
-      {/* FILTER ROW */}
-      <Stack direction="row" flexWrap="wrap" gap={1} mb={1}>
-        {/* Search */}
-        <Box
+        <Button
+          variant="contained"
+          onClick={() => setAddDrawerOpen(true)}
           sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 0.5,
-            border: "1px solid #d0d5dd",
-            borderRadius: "8px",
-            px: 1.2,
-            py: 0.5,
-            bgcolor: "white",
-            minWidth: 180,
+            bgcolor: "#2d4a5a", color: "white", borderRadius: "8px", px: 3, py: 1.1,
+            fontWeight: 700, fontSize: 13, letterSpacing: 0.5, textTransform: "uppercase",
+            "&:hover": { bgcolor: "#1e3340" }, boxShadow: "none",
           }}
         >
+          Add New
+        </Button>
+      </Stack>
+
+      {/* FILTER ROW */}
+      <Stack direction="row" flexWrap="wrap" gap={1} mb={1.5}
+        sx={{ bgcolor: "white", border: "1px solid #eaecf0", borderRadius: "8px", p: 1.5 }}
+      >
+        {/* Search */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, border: "1px solid #d0d5dd", borderRadius: "6px", px: 1.2, py: 0.6, bgcolor: "white", minWidth: 220 }}>
           <IoSearchOutline size={15} color="#9ca3af" />
           <input
             placeholder="Search by name or phone"
             value={filters.search}
             onChange={(e) => setFilter("search", e.target.value)}
-            style={{
-              border: "none",
-              outline: "none",
-              fontSize: 13,
-              color: "#374151",
-              background: "transparent",
-              width: "100%",
-            }}
+            style={{ border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", width: "100%" }}
           />
-          {filters.search && (
-            <IoClose
-              size={13}
-              color="#9ca3af"
-              style={{ cursor: "pointer" }}
-              onClick={() => setFilter("search", "")}
-            />
-          )}
+          {filters.search && <IoClose size={13} color="#9ca3af" style={{ cursor: "pointer" }} onClick={() => setFilter("search", "")} />}
         </Box>
 
+        {/* Course filter — TEACHERS_DATA dan */}
         <DropdownFilter
           label="By Courses"
           value={filters.course}
@@ -944,244 +586,89 @@ export const Students = () => {
           onClear={() => setFilter("course", "")}
         />
 
+        {/* Status */}
         <DropdownFilter
           label="Status"
           value={filters.status}
-          options={[
-            { value: "active", label: "🟢 Active" },
-            { value: "inactive", label: "🔴 Inactive" },
-          ]}
+          options={[{ value: "active", label: "🟢 Active" }, { value: "inactive", label: "🔴 Inactive" }]}
           onChange={(v) => setFilter("status", v as "active" | "inactive")}
           onClear={() => setFilter("status", "")}
         />
 
+        {/* Teacher filter — TEACHERS_DATA dan */}
         <DropdownFilter
-          label="Financial situation"
-          value=""
-          options={[
-            { value: "paid", label: "Paid" },
-            { value: "debt", label: "In debt" },
-          ]}
-          onChange={() => {}}
-          onClear={() => {}}
+          label="By Teacher"
+          value={filters.teacher}
+          options={TEACHERS.map((t) => ({ value: t, label: t }))}
+          onChange={(v) => setFilter("teacher", v)}
+          onClear={() => setFilter("teacher", "")}
         />
 
-        <DropdownFilter
-          label="By Tags"
-          value=""
-          options={[
-            { value: "new", label: "New" },
-            { value: "vip", label: "VIP" },
-          ]}
-          onChange={() => {}}
-          onClear={() => {}}
-        />
+        <DropdownFilter label="Financial" value="" options={[{ value: "paid", label: "Paid" }, { value: "debt", label: "In debt" }]} onChange={() => {}} onClear={() => {}} />
+        <DropdownFilter label="By Tags" value="" options={[{ value: "new", label: "New" }, { value: "vip", label: "VIP" }]} onChange={() => {}} onClear={() => {}} />
 
-        {/* External ID */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            border: "1px solid #d0d5dd",
-            borderRadius: "8px",
-            px: 1.2,
-            py: 0.5,
-            bgcolor: "white",
-          }}
-        >
-          <input
-            placeholder="External ID"
-            style={{
-              border: "none",
-              outline: "none",
-              fontSize: 13,
-              color: "#374151",
-              background: "transparent",
-              width: 90,
-            }}
-          />
-        </Box>
-
-        {/* Date */}
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<TbCalendar size={13} />}
-          component="label"
-          sx={{
-            borderRadius: "8px",
-            borderColor: filters.startDate ? "primary.main" : "#d0d5dd",
-            color: filters.startDate ? "primary.main" : "#667085",
-            fontSize: 13,
-            fontWeight: 400,
-            px: 1.5,
-            textTransform: "none",
-            position: "relative",
-          }}
+        {/* Date range */}
+        <Button variant="outlined" size="small" startIcon={<TbCalendar size={13} />} component="label"
+          sx={{ borderRadius: "6px", borderColor: filters.startDate ? "#5c7fa3" : "#d0d5dd", color: filters.startDate ? "#5c7fa3" : "#667085", fontSize: 13, fontWeight: 400, px: 1.5, textTransform: "none", position: "relative" }}
         >
           {filters.startDate ? formatDate(filters.startDate) : "Start date"}
-          <input
-            type="date"
-            style={{ position: "absolute", opacity: 0, inset: 0, cursor: "pointer" }}
-            value={filters.startDate}
-            onChange={(e) => setFilter("startDate", e.target.value)}
-          />
+          <input type="date" style={{ position: "absolute", opacity: 0, inset: 0, cursor: "pointer" }} value={filters.startDate} onChange={(e) => setFilter("startDate", e.target.value)} />
         </Button>
-
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<TbCalendar size={13} />}
-          component="label"
-          sx={{
-            borderRadius: "8px",
-            borderColor: filters.endDate ? "primary.main" : "#d0d5dd",
-            color: filters.endDate ? "primary.main" : "#667085",
-            fontSize: 13,
-            fontWeight: 400,
-            px: 1.5,
-            textTransform: "none",
-            position: "relative",
-          }}
+        <Button variant="outlined" size="small" startIcon={<TbCalendar size={13} />} component="label"
+          sx={{ borderRadius: "6px", borderColor: filters.endDate ? "#5c7fa3" : "#d0d5dd", color: filters.endDate ? "#5c7fa3" : "#667085", fontSize: 13, fontWeight: 400, px: 1.5, textTransform: "none", position: "relative" }}
         >
           {filters.endDate ? formatDate(filters.endDate) : "End date"}
-          <input
-            type="date"
-            style={{ position: "absolute", opacity: 0, inset: 0, cursor: "pointer" }}
-            value={filters.endDate}
-            onChange={(e) => setFilter("endDate", e.target.value)}
-          />
+          <input type="date" style={{ position: "absolute", opacity: 0, inset: 0, cursor: "pointer" }} value={filters.endDate} onChange={(e) => setFilter("endDate", e.target.value)} />
         </Button>
-      </Stack>
 
-      {hasFilters && (
-        <Box mb={1}>
-          <Button
-            size="small"
-            startIcon={<IoClose />}
-            onClick={clearAll}
-            variant="outlined"
-            sx={{
-              borderRadius: "8px",
-              borderColor: "#d0d5dd",
-              color: "#667085",
-              fontSize: 12,
-              px: 1.5,
-              textTransform: "none",
-            }}
+        {hasFilters && (
+          <Button size="small" startIcon={<IoClose />} onClick={clearAll} variant="outlined"
+            sx={{ borderRadius: "6px", borderColor: "#d0d5dd", color: "#667085", fontSize: 12, px: 1.5, textTransform: "none" }}
           >
             Clear all
           </Button>
-        </Box>
-      )}
-
-      {/* FILTERS + COLUMNS + BULK ACTIONS */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-        {selected.length > 0 ? (
-          <Stack direction="row" gap={1} alignItems="center">
-            <Typography fontSize={13} color="text.secondary">
-              {selected.length} selected
-            </Typography>
-            <Tooltip title="Delete selected">
-              <IconButton size="small" color="error" onClick={handleDeleteSelected}>
-                <MdDelete size={17} />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        ) : (
-          <Box />
         )}
+      </Stack>
 
-        <Stack direction="row" gap={1}>
-          <Button
-            size="small"
-            startIcon={<TbAdjustmentsHorizontal size={14} />}
-            variant="outlined"
-            sx={{
-              borderRadius: "8px",
-              borderColor: "#d0d5dd",
-              color: "#667085",
-              fontSize: 12,
-              px: 1.5,
-              textTransform: "none",
-            }}
-          >
-            Filters
-          </Button>
-          <Button
-            size="small"
-            startIcon={<TbColumns3 size={14} />}
-            variant="outlined"
-            onClick={(e) => setColumnsAnchor(e.currentTarget)}
-            sx={{
-              borderRadius: "8px",
-              borderColor: "#d0d5dd",
-              color: "#667085",
-              fontSize: 12,
-              px: 1.5,
-              textTransform: "none",
-            }}
-          >
-            Columns
-          </Button>
-          <Menu
-            anchorEl={columnsAnchor}
-            open={Boolean(columnsAnchor)}
-            onClose={() => setColumnsAnchor(null)}
-            PaperProps={{ sx: { borderRadius: 2, minWidth: 160, mt: 0.5 } }}
-          >
-            {ALL_COLUMNS.map((c) => (
-              <MenuItem
-                key={c.key}
-                onClick={() =>
-                  setVisibleCols((p) =>
-                    p.includes(c.key) ? p.filter((k) => k !== c.key) : [...p, c.key]
-                  )
-                }
-                sx={{ fontSize: 13, gap: 1 }}
-              >
-                <Box
-                  sx={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: 0.5,
-                    border: "2px solid",
-                    borderColor: visibleCols.includes(c.key) ? "primary.main" : "#d0d5dd",
-                    bgcolor: visibleCols.includes(c.key) ? "primary.main" : "transparent",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  {visibleCols.includes(c.key) && (
-                    <Box sx={{ width: 8, height: 8, bgcolor: "white", borderRadius: 0.25 }} />
-                  )}
-                </Box>
-                {c.label}
-              </MenuItem>
-            ))}
-          </Menu>
-        </Stack>
+      {/* COLUMNS + BULK ACTIONS */}
+      <Stack direction="row" justifyContent="flex-end" alignItems="center" mb={1.5} gap={1}>
+        {selected.length > 0 && (
+          <Typography fontSize={13} color="text.secondary" sx={{ mr: "auto" }}>
+            {selected.length} selected
+          </Typography>
+        )}
+        <Button size="small" startIcon={<TbAdjustmentsHorizontal size={14} />} variant="outlined"
+          sx={{ borderRadius: "6px", borderColor: "#d0d5dd", color: "#667085", fontSize: 12, px: 1.5, textTransform: "none" }}
+        >
+          Filters
+        </Button>
+        <Button size="small" startIcon={<TbColumns3 size={14} />} variant="outlined"
+          onClick={(e) => setColumnsAnchor(e.currentTarget)}
+          sx={{ borderRadius: "6px", borderColor: "#d0d5dd", color: "#667085", fontSize: 12, px: 1.5, textTransform: "none" }}
+        >
+          Columns
+        </Button>
+        <Menu anchorEl={columnsAnchor} open={Boolean(columnsAnchor)} onClose={() => setColumnsAnchor(null)}
+          PaperProps={{ sx: { borderRadius: 2, minWidth: 160, mt: 0.5 } }}
+        >
+          {ALL_COLUMNS.map((c) => (
+            <MenuItem key={c.key}
+              onClick={() => setVisibleCols((p) => p.includes(c.key) ? p.filter((k) => k !== c.key) : [...p, c.key])}
+              sx={{ fontSize: 13, gap: 1 }}
+            >
+              <Checkbox size="small" checked={visibleCols.includes(c.key)} sx={{ p: 0 }} />
+              {c.label}
+            </MenuItem>
+          ))}
+        </Menu>
       </Stack>
 
       {/* TABLE */}
-      <Paper sx={{ borderRadius: 3, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
+      <Paper sx={{ borderRadius: "12px", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #eaecf0" }}>
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow
-                sx={{
-                  "& th": {
-                    fontWeight: 600,
-                    fontSize: 13,
-                    color: "#374151",
-                    py: 1.5,
-                    borderBottom: "1px solid #e5e7eb",
-                    bgcolor: "white",
-                  },
-                }}
-              >
+              <TableRow sx={{ "& th": { fontWeight: 600, fontSize: 13, color: "#374151", py: 1.5, borderBottom: "1px solid #eaecf0", bgcolor: "white" } }}>
                 <TableCell sx={{ width: 32, pr: 0 }} />
                 <TableCell sx={{ width: 32, pl: 0 }}>
                   <Checkbox size="small" checked={allSelected} onChange={toggleAll} sx={{ p: 0 }} />
@@ -1189,13 +676,7 @@ export const Students = () => {
                 {col("photo") && <TableCell>Photo</TableCell>}
                 {col("name") && (
                   <TableCell>
-                    <TableSortLabel
-                      active={sortKey === "name"}
-                      direction={sortDir}
-                      onClick={() => handleSort("name")}
-                    >
-                      Name
-                    </TableSortLabel>
+                    <TableSortLabel active={sortKey === "name"} direction={sortDir} onClick={() => handleSort("name")}>Name</TableSortLabel>
                   </TableCell>
                 )}
                 {col("phone") && <TableCell>Phone</TableCell>}
@@ -1207,17 +688,13 @@ export const Students = () => {
                 <TableCell align="right">
                   <Stack direction="row" justifyContent="flex-end" gap={0.5}>
                     <Tooltip title="Archive selected">
-                      <IconButton size="small" sx={{ color: "#9ca3af" }}>
-                        <BsFolder2 size={15} />
-                      </IconButton>
+                      <IconButton size="small" sx={{ color: "#9ca3af" }}><BsFolder2 size={15} /></IconButton>
                     </Tooltip>
                     <Tooltip title="Mail selected">
-                      <IconButton size="small" sx={{ color: "#9ca3af" }}>
-                        <MdMail size={15} />
-                      </IconButton>
+                      <IconButton size="small" sx={{ color: "#9ca3af" }}><MdMail size={15} /></IconButton>
                     </Tooltip>
                     <Tooltip title="Delete selected">
-                      <IconButton size="small" sx={{ color: "#9ca3af" }} onClick={handleDeleteSelected}>
+                      <IconButton size="small" sx={{ color: "#9ca3af" }} onClick={() => { setStudents((p) => p.filter((s) => !selected.includes(s.uid))); setSelected([]); }}>
                         <MdDelete size={15} />
                       </IconButton>
                     </Tooltip>
@@ -1228,43 +705,31 @@ export const Students = () => {
 
             <TableBody>
               {filtered.map((s, i) => {
-                const badge = badgeColorMap[s.groupBadgeColor];
+                const badge = badgeColors[s.groupBadgeColor];
                 const isSelected = selected.includes(s.uid);
                 return (
                   <TableRow
                     key={s.uid}
                     hover
+                    onClick={() => navigate(`/students/${s.uid}` )}  // ✅ Profile ga o'tish
                     sx={{
                       "& td": { borderBottom: "1px solid #f3f4f6", py: 1.4, fontSize: 13 },
                       "&:last-child td": { borderBottom: "none" },
                       bgcolor: isSelected ? "#f0f7ff" : "white",
-                      "&:hover": { bgcolor: isSelected ? "#e8f2ff" : "#f9fafb" },
+                      "&:hover": { bgcolor: isSelected ? "#e8f2ff" : "#f9fafb", cursor: "pointer" },
                     }}
                   >
                     <TableCell sx={{ color: "#9ca3af", fontSize: 12, pr: 0, width: 32 }}>
                       {i + 1}.
                     </TableCell>
-                    <TableCell sx={{ pl: 0, width: 32 }}>
-                      <Checkbox
-                        size="small"
-                        checked={isSelected}
-                        onChange={() => toggleOne(s.uid)}
-                        sx={{ p: 0 }}
-                      />
+                    <TableCell sx={{ pl: 0, width: 32 }} onClick={(e) => e.stopPropagation()}>
+                      <Checkbox size="small" checked={isSelected} onChange={() => toggleOne(s.uid)} sx={{ p: 0 }} />
                     </TableCell>
 
                     {col("photo") && (
                       <TableCell>
-                        <Avatar
-                          sx={{
-                            width: 34,
-                            height: 34,
-                            fontSize: 13,
-                            fontWeight: 700,
-                            bgcolor: stringToColor(s.name),
-                          }}
-                        >
-                          {initials(s.name)}
+                        <Avatar sx={{ width: 34, height: 34, fontSize: 13, fontWeight: 700, bgcolor: "#d1d9e0", color: "#6b7280" }}>
+                          <FiUser size={16} />
                         </Avatar>
                       </TableCell>
                     )}
@@ -1277,9 +742,7 @@ export const Students = () => {
 
                     {col("phone") && (
                       <TableCell>
-                        <Typography fontSize={13} color="primary.main" sx={{ cursor: "pointer" }}>
-                          {s.phone}
-                        </Typography>
+                        <Typography fontSize={13} color="#5c7fa3">{s.phone}</Typography>
                       </TableCell>
                     )}
 
@@ -1289,17 +752,9 @@ export const Students = () => {
                           <Chip
                             label={s.groupBadge}
                             size="small"
-                            sx={{
-                              fontSize: 10,
-                              height: 20,
-                              fontWeight: 600,
-                              bgcolor: badge.bg,
-                              color: badge.color,
-                            }}
+                            sx={{ fontSize: 10, height: 20, fontWeight: 600, bgcolor: badge.bg, color: badge.color, borderRadius: "4px" }}
                           />
-                          <Typography fontSize={13} color="#374151">
-                            {s.groupName}
-                          </Typography>
+                          <Typography fontSize={13} color="#374151">{s.groupName}</Typography>
                           <Typography fontSize={12} color="#9ca3af">
                             ({s.groupSchedule.split("• ")[1] || ""})
                           </Typography>
@@ -1308,25 +763,21 @@ export const Students = () => {
                     )}
 
                     {col("teachers") && (
-                      <TableCell sx={{ minWidth: 140, color: "#374151" }}>{s.teacher}</TableCell>
+                      <TableCell sx={{ minWidth: 140, color: "#374151" }}>
+                        {s.teacher}
+                      </TableCell>
                     )}
 
                     {col("training") && (
                       <TableCell sx={{ minWidth: 120 }}>
-                        <Typography fontSize={13} color="#9ca3af">
-                          {formatDate(s.startDate)} —
-                        </Typography>
-                        <Typography fontSize={13} color="#9ca3af">
-                          {formatDate(s.endDate)}
-                        </Typography>
+                        <Typography fontSize={13} color="#9ca3af">{formatDate(s.startDate)} —</Typography>
+                        <Typography fontSize={13} color="#9ca3af">{formatDate(s.endDate)}</Typography>
                       </TableCell>
                     )}
 
                     {col("balance") && (
                       <TableCell>
-                        <Typography
-                          fontSize={13}
-                          fontWeight={500}
+                        <Typography fontSize={13} fontWeight={500}
                           color={(s.balance ?? 0) < 0 ? "#ef4444" : "#16a34a"}
                         >
                           {(s.balance ?? 0).toLocaleString("ru-RU")}
@@ -1338,59 +789,36 @@ export const Students = () => {
 
                     {/* ACTIONS */}
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => openActionMenu(e, s.uid)}
-                        sx={{ color: "#6b7280" }}
-                      >
+                      <IconButton size="small" onClick={(e) => openActionMenu(e, s.uid)} sx={{ color: "#6b7280" }}>
                         <BsThreeDotsVertical size={15} />
                       </IconButton>
-
-                      {/* CONTEXT MENU */}
                       <Menu
                         anchorEl={actionMenu?.uid === s.uid ? actionMenu.el : null}
                         open={actionMenu?.uid === s.uid}
                         onClose={() => setActionMenu(null)}
-                        PaperProps={{
-                          sx: {
-                            borderRadius: 2,
-                            minWidth: 170,
-                            boxShadow: "0 4px 20px rgba(0,0,0,0.13)",
-                            border: "1px solid #f0f0f0",
-                          },
-                        }}
+                        PaperProps={{ sx: { borderRadius: 2, minWidth: 170, boxShadow: "0 4px 20px rgba(0,0,0,0.13)", border: "1px solid #f0f0f0" } }}
                         transformOrigin={{ horizontal: "right", vertical: "top" }}
                         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
                       >
-                        {/* Edit Student */}
                         <MenuItem
-                          onClick={handleOpenEdit}
+                          onClick={() => { setActionMenu(null); setEditDrawerOpen(true); }}
                           sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "#374151" }}
                         >
-                          <MdEdit size={16} color="#6b7280" />
-                          Edit Student
+                          <MdEdit size={16} color="#6b7280" /> Edit Student
                         </MenuItem>
-
                         <Divider sx={{ my: 0.5 }} />
-
-                        {/* Add payment */}
                         <MenuItem
-                          onClick={handleOpenPayment}
+                          onClick={() => { setActionMenu(null); setPaymentDrawerOpen(true); }}
                           sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "#16a34a" }}
                         >
-                          <MdPayment size={16} color="#16a34a" />
-                          Add payment
+                          <MdPayment size={16} color="#16a34a" /> Add payment
                         </MenuItem>
-
                         <Divider sx={{ my: 0.5 }} />
-
-                        {/* Remove */}
                         <MenuItem
-                          onClick={() => handleOpenDelete(s.uid)}
+                          onClick={() => { setActionMenu(null); setDeleteUid(s.uid); }}
                           sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "#ef4444" }}
                         >
-                          <MdDelete size={16} />
-                          Remove
+                          <MdDelete size={16} /> Remove
                         </MenuItem>
                       </Menu>
                     </TableCell>
@@ -1410,128 +838,40 @@ export const Students = () => {
         </TableContainer>
 
         {/* PAGINATION */}
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
+        <Stack direction="row" justifyContent="space-between" alignItems="center"
           sx={{ px: 3, py: 1.5, borderTop: "1px solid #f3f4f6" }}
         >
           <Typography fontSize={13} color="text.secondary">
             1–{Math.min(filtered.length, 20)} of {filtered.length}
           </Typography>
           <Stack direction="row" gap={0.5}>
-            <Button
-              size="small"
-              variant="outlined"
-              sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: 2 }}
-            >
-              {"<"}
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: 2 }}
-            >
-              {">"}
-            </Button>
+            {["<", ">"].map((lbl) => (
+              <Button key={lbl} size="small" variant="outlined"
+                sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: "6px", fontSize: 13 }}
+              >
+                {lbl}
+              </Button>
+            ))}
           </Stack>
         </Stack>
       </Paper>
 
-      {/* ADD STUDENT DIALOG */}
-      <Dialog
-        open={openAdd}
-        onClose={() => setOpenAdd(false)}
-        fullWidth
-        maxWidth="xs"
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Add Student</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} mt={1}>
-            <TextField
-              label="Full name"
-              size="small"
-              value={newStudent.name}
-              onChange={(e) => setNewStudent((p) => ({ ...p, name: e.target.value }))}
-            />
-            <TextField
-              label="Phone"
-              size="small"
-              value={newStudent.phone}
-              onChange={(e) => setNewStudent((p) => ({ ...p, phone: e.target.value }))}
-            />
-            <TextField
-              select
-              label="Group"
-              size="small"
-              value={newStudent.groupId}
-              onChange={(e) => setNewStudent((p) => ({ ...p, groupId: e.target.value }))}
-            >
-              {ALL_GROUPS.map((g) => (
-                <MenuItem key={g.id} value={String(g.id)}>
-                  {g.name} — {g.course}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenAdd(false)} sx={{ color: "#667085" }}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleAddStudent}
-            disabled={!newStudent.name || !newStudent.groupId}
-            sx={{ borderRadius: 2, bgcolor: "#1a3a4a", "&:hover": { bgcolor: "#122a38" } }}
-          >
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* DRAWERS & DIALOGS */}
+      <AddStudentDrawer open={addDrawerOpen} onClose={() => setAddDrawerOpen(false)} onSubmit={handleAddStudent} />
+      <AddPaymentDrawer open={paymentDrawerOpen} student={activeStudent} onClose={() => setPaymentDrawerOpen(false)} />
+      <EditStudentDrawer open={editDrawerOpen} student={activeStudent} onClose={() => setEditDrawerOpen(false)} onSave={handleSaveEdit} />
 
-      {/* DELETE CONFIRM */}
-      <Dialog
-        open={Boolean(deleteUid)}
-        onClose={() => setDeleteUid(null)}
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
+      <Dialog open={Boolean(deleteUid)} onClose={() => setDeleteUid(null)} PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>Delete Student</DialogTitle>
         <DialogContent>
-          <Typography fontSize={14} color="text.secondary">
-            Are you sure you want to remove this student?
-          </Typography>
+          <Typography fontSize={14} color="text.secondary">Are you sure you want to remove this student?</Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteUid(null)} sx={{ color: "#667085" }}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDeleteConfirm}
-            sx={{ borderRadius: 2 }}
-          >
-            Delete
-          </Button>
+          <Button onClick={() => setDeleteUid(null)} sx={{ color: "#667085" }}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteConfirm} sx={{ borderRadius: 2 }}>Delete</Button>
         </DialogActions>
       </Dialog>
-
-      {/* ADD PAYMENT DRAWER */}
-      <AddPaymentDrawer
-        open={paymentDrawerOpen}
-        student={activeStudent}
-        onClose={() => setPaymentDrawerOpen(false)}
-      />
-
-      {/* EDIT STUDENT DRAWER */}
-      <EditStudentDrawer
-        open={editDrawerOpen}
-        student={activeStudent}
-        onClose={() => setEditDrawerOpen(false)}
-        onSave={handleSaveEdit}
-      />
     </Box>
   );
 };
+

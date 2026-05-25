@@ -6,6 +6,7 @@ import { Teachers } from "./pages/Teachers/Teachers";
 import { Leads } from "./pages/Leads/Leads";
 import { Groups } from "./pages/Groups/Groups";
 import { Students } from "./pages/Students/Students";
+import { StudentProfile } from "./pages/StudentProfile/StudentProfile";
 import { Reminders } from "./pages/Reminders";
 import SignUp from "./pages/SignUp/SignUp";
 import LoginPage from "./pages/Login/Login";
@@ -21,21 +22,23 @@ import { SettingsSms } from "./pages/Settings/pages/sms";
 import { Grade } from "./pages/Settings/pages/grade";
 import { Voip } from "./pages/Settings/pages/voip";
 import { CEO } from "./pages/Settings/ceo/ceo";
-import { General } from "./pages/General";
+import { General } from "./pages/Settings/ceo/pages/general";
 import { Staff } from "./pages/Settings/ceo/pages/staff";
 import { Roadmap } from "./pages/Settings/ceo/pages/roadmap";
 import { Billing } from "./pages/Settings/ceo/pages/billing";
 import { Office } from "./pages/Settings/office/office";
 import { Courses } from "./pages/Settings/office/pages";
+import { SingleCourse } from "./pages/SingleCourse";
 import { Rooms } from "./pages/Settings/office/pages";
 import { Holidays } from "./pages/Settings/office/pages";
 import { StudentLeft } from "./pages/Settings/office/pages";
 import { Archive } from "./pages/Settings/office/pages";
 import { Forms } from "./pages/Settings/forms";
 import { Lists } from "./pages/Settings/forms/pages";
+import { CreateForm } from "./pages/Settings/forms/pages/createForm";
 import { Blog } from "./pages/Settings/blog";
 import { WhatsNew } from "./pages/Settings/blog/pages";
-
+import { BlogAdd } from "./pages/Settings/blog/pages/wahts-new/add";
 import { Finance } from "./pages/Finance/Finance";
 import { AllPayments } from "./pages/Finance/pages/AllPayments";
 import { Withdraw } from "./pages/Finance/pages/Withdraw";
@@ -71,6 +74,8 @@ export const AppRouter = () => {
         <Route path="/groups" element={<Layout><Groups/></Layout>} />
         <Route path="/groups/:id" element={<Layout><SingleGroup/></Layout>} />
         <Route path="/students" element={<Layout><Students/></Layout>} />
+        <Route path="/students/:id" element={<Layout><StudentProfile/></Layout>} />
+        <Route path="/courses/:id" element={<Layout><SingleCourse/></Layout>} />
         <Route path="/reminders" element={<Layout><Reminders/></Layout>} />
         <Route path="/rating" element={<Layout><Rating/></Layout>} />
         <Route path="/budget" element={<Layout><Budget/></Layout>} />
@@ -101,10 +106,13 @@ export const AppRouter = () => {
 
             <Route path="forms"             element={<Forms />} >
                 <Route path="list"      element={<Lists />} />
+                <Route path="create" element={<CreateForm />} />
+                <Route path="edit/:id" element={<CreateForm />} />
             </Route>
 
             <Route path="blog"             element={<Blog />} >
                 <Route path="whats-new"      element={<WhatsNew />} />
+                 <Route path="whats-new/add" element={<BlogAdd />} />
             </Route>
 
             <Route path="tags"             element={<Tags />} >

@@ -19,7 +19,6 @@ export interface Group {
   roomCapacity?: number;
   studentCount: number;
   students: Student[];
-  // Group page uchun qo'shimcha maydonlar
   course: string;
   teacher: string;
   teacherId: number;
@@ -266,8 +265,10 @@ export const TEACHERS_DATA: Teacher[] = [
 // Helper: barcha guruhlarni tekis ro'yxat sifatida olish
 export const ALL_GROUPS: Group[] = TEACHERS_DATA.flatMap((t) => t.groups);
 
-// Helper: barcha guruhlarni tekis ro'yxat sifatida olish
-export const ALL_STUDENTS: Student[] = TEACHERS_DATA.flatMap((t) => t.groups).flatMap((g) => g.students);
+// Helper: barcha o'quvchilarni tekis ro'yxat sifatida olish
+export const ALL_STUDENTS: Student[] = TEACHERS_DATA.flatMap((t) =>
+  t.groups.flatMap((g) => g.students)
+);
 
 // Helper: id bo'yicha guruh topish
 export const findGroupById = (id: number): Group | undefined =>

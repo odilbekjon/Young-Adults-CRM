@@ -51,12 +51,12 @@ import { ConversionReports } from "./pages/Reports/pages/ConversationReports";
 import { LeadsReports } from "./pages/Reports/pages/LeadsReports";
 import { StudentsLeftGroup } from "./pages/Reports/pages/StudentsLeftGroup";       
 import { Logs } from "./pages/Reports/Logs/Logs";
-import { Workly } from "./pages/Reports/Logs/pages/Workly";
-import { Sms } from "./pages/Reports/Logs/pages/Sms";
-import { Call } from "./pages/Reports/Logs/pages/Call";
-import { Log } from "./pages/Reports/Logs/pages/Log";
+import { Workly } from "./pages/Reports/Logs/pages/Workly/workly";
+import { Sms } from "./pages/Reports/Logs/pages/Sms/sms";
+import { Call } from "./pages/Reports/Logs/pages/Call/call";
+import { Log } from "./pages/Reports/Logs/pages/Log/log";
 import { Tags } from "./pages/Settings/tags";
-import { Tag } from "./pages/Settings/tags/pages";
+import { Tag } from "./pages/Settings/tags/pages/tag/tag";
 
 
 export const AppRouter = () => {

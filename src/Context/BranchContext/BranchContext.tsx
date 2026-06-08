@@ -1,92 +1,50 @@
+/* eslint-disable react-refresh/only-export-components */
 // src/Context/BranchContext.tsx
+import React, { createContext, useContext, useState } from "react";
+import { useData } from "../DataContext";
+import type { Group, Teacher } from "../../constants/Teachers";
 
-import React, { createContext, useContext, useState, useMemo } from "react";
-import { TEACHERS_DATA, ALL_GROUPS } from "../../constants/Teachers";
-import type { Teacher, Group, Student } from "../../constants/Teachers";
+// ✅ Header import qiladigan type va constant
+export type BranchId = string;
 
-export type BranchId = "all" | "ielts" | "yangi" | "istiqlol";
-
-interface BranchOption {
-  value: BranchId;
-  label: string;
-  /** constants/Teachers dagi branch string bilan mos */
-  match: string | null;
-}
-
-export const BRANCH_OPTIONS: BranchOption[] = [
-  { value: "all",      label: "All branches",       match: null },
-  { value: "ielts",    label: "YA IELTS Campus",    match: "YA IELTS Campus" },
-  { value: "yangi",    label: "Main Campus",        match: "Main Campus" },
-  { value: "istiqlol", label: "West Branch",        match: "West Branch" },
+// eslint-disable-next-line react-refresh/only-export-components
+export const BRANCH_OPTIONS: { value: BranchId; label: string }[] = [
+  { value: "all",              label: "All branches" },
+  { value: "YA IELTS Campus",  label: "YA IELTS Campus" },
+  { value: "Main Campus",      label: "Main Campus" },
+  { value: "West Branch",      label: "West Branch" },
 ];
 
 interface BranchContextValue {
   branch: BranchId;
   setBranch: (b: BranchId) => void;
   branchLabel: string;
-
-  // filtered data – istalgan sahifada ishlatish mumkin
-  teachers: Teacher[];
   groups: Group[];
-  students: Student[];
-
-  // Dashboard stats
-  stats: {
-    activeStudents: number;
-    groups: number;
-    debtors: number;
-    trialStudents: number;
-    courses: number;
-    teachers: number;
-    branches: number;
-  };
+  teachers: Teacher[];
 }
 
 const BranchContext = createContext<BranchContextValue | null>(null);
 
-export const BranchProvider = ({ children }: { children: React.ReactNode }) => {
+export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { groups: allGroups, teachers: allTeachers } = useData();
   const [branch, setBranch] = useState<BranchId>("all");
 
-  const value = useMemo<BranchContextValue>(() => {
-    const option = BRANCH_OPTIONS.find((o) => o.value === branch)!;
+  const groups =
+    branch === "all" ? allGroups : allGroups.filter((g) => g.branch === branch);
 
-    const teachers: Teacher[] =
-      option.match === null
-        ? TEACHERS_DATA
-        : TEACHERS_DATA.filter((t) => t.branch === option.match);
+  const teachers =
+    branch === "all" ? allTeachers : allTeachers.filter((t) => t.branch === branch);
 
-    const groups: Group[] =
-      option.match === null
-        ? ALL_GROUPS
-        : ALL_GROUPS.filter((g) => g.branch === option.match);
+  const branchLabel =
+    BRANCH_OPTIONS.find((o) => o.value === branch)?.label ?? "All branches";
 
-    const students: Student[] = groups.flatMap((g) => g.students);
-
-    const stats = {
-      activeStudents: students.filter((s) => s.active).length,
-      groups: groups.length,
-      debtors: 0,          // real loyihada API dan keladi
-      trialStudents: 0,    // real loyihada API dan keladi
-      courses: [...new Set(groups.map((g) => g.course))].length,
-      teachers: teachers.length,
-      branches: option.match === null ? BRANCH_OPTIONS.length - 1 : 1,
-    };
-
-    return {
-      branch,
-      setBranch,
-      branchLabel: option.label,
-      teachers,
-      groups,
-      students,
-      stats,
-    };
-  }, [branch]);
-
-  return <BranchContext.Provider value={value}>{children}</BranchContext.Provider>;
+  return (
+    <BranchContext.Provider value={{ branch, setBranch, branchLabel, groups, teachers }}>
+      {children}
+    </BranchContext.Provider>
+  );
 };
 
-/** Har qanday sahifada ishlatish uchun hook */
 export const useBranch = () => {
   const ctx = useContext(BranchContext);
   if (!ctx) throw new Error("useBranch must be used inside BranchProvider");

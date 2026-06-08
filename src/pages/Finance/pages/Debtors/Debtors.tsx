@@ -3,94 +3,104 @@ import { BsCashStack } from "react-icons/bs";
 import { FiFilter, FiCalendar, FiChevronDown, FiMail } from "react-icons/fi";
 import { IoTimeOutline } from "react-icons/io5";
 import { IoMdFlag } from "react-icons/io";
+import { buildFlatStudents } from "../../../../constants/FlatStudents";
 
 // ---------- Types ----------
-interface Debtor {
+interface DebtorRow {
+  uid: string;
   id: number;
   name: string;
   phone: string;
+  active: boolean;
+  groupId: number;
+  groupName: string;
+  groupBadge: string;
+  groupBadgeColor: "blue" | "green" | "amber";
+  groupSchedule: string;
+  teacher: string;
+  branch: string;
   balance: number;
   totalOnPeriod: number;
-  groupTag: string;
-  groupDetail: string;
   comment: string;
   task: string;
   status: string;
 }
 
-// ---------- Mock data ----------
-const MOCK_DEBTORS: Debtor[] = Array.from({ length: 47 }, (_, i) => {
-  const names = [
-    "Bo'riyeva Nozima (copy 3263)",
-    "Bekmurodov Hayitmurod",
-    "Qilichova Zarifa",
-    "Axrorova Madina",
-    "Bo'riyev Mirjalol",
-    "Toshmatov Jasur",
-    "Rahimova Dilnoza",
-    "Yusupov Sardor",
-    "Karimova Nilufar",
-    "Ergashev Bobur",
-  ];
-  const phones = [
-    "94 014 72 40", "94 590 76 07", "88 708 79 82", "70 039 29 90",
-    "94 870 21 10", "93 123 45 67", "91 234 56 78", "90 345 67 89",
-    "95 456 78 90", "97 567 89 01",
-  ];
-  const groups = [
-    { tag: "Young Developers", detail: "Frontend (Odilbek Safarov - 12:00) • 23.04.2026" },
-    { tag: "new group", detail: "Kampyuter Savodxonligi (Odilbek Safarov - 16:00) • 11.05.2026" },
-    { tag: "Math Masters", detail: "Matematika (G'ulomjon Egamberdiyev - 16:00) • 04.03.2026" },
-    { tag: "new group", detail: "Python Basics (Sherzod Tursunov - 14:00) • 15.04.2026" },
-  ];
-  const amounts = [-369231, -207692, -207692, -207692, -269231, -312000, -180000, -250000, -195000, -320000];
-  const idx = i % names.length;
-  const grp = groups[i % groups.length];
-  return {
-    id: i + 1,
-    name: names[idx],
-    phone: phones[idx],
-    balance: amounts[idx],
-    totalOnPeriod: amounts[idx],
-    groupTag: grp.tag,
-    groupDetail: grp.detail,
-    comment: "",
-    task: "",
-    status: "active",
-  };
-});
+// ---------- Build data from FlatStudents ----------
+const MOCK_BALANCES = [
+  -369231, -207692, -180000, -250000, -312000,
+  -195000, -320000, -148000, -265000, -290000,
+];
 
+const ALL_FLAT = buildFlatStudents();
+
+const DEBTORS_DATA: DebtorRow[] = ALL_FLAT.map((s, i) => ({
+  uid: s.uid,
+  id: s.id,
+  name: s.name,
+  phone: s.phone,
+  active: s.active,
+  groupId: s.groupId,
+  groupName: s.groupName,
+  groupBadge: s.groupBadge,
+  groupBadgeColor: s.groupBadgeColor,
+  groupSchedule: s.groupSchedule,
+  teacher: s.teacher,
+  branch: s.branch,
+  balance: MOCK_BALANCES[i % MOCK_BALANCES.length],
+  totalOnPeriod: MOCK_BALANCES[i % MOCK_BALANCES.length],
+  comment: "",
+  task: "",
+  status: s.active ? "Active (Not archived)" : "Archived",
+}));
+
+// ---------- Constants ----------
 const STATUSES = ["Active (Not archived)", "Archived", "All"];
 const PAGE_SIZE_OPTIONS = [20, 25, 50];
+const GROUP_OPTIONS = [...new Set(ALL_FLAT.map((s) => s.groupName))] as string[];
 
 // ---------- Helpers ----------
-const formatUZS = (n: number) =>
-  n.toLocaleString("uz-UZ") + " UZS";
+const formatUZS = (n: number) => n.toLocaleString("uz-UZ") + " UZS";
 
 // ---------- Small components ----------
 const SelectBox = ({
   value, onChange, options, placeholder,
-}: { value: string; onChange: (v: string) => void; options: string[]; placeholder?: string }) => {
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder?: string;
+}) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
   return (
     <div className="relative" ref={ref}>
-      <button type="button" onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-left hover:border-gray-400 transition-colors min-w-[140px]">
-        <span className={value ? "text-gray-800" : "text-gray-400"}>{value || placeholder || "Select"}</span>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-left hover:border-gray-400 transition-colors min-w-[140px]"
+      >
+        <span className={value ? "text-gray-800" : "text-gray-400"}>
+          {value || placeholder || "Select"}
+        </span>
         <FiChevronDown size={13} className="text-gray-400 ml-2 flex-shrink-0" />
       </button>
       {open && (
         <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-full py-1">
-          {options.map(opt => (
-            <button key={opt} type="button"
+          {options.map((opt) => (
+            <button
+              key={opt}
+              type="button"
               className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
-              onClick={() => { onChange(opt); setOpen(false); }}>
+              onClick={() => { onChange(opt); setOpen(false); }}
+            >
               {opt}
             </button>
           ))}
@@ -100,27 +110,40 @@ const SelectBox = ({
   );
 };
 
-const SearchByDropdown = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
+const SearchByDropdown = ({
+  value, onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) => {
   const opts = ["Name", "Phone", "Group"];
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
   return (
     <div className="relative flex-shrink-0" ref={ref}>
-      <button type="button" onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1 border border-gray-300 rounded-l px-3 py-1.5 text-sm bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors border-r-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 border border-gray-300 rounded-l px-3 py-1.5 text-sm bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors border-r-0"
+      >
         Search by {value} <FiChevronDown size={12} />
       </button>
       {open && (
         <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 min-w-[120px]">
-          {opts.map(opt => (
-            <button key={opt} type="button"
+          {opts.map((opt) => (
+            <button
+              key={opt}
+              type="button"
               className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              onClick={() => { onChange(opt); setOpen(false); }}>
+              onClick={() => { onChange(opt); setOpen(false); }}
+            >
               {opt}
             </button>
           ))}
@@ -128,6 +151,13 @@ const SearchByDropdown = ({ value, onChange }: { value: string; onChange: (v: st
       )}
     </div>
   );
+};
+
+// ---------- Badge color helper ----------
+const badgeCls = (color: "blue" | "green" | "amber") => {
+  if (color === "blue") return "bg-blue-100 text-blue-700";
+  if (color === "green") return "bg-green-100 text-green-700";
+  return "bg-amber-100 text-amber-700";
 };
 
 // ---------- Main Component ----------
@@ -141,20 +171,28 @@ export const Debtors = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [task, setTask] = useState("");
-  const [activeFilters, setActiveFilters] = useState({ searchBy: "Name", searchText: "", status: "Active (Not archived)", group: "", debtFrom: "", debtTo: "" });
-  const [selected, setSelected] = useState<number[]>([]);
+  const [activeFilters, setActiveFilters] = useState({
+    searchBy: "Name",
+    searchText: "",
+    status: "Active (Not archived)",
+    group: "",
+    debtFrom: "",
+    debtTo: "",
+  });
+  const [selected, setSelected] = useState<string[]>([]); // uid based
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // Filtered
-  const filtered = MOCK_DEBTORS.filter(d => {
+  // ---------- Filter ----------
+  const filtered = DEBTORS_DATA.filter((d) => {
     if (activeFilters.searchText) {
       const val = activeFilters.searchText.toLowerCase();
       if (activeFilters.searchBy === "Name" && !d.name.toLowerCase().includes(val)) return false;
       if (activeFilters.searchBy === "Phone" && !d.phone.includes(val)) return false;
-      if (activeFilters.searchBy === "Group" && !d.groupDetail.toLowerCase().includes(val)) return false;
+      if (activeFilters.searchBy === "Group" && !d.groupName.toLowerCase().includes(val)) return false;
     }
-    if (activeFilters.group && d.groupTag !== activeFilters.group) return false;
+    if (activeFilters.group && d.groupName !== activeFilters.group) return false;
+    if (activeFilters.status !== "All" && d.status !== activeFilters.status) return false;
     if (activeFilters.debtFrom && d.balance > Number(activeFilters.debtFrom)) return false;
     if (activeFilters.debtTo && d.balance < Number(activeFilters.debtTo)) return false;
     return true;
@@ -162,24 +200,24 @@ export const Debtors = () => {
 
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
-
   const totalBalance = filtered.reduce((a, d) => a + d.balance, 0);
   const totalPeriod = filtered.reduce((a, d) => a + d.totalOnPeriod, 0);
 
-  const allChecked = paginated.length > 0 && paginated.every(d => selected.includes(d.id));
+  const allChecked = paginated.length > 0 && paginated.every((d) => selected.includes(d.uid));
   const toggleAll = () => {
-    if (allChecked) setSelected(s => s.filter(id => !paginated.find(d => d.id === id)));
-    else setSelected(s => [...new Set([...s, ...paginated.map(d => d.id)])]);
+    if (allChecked) setSelected((s) => s.filter((uid) => !paginated.find((d) => d.uid === uid)));
+    else setSelected((s) => [...new Set([...s, ...paginated.map((d) => d.uid)])]);
   };
-  const toggleOne = (id: number) =>
-    setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+  const toggleOne = (uid: string) =>
+    setSelected((s) => s.includes(uid) ? s.filter((x) => x !== uid) : [...s, uid]);
 
   const handleFilter = () => {
     setActiveFilters({ searchBy, searchText, status, group, debtFrom, debtTo });
     setPage(1);
   };
 
-  const inputCls = "border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400 w-full";
+  const inputCls =
+    "border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400 w-full";
 
   return (
     <div className="min-h-screen bg-gray-100 p-6 font-sans">
@@ -213,8 +251,12 @@ export const Debtors = () => {
             <label className="text-xs text-gray-500 mb-1 block">Search</label>
             <div className="flex">
               <SearchByDropdown value={searchBy} onChange={setSearchBy} />
-              <input type="text" className="flex-1 border border-gray-300 rounded-r px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
-                value={searchText} onChange={e => setSearchText(e.target.value)} />
+              <input
+                type="text"
+                className="flex-1 border border-gray-300 rounded-r px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
             </div>
           </div>
           <div>
@@ -223,41 +265,64 @@ export const Debtors = () => {
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Group</label>
-            <SelectBox value={group} onChange={setGroup} options={["Young Developers", "new group", "Math Masters"]} placeholder="Select" />
+            <SelectBox value={group} onChange={setGroup} options={GROUP_OPTIONS} placeholder="Select" />
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Debt amount (from)</label>
-            <SelectBox value={debtFrom} onChange={setDebtFrom} options={["-100000", "-200000", "-300000", "-400000"]} placeholder="Select" />
+            <SelectBox
+              value={debtFrom}
+              onChange={setDebtFrom}
+              options={["-100000", "-200000", "-300000", "-400000"]}
+              placeholder="Select"
+            />
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Debt amount (to)</label>
-            <SelectBox value={debtTo} onChange={setDebtTo} options={["-100000", "-200000", "-300000", "-400000"]} placeholder="Select" />
+            <SelectBox
+              value={debtTo}
+              onChange={setDebtTo}
+              options={["-100000", "-200000", "-300000", "-400000"]}
+              placeholder="Select"
+            />
           </div>
         </div>
+
         {/* Row 2 */}
         <div className="flex items-end gap-3">
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Date from</label>
             <div className="relative">
               <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
-              <input type="text" className={inputCls + " pl-7 w-44"} placeholder="No date selected"
-                value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+              <input
+                type="text"
+                className={inputCls + " pl-7 w-44"}
+                placeholder="No date selected"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
             </div>
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Date to</label>
             <div className="relative">
               <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
-              <input type="text" className={inputCls + " pl-7 w-44"} placeholder="No date selected"
-                value={dateTo} onChange={e => setDateTo(e.target.value)} />
+              <input
+                type="text"
+                className={inputCls + " pl-7 w-44"}
+                placeholder="No date selected"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
             </div>
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Task</label>
             <SelectBox value={task} onChange={setTask} options={["Task 1", "Task 2", "Task 3"]} placeholder="Select" />
           </div>
-          <button onClick={handleFilter}
-            className="bg-blue-700 hover:bg-blue-800 text-white rounded-full px-6 py-1.5 text-sm font-medium transition-colors">
+          <button
+            onClick={handleFilter}
+            className="bg-blue-700 hover:bg-blue-800 text-white rounded-full px-6 py-1.5 text-sm font-medium transition-colors"
+          >
             Filter
           </button>
         </div>
@@ -267,9 +332,12 @@ export const Debtors = () => {
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Rows per page:</span>
-          <select className="border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:outline-none"
-            value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}>
-            {PAGE_SIZE_OPTIONS.map(n => <option key={n}>{n}</option>)}
+          <select
+            className="border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:outline-none"
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+          >
+            {PAGE_SIZE_OPTIONS.map((n) => <option key={n}>{n}</option>)}
           </select>
         </div>
         <button className="flex items-center gap-2 border border-gray-300 rounded px-3 py-1.5 text-sm text-gray-600 bg-white hover:bg-gray-50 transition-colors">
@@ -283,8 +351,7 @@ export const Debtors = () => {
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
               <th className="px-4 py-3 w-8">
-                <input type="checkbox" checked={allChecked} onChange={toggleAll}
-                  className="rounded accent-blue-600" />
+                <input type="checkbox" checked={allChecked} onChange={toggleAll} className="rounded accent-blue-600" />
               </th>
               <th className="px-3 py-3 text-left text-gray-500 font-medium w-8">#</th>
               <th className="px-3 py-3 text-left text-gray-500 font-medium">Name</th>
@@ -302,13 +369,19 @@ export const Debtors = () => {
           </thead>
           <tbody>
             {paginated.length === 0 ? (
-              <tr><td colSpan={11} className="text-center py-10 text-gray-400">No Data</td></tr>
+              <tr>
+                <td colSpan={11} className="text-center py-10 text-gray-400">No Data</td>
+              </tr>
             ) : (
               paginated.map((d, i) => (
-                <tr key={d.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <tr key={d.uid} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
-                    <input type="checkbox" checked={selected.includes(d.id)} onChange={() => toggleOne(d.id)}
-                      className="rounded accent-blue-600" />
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(d.uid)}
+                      onChange={() => toggleOne(d.uid)}
+                      className="rounded accent-blue-600"
+                    />
                   </td>
                   <td className="px-3 py-3 text-gray-500 text-xs">{(page - 1) * pageSize + i + 1}.</td>
                   <td className="px-3 py-3 font-medium text-gray-800 whitespace-nowrap">{d.name}</td>
@@ -317,11 +390,12 @@ export const Debtors = () => {
                   <td className="px-3 py-3 text-gray-700 whitespace-nowrap">{formatUZS(d.totalOnPeriod)}</td>
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-xs px-2 py-0.5 rounded font-medium whitespace-nowrap
-                        ${d.groupTag === "Young Developers" ? "bg-blue-100 text-blue-700" : "bg-gray-200 text-gray-600"}`}>
-                        {d.groupTag}
+                      <span className={`text-xs px-2 py-0.5 rounded font-medium whitespace-nowrap ${badgeCls(d.groupBadgeColor)}`}>
+                        {d.groupBadge}
                       </span>
-                      <span className="text-gray-600 text-xs whitespace-nowrap">{d.groupDetail}</span>
+                      <span className="text-gray-600 text-xs whitespace-nowrap">
+                        {d.groupName} ({d.teacher} · {d.groupSchedule})
+                      </span>
                     </div>
                   </td>
                   <td className="px-3 py-3">
@@ -333,7 +407,7 @@ export const Debtors = () => {
                     <IoTimeOutline size={18} className="text-orange-400" />
                   </td>
                   <td className="px-3 py-3">
-                    <IoMdFlag size={18} className="text-green-500" />
+                    <IoMdFlag size={18} className={d.active ? "text-green-500" : "text-gray-400"} />
                   </td>
                   <td className="px-3 py-3" />
                 </tr>
@@ -351,38 +425,28 @@ export const Debtors = () => {
           </span>
           <div className="flex items-center gap-1">
             <button onClick={() => setPage(1)} disabled={page === 1}
-              className="px-2 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              «
-            </button>
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="px-3 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              ‹
-            </button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              className="px-2 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">«</button>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-3 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">‹</button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
               let p: number;
-              if (totalPages <= 5) p = i + 1;
-              else if (page <= 3) p = i + 1;
-              else if (page >= totalPages - 2) p = totalPages - 4 + i;
-              else p = page - 2 + i;
+              if (totalPages <= 5) p = idx + 1;
+              else if (page <= 3) p = idx + 1;
+              else if (page >= totalPages - 2) p = totalPages - 4 + idx;
+              else p = page - 2 + idx;
               return (
                 <button key={p} onClick={() => setPage(p)}
                   className={`px-3 py-1 rounded text-sm border transition-colors ${
-                    page === p
-                      ? "bg-blue-700 border-blue-700 text-white"
-                      : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                    page === p ? "bg-blue-700 border-blue-700 text-white" : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
                   }`}>
                   {p}
                 </button>
               );
             })}
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="px-3 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              ›
-            </button>
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="px-3 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">›</button>
             <button onClick={() => setPage(totalPages)} disabled={page === totalPages}
-              className="px-2 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              »
-            </button>
+              className="px-2 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">»</button>
           </div>
         </div>
       )}

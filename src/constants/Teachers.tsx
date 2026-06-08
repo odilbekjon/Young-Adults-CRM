@@ -40,6 +40,7 @@ export interface Teacher {
   dob?: string;
   gender?: string;
   groups: Group[];
+  students?: Student[]; // Optional: barcha guruhlardagi o'quvchilarni tekis ro'yxat sifatida olish uchun
 }
 
 export const TEACHERS_DATA: Teacher[] = [

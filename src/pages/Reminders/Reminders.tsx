@@ -13,16 +13,41 @@ import {
   InputLabel,
   FormControl,
   IconButton,
+  // Popover,
 } from "@mui/material";
-import { MdAdd, MdClose, MdCheck, MdAccessTime, MdPerson, MdGroup } from "react-icons/md";
-import { useState } from "react";
+import {
+  MdAdd,
+  MdClose,
+  MdCheck,
+  MdAccessTime,
+  MdPerson,
+  MdGroup,
+  MdCalendarToday,
+} from "react-icons/md";
+import { useState, useRef } from "react";
+
+// ─── Mock teachers ────────────────────────────────────────────────────────────
+const TEACHERS = [
+  { id: 1, name: "Alisher Karimov" },
+  { id: 2, name: "Malika Yusupova" },
+  { id: 3, name: "Jasur Toshmatov" },
+  { id: 4, name: "Nilufar Rahimova" },
+  { id: 5, name: "Bobur Xasanov" },
+];
+
+type ReminderStatus = "overdue" | "today" | "future";
+type FilterStatus = "active" | "done" | "";
 
 type Reminder = {
   id: number;
   title: string;
   description: string;
   date: string;
-  status: "overdue" | "today" | "future";
+  dateValue: string; // "YYYY-MM-DD"
+  status: ReminderStatus;
+  assigneeId: number | "";
+  tags: string;
+  isDone: boolean;
 };
 
 const emptyForm = {
@@ -30,106 +55,170 @@ const emptyForm = {
   description: "",
   tags: "",
   priority: "",
-  datetime: new Date(new Date().setHours(23, 59, 0, 0)).toISOString().slice(0, 16),
-  assignee: "",
+  datetime: new Date(new Date().setHours(23, 59, 0, 0))
+    .toISOString()
+    .slice(0, 16),
+  assigneeId: "" as number | "",
 };
 
-export const Reminders = () => {
-  const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function calcStatus(datetimeStr: string): ReminderStatus {
+  const selected = new Date(datetimeStr);
+  const now = new Date();
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
 
-  const overdue = reminders.filter((r) => r.status === "overdue");
-  const today = reminders.filter((r) => r.status === "today");
-  const future = reminders.filter((r) => r.status === "future");
+  if (selected < now) return "overdue";
+  if (selected >= todayStart && selected < tomorrowStart) return "today";
+  return "future";
+}
 
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
-  const handleReset = () => setForm(emptyForm);
+function formatDate(datetimeStr: string): string {
+  return datetimeStr.replace("T", " ");
+}
 
-  const handleCreate = () => {
-    if (!form.title.trim()) return;
-    const selected = new Date(form.datetime);
-    const now = new Date();
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    const tomorrowDate = new Date(todayDate);
-    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+// ─── Filter select style ──────────────────────────────────────────────────────
+const filterSelectSx = {
+  bgcolor: "#fff",
+  "& .MuiOutlinedInput-notchedOutline": { borderColor: "#dde1e9" },
+  "& .MuiSelect-select": { py: "7px", px: "12px", fontSize: 13.5, color: "#555" },
+  borderRadius: "6px",
+  minWidth: 150,
+};
 
-    let status: Reminder["status"] = "future";
-    if (selected < now) status = "overdue";
-    else if (selected >= todayDate && selected < tomorrowDate) status = "today";
+// ─── Date filter button (no external lib) ─────────────────────────────────────
+function DateFilterButton({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string; // "YYYY-MM-DD" or ""
+  onChange: (v: string) => void;
+}) {
+  const [, setAnchor] = useState<HTMLElement | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-    setReminders((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        title: form.title,
-        description: form.description,
-        date: form.datetime.replace("T", " "),
-        status,
-      },
-    ]);
-    setForm(emptyForm);
-    setOpen(false);
-  };
+  const displayValue = value
+    ? value.split("-").reverse().join(".")
+    : null;
 
-  const filterSelectSx = {
-    bgcolor: "#fff",
-    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#dde1e9" },
-    "& .MuiSelect-select": { py: "7px", px: "12px", fontSize: 13.5, color: "#555" },
-    borderRadius: "6px",
-    minWidth: 140,
-  };
-
-  const CountBox = ({
-    count,
-    color,
-  }: {
-    count: number;
-    color: string;
-  }) => (
-    <Box
-      sx={{
-        width: 34,
-        height: 34,
-        border: `2px solid ${color}`,
-        borderRadius: "4px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color,
-        fontWeight: 700,
-        fontSize: 17,
-      }}
-    >
-      {count}
-    </Box>
+  return (
+    <>
+      <Box
+        onClick={(e) => {
+          setAnchor(e.currentTarget);
+          // native calendar ni ochish uchun kichik timeout
+          setTimeout(() => inputRef.current?.showPicker?.(), 50);
+        }}
+        sx={{
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          gap: 0.8,
+          bgcolor: "#fff",
+          border: "1px solid #dde1e9",
+          borderRadius: "6px",
+          px: 1.5,
+          py: "7px",
+          fontSize: 13.5,
+          color: displayValue ? "#222" : "#555",
+          cursor: "pointer",
+          minWidth: 160,
+          userSelect: "none",
+          "&:hover": { borderColor: "#bbb" },
+        }}
+      >
+        <MdCalendarToday size={15} color="#888" />
+        {displayValue ?? label}
+        {displayValue && (
+          <Box
+            component="span"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange("");
+            }}
+            sx={{
+              ml: "auto",
+              display: "flex",
+              color: "#aaa",
+              "&:hover": { color: "#555" },
+            }}
+          >
+            <MdClose size={14} />
+          </Box>
+        )}
+        {/* Hidden native date input */}
+        <input
+          ref={inputRef}
+          type="date"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setAnchor(null);
+          }}
+          style={{
+            position: "absolute",
+            opacity: 0,
+            width: 0,
+            height: 0,
+            pointerEvents: "none",
+          }}
+        />
+      </Box>
+    </>
   );
+}
 
-  const NoMore = () => (
-    <Box
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      gap={0.8}
-      py={2}
-      sx={{ color: "#aaa", fontSize: 13 }}
-    >
-      <MdCheck color="#4caf50" size={14} />
-      No more
-    </Box>
-  );
+// ─── CountBox ─────────────────────────────────────────────────────────────────
+const CountBox = ({ count, color }: { count: number; color: string }) => (
+  <Box
+    sx={{
+      width: 34,
+      height: 34,
+      border: `2px solid ${color}`,
+      borderRadius: "4px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color,
+      fontWeight: 700,
+      fontSize: 17,
+    }}
+  >
+    {count}
+  </Box>
+);
 
-  const Column = ({
-    label,
-    color,
-    items,
-  }: {
-    label: string;
-    color: string;
-    items: Reminder[];
-  }) => (
+const NoMore = () => (
+  <Box
+    display="flex"
+    alignItems="center"
+    justifyContent="center"
+    gap={0.8}
+    py={2}
+    sx={{ color: "#aaa", fontSize: 13 }}
+  >
+    <MdCheck color="#4caf50" size={14} />
+    No more
+  </Box>
+);
+
+// ─── Column ───────────────────────────────────────────────────────────────────
+function Column({
+  label,
+  color,
+  items,
+  onDone,
+}: {
+  label: string;
+  color: string;
+  items: Reminder[];
+  onDone: (id: number) => void;
+}) {
+  return (
     <Box flex={1} pr={3} sx={{ "&:last-child": { pr: 0 } }}>
       <Box
         display="flex"
@@ -148,17 +237,43 @@ export const Reminders = () => {
         <Box
           key={r.id}
           sx={{
-            bgcolor: "#fff",
+            bgcolor: r.isDone ? "#f5f5f5" : "#fff",
             borderRadius: "8px",
             p: 2,
             mb: 1.5,
             boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+            opacity: r.isDone ? 0.7 : 1,
           }}
         >
-          <Typography fontWeight={600} fontSize={14} mb={0.5}>
-            {r.title}
-          </Typography>
-          <Box display="flex" alignItems="center" gap={0.6} sx={{ color: "#999", fontSize: 12 }}>
+          <Box display="flex" alignItems="flex-start" justifyContent="space-between">
+            <Typography
+              fontWeight={600}
+              fontSize={14}
+              mb={0.5}
+              sx={{
+                textDecoration: r.isDone ? "line-through" : "none",
+                color: r.isDone ? "#aaa" : "#222",
+              }}
+            >
+              {r.title}
+            </Typography>
+            {!r.isDone && (
+              <IconButton
+                size="small"
+                title="Mark as done"
+                onClick={() => onDone(r.id)}
+                sx={{ ml: 1, color: "#4caf50", p: 0.3 }}
+              >
+                <MdCheck size={16} />
+              </IconButton>
+            )}
+          </Box>
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={0.6}
+            sx={{ color: "#999", fontSize: 12 }}
+          >
             <MdAccessTime size={13} />
             {r.date}
           </Box>
@@ -167,11 +282,120 @@ export const Reminders = () => {
               {r.description}
             </Typography>
           )}
+          {r.assigneeId !== "" && (
+            <Box display="flex" alignItems="center" gap={0.5} mt={0.8}>
+              <MdPerson size={13} color="#aaa" />
+              <Typography fontSize={12} color="#888">
+                {TEACHERS.find((t) => t.id === r.assigneeId)?.name}
+              </Typography>
+            </Box>
+          )}
+          {r.tags && (
+            <Chip
+              label={r.tags}
+              size="small"
+              sx={{
+                mt: 0.8,
+                fontSize: 11,
+                height: 20,
+                bgcolor: "#e3f2fd",
+                color: "#1976d2",
+              }}
+            />
+          )}
         </Box>
       ))}
       {items.length === 0 && <NoMore />}
     </Box>
   );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+export const Reminders = () => {
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+
+  // Filters
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>("");
+  const [filterAssignee, setFilterAssignee] = useState<number | "">("");
+  const [filterTags, setFilterTags] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+
+  // Active chips
+  const activeChips: { key: string; label: string; clear: () => void }[] = [];
+  if (filterStatus)
+    activeChips.push({
+      key: "status",
+      label: filterStatus === "active" ? "Active" : "Done",
+      clear: () => setFilterStatus(""),
+    });
+  if (filterAssignee)
+    activeChips.push({
+      key: "assignee",
+      label: TEACHERS.find((t) => t.id === filterAssignee)?.name ?? "",
+      clear: () => setFilterAssignee(""),
+    });
+  if (filterTags)
+    activeChips.push({ key: "tags", label: filterTags, clear: () => setFilterTags("") });
+  if (filterDateFrom)
+    activeChips.push({
+      key: "from",
+      label: `From: ${filterDateFrom.split("-").reverse().join(".")}`,
+      clear: () => setFilterDateFrom(""),
+    });
+  if (filterDateTo)
+    activeChips.push({
+      key: "to",
+      label: `To: ${filterDateTo.split("-").reverse().join(".")}`,
+      clear: () => setFilterDateTo(""),
+    });
+
+  // Filter logic
+  const filtered = reminders.filter((r) => {
+    if (filterStatus === "active" && r.isDone) return false;
+    if (filterStatus === "done" && !r.isDone) return false;
+    if (filterAssignee && r.assigneeId !== filterAssignee) return false;
+    if (filterTags && r.tags !== filterTags) return false;
+    if (filterDateFrom && r.dateValue < filterDateFrom) return false;
+    if (filterDateTo && r.dateValue > filterDateTo) return false;
+    return true;
+  });
+
+  const overdue = filtered.filter((r) => r.status === "overdue");
+  const today = filtered.filter((r) => r.status === "today");
+  const future = filtered.filter((r) => r.status === "future");
+
+  const allTags = Array.from(
+    new Set(reminders.map((r) => r.tags).filter(Boolean))
+  );
+
+  const handleCreate = () => {
+    if (!form.title.trim()) return;
+    setReminders((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        title: form.title,
+        description: form.description,
+        date: formatDate(form.datetime),
+        dateValue: form.datetime.slice(0, 10),
+        status: calcStatus(form.datetime),
+        assigneeId: form.assigneeId,
+        tags: form.tags,
+        isDone: false,
+      },
+    ]);
+    setForm(emptyForm);
+    setOpen(false);
+  };
+
+  const handleDone = (id: number) => {
+    setReminders((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, isDone: true } : r))
+    );
+  };
 
   return (
     <Box p={4} bgcolor="#f0f2f5" minHeight="100vh">
@@ -181,36 +405,77 @@ export const Reminders = () => {
       </Typography>
 
       {/* FILTERS */}
-      <Box display="flex" flexWrap="wrap" alignItems="center" gap={1.2} mb={4}>
-        <Chip
-          label="Active"
-          onDelete={() => {}}
-          deleteIcon={<MdClose />}
-          sx={{
-            bgcolor: "#fff",
-            border: "1px solid #dde1e9",
-            borderRadius: "6px",
-            fontSize: 13.5,
-            "& .MuiChip-deleteIcon": { fontSize: 16 },
-          }}
+      <Box display="flex" flexWrap="wrap" alignItems="center" gap={1.2} mb={activeChips.length ? 1.5 : 4}>
+        {/* Status */}
+        <Select
+          displayEmpty
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+          sx={filterSelectSx}
+        >
+          <MenuItem value="" disabled sx={{ fontSize: 13.5, color: "#555" }}>
+            Select status
+          </MenuItem>
+          <MenuItem value="active" sx={{ fontSize: 13.5 }}>
+            Active
+          </MenuItem>
+          <MenuItem value="done" sx={{ fontSize: 13.5 }}>
+            Done
+          </MenuItem>
+        </Select>
+
+        {/* Assignee */}
+        <Select
+          displayEmpty
+          value={filterAssignee}
+          onChange={(e) => setFilterAssignee(e.target.value as number | "")}
+          sx={filterSelectSx}
+        >
+          <MenuItem value="" disabled sx={{ fontSize: 13.5, color: "#555" }}>
+            Select assignee
+          </MenuItem>
+          {TEACHERS.map((t) => (
+            <MenuItem key={t.id} value={t.id} sx={{ fontSize: 13.5 }}>
+              {t.name}
+            </MenuItem>
+          ))}
+        </Select>
+
+        {/* Tags */}
+        <Select
+          displayEmpty
+          value={filterTags}
+          onChange={(e) => setFilterTags(e.target.value)}
+          sx={filterSelectSx}
+        >
+          <MenuItem value="" disabled sx={{ fontSize: 13.5, color: "#555" }}>
+            Select tags
+          </MenuItem>
+          {allTags.map((tag) => (
+            <MenuItem key={tag} value={tag} sx={{ fontSize: 13.5 }}>
+              {tag}
+            </MenuItem>
+          ))}
+        </Select>
+
+        {/* Date from */}
+        <DateFilterButton
+          label="Select date (from)"
+          value={filterDateFrom}
+          onChange={setFilterDateFrom}
         />
-        <Select displayEmpty value="" sx={filterSelectSx}>
-          <MenuItem value="" disabled sx={{ fontSize: 13.5 }}>Select assignee</MenuItem>
-        </Select>
-        <Select displayEmpty value="" sx={filterSelectSx}>
-          <MenuItem value="" disabled sx={{ fontSize: 13.5 }}>Select tags</MenuItem>
-        </Select>
-        <Select displayEmpty value="" sx={filterSelectSx}>
-          <MenuItem value="" disabled sx={{ fontSize: 13.5 }}>📅 Select date</MenuItem>
-        </Select>
-        <Select displayEmpty value="" sx={filterSelectSx}>
-          <MenuItem value="" disabled sx={{ fontSize: 13.5 }}>📅 Select date</MenuItem>
-        </Select>
+
+        {/* Date to */}
+        <DateFilterButton
+          label="Select date (to)"
+          value={filterDateTo}
+          onChange={setFilterDateTo}
+        />
 
         <Button
           variant="contained"
           startIcon={<MdAdd />}
-          onClick={handleOpen}
+          onClick={() => setOpen(true)}
           sx={{
             ml: "auto",
             bgcolor: "#2196f3",
@@ -225,17 +490,58 @@ export const Reminders = () => {
         </Button>
       </Box>
 
+      {/* FILTER CHIPS */}
+      {activeChips.length > 0 && (
+        <Box display="flex" flexWrap="wrap" gap={0.8} mb={3}>
+          {activeChips.map((chip) => (
+            <Chip
+              key={chip.key}
+              label={chip.label}
+              onDelete={chip.clear}
+              deleteIcon={<MdClose />}
+              size="small"
+              sx={{
+                bgcolor: "#fff",
+                border: "1px solid #dde1e9",
+                borderRadius: "6px",
+                fontSize: 12.5,
+                "& .MuiChip-deleteIcon": { fontSize: 15 },
+              }}
+            />
+          ))}
+          <Chip
+            label="Clear all"
+            onClick={() => {
+              setFilterStatus("");
+              setFilterAssignee("");
+              setFilterTags("");
+              setFilterDateFrom("");
+              setFilterDateTo("");
+            }}
+            size="small"
+            sx={{
+              bgcolor: "#ffebee",
+              color: "#f44336",
+              border: "1px solid #ffcdd2",
+              borderRadius: "6px",
+              fontSize: 12.5,
+              cursor: "pointer",
+            }}
+          />
+        </Box>
+      )}
+
       {/* COLUMNS */}
       <Box display="flex" gap={0}>
-        <Column label="Overdue" color="#f44336" items={overdue} />
-        <Column label="Today" color="#2196f3" items={today} />
-        <Column label="Future" color="#9e9e9e" items={future} />
+        <Column label="Overdue" color="#f44336" items={overdue} onDone={handleDone} />
+        <Column label="Today" color="#2196f3" items={today} onDone={handleDone} />
+        <Column label="Future" color="#9e9e9e" items={future} onDone={handleDone} />
       </Box>
 
       {/* CREATE MODAL */}
       <Dialog
         open={open}
-        onClose={handleClose}
+        onClose={() => setOpen(false)}
         PaperProps={{
           sx: { borderRadius: "10px", width: 460, maxWidth: "95vw", p: "4px" },
         }}
@@ -243,7 +549,7 @@ export const Reminders = () => {
         <DialogTitle sx={{ fontSize: 19, fontWeight: 600, color: "#1a1a2e", pb: 1 }}>
           Create reminder
           <IconButton
-            onClick={handleClose}
+            onClick={() => setOpen(false)}
             sx={{ position: "absolute", right: 12, top: 12, color: "#aaa" }}
           >
             <MdClose />
@@ -251,7 +557,6 @@ export const Reminders = () => {
         </DialogTitle>
 
         <DialogContent sx={{ pt: "8px !important" }}>
-          {/* Title */}
           <InputLabel sx={{ fontSize: 13.5, fontWeight: 600, color: "#333", mb: 0.6 }}>
             <span style={{ color: "#f44336" }}>*</span>Title
           </InputLabel>
@@ -264,7 +569,6 @@ export const Reminders = () => {
             sx={{ mb: 2 }}
           />
 
-          {/* Description */}
           <InputLabel sx={{ fontSize: 13.5, fontWeight: 600, color: "#333", mb: 0.6 }}>
             Description
           </InputLabel>
@@ -283,7 +587,6 @@ export const Reminders = () => {
             {form.description.length}/255
           </Typography>
 
-          {/* Tags */}
           <InputLabel sx={{ fontSize: 13.5, fontWeight: 600, color: "#333", mb: 0.6 }}>
             Tags
           </InputLabel>
@@ -294,10 +597,13 @@ export const Reminders = () => {
               onChange={(e) => setForm({ ...form, tags: e.target.value })}
             >
               <MenuItem value="">Select tags</MenuItem>
+              <MenuItem value="Payment">Payment</MenuItem>
+              <MenuItem value="Meeting">Meeting</MenuItem>
+              <MenuItem value="Urgent">Urgent</MenuItem>
+              <MenuItem value="Follow-up">Follow-up</MenuItem>
             </Select>
           </FormControl>
 
-          {/* Details */}
           <Typography fontSize={13.5} fontWeight={600} color="#333" mb={1}>
             Details
           </Typography>
@@ -336,11 +642,18 @@ export const Reminders = () => {
             <FormControl fullWidth size="small">
               <Select
                 displayEmpty
-                value={form.assignee}
-                onChange={(e) => setForm({ ...form, assignee: e.target.value })}
+                value={form.assigneeId}
+                onChange={(e) =>
+                  setForm({ ...form, assigneeId: e.target.value as number | "" })
+                }
                 sx={{ bgcolor: "#f8f9fb" }}
               >
                 <MenuItem value="">Select assignee</MenuItem>
+                {TEACHERS.map((t) => (
+                  <MenuItem key={t.id} value={t.id}>
+                    {t.name}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Box>
@@ -348,7 +661,7 @@ export const Reminders = () => {
 
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
           <Button
-            onClick={handleReset}
+            onClick={() => setForm(emptyForm)}
             sx={{
               border: "1.5px solid #dde1e9",
               color: "#555",

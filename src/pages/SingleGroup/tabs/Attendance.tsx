@@ -12,16 +12,16 @@ import {
   Typography,
   Button,
   Avatar,
-  Menu,
-  MenuItem,
+  Tooltip,
 } from "@mui/material";
 import {
   MdKeyboardDoubleArrowLeft,
   MdKeyboardDoubleArrowRight,
   MdKeyboardArrowLeft,
   MdKeyboardArrowRight,
+  MdClose,
+  MdCheck,
 } from "react-icons/md";
-import { MdClose } from "react-icons/md";
 import { useState } from "react";
 import { Student } from "../../../types/group";
 
@@ -48,10 +48,6 @@ export const Attendance = ({ students }: Props) => {
     Record<number, Record<number, AttVal>>
   >({});
 
-  // Menu state
-  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
-  const [menuTarget, setMenuTarget] = useState<{ studentId: number; day: number } | null>(null);
-
   const totalDays = getDaysInMonth(year, month);
   const lessonDays = Array.from({ length: totalDays }, (_, i) => i + 1);
   const today = now.getDate();
@@ -74,32 +70,14 @@ export const Attendance = ({ students }: Props) => {
     setYear(now.getFullYear());
   };
 
-  // Open dropdown menu on cell click
-  const handleCellClick = (
-    e: React.MouseEvent<HTMLElement>,
-    studentId: number,
-    day: number
-  ) => {
-    setMenuAnchor(e.currentTarget);
-    setMenuTarget({ studentId, day });
-  };
-
-  const handleMenuClose = () => {
-    setMenuAnchor(null);
-    setMenuTarget(null);
-  };
-
-  const handleSelect = (val: AttVal) => {
-    if (!menuTarget) return;
-    const { studentId, day } = menuTarget;
+  const handleSet = (studentId: number, day: number, val: AttVal) => {
     setAttendance((prev) => ({
       ...prev,
       [studentId]: { ...(prev[studentId] || {}), [day]: val },
     }));
-    handleMenuClose();
   };
 
-  // Remove (X) button on hover — direct remove without menu
+  // Remove (X) button on hover
   const handleRemove = (
     e: React.MouseEvent,
     studentId: number,
@@ -252,27 +230,35 @@ export const Attendance = ({ students }: Props) => {
                       align="center"
                       sx={{
                         px: 0.5,
+                        overflow: "visible",
                         bgcolor: isToday ? "#f0f7ff" : undefined,
                       }}
                     >
-                      {/* Cell box */}
                       <Box
                         sx={{
                           position: "relative",
-                          width: 40,
+                          width: 48,
                           height: 28,
                           mx: "auto",
+                          "& .cell-value": { transition: "opacity 0.12s" },
+                          "&:hover .cell-value": { opacity: 0 },
+                          "& .att-picker": {
+                            opacity: 0,
+                            pointerEvents: "none",
+                            transition: "opacity 0.12s",
+                          },
+                          "&:hover .att-picker": {
+                            opacity: 1,
+                            pointerEvents: "auto",
+                          },
                           "& .remove-btn": { display: "none" },
                           "&:hover .remove-btn": {
                             display: val ? "flex" : "none",
                           },
                         }}
                       >
-                        {/* Main clickable box */}
                         <Box
-                          onClick={(e) =>
-                            handleCellClick(e, student.id, d)
-                          }
+                          className="cell-value"
                           sx={{
                             width: "100%",
                             height: "100%",
@@ -282,7 +268,6 @@ export const Attendance = ({ students }: Props) => {
                             justifyContent: "center",
                             fontSize: 11,
                             fontWeight: 600,
-                            cursor: "pointer",
                             userSelect: "none",
                             border: isToday
                               ? "2px solid #1976d2"
@@ -299,24 +284,81 @@ export const Attendance = ({ students }: Props) => {
                               val === "Was" || val === "Not"
                                 ? "#fff"
                                 : "#bdbdbd",
-                            transition: "all 0.15s",
-                            "&:hover": { opacity: 0.85 },
                           }}
                         >
                           {val ?? "·"}
                         </Box>
 
-                        {/* X remove button — hover da chiqadi */}
+                        <Box
+                          className="att-picker"
+                          sx={{
+                            position: "absolute",
+                            inset: 0,
+                            zIndex: 2,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 0.25,
+                            px: 0.25,
+                            bgcolor: "#fff",
+                            border: isToday
+                              ? "2px solid #1976d2"
+                              : "1px solid #e0e0e0",
+                            borderRadius: "6px",
+                            boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                          }}
+                        >
+                          <Tooltip title="Was" placement="top" arrow disableInteractive>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSet(student.id, d, "Was");
+                              }}
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                p: 0,
+                                bgcolor: "#00897b",
+                                color: "#fff",
+                                border: "2px solid #fff",
+                                boxShadow: "0 0 0 1px #00897b",
+                                "&:hover": { bgcolor: "#00796b" },
+                              }}
+                            >
+                              <MdCheck size={13} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Not" placement="top" arrow disableInteractive>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSet(student.id, d, "Not");
+                              }}
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                p: 0,
+                                bgcolor: "#fff",
+                                color: "#1976d2",
+                                border: "2px solid #1976d2",
+                                "&:hover": { bgcolor: "#e3f2fd" },
+                              }}
+                            >
+                              <MdClose size={13} />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+
                         {val && (
                           <Box
                             className="remove-btn"
-                            onClick={(e) =>
-                              handleRemove(e, student.id, d)
-                            }
+                            onClick={(e) => handleRemove(e, student.id, d)}
                             sx={{
                               position: "absolute",
-                              top: -7,
-                              right: -7,
+                              top: -6,
+                              right: -6,
                               width: 16,
                               height: 16,
                               borderRadius: "50%",
@@ -325,7 +367,7 @@ export const Attendance = ({ students }: Props) => {
                               alignItems: "center",
                               justifyContent: "center",
                               cursor: "pointer",
-                              zIndex: 2,
+                              zIndex: 4,
                               "&:hover": { bgcolor: "#e53935" },
                             }}
                           >
@@ -341,63 +383,6 @@ export const Attendance = ({ students }: Props) => {
           </TableBody>
         </Table>
       </TableContainer>
-
-      {/* DROPDOWN MENU */}
-      <Menu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
-        onClose={handleMenuClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        transformOrigin={{ vertical: "top", horizontal: "center" }}
-        slotProps={{
-          paper: { sx: { minWidth: 130, borderRadius: 2, mt: 0.5 } },
-        }}
-      >
-        <MenuItem
-          onClick={() => handleSelect("Was")}
-          sx={{ fontSize: 13, gap: 1 }}
-        >
-          <Box
-            sx={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              bgcolor: "#00897b",
-            }}
-          />
-          Was
-        </MenuItem>
-        <MenuItem
-          onClick={() => handleSelect("Not")}
-          sx={{ fontSize: 13, gap: 1 }}
-        >
-          <Box
-            sx={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              bgcolor: "#ef5350",
-            }}
-          />
-          Not
-        </MenuItem>
-        {menuTarget && getVal(menuTarget.studentId, menuTarget.day) && (
-          <MenuItem
-            onClick={() => handleSelect(null)}
-            sx={{ fontSize: 13, color: "text.secondary", gap: 1 }}
-          >
-            <Box
-              sx={{
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                bgcolor: "#bdbdbd",
-              }}
-            />
-            Remove
-          </MenuItem>
-        )}
-      </Menu>
     </Box>
   );
 };

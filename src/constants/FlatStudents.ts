@@ -1,12 +1,9 @@
-// src/constants/flatStudents.ts
-// TEACHERS_DATA dan barcha studentlarni "flat" ko'rinishga o'tkazish
+// src/constants/FlatStudents.ts
 
-import { TEACHERS_DATA, formatDate } from "./Teachers";
+import { TEACHERS_DATA } from "./Teachers";
 
 export interface FlatStudent {
-  /** Unique key: groupId-studentId */
   uid: string;
-  /** Student's own id (group ichidagi) */
   id: number;
   name: string;
   phone: string;
@@ -24,25 +21,18 @@ export interface FlatStudent {
   branch: string;
   room: string;
   price: number;
-  /** Mock balance (real loyihada backenddan keladi) */
   balance: number;
+  comment?: string;
 }
 
-/** TEACHERS_DATA → FlatStudent[] */
 export const buildFlatStudents = (): FlatStudent[] => {
   const result: FlatStudent[] = [];
-  const seen = new Set<string>();
 
   TEACHERS_DATA.forEach((teacher) => {
     teacher.groups.forEach((group) => {
       group.students.forEach((student) => {
-        const uid = `${group.id}-${student.id}`;
-        // Bir xil uid bo'lsa (turli groupda bir xil id) — skip
-        if (seen.has(uid)) return;
-        seen.add(uid);
-
         result.push({
-          uid,
+          uid: `${group.id}-${student.id}`,
           id: student.id,
           name: student.name,
           phone: student.phone,
@@ -53,17 +43,14 @@ export const buildFlatStudents = (): FlatStudent[] => {
           groupBadge: group.badge,
           groupBadgeColor: group.badgeColor,
           course: group.course,
-          teacher: group.teacher,
-          teacherId: group.teacherId,
+          teacher: teacher.fullName,
+          teacherId: teacher.id,
           startDate: group.startDate,
           endDate: group.endDate,
-          branch: group.branch ?? teacher.branch,
+          branch: group.branch ?? "",
           room: group.room,
           price: group.price ?? 0,
-          balance:
-            Math.random() > 0.4
-              ? -Math.floor(Math.random() * 300000 + 50000)
-              : 0,
+          balance: 0,
         });
       });
     });
@@ -72,4 +59,8 @@ export const buildFlatStudents = (): FlatStudent[] => {
   return result;
 };
 
-export { formatDate };
+export const formatDate = (d: string): string => {
+  if (!d) return "—";
+  const [y, m, day] = d.split("-");
+  return `${day}.${m}.${y}`;
+};

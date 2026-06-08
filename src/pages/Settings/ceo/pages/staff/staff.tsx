@@ -1,3 +1,5 @@
+// src/pages/Staff.tsx
+
 import { useState, useRef } from "react";
 import {
   Box,
@@ -16,16 +18,22 @@ import {
   FormControlLabel,
   Radio,
   RadioGroup,
-//   FormControl,
-//   FormLabel,
   IconButton,
   InputAdornment,
   Divider,
 } from "@mui/material";
-import { MdOutlineEmail, MdDeleteOutline, MdClose, MdCloudUpload, MdCalendarToday } from "react-icons/md";
-// import { FiUpload } from "react-icons/fi";
+import {
+  MdOutlineEmail,
+  MdDeleteOutline,
+  MdClose,
+  MdCloudUpload,
+  MdCalendarToday,
+} from "react-icons/md";
 import { HiEye, HiEyeOff } from "react-icons/hi";
+import { TEACHERS_DATA } from "../../../../../constants/Teachers";
+import { SendSmsModal } from "../../../../../components/SendSmsModal";
 
+// ---------- Types ----------
 interface StaffMember {
   id: number;
   name: string;
@@ -34,15 +42,27 @@ interface StaffMember {
   phone: string;
 }
 
-const initialStaff: StaffMember[] = [
-  { id: 1579662, name: "Odilbek Safarov", roles: ["CEO", "Teacher"], jobTitle: "", phone: "(91) 517-97-74" },
-  { id: 1568637, name: "Abdullayeva Dildora", roles: ["Administrator", "Teacher", "Branch Director"], jobTitle: "", phone: "(88) 845-33-31" },
-  { id: 1557423, name: "Toshmirza Jumaev", roles: ["CEO", "Teacher", "Branch Director"], jobTitle: "Manager", phone: "(97) 848-10-11" },
-  { id: 1462260, name: "Ugilbeka Abdullaeva", roles: ["CEO", "Teacher", "Branch Director"], jobTitle: "", phone: "(97) 921-97-09" },
-  { id: 1461316, name: "Maksuda Abraykulova", roles: ["CEO", "Teacher", "Branch Director"], jobTitle: "", phone: "(94) 512-58-45" },
-];
+// ---------- TEACHERS_DATA → StaffMember[] ----------
+const buildStaffFromTeachers = (): StaffMember[] =>
+  TEACHERS_DATA.map((t) => ({
+    id: Number(t.uid),
+    name: t.fullName,
+    roles: [t.role],          // Teacher.role = "Teacher" etc.
+    jobTitle: "",
+    phone: t.phone,
+  }));
 
-const rolesList = ["CEO", "Branch Director", "Administrator", "Administrator2", "Limited Administrator", "Teacher", "Marketer", "Cashier"];
+// ---------- Constants ----------
+const rolesList = [
+  "CEO",
+  "Branch Director",
+  "Administrator",
+  "Administrator2",
+  "Limited Administrator",
+  "Teacher",
+  "Marketer",
+  "Cashier",
+];
 
 interface NewStaffForm {
   name: string;
@@ -66,14 +86,20 @@ const defaultForm: NewStaffForm = {
   photo: "",
 };
 
+// ---------- Component ----------
 export const Staff = () => {
-  const [staff, setStaff] = useState<StaffMember[]>(initialStaff);
+  const [staff, setStaff] = useState<StaffMember[]>(buildStaffFromTeachers());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<NewStaffForm>(defaultForm);
   const [showPassword, setShowPassword] = useState(false);
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // SMS modal state
+  const [smsOpen, setSmsOpen] = useState(false);
+  const [, setSmsMember] = useState<StaffMember | null>(null);
+
+  // ---------- Handlers ----------
   const handleDelete = (id: number) => {
     setStaff((prev) => prev.filter((s) => s.id !== id));
   };
@@ -100,6 +126,11 @@ export const Staff = () => {
     setForm(defaultForm);
     setFileName("");
     setDrawerOpen(false);
+  };
+
+  const handleOpenSms = (member: StaffMember) => {
+    setSmsMember(member);
+    setSmsOpen(true);
   };
 
   return (
@@ -152,7 +183,12 @@ export const Staff = () => {
                 <TableCell
                   key={col}
                   align={col === "Actions" ? "right" : "left"}
-                  sx={{ fontWeight: 600, fontSize: 13, color: "#333", borderBottom: "1px solid #e0e0e0" }}
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: 13,
+                    color: "#333",
+                    borderBottom: "1px solid #e0e0e0",
+                  }}
                 >
                   {col}
                 </TableCell>
@@ -183,11 +219,21 @@ export const Staff = () => {
                 </TableCell>
                 <TableCell align="right" sx={{ verticalAlign: "top", pt: 1.5 }}>
                   <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
-                    <IconButton size="small" sx={{ color: "#f0a500" }}>
+                    {/* SMS button */}
+                    <IconButton
+                      size="small"
+                      sx={{ color: "#f0a500" }}
+                      onClick={() => handleOpenSms(member)}
+                    >
                       <MdOutlineEmail size={20} />
                     </IconButton>
+                    {/* Delete — faqat 1 dan ko'p role bo'lsa */}
                     {member.roles.length > 1 && (
-                      <IconButton size="small" sx={{ color: "#e53935" }} onClick={() => handleDelete(member.id)}>
+                      <IconButton
+                        size="small"
+                        sx={{ color: "#e53935" }}
+                        onClick={() => handleDelete(member.id)}
+                      >
                         <MdDeleteOutline size={20} />
                       </IconButton>
                     )}
@@ -199,7 +245,7 @@ export const Staff = () => {
         </Table>
       </TableContainer>
 
-      {/* Drawer */}
+      {/* Add New Staff Drawer */}
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -230,7 +276,7 @@ export const Staff = () => {
           {/* Phone */}
           <Box mb={2}>
             <Typography fontSize={13} mb={0.5}>Phone</Typography>
-            <Box sx={{ display: "flex", gap: 0 }}>
+            <Box sx={{ display: "flex" }}>
               <Box
                 sx={{
                   border: "1px solid #c4c4c4",
@@ -295,7 +341,7 @@ export const Staff = () => {
           {/* Role */}
           <Box mb={2}>
             <Typography fontSize={13} mb={0.5}>Role</Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0 }}>
+            <Box sx={{ display: "flex", flexWrap: "wrap" }}>
               {rolesList.map((role) => (
                 <FormControlLabel
                   key={role}
@@ -329,7 +375,6 @@ export const Staff = () => {
                   </InputAdornment>
                 ),
               }}
-              inputProps={{ placeholder: "No date selected" }}
               sx={{
                 "& .MuiOutlinedInput-root": { bgcolor: "#f9f9f9" },
                 "& input::-webkit-calendar-picker-indicator": { opacity: 0, width: 0 },
@@ -419,6 +464,15 @@ export const Staff = () => {
           </Button>
         </Box>
       </Drawer>
+
+      {/* SMS Modal — reusable */}
+      <SendSmsModal
+        open={smsOpen}
+        onClose={() => { setSmsOpen(false); setSmsMember(null); }}
+        selectedCount={1}
+        recipientLabel="staff"
+        sender="3700"
+      />
     </Box>
   );
 };

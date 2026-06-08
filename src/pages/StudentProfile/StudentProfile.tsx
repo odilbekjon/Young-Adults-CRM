@@ -10,11 +10,11 @@ import { IoArrowBack } from "react-icons/io5";
 import {
   Avatar, Chip, Tab, Tabs, Button, IconButton, Tooltip, Box,
   Drawer, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Radio, RadioGroup, FormControlLabel, 
-  InputAdornment, 
+  TextField, Radio, RadioGroup, FormControlLabel, Switch, Checkbox,
+  InputAdornment, Menu, MenuItem,
 } from "@mui/material";
 
-import { FlatStudent, formatDate, buildFlatStudents } from "../../constants/FlatStudents";
+import { FlatStudent, buildFlatStudents, formatDate } from "../../constants/FlatStudents";
 import { TEACHERS_DATA } from "../../constants/Teachers";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -29,6 +29,19 @@ interface Payment {
   creatorDate: string;
 }
 
+interface SmsHistory {
+  text: string;
+  creator: string;
+  createdAt: string;
+}
+
+interface GroupHistoryItem {
+  title: string;
+  createdAt: string;
+  creator: string;
+  details?: string[];
+}
+
 const TABS = ["Groups", "Comments", "Call history", "SMS", "History", "Lead history"];
 
 const makeMockPayments = (student: FlatStudent): Payment[] => [
@@ -40,6 +53,42 @@ const makeMockPayments = (student: FlatStudent): Payment[] => [
     period: `${formatDate(student.startDate)} — ${formatDate(student.endDate)}`,
     creator: student.teacher,
     creatorDate: "14.05.2026 16:40:43",
+  },
+];
+
+const makeMockSms = (student: FlatStudent): SmsHistory[] => [
+  {
+    text: "Hurmatli (STUDENT). O'qishni davom ettirish uchun guruh (GROUP): (SUM) sum. O'qishni to'xtovsiz davom ettirish uchun pul to'lang. Rahmat!",
+    creator: student.teacher,
+    createdAt: "02.06.2026 09:02:22",
+  },
+  {
+    text: `Hurmatli, ${student.name}! Siz o'quv guruhiga qo'shildingiz.\nO'qituvchi: ${student.teacher}\nO'quv kunlari: Du, Cho, Ju\nVaqt: ${student.groupSchedule.split("·")[1]?.trim() ?? "10:30"}\nKabinet: ${student.room}\n\nSizni Young Adultsda kutamiz!`,
+    creator: student.teacher,
+    createdAt: "01.06.2026 10:36:36",
+  },
+];
+
+const makeMockGroupHistory = (student: FlatStudent): GroupHistoryItem[] => [
+  {
+    title: "Status changed",
+    createdAt: "01.06.2026 10:36:47",
+    creator: "Maksuda Abraykulova",
+    details: [
+      `Group Name: ${student.groupName}`,
+      `Group: #${student.groupId}`,
+      `Activated from: ${student.startDate}`,
+    ],
+  },
+  {
+    title: "Added new student",
+    createdAt: "01.06.2026 10:36:34",
+    creator: "Maksuda Abraykulova",
+  },
+  {
+    title: "Added to group",
+    createdAt: "01.06.2026 10:36:34",
+    creator: "Maksuda Abraykulova",
   },
 ];
 
@@ -57,6 +106,7 @@ const BalanceBadge = ({ amount }: { amount: number }) => (
       background: amount < 0 ? "#ef4444" : amount === 0 ? "#6b7280" : "#16a34a",
     }}
   >
+    {amount > 0 ? "+" : ""}
     {amount.toLocaleString("ru-RU")} UZS
   </span>
 );
@@ -120,10 +170,27 @@ const EditStudentDrawer = ({
       </div>
 
       {/* Body */}
-      <div style={{ padding: "24px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
+      <div
+        style={{
+          padding: "24px",
+          overflowY: "auto",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: 20,
+        }}
+      >
         {/* Phone */}
         <div>
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#374151", display: "block", marginBottom: 6 }}>
+          <label
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#374151",
+              display: "block",
+              marginBottom: 6,
+            }}
+          >
             Phone
           </label>
           <TextField
@@ -149,18 +216,21 @@ const EditStudentDrawer = ({
                 </InputAdornment>
               ),
             }}
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                borderRadius: "8px",
-                fontSize: 14,
-              },
-            }}
+            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 } }}
           />
         </div>
 
         {/* Name */}
         <div>
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#374151", display: "block", marginBottom: 6 }}>
+          <label
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#374151",
+              display: "block",
+              marginBottom: 6,
+            }}
+          >
             Name
           </label>
           <TextField
@@ -168,22 +238,27 @@ const EditStudentDrawer = ({
             size="small"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            sx={{
-              "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 },
-            }}
+            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 } }}
           />
         </div>
 
         {/* Date of birth */}
         <div>
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#374151", display: "block", marginBottom: 6 }}>
+          <label
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#374151",
+              display: "block",
+              marginBottom: 6,
+            }}
+          >
             Date of birth
           </label>
           <TextField
             fullWidth
             size="small"
             type="date"
-            placeholder="No date selected"
             InputLabelProps={{ shrink: true }}
             sx={{
               "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 },
@@ -194,23 +269,24 @@ const EditStudentDrawer = ({
 
         {/* Gender */}
         <div>
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#374151", display: "block", marginBottom: 6 }}>
+          <label
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#374151",
+              display: "block",
+              marginBottom: 6,
+            }}
+          >
             Gender
           </label>
-          <RadioGroup
-            row
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-          >
+          <RadioGroup row value={gender} onChange={(e) => setGender(e.target.value)}>
             <FormControlLabel
               value="male"
               control={
                 <Radio
                   size="small"
-                  sx={{
-                    color: "#d1d5db",
-                    "&.Mui-checked": { color: "#1e40af" },
-                  }}
+                  sx={{ color: "#d1d5db", "&.Mui-checked": { color: "#1e40af" } }}
                 />
               }
               label={<span style={{ fontSize: 14, color: "#374151" }}>Male</span>}
@@ -220,10 +296,7 @@ const EditStudentDrawer = ({
               control={
                 <Radio
                   size="small"
-                  sx={{
-                    color: "#d1d5db",
-                    "&.Mui-checked": { color: "#1e40af" },
-                  }}
+                  sx={{ color: "#d1d5db", "&.Mui-checked": { color: "#1e40af" } }}
                 />
               }
               label={<span style={{ fontSize: 14, color: "#374151" }}>Female</span>}
@@ -233,7 +306,15 @@ const EditStudentDrawer = ({
 
         {/* Photo */}
         <div>
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#374151", display: "block", marginBottom: 6 }}>
+          <label
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#374151",
+              display: "block",
+              marginBottom: 6,
+            }}
+          >
             Photo
           </label>
           <div
@@ -275,8 +356,16 @@ const EditStudentDrawer = ({
 
         {/* Additional contacts */}
         <div>
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#374151", display: "block", marginBottom: 8 }}>
-            additional contacts
+          <label
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#374151",
+              display: "block",
+              marginBottom: 8,
+            }}
+          >
+            Additional contacts
           </label>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {additionalContactIcons.map((item, i) => (
@@ -301,7 +390,15 @@ const EditStudentDrawer = ({
 
         {/* Tags */}
         <div>
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#374151", display: "block", marginBottom: 6 }}>
+          <label
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#374151",
+              display: "block",
+              marginBottom: 6,
+            }}
+          >
             Tags
           </label>
           <TextField
@@ -317,9 +414,7 @@ const EditStudentDrawer = ({
                 </InputAdornment>
               ),
             }}
-            sx={{
-              "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 },
-            }}
+            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 } }}
           />
         </div>
 
@@ -341,12 +436,7 @@ const EditStudentDrawer = ({
       </div>
 
       {/* Footer */}
-      <div
-        style={{
-          padding: "16px 24px",
-          borderTop: "1px solid #f3f4f6",
-        }}
-      >
+      <div style={{ padding: "16px 24px", borderTop: "1px solid #f3f4f6" }}>
         <Button
           variant="contained"
           onClick={onClose}
@@ -484,104 +574,358 @@ const DeleteConfirmDialog = ({
 }: {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (deleteMode: boolean) => void;
   studentName: string;
-}) => (
-  <Dialog
-    open={open}
-    onClose={onClose}
-    PaperProps={{
-      sx: {
-        borderRadius: "16px",
-        width: 420,
-        padding: "8px",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-      },
-    }}
-  >
-    <DialogTitle sx={{ pb: 1 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 18, fontWeight: 600, color: "#111827" }}>
-          Delete Student
-        </span>
-        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}>
-          <FiX size={20} />
-        </IconButton>
-      </div>
-    </DialogTitle>
+}) => {
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [reason, setReason] = useState("");
+  const [comment, setComment] = useState("");
+  const [recalculate, setRecalculate] = useState(false);
+  const [scope, setScope] = useState<"current" | "all">("current");
 
-    <DialogContent sx={{ pt: 1 }}>
-      {/* Warning icon */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 16,
-          padding: "16px 0",
-        }}
-      >
-        <div
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: "50%",
-            background: "#fee2e2",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+  const handleClose = () => {
+    setDeleteMode(false);
+    setReason("");
+    setComment("");
+    setRecalculate(false);
+    setScope("current");
+    onClose();
+  };
+
+  const handleYes = () => {
+    onConfirm(deleteMode);
+    handleClose();
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      PaperProps={{
+        sx: {
+          borderRadius: "12px",
+          width: 620,
+          maxWidth: "95vw",
+          overflow: "hidden",
+        },
+      }}
+    >
+      <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid #ececec" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 32, transform: "scale(0.42)", transformOrigin: "left center", whiteSpace: "nowrap", color: "#2e2e2e" }}>
+            Do you realy want to delete it?
+          </span>
+          <IconButton size="small" onClick={handleClose} sx={{ color: "#9ca3af" }}>
+            <FiX size={20} />
+          </IconButton>
+        </div>
+      </DialogTitle>
+
+      <DialogContent sx={{ px: 4, py: 3 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 18 }}>
+          <span style={{ fontSize: 14, color: deleteMode ? "#7d7d7d" : "#5f9bb8" }}>Remove from group</span>
+          <Switch checked={deleteMode} onChange={(e) => setDeleteMode(e.target.checked)} />
+          <span style={{ fontSize: 14, color: deleteMode ? "#2f2f2f" : "#7d7d7d" }}>Delete student</span>
+        </div>
+
+        <select
+          style={{ width: "100%", border: "1px solid #e0e0e0", borderRadius: 8, height: 46, padding: "0 12px", fontSize: 14, color: reason ? "#1a1a1a" : "#9ca3af", marginBottom: 12 }}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        >
+          <option value="">Reasons for removal</option>
+          <option value="No attendance">No attendance</option>
+          <option value="Parent request">Parent request</option>
+          <option value="Low results">Low results</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <textarea
+          style={{ width: "100%", border: "1px solid #e0e0e0", borderRadius: 8, minHeight: 84, padding: "10px 12px", fontSize: 14, color: "#555", resize: "vertical", boxSizing: "border-box", marginBottom: 10 }}
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Comment"
+        />
+
+        <FormControlLabel
+          control={<Checkbox size="small" checked={recalculate} onChange={(e) => setRecalculate(e.target.checked)} />}
+          label={<span style={{ fontSize: 14, color: "#3f3f3f" }}>Recalculate the balance</span>}
+          sx={{ m: 0, mb: 1 }}
+        />
+
+        <RadioGroup row value={scope} onChange={(e) => setScope(e.target.value as "current" | "all")} sx={{ gap: 1.5 }}>
+          <FormControlLabel value="current" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>Current group</span>} />
+          <FormControlLabel value="all" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>All groups</span>} />
+        </RadioGroup>
+        <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>
+          Student: {studentName}
+        </div>
+      </DialogContent>
+
+      <DialogActions sx={{ justifyContent: "center", pb: 3, gap: 2 }}>
+        <Button
+          variant="contained"
+          onClick={handleYes}
+          sx={{
+            textTransform: "none",
+            borderRadius: 999,
+            bgcolor: "#d93f4f",
+            px: 4,
+            "&:hover": { bgcolor: "#c53343" },
           }}
         >
-          <FiTrash2 size={28} color="#ef4444" />
-        </div>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: "#111827", marginBottom: 8 }}>
-            Are you sure?
-          </div>
-          <div style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.5 }}>
-            You are about to delete{" "}
-            <strong style={{ color: "#111827" }}>{studentName}</strong>. This
-            action cannot be undone.
-          </div>
-        </div>
-      </div>
-    </DialogContent>
+          Yes
+        </Button>
+        <Button onClick={handleClose} sx={{ textTransform: "none", color: "#8a8a8a" }}>
+          Cancel
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
-    <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-      <Button
-        fullWidth
-        variant="outlined"
-        onClick={onClose}
-        sx={{
-          textTransform: "none",
-          borderRadius: "8px",
-          borderColor: "#e5e7eb",
-          color: "#374151",
-          fontWeight: 500,
-          py: 1.2,
-          "&:hover": { borderColor: "#d1d5db", background: "#f9fafb" },
-        }}
-      >
-        Cancel
-      </Button>
-      <Button
-        fullWidth
-        variant="contained"
-        onClick={onConfirm}
-        sx={{
-          textTransform: "none",
-          borderRadius: "8px",
-          background: "#ef4444",
-          fontWeight: 600,
-          py: 1.2,
-          "&:hover": { background: "#dc2626" },
-        }}
-      >
-        Delete
-      </Button>
-    </DialogActions>
-  </Dialog>
-);
+const AddToGroupModal = ({
+  open,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (groupId: string) => void;
+}) => {
+  const [groupId, setGroupId] = useState("");
+  const allGroups = TEACHERS_DATA.flatMap((t) => t.groups);
+
+  const handleClose = () => {
+    setGroupId("");
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onClose={handleClose} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
+      <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid #e5e7eb" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 34, transform: "scale(0.42)", transformOrigin: "left center", color: "#2e2e2e", whiteSpace: "nowrap" }}>
+            Add student to group
+          </span>
+          <IconButton size="small" onClick={handleClose}>
+            <FiX size={20} />
+          </IconButton>
+        </div>
+      </DialogTitle>
+      <DialogContent sx={{ p: 4 }}>
+        <select
+          value={groupId}
+          onChange={(e) => setGroupId(e.target.value)}
+          style={{
+            width: "100%",
+            border: "1px solid #e5e7eb",
+            borderRadius: 8,
+            height: 46,
+            padding: "0 12px",
+            color: groupId ? "#1f2937" : "#a8b0bb",
+            fontSize: 14,
+            marginBottom: 18,
+          }}
+        >
+          <option value="">Select group</option>
+          {allGroups.map((g) => (
+            <option key={g.id} value={String(g.id)}>
+              {g.name}: {g.course} {g.teacher} ({g.schedule})
+            </option>
+          ))}
+        </select>
+        <Button
+          variant="contained"
+          onClick={() => onSubmit(groupId)}
+          disabled={!groupId}
+          sx={{
+            textTransform: "none",
+            borderRadius: 999,
+            bgcolor: "#66c4d8",
+            px: 3.5,
+            py: 1.2,
+            fontWeight: 600,
+            "&:hover": { bgcolor: "#55b3c7" },
+          }}
+        >
+          Add student to group
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const MoveToBranchModal = ({
+  open,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (branch: string) => void;
+}) => {
+  const [branch, setBranch] = useState("");
+  const branches = Array.from(new Set(TEACHERS_DATA.map((t) => t.branch))).filter(Boolean);
+
+  const handleClose = () => {
+    setBranch("");
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onClose={handleClose} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
+      <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid #e5e7eb" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 34, transform: "scale(0.42)", transformOrigin: "left center", color: "#2e2e2e", whiteSpace: "nowrap" }}>
+            Move to other branch
+          </span>
+          <IconButton size="small" onClick={handleClose}>
+            <FiX size={20} />
+          </IconButton>
+        </div>
+      </DialogTitle>
+      <DialogContent sx={{ p: 4 }}>
+        <select
+          value={branch}
+          onChange={(e) => setBranch(e.target.value)}
+          style={{
+            width: "100%",
+            border: "1px solid #e5e7eb",
+            borderRadius: 8,
+            height: 46,
+            padding: "0 12px",
+            color: branch ? "#1f2937" : "#a8b0bb",
+            fontSize: 14,
+            marginBottom: 18,
+          }}
+        >
+          <option value="">Select branch</option>
+          {branches.map((b) => (
+            <option key={b} value={b}>
+              {b}
+            </option>
+          ))}
+        </select>
+        <Button
+          variant="contained"
+          onClick={() => onSubmit(branch)}
+          disabled={!branch}
+          sx={{
+            textTransform: "none",
+            borderRadius: 999,
+            bgcolor: "#66c4d8",
+            px: 3.5,
+            py: 1.2,
+            fontWeight: 600,
+            "&:hover": { bgcolor: "#55b3c7" },
+          }}
+        >
+          Move to other branch
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const AddPaymentModal = ({
+  open,
+  onClose,
+  student,
+}: {
+  open: boolean;
+  onClose: () => void;
+  student: FlatStudent;
+}) => {
+  const [method, setMethod] = useState("Cash");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState("2026-06-02");
+  const [comment, setComment] = useState("");
+  const groupOptions = TEACHERS_DATA.flatMap((t) => t.groups);
+  const [groupId, setGroupId] = useState(String(student.groupId));
+
+  const methodsLeft = ["Cash", "Card", "Bank account", "Payme"];
+  const methodsRight = ["Click", "Uzum", "Humo"];
+
+  const handleClose = () => {
+    setMethod("Cash");
+    setAmount("");
+    setDate("2026-06-02");
+    setComment("");
+    setGroupId(String(student.groupId));
+    onClose();
+  };
+
+  return (
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={handleClose}
+      PaperProps={{
+        sx: {
+          width: 380,
+          borderRadius: "12px 0 0 12px",
+          boxShadow: "-8px 0 32px rgba(0,0,0,0.12)",
+        },
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 18px", borderBottom: "1px solid #ececec" }}>
+        <span style={{ fontSize: 34, transform: "scale(0.42)", transformOrigin: "left center", whiteSpace: "nowrap", color: "#2d2d2d" }}>Add payment</span>
+        <IconButton size="small" onClick={handleClose}><FiX size={20} /></IconButton>
+      </div>
+      <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
+        <div>
+          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Student</div>
+          <div style={{ background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 4, padding: "10px 12px", color: "#6b7280", fontSize: 14 }}>
+            {student.name}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Balance</div>
+          <span style={{ background: "#1d5f98", color: "#fff", borderRadius: 999, fontSize: 26, transform: "scale(0.42)", transformOrigin: "left center", display: "inline-block", padding: "4px 16px", fontWeight: 700 }}>
+            {(student.balance ?? 0).toLocaleString("ru-RU")} UZS
+          </span>
+        </div>
+        <div>
+          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Group</div>
+          <select value={groupId} onChange={(e) => setGroupId(e.target.value)} style={{ width: "100%", border: "1px solid #d9dee5", borderRadius: 6, padding: "10px 12px", fontSize: 14, color: "#334155" }}>
+            {groupOptions.map((g) => (
+              <option key={g.id} value={String(g.id)}>
+                {g.name}: {g.course} {g.teacher} ({g.schedule})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Method pay</div>
+          <div style={{ display: "flex", gap: 26 }}>
+            <RadioGroup value={method} onChange={(e) => setMethod(e.target.value)}>
+              {methodsLeft.map((m) => <FormControlLabel key={m} value={m} control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{m}</span>} />)}
+            </RadioGroup>
+            <RadioGroup value={method} onChange={(e) => setMethod(e.target.value)}>
+              {methodsRight.map((m) => <FormControlLabel key={m} value={m} control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{m}</span>} />)}
+            </RadioGroup>
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Amount</div>
+          <input value={amount} onChange={(e) => setAmount(e.target.value)} style={{ width: "100%", border: "1px solid #d9dee5", borderRadius: 4, padding: "10px 12px", boxSizing: "border-box" }} />
+        </div>
+        <div>
+          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Date</div>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: "100%", border: "1px solid #d9dee5", borderRadius: 4, padding: "10px 12px", boxSizing: "border-box", color: "#6b7280" }} />
+        </div>
+        <div>
+          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Comment</div>
+          <textarea value={comment} onChange={(e) => setComment(e.target.value)} style={{ width: "100%", minHeight: 62, border: "1px solid #d9dee5", borderRadius: 4, padding: "10px 12px", boxSizing: "border-box" }} />
+        </div>
+        <Button variant="contained" onClick={handleClose} sx={{ textTransform: "none", borderRadius: 999, bgcolor: "#66c4d8", alignSelf: "flex-start", px: 3, py: 1, "&:hover": { bgcolor: "#55b3c7" } }}>
+          Submit
+        </Button>
+      </div>
+    </Drawer>
+  );
+};
 
 /* ─── SIDE CARD ──────────────────────────────────────── */
 const SideCard = ({
@@ -589,11 +933,19 @@ const SideCard = ({
   onEdit,
   onDelete,
   onSms,
+  onAddToGroup,
+  onOpenAddToGroupMenu,
+  onAddPayment,
+  onOpenAddPaymentMenu,
 }: {
   student: FlatStudent;
   onEdit: () => void;
   onDelete: () => void;
   onSms: () => void;
+  onAddToGroup: () => void;
+  onOpenAddToGroupMenu: (event: React.MouseEvent<HTMLElement>) => void;
+  onAddPayment: () => void;
+  onOpenAddPaymentMenu: (event: React.MouseEvent<HTMLElement>) => void;
 }) => (
   <div
     style={{
@@ -649,7 +1001,9 @@ const SideCard = ({
         <FiUser size={32} />
       </Avatar>
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 17, fontWeight: 600, color: "#111827" }}>{student.name}</div>
+        <div style={{ fontSize: 17, fontWeight: 600, color: "#111827" }}>
+          {student.name}
+        </div>
         <div style={{ fontSize: 12, color: "#9ca3af" }}>(id: {student.uid})</div>
       </div>
     </div>
@@ -662,20 +1016,26 @@ const SideCard = ({
 
     <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "14px 0" }} />
 
-    {/* Info */}
+    {/* Info rows */}
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
+      >
         <FiPhone size={14} />
         <span style={{ color: "#5c7fa3", fontWeight: 500 }}>{student.phone}</span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
+      >
         <FiCalendar size={14} />
         <span>
           Group start:{" "}
           <strong style={{ color: "#111827" }}>{formatDate(student.startDate)}</strong>
         </span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
+      >
         <FiGitBranch size={14} />
         <span>Branch:</span>
         <Chip
@@ -684,7 +1044,9 @@ const SideCard = ({
           sx={{ fontSize: 11, height: 20, bgcolor: "#f3f4f6" }}
         />
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
+      >
         <FiUser size={14} />
         <span>
           Status:{" "}
@@ -697,38 +1059,58 @@ const SideCard = ({
 
     <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "14px 0" }} />
 
-    {/* Actions */}
+    {/* Action buttons */}
     <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-      <Button
-        size="small"
-        variant="outlined"
-        startIcon={<FiUsers size={13} />}
-        endIcon={<FiChevronDown size={13} />}
-        sx={{
-          flex: 1,
-          textTransform: "none",
-          fontSize: 12,
-          borderColor: "#d1d5db",
-          color: "#374151",
-        }}
-      >
-        Add to group
-      </Button>
-      <Button
-        size="small"
-        variant="outlined"
-        startIcon={<FiDollarSign size={13} />}
-        endIcon={<FiChevronDown size={13} />}
-        sx={{
-          flex: 1,
-          textTransform: "none",
-          fontSize: 12,
-          borderColor: "#d1d5db",
-          color: "#374151",
-        }}
-      >
-        Add payment
-      </Button>
+      <div style={{ display: "flex", gap: 4, flex: 1 }}>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<FiUsers size={13} />}
+          onClick={onAddToGroup}
+          sx={{
+            flex: 1,
+            textTransform: "none",
+            fontSize: 12,
+            borderColor: "#8fc8d6",
+            color: "#2b7689",
+            borderRadius: 999,
+          }}
+        >
+          Add to group
+        </Button>
+        <IconButton
+          size="small"
+          onClick={onOpenAddToGroupMenu}
+          sx={{ border: "1px solid #8fc8d6", color: "#2b7689", borderRadius: 999, width: 28, height: 28 }}
+        >
+          <FiChevronDown size={13} />
+        </IconButton>
+      </div>
+      <div style={{ display: "flex", gap: 4, flex: 1 }}>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<FiDollarSign size={13} />}
+          onClick={onAddPayment}
+          sx={{
+            flex: 1,
+            textTransform: "none",
+            fontSize: 12,
+            borderColor: "#8fc8d6",
+            color: "#2b7689",
+            borderRadius: 999,
+          }}
+        >
+          Add payment
+        </Button>
+        <IconButton
+          size="small"
+          onClick={onOpenAddPaymentMenu}
+          sx={{ border: "1px solid #8fc8d6", color: "#2b7689", borderRadius: 999, width: 28, height: 28 }}
+        >
+          <FiChevronDown size={13} />
+        </IconButton>
+      </div>
     </div>
 
     {/* Note */}
@@ -794,7 +1176,9 @@ const GroupCard = ({ student }: { student: FlatStudent }) => {
           <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>
             {student.groupName}
           </div>
-          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{student.teacher}</div>
+          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+            {student.teacher}
+          </div>
         </div>
         <div style={{ fontSize: 12, color: "#6b7280", textAlign: "right" }}>
           <div>{formatDate(student.startDate)} —</div>
@@ -805,7 +1189,13 @@ const GroupCard = ({ student }: { student: FlatStudent }) => {
 
       <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "12px 0" }} />
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+        }}
+      >
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {[
             ["Status", student.active ? "Active (Learns)" : "Inactive"],
@@ -819,7 +1209,9 @@ const GroupCard = ({ student }: { student: FlatStudent }) => {
             </div>
           ))}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginLeft: 16 }}>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: 8, marginLeft: 16 }}
+        >
           <Tooltip title="Pause">
             <IconButton
               size="small"
@@ -965,7 +1357,9 @@ const PaymentsTable = ({ payments }: { payments: Payment[] }) => (
               </td>
               <td style={{ padding: "14px 16px", fontSize: 13, color: "#374151" }}>
                 <div style={{ fontWeight: 500 }}>{p.comment}</div>
-                <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{p.period}</div>
+                <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
+                  {p.period}
+                </div>
                 <button
                   style={{
                     marginTop: 4,
@@ -1017,16 +1411,144 @@ const PaymentsTable = ({ payments }: { payments: Payment[] }) => (
   </div>
 );
 
+const SmsTabContent = ({ sms }: { sms: SmsHistory[] }) => (
+  <div
+    style={{
+      background: "white",
+      border: "1px solid #eaecf0",
+      borderRadius: 12,
+      overflow: "hidden",
+    }}
+  >
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead>
+        <tr style={{ borderBottom: "1px solid #f1f3f5" }}>
+          {["SMS", "Creator", "Create at"].map((h) => (
+            <th
+              key={h}
+              style={{
+                padding: "14px 18px",
+                fontSize: 12,
+                color: "#9aa1aa",
+                textAlign: "left",
+                fontWeight: 600,
+              }}
+            >
+              {h}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {sms.map((row, idx) => (
+          <tr key={idx} style={{ borderBottom: idx === sms.length - 1 ? "none" : "1px solid #f1f3f5" }}>
+            <td style={{ padding: "14px 18px", color: "#444", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-line" }}>{row.text}</td>
+            <td style={{ padding: "14px 18px", color: "#6b7280", fontSize: 13, verticalAlign: "top" }}>{row.creator}</td>
+            <td style={{ padding: "14px 18px", color: "#8b95a1", fontSize: 13, whiteSpace: "nowrap", verticalAlign: "top" }}>{row.createdAt}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+const HistoryTabContent = ({
+  student,
+  items,
+}: {
+  student: FlatStudent;
+  items: GroupHistoryItem[];
+}) => (
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {items.map((item, idx) => (
+        <div
+          key={`${item.title}-${idx}`}
+          style={{
+            background: "white",
+            border: "1px solid #eaecf0",
+            borderRadius: 8,
+            padding: 18,
+            minHeight: 98,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 33, transform: "scale(0.42)", transformOrigin: "left top", color: "#2c2c2c", marginBottom: -8 }}>{item.title}</div>
+              {item.details?.map((line) => (
+                <div key={line} style={{ fontSize: 13, color: "#4b5563", marginTop: 2 }}>{line}</div>
+              ))}
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 12, color: "#8b95a1" }}>{item.createdAt}</div>
+              <div style={{ fontSize: 12, color: "#8b95a1", marginTop: 2 }}>{item.creator}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div>
+      <div style={{ fontSize: 40, transform: "scale(0.42)", transformOrigin: "left top", color: "#2c2c2c", marginBottom: -6 }}>Group History</div>
+      <div
+        style={{
+          position: "relative",
+          background: "white",
+          border: "1px solid #eaecf0",
+          borderRadius: 8,
+          padding: 16,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            right: -40,
+            transform: "rotate(40deg)",
+            background: "#38a169",
+            color: "white",
+            fontSize: 11,
+            fontWeight: 700,
+            width: 140,
+            textAlign: "center",
+            padding: "4px 0",
+          }}
+        >
+          ACTIVE
+        </div>
+        <div style={{ fontSize: 12, color: "#111827", fontWeight: 700 }}>{student.groupBadge}</div>
+        <div style={{ fontSize: 13, color: "#4b5563", marginTop: 4 }}>{student.course}</div>
+        <div style={{ fontSize: 13, color: "#4b5563", marginTop: 2 }}>{student.teacher}</div>
+        <div style={{ fontSize: 13, color: "#4b5563", marginTop: 2 }}>Status: Active (Learns)</div>
+        <div style={{ position: "absolute", top: 16, right: 16, textAlign: "right", fontSize: 13, color: "#6b7280" }}>
+          <div>{formatDate(student.startDate)} —</div>
+          <div>{formatDate(student.endDate)}</div>
+          <div style={{ marginTop: 2 }}>{student.groupSchedule}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 /* ─── MAIN COMPONENT ─────────────────────────────────── */
 export const StudentProfile = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const student = buildFlatStudents().find((s) => s.uid === id);
+  const { id } = useParams<{ id: string }>();
+
+  // ✅ uid (string) orqali topiladi — navigate('/students/101-1') bilan mos
+  const allStudents = buildFlatStudents();
+  const student = allStudents.find((s) => s.uid === id);
 
   const [activeTab, setActiveTab] = useState(0);
   const [editOpen, setEditOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [addToGroupOpen, setAddToGroupOpen] = useState(false);
+  const [moveBranchOpen, setMoveBranchOpen] = useState(false);
+  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
+  const [groupMenuAnchor, setGroupMenuAnchor] = useState<null | HTMLElement>(null);
+  const [paymentMenuAnchor, setPaymentMenuAnchor] = useState<null | HTMLElement>(null);
 
   if (!student) {
     return (
@@ -1056,17 +1578,22 @@ export const StudentProfile = () => {
             color: "#6b7280",
           }}
         >
-          Student not found.
+          Student not found. (id: {id})
         </div>
       </div>
     );
   }
 
   const payments = makeMockPayments(student);
+  const smsHistory = makeMockSms(student);
+  const groupHistory = makeMockGroupHistory(student);
 
-  const handleDelete = () => {
-    console.log("delete", student.uid);
-    setDeleteOpen(false);
+  const handleDelete = (deleteMode: boolean) => {
+    if (deleteMode) {
+      console.log("delete permanently", student.uid);
+    } else {
+      console.log("archive/remove from group", student.uid);
+    }
     navigate(-1);
   };
 
@@ -1096,6 +1623,10 @@ export const StudentProfile = () => {
             onEdit={() => setEditOpen(true)}
             onDelete={() => setDeleteOpen(true)}
             onSms={() => setSmsOpen(true)}
+            onAddToGroup={() => setAddToGroupOpen(true)}
+            onOpenAddToGroupMenu={(e) => setGroupMenuAnchor(e.currentTarget)}
+            onAddPayment={() => setAddPaymentOpen(true)}
+            onOpenAddPaymentMenu={(e) => setPaymentMenuAnchor(e.currentTarget)}
           />
         </div>
 
@@ -1140,6 +1671,10 @@ export const StudentProfile = () => {
                   <MonthlyBalance balance={student.balance ?? 0} />
                   <PaymentsTable payments={payments} />
                 </>
+              ) : activeTab === 3 ? (
+                <SmsTabContent sms={smsHistory} />
+              ) : activeTab === 4 ? (
+                <HistoryTabContent student={student} items={groupHistory} />
               ) : (
                 <div
                   style={{
@@ -1176,5 +1711,48 @@ export const StudentProfile = () => {
         onConfirm={handleDelete}
         studentName={student.name}
       />
+
+      <AddToGroupModal
+        open={addToGroupOpen}
+        onClose={() => setAddToGroupOpen(false)}
+        onSubmit={() => setAddToGroupOpen(false)}
+      />
+
+      <MoveToBranchModal
+        open={moveBranchOpen}
+        onClose={() => setMoveBranchOpen(false)}
+        onSubmit={() => setMoveBranchOpen(false)}
+      />
+
+      <AddPaymentModal
+        open={addPaymentOpen}
+        onClose={() => setAddPaymentOpen(false)}
+        student={student}
+      />
+
+      <Menu
+        anchorEl={groupMenuAnchor}
+        open={Boolean(groupMenuAnchor)}
+        onClose={() => setGroupMenuAnchor(null)}
+      >
+        <MenuItem
+          onClick={() => {
+            setGroupMenuAnchor(null);
+            setMoveBranchOpen(true);
+          }}
+        >
+          Move to another branch
+        </MenuItem>
+      </Menu>
+
+      <Menu
+        anchorEl={paymentMenuAnchor}
+        open={Boolean(paymentMenuAnchor)}
+        onClose={() => setPaymentMenuAnchor(null)}
+      >
+        <MenuItem onClick={() => setPaymentMenuAnchor(null)}>Return money</MenuItem>
+        <MenuItem onClick={() => setPaymentMenuAnchor(null)}>Write off</MenuItem>
+      </Menu>
     </div>
-  )};
+  );
+};

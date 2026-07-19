@@ -84,14 +84,14 @@ const PEAKS: Record<ScheduleTab, string> = {
 // ─── Stat card config ─────────────────────────────────────────────────────────
 
 const STATS = [
-  { key: "leads",        label: "Active leads",            value: 1,   route: "/leads",    icon: <FiUsers size={20} /> },
-  { key: "students",     label: "Active students",         value: 26, route: "/students", icon: <FiUserCheck size={20} /> },
-  { key: "groups",       label: "Groups",                  value: 6,  route: "/groups",   icon: <FiLayers size={20} /> },
-  { key: "debtors",      label: "Debtors",                 value: 6, route: "/students", filter: "debt", icon: <FiAlertTriangle size={20} /> },
-  { key: "trial",        label: "In a trial lesson",       value: 2,  route: "/students", filter: "trial", icon: <FiPlayCircle size={20} /> },
-  { key: "paid",         label: "Paid during the month",   value: 4, route: "/payments", icon: <FiDollarSign size={20} /> },
-  { key: "leftActive",   label: "Left active group",       value: 1, route: "/students", filter: "left_active", icon: <FiUserMinus size={20} /> },
-  { key: "leftTrial",    label: "Left after trial period", value: 0,   route: "/students", filter: "left_trial", icon: <FiUserX size={20} /> },
+  { key: "leads",        label: "Active leads",            value: 1,   route: "/leads",    icon: <FiUsers size={35} /> },
+  { key: "students",     label: "Active students",         value: 26, route: "/students", icon: <FiUserCheck size={35} /> },
+  { key: "groups",       label: "Groups",                  value: 6,  route: "/groups",   icon: <FiLayers size={35} /> },
+  { key: "debtors",      label: "Debtors",                 value: 6, route: "/students", filter: "debt", icon: <FiAlertTriangle size={35} /> },
+  { key: "trial",        label: "In a trial lesson",       value: 2,  route: "/students", filter: "trial", icon: <FiPlayCircle size={35} /> },
+  { key: "paid",         label: "Paid during the month",   value: 4, route: "/payments", icon: <FiDollarSign size={35} /> },
+  { key: "leftActive",   label: "Left active group",       value: 1, route: "/students", filter: "left_active", icon: <FiUserMinus size={35} /> },
+  { key: "leftTrial",    label: "Left after trial period", value: 0,   route: "/students", filter: "left_trial", icon: <FiUserX size={40} /> },
 ];
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
@@ -110,6 +110,12 @@ for (let m = TIME_START; m <= TIME_END; m += 30) {
 const pct = (mins: number) =>
   `${((mins / TOTAL_MINS) * 100).toFixed(3)}%`;
 
+const formatChartValue = (value: number) => {
+  if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B UZS`;
+  if (value >= 1000000) return `${(value / 1000000).toFixed(0)} 000 000 UZS`;
+  return `${new Intl.NumberFormat("uz-UZ").format(value)} UZS`;
+};
+
 // ─── Custom chart tooltip ─────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -118,12 +124,12 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   return (
     <Box sx={{
       background: "#fff", border: "1px solid #e5e7eb",
-      borderRadius: 2, px: 2, py: 1.5,
-      boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+      borderRadius: 2, px: 2.2, py: 1.6,
+      boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
     }}>
-      <Typography sx={{ fontSize: 11, color: "#9ca3af" }}>{label}</Typography>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#f97316" }}>
-        {new Intl.NumberFormat("uz-UZ").format(payload[0].value)} UZS
+      <Typography sx={{ fontSize: 12, color: "#6b7280", fontWeight: 700 }}>{label}</Typography>
+      <Typography sx={{ fontSize: 15, fontWeight: 800, color: "#f97316", mt: 0.3 }}>
+        {formatChartValue(payload[0].value)}
       </Typography>
     </Box>
   );
@@ -199,13 +205,13 @@ export const Dashboard = () => {
             >
               <Box sx={{ color: "#f97316", mb: 0.25 }}>{icon}</Box>
               <Typography sx={{
-                fontSize: 10, color: "#9ca3af", lineHeight: 1.3,
-                fontWeight: 500, minHeight: 28, display: "flex",
+                fontSize: 15, color: "#6b7280", lineHeight: 1.3,
+                 minHeight: 32, display: "flex",
                 alignItems: "center", justifyContent: "center",
               }}>
                 {label}
               </Typography>
-              <Typography sx={{ fontSize: 24, fontWeight: 700, color: "#4b90f0", lineHeight: 1 }}>
+              <Typography sx={{ fontSize: 32,  color: "#022081", lineHeight: 1 }}>
                 {value}
               </Typography>
             </Paper>
@@ -226,26 +232,22 @@ export const Dashboard = () => {
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
               <XAxis
                 dataKey="month"
-                tick={{ fontSize: 10, fill: "#9ca3af" }}
+                tick={{ fontSize: 12, fill: "#6b7280" }}
                 axisLine={false} tickLine={false}
                 interval={3}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: "#9ca3af" }}
+                tick={{ fontSize: 12, fill: "#6b7280" }}
                 axisLine={false} tickLine={false}
-                tickFormatter={(v) =>
-                  v >= 1_000_000
-                    ? (v / 1_000_000).toFixed(0) + " 000 000 UZS"
-                    : String(v)
-                }
-                width={105}
+                tickFormatter={(v) => formatChartValue(v as number)}
+                width={130}
               />
               <RTooltip content={<ChartTooltip />} />
               <Line
                 type="monotone" dataKey="value"
                 stroke="#f97316" strokeWidth={2.5}
-                dot={{ r: 3, fill: "#fff", stroke: "#f97316", strokeWidth: 2 }}
-                activeDot={{ r: 5, fill: "#f97316" }}
+                dot={{ r: 4, fill: "#fff", stroke: "#f97316", strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: "#f97316" }}
                 isAnimationActive
               />
               <ReferenceDot

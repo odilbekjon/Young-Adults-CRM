@@ -49,7 +49,6 @@ const TABS: { key: TabType; label: string }[] = [
   { key: "salary", label: "Salary calculation" },
 ];
 
-// Sample data — replace with real API data
 const SAMPLE_TEACHERS: Teacher[] = [];
 
 export const TeacherAttendanceReport = () => {
@@ -67,22 +66,24 @@ export const TeacherAttendanceReport = () => {
   const workingDays = days.filter((d) => !d.isWeekend).length;
 
   return (
-    <div className="p-5 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-medium text-gray-900 mb-5">
-        Teacher attendance reports
-      </h1>
+    <div className="min-h-screen bg-slate-50 p-6 md:p-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-semibold text-slate-900">Teacher attendance reports</h1>
+        <p className="mt-2 text-[15px] text-slate-600">
+          Review attendance and daily activity with clearer, larger controls and tables.
+        </p>
+      </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap border-b border-slate-200">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-5 py-3.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              className={`px-6 py-3.5 text-[15px] font-medium transition-colors border-b-2 -mb-px ${
                 activeTab === tab.key
-                  ? "text-blue-500 border-blue-500"
-                  : "text-gray-500 border-transparent hover:text-gray-700"
+                  ? "text-blue-600 border-blue-600"
+                  : "text-slate-500 border-transparent hover:text-slate-700"
               }`}
             >
               {tab.label}
@@ -90,13 +91,12 @@ export const TeacherAttendanceReport = () => {
           ))}
         </div>
 
-        <div className="p-4">
+        <div className="p-5 md:p-6">
           {activeTab === "attendance" && (
             <>
-              {/* Month picker */}
-              <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 w-full mb-4 text-sm text-gray-700 bg-white">
+              <div className="mb-5 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-700 shadow-sm">
                 <svg
-                  className="w-4 h-4 text-gray-400 shrink-0"
+                  className="h-5 w-5 shrink-0 text-slate-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -108,40 +108,33 @@ export const TeacherAttendanceReport = () => {
                   type="month"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="flex-1 outline-none bg-transparent text-sm text-gray-700 cursor-pointer"
+                  className="flex-1 bg-transparent text-[15px] text-slate-700 outline-none cursor-pointer"
                 />
               </div>
 
-              {/* Table */}
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="border-collapse text-xs" style={{ minWidth: 900 }}>
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="min-w-[960px] border-collapse text-sm" style={{ minWidth: 960 }}>
                   <thead>
                     <tr>
-                      <th
-                        className="sticky left-0 z-10 bg-gray-50 border-r border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-600 min-w-[140px]"
-                      >
+                      <th className="sticky left-0 z-10 min-w-[160px] border-r border-b border-slate-200 bg-slate-50 px-3 py-3 text-left font-semibold text-slate-700">
                         Teachers
                       </th>
 
                       {days.map((day) => (
                         <th
                           key={day.date}
-                          className={`border-r border-b border-gray-200 px-2 py-2 text-center font-medium whitespace-nowrap ${
+                          className={`border-r border-b border-slate-200 px-3 py-3 text-center font-semibold whitespace-nowrap ${
                             day.isToday
-                              ? "bg-amber-50 text-amber-600"
+                              ? "bg-amber-50 text-amber-700"
                               : day.isWeekend
-                              ? "bg-gray-50 text-gray-400"
-                              : "bg-gray-50 text-gray-600"
+                              ? "bg-slate-50 text-slate-400"
+                              : "bg-slate-50 text-slate-600"
                           }`}
                         >
-                          <span className="block text-xs font-medium">
-                            {day.date}-{day.month}
-                          </span>
+                          <span className="block text-[13px] font-semibold">{day.date}-{day.month}</span>
                           <span
-                            className={`block text-[11px] font-normal ${
-                              day.isToday
-                                ? "text-amber-500"
-                                : "text-gray-400"
+                            className={`mt-1 block text-[12px] font-normal ${
+                              day.isToday ? "text-amber-600" : "text-slate-400"
                             }`}
                           >
                             {day.dayName}
@@ -149,13 +142,13 @@ export const TeacherAttendanceReport = () => {
                         </th>
                       ))}
 
-                      <th className="border-r border-b border-gray-200 px-2 py-2 text-center font-medium text-gray-600 bg-gray-50 whitespace-nowrap min-w-[80px]">
+                      <th className="min-w-[96px] border-r border-b border-slate-200 bg-slate-50 px-3 py-3 text-center font-semibold text-slate-700 whitespace-nowrap">
                         Full work day
                       </th>
-                      <th className="border-r border-b border-gray-200 px-2 py-2 text-center font-medium text-gray-600 bg-gray-50 min-w-[60px]">
+                      <th className="min-w-[72px] border-r border-b border-slate-200 bg-slate-50 px-3 py-3 text-center font-semibold text-slate-700">
                         Came
                       </th>
-                      <th className="border-b border-gray-200 px-2 py-2 text-center font-medium text-gray-600 bg-gray-50 min-w-[60px]">
+                      <th className="min-w-[72px] border-b border-slate-200 bg-slate-50 px-3 py-3 text-center font-semibold text-slate-700">
                         Extra
                       </th>
                     </tr>
@@ -163,23 +156,18 @@ export const TeacherAttendanceReport = () => {
                   <tbody>
                     {teachers.length === 0 ? (
                       <tr>
-                        <td
-                          colSpan={days.length + 4}
-                          className="py-12 text-center text-gray-400 text-sm"
-                        >
+                        <td colSpan={days.length + 4} className="py-14 text-center text-slate-500 text-[15px]">
                           No Data
                         </td>
                       </tr>
                     ) : (
                       teachers.map((teacher) => {
-                        const came = days.filter(
-                          (d) => teacher.attendance[d.date] === "present"
-                        ).length;
+                        const came = days.filter((d) => teacher.attendance[d.date] === "present").length;
                         const extra = Math.max(0, came - workingDays);
 
                         return (
-                          <tr key={teacher.id} className="hover:bg-gray-50">
-                            <td className="sticky left-0 z-10 bg-white border-r border-t border-gray-200 px-3 py-2 text-gray-800 font-medium">
+                          <tr key={teacher.id} className="hover:bg-slate-50">
+                            <td className="sticky left-0 z-10 border-r border-t border-slate-200 bg-white px-3 py-3 font-semibold text-slate-800">
                               {teacher.name}
                             </td>
                             {days.map((day) => {
@@ -187,30 +175,30 @@ export const TeacherAttendanceReport = () => {
                               return (
                                 <td
                                   key={day.date}
-                                  className={`border-r border-t border-gray-200 px-2 py-2 text-center ${
-                                    day.isWeekend ? "bg-gray-50" : ""
+                                  className={`border-r border-t border-slate-200 px-3 py-3 text-center ${
+                                    day.isWeekend ? "bg-slate-50" : ""
                                   } ${day.isToday ? "bg-amber-50/40" : ""}`}
                                 >
                                   {status === "present" && (
-                                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 text-green-700 text-[10px] font-medium">
+                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-[11px] font-semibold text-green-700">
                                       ✓
                                     </span>
                                   )}
                                   {status === "absent" && (
-                                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-600 text-[10px] font-medium">
+                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-100 text-[11px] font-semibold text-red-600">
                                       ✗
                                     </span>
                                   )}
                                 </td>
                               );
                             })}
-                            <td className="border-r border-t border-gray-200 px-2 py-2 text-center text-gray-700">
+                            <td className="border-r border-t border-slate-200 px-3 py-3 text-center text-slate-700">
                               {workingDays}
                             </td>
-                            <td className="border-r border-t border-gray-200 px-2 py-2 text-center text-gray-700">
+                            <td className="border-r border-t border-slate-200 px-3 py-3 text-center text-slate-700">
                               {came}
                             </td>
-                            <td className="border-t border-gray-200 px-2 py-2 text-center text-gray-700">
+                            <td className="border-t border-slate-200 px-3 py-3 text-center text-slate-700">
                               {extra}
                             </td>
                           </tr>
@@ -224,13 +212,13 @@ export const TeacherAttendanceReport = () => {
           )}
 
           {activeTab === "schedule" && (
-            <div className="py-12 text-center text-gray-400 text-sm">
+            <div className="py-16 text-center text-slate-500 text-[15px]">
               Teacher work schedule coming soon
             </div>
           )}
 
           {activeTab === "salary" && (
-            <div className="py-12 text-center text-gray-400 text-sm">
+            <div className="py-16 text-center text-slate-500 text-[15px]">
               Salary calculation coming soon
             </div>
           )}

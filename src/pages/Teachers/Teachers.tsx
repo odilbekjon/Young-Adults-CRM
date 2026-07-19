@@ -36,6 +36,7 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { type Teacher } from "../../constants/Teachers";
 import { useBranch } from "../../Context/BranchContext";
+import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
 
 const EMPTY_FORM = {
   fullName: "",
@@ -73,6 +74,7 @@ export const Teachers = () => {
   const [localTeachers, setLocalTeachers]         = useState<Teacher[]>([]);
   const [form, setForm]                           = useState(EMPTY_FORM);
   const [deleteOpen, setDeleteOpen]               = useState(false);
+  const [smsOpen, setSmsOpen]                     = useState(false);
   const [showPassword, setShowPassword]           = useState(false);
   const [photoPreview, setPhotoPreview]           = useState<string | null>(null);
   const fileInputRef                              = useRef<HTMLInputElement>(null);
@@ -163,6 +165,7 @@ export const Teachers = () => {
   /* ── delete ── */
   const handleDelete     = () => { setDeleteOpen(true); handleCloseMenu(); };
   const handleConfirmDel = () => { setLocalTeachers((prev) => prev.filter((t) => t.id !== selectedTeacherId)); setDeleteOpen(false); setSelectedTeacherId(null); };
+  const handleSmsOpen    = () => { setSmsOpen(true); handleCloseMenu(); };
 
   /* ════════════════════════════════════════════════════════ */
   return (
@@ -209,15 +212,14 @@ export const Teachers = () => {
       <TableContainer sx={{ borderRadius: "10px", border: "1px solid #e0e0e0" }}>
         <Table sx={{ bgcolor: "#fff" }}>
           <TableBody sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", padding: "12px" }}>
-            {filteredTeachers.map((t, index) => (
+            {filteredTeachers.map((t) => (
               <TableRow key={t.id} onClick={() => navigate(`/teachers/${t.id}`)}
                 sx={{ display: "flex", justifyContent: "space-between", alignItems: "center",
                   border: "1px solid #e8e8e8", borderRadius: "10px", cursor: "pointer",
                   "&:hover": { bgcolor: "#f9f9f9" }, "& td": { border: 0 } }}>
-                <TableCell sx={{ color: "#aaa", fontSize: 14, minWidth: 28, py: 1.8 }}>{index + 1}</TableCell>
                 <TableCell sx={{ fontWeight: 500, fontSize: 14, flex: 1, py: 1.8 }}>{t.fullName}</TableCell>
-                <TableCell sx={{ color: "#185FA5", fontSize: 14, minWidth: 110, textAlign: "center", py: 1.8 }}>{t.phone}</TableCell>
-                <TableCell sx={{ fontSize: 14, color: "#888", minWidth: 80, textAlign: "center", py: 1.8 }}>{t.groups.length} groups</TableCell>
+                <TableCell sx={{ color: "#185FA5", fontSize: 14, mr: 12 }}>{t.phone}</TableCell>
+                <TableCell sx={{ fontSize: 14, color: "#888", minWidth: 90, textAlign: "center", py: 1.8 }}>{t.groups.length} groups</TableCell>
                 <TableCell align="center" sx={{ py: 1.8 }} onClick={(e) => e.stopPropagation()}>
                   <IconButton size="small" onClick={(e) => handleMenuOpen(e, t.id)}>
                     <BsThreeDotsVertical size={16} />
@@ -226,6 +228,7 @@ export const Teachers = () => {
                     anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
                     transformOrigin={{ vertical: "top", horizontal: "center" }}>
                     <MenuItem onClick={openEditDrawer}>✏️ Edit</MenuItem>
+                    <MenuItem onClick={handleSmsOpen}>📱 SMS</MenuItem>
                     <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>🗑 Delete</MenuItem>
                   </Menu>
                 </TableCell>
@@ -233,12 +236,20 @@ export const Teachers = () => {
             ))}
             {filteredTeachers.length === 0 && (
               <TableRow sx={{ "& td": { border: 0 } }}>
-                <TableCell colSpan={5} align="center" sx={{ color: "#aaa", py: 4 }}>No data available</TableCell>
+                <TableCell colSpan={4} align="center" sx={{ color: "#aaa", py: 4 }}>No data available</TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </TableContainer>
+
+      <SendSmsModal
+        open={smsOpen}
+        onClose={() => setSmsOpen(false)}
+        selectedCount={1}
+        recipientLabel="teacher"
+        sender="3700"
+      />
 
       {/* ══════════════════════════════════════════════════════
           DRAWER

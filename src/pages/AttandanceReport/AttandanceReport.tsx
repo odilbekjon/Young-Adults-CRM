@@ -3,7 +3,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   MenuItem, Select, FormControl, TextField, IconButton,
 } from "@mui/material";
-import { FiCalendar, FiX } from "react-icons/fi";
+import { FiCalendar, FiX, FiEdit2 } from "react-icons/fi";
 import { TEACHERS_DATA } from "../../constants/Teachers";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -21,6 +21,7 @@ interface AttendanceRow {
   days: string;
   course: string;
   attendance: AttendanceStatus;
+  lastComment: string;
 }
 
 // ─── Ma'lumotlarni TEACHERS_DATA dan generatsiya qilish ───────────────────────
@@ -64,6 +65,7 @@ function buildRows(): AttendanceRow[] {
           days: group.days,
           course: group.course,
           attendance,
+          lastComment: "",
         });
         uid++;
       });
@@ -265,10 +267,10 @@ export const AttendanceReport = () => {
                 Group <SortIcon active={sortKey === "group"} dir={sortDir} />
               </TableCell>
               <TableCell sx={thSx}>Teacher</TableCell>
-              <TableCell sx={thSx}>Time</TableCell>
-              <TableCell sx={thSx}>Days</TableCell>
+              <TableCell sx={thSx}>Lesson time</TableCell>
               <TableCell sx={thSx}>Attendance</TableCell>
-              <TableCell sx={thSx}>Course</TableCell>
+              <TableCell sx={thSx}>Last comment</TableCell>
+              <TableCell sx={thSx}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -290,11 +292,15 @@ export const AttendanceReport = () => {
                   <TableCell sx={{ fontSize: 13 }}>{row.group}</TableCell>
                   <TableCell sx={{ fontSize: 13 }}>{row.teacher}</TableCell>
                   <TableCell sx={{ fontSize: 13, whiteSpace: "nowrap" }}>{row.lessonTime}</TableCell>
-                  <TableCell sx={{ fontSize: 13, color: "#6b7280" }}>{row.days}</TableCell>
                   <TableCell sx={{ fontSize: 13, whiteSpace: "nowrap" }}>
                     <span style={{ color: attendanceColor(row.attendance) }} className="font-medium">{row.attendance}</span>
                   </TableCell>
-                  <TableCell sx={{ fontSize: 13, color: "#6b7280" }}>{row.course}</TableCell>
+                  <TableCell sx={{ fontSize: 13, color: "#6b7280" }}>{row.lastComment || ""}</TableCell>
+                  <TableCell sx={{ fontSize: 13 }}>
+                    <IconButton size="small" sx={{ color: "#3b82f6" }}>
+                      <FiEdit2 size={15} />
+                    </IconButton>
+                  </TableCell>
                 </TableRow>
               ))
             )}

@@ -159,7 +159,7 @@ const ALL_COURSES  = [...new Set(TEACHERS_DATA.flatMap((t) => t.groups.map((g) =
 // ─── Reusable UI ─────────────────────────────────────────────────────────────
 
 const Label = ({ text }: { text: string }) => (
-  <label className="block text-[10px] text-gray-500 font-medium mb-1">{text}</label>
+  <label className="mb-1 block text-[12px] font-semibold text-gray-600">{text}</label>
 );
 
 const Input = ({ value, onChange, placeholder }: {
@@ -169,7 +169,7 @@ const Input = ({ value, onChange, placeholder }: {
     value={value}
     onChange={(e) => onChange(e.target.value)}
     placeholder={placeholder}
-    className="w-full border border-gray-200 rounded-md px-2 py-[7px] text-xs text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-[#003366]"
+    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-[15px] text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-[#003366]"
   />
 );
 
@@ -179,7 +179,7 @@ const Select = ({ value, onChange, options, placeholder = "Select" }: {
   <select
     value={value}
     onChange={(e) => onChange(e.target.value)}
-    className="w-full border border-gray-200 rounded-md px-2 py-[7px] text-xs text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-[#003366] cursor-pointer"
+    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-[15px] text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-[#003366] cursor-pointer"
   >
     <option value="">{placeholder}</option>
     {options.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -187,7 +187,7 @@ const Select = ({ value, onChange, options, placeholder = "Select" }: {
 );
 
 const SortIcon = ({ active, dir }: { active: boolean; dir: "asc" | "desc" }) => (
-  <span className={`ml-1 text-[10px] ${active ? "text-[#003366]" : "text-gray-300"}`}>
+  <span className={`ml-1 text-[12px] ${active ? "text-[#003366]" : "text-gray-300"}`}>
     {active ? (dir === "asc" ? "▲" : "▼") : "⇅"}
   </span>
 );
@@ -267,10 +267,10 @@ export const AllPayments = () => {
         <div className="col-span-2 flex flex-col gap-4">
 
           {/* Total Revenue */}
-          <div className="bg-white rounded-xl border border-gray-200 border-l-[5px] border-l-[#003366] px-6 py-5 flex items-center justify-between shadow-sm">
+          <div className="flex items-center justify-between rounded-2xl border border-gray-200 border-l-[5px] border-l-[#003366] bg-white px-6 py-6 shadow-sm">
             <div>
-              <p className="text-sm text-gray-500 font-medium mb-2">Total Revenue:</p>
-              <p className="text-3xl font-bold text-gray-900 tracking-tight">
+              <p className="mb-2 text-[15px] font-semibold text-gray-500">Total Revenue:</p>
+              <p className="text-3xl font-bold tracking-tight text-gray-900">
                 {fmt(totalRevenue)}
                 <span className="text-lg font-semibold text-gray-500 ml-2">UZS</span>
               </p>
@@ -282,15 +282,15 @@ export const AllPayments = () => {
           </div>
 
           {/* Total Net Profit */}
-          <div className="bg-white rounded-xl border border-gray-200 border-l-[5px] border-l-[#003366] px-6 py-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-200 border-l-[5px] border-l-[#003366] bg-white px-6 py-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <p className="text-sm text-gray-500 font-medium mb-2">Total Net Profit:</p>
-                <p className="text-3xl font-bold text-gray-900 tracking-tight">
+                <p className="mb-2 text-[15px] font-semibold text-gray-500">Total Net Profit:</p>
+                <p className="text-3xl font-bold tracking-tight text-gray-900">
                   {fmt(totalRevenue)}
                   <span className="text-lg font-semibold text-gray-500 ml-2">UZS</span>
                 </p>
-                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                <p className="mt-2 flex items-center gap-1 text-[13px] text-gray-400">
                   📅 {dateFrom} — {dateTo}
                 </p>
               </div>
@@ -300,7 +300,7 @@ export const AllPayments = () => {
             {/* Details toggle */}
             <button
               onClick={() => setShowDetails((v) => !v)}
-              className="mt-4 flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#003366] transition-colors group"
+              className="group mt-4 flex items-center gap-1.5 text-[13px] text-gray-500 transition-colors hover:text-[#003366]"
             >
               <FiInfo size={13} className="group-hover:text-[#003366]" />
               <span>Details</span>
@@ -313,14 +313,14 @@ export const AllPayments = () => {
             <Collapse in={showDetails}>
               <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
                 {DETAIL_METHODS.map((method) => (
-                  <div key={method} className="flex items-center gap-2 text-sm text-gray-700">
+                  <div key={method} className="flex items-center gap-2 text-[15px] text-gray-700">
                     <span className="text-gray-400 text-base leading-none">•</span>
                     <span>
                       <span className="font-medium">{method}:</span>{" "}
                       <span className="font-semibold text-gray-800">
                         {fmt(details[method] ?? 0)}
                       </span>{" "}
-                      <span className="text-gray-400 text-xs">UZS</span>
+                      <span className="text-[13px] text-gray-400">UZS</span>
                     </span>
                   </div>
                 ))}
@@ -330,7 +330,7 @@ export const AllPayments = () => {
         </div>
 
         {/* Right: Chart */}
-        <div className="col-span-3 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="col-span-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={CHART_DATA} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -366,10 +366,10 @@ export const AllPayments = () => {
       </div>
 
       {/* ── Filter Panel ── */}
-      <div className="bg-white rounded-xl border border-gray-200 mb-4 overflow-hidden shadow-sm">
+      <div className="mb-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         <button
           onClick={() => setShowFilters((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          className="flex w-full items-center justify-between px-5 py-3.5 text-[15px] font-semibold text-gray-700 transition-colors hover:bg-gray-50"
         >
           <span className="flex items-center gap-2">
             <FiFilter size={14} /> Filters
@@ -410,12 +410,12 @@ export const AllPayments = () => {
               <div className="flex gap-2">
                 <button
                   onClick={resetFilters}
-                  className="flex-1 border border-gray-200 rounded-md py-[7px] text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+                  className="flex-1 rounded-lg border border-gray-200 py-2.5 text-[14px] text-gray-500 transition-colors hover:bg-gray-50"
                 >
                   Reset
                 </button>
                 <button
-                  className="flex-1 bg-[#003366] text-white rounded-md py-[7px] text-xs font-medium hover:bg-[#002244] transition-colors"
+                  className="flex-1 rounded-lg bg-[#003366] py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#002244]"
                 >
                   Filter
                 </button>
@@ -426,7 +426,7 @@ export const AllPayments = () => {
       </div>
 
       {/* ── Table ── */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -447,12 +447,12 @@ export const AllPayments = () => {
                     onClick={() => key && handleSort(key)}
                     sx={{
                       fontWeight: 700,
-                      fontSize: 12,
+                      fontSize: 13,
                       color: "#374151",
                       cursor: key ? "pointer" : "default",
                       whiteSpace: "nowrap",
                       borderBottom: "2px solid #e5e9f0",
-                      py: 1.5,
+                      py: 1.6,
                       userSelect: "none",
                     }}
                   >
@@ -475,15 +475,15 @@ export const AllPayments = () => {
                       backgroundColor: i % 2 === 0 ? "#fff" : "#fafbfc",
                     }}
                   >
-                    <TableCell sx={{ fontSize: 12, py: 1.2, whiteSpace: "nowrap", fontWeight: 500, color: "#374151" }}>
+                    <TableCell sx={{ fontSize: 13, py: 1.3, whiteSpace: "nowrap", fontWeight: 600, color: "#374151" }}>
                       {rowNum}. {fmtDate(p.date)}
                     </TableCell>
                     <TableCell sx={{ fontSize: 12, py: 1.2, color: "#374151" }}>
                       {p.name}
                     </TableCell>
-                    <TableCell sx={{ fontSize: 12, py: 1.2, whiteSpace: "nowrap" }}>
+                    <TableCell sx={{ fontSize: 13, py: 1.3, whiteSpace: "nowrap" }}>
                       <span className="font-semibold text-gray-900">{fmt(p.sum)}</span>
-                      <span className="text-[11px] text-gray-400 ml-1">UZS</span>
+                      <span className="ml-1 text-[12px] text-gray-400">UZS</span>
                     </TableCell>
                     <TableCell sx={{ fontSize: 12, py: 1.2, color: "#374151" }}>
                       {p.methodPay}
@@ -492,14 +492,14 @@ export const AllPayments = () => {
                       {p.teacher}
                     </TableCell>
                     <TableCell sx={{ fontSize: 12, py: 1.2 }}>
-                      <span className="bg-gray-100 border border-gray-200 rounded px-2 py-[2px] text-[11px] text-gray-700 whitespace-nowrap">
+                      <span className="whitespace-nowrap rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-[12px] text-gray-700">
                         {p.comment}
                       </span>
                     </TableCell>
                     <TableCell sx={{ fontSize: 12, py: 1.2 }}>
-                      <span className="text-gray-700 text-xs">{p.creator}</span>
+                      <span className="text-[13px] text-gray-700">{p.creator}</span>
                       <br />
-                      <span className="text-[11px] text-gray-400">{p.createdAt}</span>
+                      <span className="text-[12px] text-gray-400">{p.createdAt}</span>
                     </TableCell>
                   </TableRow>
                 );
@@ -507,7 +507,7 @@ export const AllPayments = () => {
 
               {paginated.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: "#9ca3af", fontSize: 13 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: "#9ca3af", fontSize: 14 }}>
                     No payments found
                   </TableCell>
                 </TableRow>
@@ -518,7 +518,7 @@ export const AllPayments = () => {
 
         {/* Footer: total + pagination */}
         <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100">
-          <span className="text-xs text-gray-500">
+          <span className="text-[13px] text-gray-500">
             Showing{" "}
             <strong className="text-gray-700">
               {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)}

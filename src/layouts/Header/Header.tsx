@@ -865,13 +865,11 @@ export const Header = () => {
             PaperProps={{ sx: { borderRadius: 2, mt: 1, minWidth: 160, boxShadow: "0 8px 24px rgba(0,0,0,0.1)" } }}
           >
             <MenuItem sx={{ fontSize: 13 }} onClick={() => { setUserMenuAnchor(null); navigate("/profile"); }}>
-              My Profile
+              Account
             </MenuItem>
-            <MenuItem sx={{ fontSize: 13 }} onClick={() => { setUserMenuAnchor(null); navigate("/settings"); }}>
-              Settings
-            </MenuItem>
+          
             <MenuItem sx={{ fontSize: 13, color: "#e53935" }} onClick={() => setUserMenuAnchor(null)}>
-              Logout
+              Sign out
             </MenuItem>
           </Menu>
         </Box>

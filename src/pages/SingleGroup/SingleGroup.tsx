@@ -111,6 +111,7 @@ export const SingleGroup = () => {
   const [removeReason, setRemoveReason] = useState<RemoveReason>("");
   const [removeComment, setRemoveComment] = useState("");
   const [removeRecalculate, setRemoveRecalculate] = useState(false);
+  const [, setMoveToBranchOpen] = useState(false);
   const [removeScope, setRemoveScope] = useState<"current" | "all">("current");
 
   if (!group) {
@@ -564,6 +565,7 @@ export const SingleGroup = () => {
         onAddPayment={() => { handleCloseMenu(); setPaymentOpen(true); }}
         onAddNote={() => { handleCloseMenu(); setNoteOpen(true); }}
         onMoveGroup={() => { handleCloseMenu(); setMoveOpen(true); }}
+        onMoveToBranch={() => { handleCloseMenu(); setMoveToBranchOpen(true); }}
         onRemove={() => { handleCloseMenu(); setRemoveOpen(true); }}
         onReminders={() => { handleCloseMenu(); setReminderOpen(true); }}
       />

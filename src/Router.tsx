@@ -26,6 +26,7 @@ import { General } from "./pages/Settings/ceo/pages/general";
 import { Staff } from "./pages/Settings/ceo/pages/staff";
 import { Roadmap } from "./pages/Settings/ceo/pages/roadmap";
 import { Billing } from "./pages/Settings/ceo/pages/billing";
+import { Branches } from "./pages/Settings/ceo/pages/branches";
 import { Office } from "./pages/Settings/office/office";
 import { Courses } from "./pages/Settings/office/pages";
 import { SingleCourse } from "./pages/SingleCourse";
@@ -88,6 +89,7 @@ export const AppRouter = () => {
                 <Route path="roadmap"      element={<Roadmap />} />
                 <Route path="staff"        element={<Staff />} />
                 <Route path="billing"      element={<Billing />} />
+                <Route path="branches"      element={<Branches />} />
             </Route>
 
             <Route path="office"             element={<Office />} >

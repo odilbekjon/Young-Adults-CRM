@@ -1,474 +1,25 @@
 // src/components/Header/Header.tsx
 
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Box, Avatar, Typography, Menu, MenuItem } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { useBranch, BRANCH_OPTIONS, type BranchId } from "../../Context/BranchContext";
-import { useData } from "../../Context/DataContext";
-import type { FlatStudent } from "../../constants/FlatStudents";
+
 import { SIDEBAR_WIDTH, HEADER_HEIGHT } from "../Sidebar/Sidebar";
+import { AddStudent } from "../../components/AddStudent/AddStudent";
+import { AddPayment } from "../../components/AddPayment/AddPayment";
+
 
 import {
   MdSearch, MdFullscreen, MdFullscreenExit,
   MdHelpOutline, MdHistory, MdNotificationsNone,
-  MdKeyboardArrowDown, MdAdd, MdClose, MdCalendarToday,
+  MdKeyboardArrowDown, MdAdd,
 } from "react-icons/md";
-import {
-  BsTelephone, BsKey, BsPerson, BsEnvelope,
-  BsTelegram, BsMortarboard, BsGeoAlt, BsCardText,
-} from "react-icons/bs";
 
 import logo from "../../assets/logo.svg";
 
-/* ─── shared styles ─── */
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  border: "1px solid #e0e0e0",
-  borderRadius: 8,
-  padding: "10px 12px",
-  fontSize: 13,
-  color: "#1a1a1a",
-  outline: "none",
-  boxSizing: "border-box",
-  background: "#fff",
-  fontFamily: "inherit",
-};
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 500,
-  color: "#1a1a1a",
-  marginBottom: 6,
-  display: "block",
-};
-
-const additionalIcons = [
-  { icon: <BsTelephone size={16} />, label: "Phone" },
-  { icon: <BsKey size={16} />, label: "Key" },
-  { icon: <BsPerson size={16} />, label: "Contact" },
-  { icon: <BsEnvelope size={16} />, label: "Email" },
-  { icon: <BsTelegram size={16} />, label: "Telegram" },
-  { icon: <BsMortarboard size={16} />, label: "Education" },
-  { icon: <BsGeoAlt size={16} />, label: "Location" },
-  { icon: <BsCardText size={16} />, label: "Card" },
-];
-
-const PAYMENT_METHODS = [
-  ["Cash", "Click"],
-  ["Card", "Uzum"],
-  ["Bank account", "Humo"],
-  ["Payme", ""],
-];
-
-/* ══════════════════════════════════════════
-   Right Drawer (reusable)
-══════════════════════════════════════════ */
-const RightDrawer = ({
-  open, onClose, title, width = 460, children,
-}: {
-  open: boolean; onClose: () => void; title: string; width?: number; children: React.ReactNode;
-}) => (
-  <>
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,0.18)",
-        zIndex: 1200, opacity: open ? 1 : 0,
-        pointerEvents: open ? "auto" : "none", transition: "opacity 0.25s",
-      }}
-    />
-    <div
-      style={{
-        position: "fixed", top: 0, right: 0,
-        width, height: "100vh", background: "#fff",
-        zIndex: 1300, boxShadow: "-4px 0 24px rgba(0,0,0,0.12)",
-        transform: open ? "translateX(0)" : "translateX(100%)",
-        transition: "transform 0.28s cubic-bezier(.4,0,.2,1)",
-        display: "flex", flexDirection: "column",
-      }}
-    >
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "20px 24px", borderBottom: "1px solid #f0f0f0", flexShrink: 0,
-      }}>
-        <span style={{ fontSize: 17, fontWeight: 600, color: "#1a1a1a" }}>{title}</span>
-        <div onClick={onClose} style={{ cursor: "pointer", color: "#aaa", display: "flex" }}>
-          <MdClose size={20} />
-        </div>
-      </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
-        {children}
-      </div>
-    </div>
-  </>
-);
-
-/* ══════════════════════════════════════════
-   Add Student Drawer
-══════════════════════════════════════════ */
-const AddStudentDrawer = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
-  const { groups, addStudent } = useData();
-  const [phone, setPhone] = useState("");
-  const [name, setName] = useState("");
-  const [dob, setDob] = useState("");
-  const [gender, setGender] = useState<"Male" | "Female" | "">("");
-  const [comment, setComment] = useState("");
-  const [showGroupField, setShowGroupField] = useState(false);
-  const [showPasswordField, setShowPasswordField] = useState(false);
-  const [group, setGroup] = useState("");
-  const [password, setPassword] = useState("");
-
-  const handleClose = () => {
-    setPhone(""); setName(""); setDob(""); setGender("");
-    setComment(""); setGroup(""); setPassword("");
-    setShowGroupField(false); setShowPasswordField(false);
-    onClose();
-  };
-
-  const handleSubmit = () => {
-    const firstGroup = groups[0];
-    if (!firstGroup) { handleClose(); return; }
-    const newStudent: FlatStudent = {
-      uid: `${firstGroup.id}-${Date.now()}`,
-      id: Date.now(),
-      name: name || "Yangi O'quvchi",
-      phone: `+998 ${phone}`,
-      active: true,
-      groupId: firstGroup.id,
-      groupName: firstGroup.name,
-      groupSchedule: firstGroup.schedule,
-      groupBadge: firstGroup.badge,
-      groupBadgeColor: firstGroup.badgeColor,
-      course: firstGroup.course,
-      teacher: firstGroup.teacher,
-      teacherId: firstGroup.teacherId,
-      startDate: firstGroup.startDate,
-      endDate: firstGroup.endDate,
-      branch: firstGroup.branch ?? "",
-      room: firstGroup.room,
-      price: firstGroup.price ?? 0,
-      balance: 0,
-    };
-    addStudent(newStudent);
-    handleClose();
-  };
-
-  return (
-    <RightDrawer open={open} onClose={handleClose} title="Add New Student">
-      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-
-        {/* Phone */}
-        <div>
-          <label style={labelStyle}>Phone</label>
-          <div style={{ display: "flex", gap: 8 }}>
-            <div style={{
-              ...inputStyle, width: 72, flexShrink: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#555", fontWeight: 500,
-            }}>+998</div>
-            <input
-              style={{ ...inputStyle, flex: 1 }}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="90 123 45 67"
-              type="tel"
-            />
-          </div>
-        </div>
-
-        {/* Name */}
-        <div>
-          <label style={labelStyle}>Name</label>
-          <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-
-        {/* Date of birth */}
-        <div>
-          <label style={labelStyle}>Date of birth</label>
-          <div style={{ position: "relative" }}>
-            <MdCalendarToday size={14} style={{
-              position: "absolute", left: 12, top: "50%",
-              transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
-            }} />
-            <input
-              type="date"
-              style={{ ...inputStyle, paddingLeft: 34, color: dob ? "#1a1a1a" : "#aaa" }}
-              value={dob}
-              onChange={(e) => setDob(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Gender */}
-        <div>
-          <label style={labelStyle}>Gender</label>
-          <div style={{ display: "flex", gap: 24 }}>
-            {(["Male", "Female"] as const).map((g) => (
-              <label key={g} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
-                <div
-                  onClick={() => setGender(g)}
-                  style={{
-                    width: 18, height: 18, borderRadius: "50%",
-                    border: `2px solid ${gender === g ? "#185FA5" : "#ccc"}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer", flexShrink: 0,
-                  }}
-                >
-                  {gender === g && <div style={{ width: 9, height: 9, borderRadius: "50%", background: "#185FA5" }} />}
-                </div>
-                {g}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Comment */}
-        <div>
-          <label style={labelStyle}>Comment</label>
-          <textarea
-            style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-        </div>
-
-        {/* Additional contacts */}
-        <div>
-          <label style={{ ...labelStyle, color: "#888", fontWeight: 400 }}>Additional contacts</label>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {additionalIcons.map((item, i) => (
-              <button
-                key={i}
-                title={item.label}
-                style={{
-                  width: 40, height: 40,
-                  border: "1.5px solid #c5d8ec", borderRadius: "50%",
-                  background: "#fff", display: "flex", alignItems: "center",
-                  justifyContent: "center", cursor: "pointer", color: "#4a7aaa",
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#f0f7ff")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#fff")}
-              >
-                {item.icon}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Add to group */}
-        <div>
-          <span
-            onClick={() => setShowGroupField((p) => !p)}
-            style={{ fontSize: 13, color: "#555", cursor: "pointer", userSelect: "none" }}
-          >
-            + Add to the group
-          </span>
-          {showGroupField && (
-            <select
-              style={{ ...inputStyle, marginTop: 8, appearance: "none" }}
-              value={group}
-              onChange={(e) => setGroup(e.target.value)}
-            >
-              <option value="">Select group...</option>
-              {groups.map((g) => (
-                <option key={g.id} value={String(g.id)}>{g.name} — {g.schedule}</option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        {/* Set password */}
-        <div>
-          <span
-            onClick={() => setShowPasswordField((p) => !p)}
-            style={{ fontSize: 13, color: "#555", cursor: "pointer", userSelect: "none" }}
-          >
-            + Set password
-          </span>
-          {showPasswordField && (
-            <input
-              type="password"
-              style={{ ...inputStyle, marginTop: 8 }}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          )}
-        </div>
-
-        {/* Submit */}
-        <div style={{ marginTop: 4 }}>
-          <button
-            onClick={handleSubmit}
-            style={{
-              background: "#4a7aaa", color: "#fff", border: "none",
-              borderRadius: 20, padding: "11px 32px",
-              fontSize: 14, fontWeight: 600, cursor: "pointer",
-            }}
-          >
-            Submit
-          </button>
-        </div>
-      </div>
-    </RightDrawer>
-  );
-};
-
-/* ══════════════════════════════════════════
-   Add Payment Drawer
-══════════════════════════════════════════ */
-const AddPaymentDrawer = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
-  const { students, editStudent } = useData();
-  const [method, setMethod] = useState("Cash");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [comment, setComment] = useState("");
-  const [selectedUid, setSelectedUid] = useState("");
-
-  const handleClose = () => {
-    setMethod("Cash"); setAmount(""); setComment("");
-    setSelectedUid(""); setDate(new Date().toISOString().split("T")[0]);
-    onClose();
-  };
-
-  const handleSubmit = () => {
-    if (selectedUid && amount) {
-      const student = students.find((s) => s.uid === selectedUid);
-      if (student) {
-        const paid = Number(amount);
-        editStudent(selectedUid, { balance: (student.balance ?? 0) + paid });
-      }
-    }
-    handleClose();
-  };
-
-  return (
-    <RightDrawer open={open} onClose={handleClose} title="Add payment" width={440}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-        {/* Student */}
-        <div>
-          <label style={labelStyle}>Student</label>
-          <div style={{ position: "relative" }}>
-            <select
-              value={selectedUid}
-              onChange={(e) => setSelectedUid(e.target.value)}
-              style={{
-                ...inputStyle, appearance: "none",
-                color: selectedUid ? "#1a1a1a" : "#aaa", paddingRight: 36,
-              }}
-            >
-              <option value="">Select student</option>
-              {students.map((s) => (
-                <option key={s.uid} value={s.uid}>{s.name}</option>
-              ))}
-            </select>
-            <MdKeyboardArrowDown size={18} style={{
-              position: "absolute", right: 12, top: "50%",
-              transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
-            }} />
-          </div>
-        </div>
-
-        {/* Show balance if student selected */}
-        {selectedUid && (() => {
-          const s = students.find((st) => st.uid === selectedUid);
-          return s ? (
-            <div style={{
-              background: "#2d4a5a", color: "#fff", borderRadius: 20,
-              padding: "6px 16px", fontSize: 13, fontWeight: 600,
-              display: "inline-flex", alignSelf: "flex-start",
-            }}>
-              Balance: {(s.balance ?? 0).toLocaleString("ru-RU")} UZS
-            </div>
-          ) : null;
-        })()}
-
-        {/* Method pay */}
-        <div>
-          <label style={labelStyle}>Method pay</label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
-            {PAYMENT_METHODS.map((row, ri) =>
-              row.map((m, ci) =>
-                m ? (
-                  <label key={m} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
-                    <div
-                      onClick={() => setMethod(m)}
-                      style={{
-                        width: 18, height: 18, borderRadius: "50%",
-                        border: `2px solid ${method === m ? "#185FA5" : "#ccc"}`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: "pointer", flexShrink: 0,
-                        background: method === m ? "#185FA5" : "#fff",
-                      }}
-                    >
-                      {method === m && <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff" }} />}
-                    </div>
-                    {m}
-                  </label>
-                ) : <div key={`empty-${ri}-${ci}`} />
-              )
-            )}
-          </div>
-        </div>
-
-        {/* Amount */}
-        <div>
-          <label style={labelStyle}>Amount</label>
-          <input
-            style={inputStyle}
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0"
-          />
-        </div>
-
-        {/* Date */}
-        <div>
-          <label style={labelStyle}>Date</label>
-          <div style={{ position: "relative" }}>
-            <MdCalendarToday size={14} style={{
-              position: "absolute", left: 12, top: "50%",
-              transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
-            }} />
-            <input
-              type="date"
-              style={{ ...inputStyle, paddingLeft: 34 }}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Comment */}
-        <div>
-          <label style={labelStyle}>Comment</label>
-          <textarea
-            style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-        </div>
-
-        {/* Submit */}
-        <div>
-          <button
-            onClick={handleSubmit}
-            style={{
-              background: "#4a9bb5", color: "#fff", border: "none",
-              borderRadius: 20, padding: "11px 32px",
-              fontSize: 14, fontWeight: 600, cursor: "pointer",
-            }}
-          >
-            Submit
-          </button>
-        </div>
-      </div>
-    </RightDrawer>
-  );
-};
 
 /* ══════════════════════════════════════════
    Icon Button helper
@@ -564,6 +115,7 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
 
 /* ─── Search Bar ─── */
 const SearchBar = () => {
+  const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   return (
     <div style={{
@@ -574,7 +126,7 @@ const SearchBar = () => {
     }}>
       <MdSearch size={17} color="#6b7a8d" />
       <input
-        placeholder="Search"
+        placeholder={t("header.search")}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={{
@@ -587,27 +139,87 @@ const SearchBar = () => {
 };
 
 /* ─── Language Toggle ─── */
+const LANGUAGE_OPTIONS: { code: "en" | "ru" | "uz"; label: string }[] = [
+  { code: "en", label: "English" },
+  { code: "ru", label: "Русский" },
+  { code: "uz", label: "O'zbekcha" },
+];
+
 const LangToggle = () => {
-  const [lang, setLang] = useState<"en" | "uz" | "ru">("en");
-  const langs: ("en" | "uz" | "ru")[] = ["en", "uz", "ru"];
+  const { i18n } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const currentLang = (i18n.language as "en" | "ru" | "uz") || "en";
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  const handleSelect = (code: "en" | "ru" | "uz") => {
+    i18n.changeLanguage(code);
+    localStorage.setItem("appLanguage", code);
+    setOpen(false);
+  };
+
   return (
-    <button
-      onClick={() => setLang((l) => langs[(langs.indexOf(l) + 1) % langs.length])}
-      style={{
-        height: 34, padding: "0 10px", border: "1px solid #e0e5ec",
-        borderRadius: 8, background: "#fff", cursor: "pointer",
-        fontSize: 12, fontWeight: 600, color: "#6b7a8d",
-      }}
-      onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#f0f4f9")}
-      onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#fff")}
-    >
-      {lang}
-    </button>
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen((p) => !p)}
+        style={{
+          display: "flex", alignItems: "center", gap: 4,
+          height: 34, padding: "0 10px", border: "1px solid #e0e5ec",
+          borderRadius: 8, background: "#fff", cursor: "pointer",
+          fontSize: 12, fontWeight: 600, color: "#6b7a8d",
+        }}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#f0f4f9")}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#fff")}
+      >
+        {currentLang}
+        <MdKeyboardArrowDown
+          size={14} color="#6b7a8d"
+          style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}
+        />
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 8px)", right: 0,
+          background: "#fff", border: "1px solid #e0e5ec", borderRadius: 10,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 500,
+          minWidth: 160, animation: "dropDown 0.15s ease", overflow: "hidden",
+        }}>
+          <style>{`@keyframes dropDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
+          {LANGUAGE_OPTIONS.map((opt) => (
+            <div
+              key={opt.code}
+              onClick={() => handleSelect(opt.code)}
+              style={{
+                padding: "10px 14px", fontSize: 13, cursor: "pointer",
+                fontWeight: opt.code === currentLang ? 600 : 400,
+                color: opt.code === currentLang ? "#185FA5" : "#1a2332",
+                background: opt.code === currentLang ? "#f0f7ff" : "#fff",
+              }}
+              onMouseEnter={(e) => { if (opt.code !== currentLang) (e.currentTarget as HTMLDivElement).style.background = "#f7f8fa"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = opt.code === currentLang ? "#f0f7ff" : "#fff"; }}
+            >
+              {opt.code} - {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
 /* ─── Notifications ─── */
 const NotificationBtn = () => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -643,7 +255,7 @@ const NotificationBtn = () => {
           width: 280, animation: "dropDown 0.15s ease", overflow: "hidden",
         }}>
           <div style={{ padding: "12px 14px 8px", fontSize: 13, fontWeight: 600, color: "#1a2332", borderBottom: "1px solid #f0f0f0" }}>
-            Notifications
+            {t("header.notifications")}
           </div>
           {[
             { text: "New student added to KIDS English", time: "2 min ago" },
@@ -661,7 +273,7 @@ const NotificationBtn = () => {
             </div>
           ))}
           <div style={{ padding: "10px 14px", textAlign: "center" }}>
-            <span style={{ fontSize: 12, color: "#185FA5", cursor: "pointer" }}>View all</span>
+            <span style={{ fontSize: 12, color: "#185FA5", cursor: "pointer" }}>{t("header.viewAll")}</span>
           </div>
         </div>
       )}
@@ -671,6 +283,7 @@ const NotificationBtn = () => {
 
 /* ─── History ─── */
 const HistoryBtn = () => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -682,7 +295,7 @@ const HistoryBtn = () => {
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      <IconBtn onClick={() => setOpen((p) => !p)} title="History" active={open}>
+      <IconBtn onClick={() => setOpen((p) => !p)} title={t("header.recentPages")} active={open}>
         <MdHistory size={18} />
       </IconBtn>
       {open && (
@@ -693,7 +306,7 @@ const HistoryBtn = () => {
           width: 240, animation: "dropDown 0.15s ease", overflow: "hidden",
         }}>
           <div style={{ padding: "12px 14px 8px", fontSize: 13, fontWeight: 600, color: "#1a2332", borderBottom: "1px solid #f0f0f0" }}>
-            Recent pages
+            {t("header.recentPages")}
           </div>
           {["Teachers list", "KIDS English group", "Pardayev Jahongir", "Students"].map((p, i) => (
             <div
@@ -720,6 +333,7 @@ const HistoryBtn = () => {
 const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
   onAddStudent: () => void; onAddPayment: () => void;
 }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -730,13 +344,13 @@ const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
   }, [open]);
 
   const items = [
-    { label: "Add student", emoji: "🎓", action: onAddStudent },
-    { label: "Add payment", emoji: "💳", action: onAddPayment },
+    { label: t("quickAdd.addStudent"), emoji: "🎓", action: onAddStudent },
+    { label: t("quickAdd.addPayment"), emoji: "💳", action: onAddPayment },
   ];
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      <IconBtn onClick={() => setOpen((p) => !p)} title="Quick add" active={open}>
+      <IconBtn onClick={() => setOpen((p) => !p)} title={t("quickAdd.addStudent")} active={open}>
         <MdAdd size={18} />
       </IconBtn>
       {open && (
@@ -772,6 +386,7 @@ const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
    Main Header
 ══════════════════════════════════════════ */
 export const Header = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { branch, setBranch } = useBranch();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -806,7 +421,7 @@ export const Header = () => {
           display: "flex", alignItems: "center", justifyContent: "center",
           height: "100%", borderRight: "1px solid #e0e5ec", px: 1.5,
         }}>
-          <Link to="/" style={{ display: "flex", alignItems: "center" }}>
+          <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
             <img
               src={logo} alt="logo"
               style={{ width: SIDEBAR_WIDTH - 24, height: "auto", maxHeight: 36, objectFit: "contain", display: "block" }}
@@ -828,10 +443,10 @@ export const Header = () => {
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <LangToggle />
-            <IconBtn onClick={toggleFullscreen} title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}>
+            <IconBtn onClick={toggleFullscreen} title={isFullscreen ? t("header.exitFullscreen") : t("header.fullscreen")}>
               {isFullscreen ? <MdFullscreenExit size={18} /> : <MdFullscreen size={18} />}
             </IconBtn>
-            <IconBtn title="Help"><MdHelpOutline size={18} /></IconBtn>
+            <IconBtn title={t("header.help")}><MdHelpOutline size={18} /></IconBtn>
             <HistoryBtn />
             <NotificationBtn />
           </Box>
@@ -865,19 +480,19 @@ export const Header = () => {
             PaperProps={{ sx: { borderRadius: 2, mt: 1, minWidth: 160, boxShadow: "0 8px 24px rgba(0,0,0,0.1)" } }}
           >
             <MenuItem sx={{ fontSize: 13 }} onClick={() => { setUserMenuAnchor(null); navigate("/profile"); }}>
-              Account
+              {t("header.account")}
             </MenuItem>
-          
+
             <MenuItem sx={{ fontSize: 13, color: "#e53935" }} onClick={() => setUserMenuAnchor(null)}>
-              Sign out
+              {t("header.signOut")}
             </MenuItem>
           </Menu>
         </Box>
       </Box>
 
       {/* Drawers */}
-      <AddStudentDrawer open={addStudentOpen} onClose={() => setAddStudentOpen(false)} />
-      <AddPaymentDrawer open={addPaymentOpen} onClose={() => setAddPaymentOpen(false)} />
+      <AddStudent open={addStudentOpen} onClose={() => setAddStudentOpen(false)} />
+      <AddPayment open={addPaymentOpen} onClose={() => setAddPaymentOpen(false)} />
     </>
   );
 };

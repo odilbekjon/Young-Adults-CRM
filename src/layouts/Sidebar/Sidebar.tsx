@@ -3,7 +3,7 @@ import { Box, Tooltip, Collapse } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 
 import {
-  FiDownload, FiUsers, FiLayers, FiClock, FiHome,
+  FiDownload, FiUsers, FiLayers,  FiHome,
   FiChevronDown, FiChevronRight, FiMail, FiPhone,
   FiStar, FiSettings, FiUser, FiFileText, FiTag,
   FiBriefcase, FiBook, FiMap, FiArchive, FiCalendar,
@@ -12,10 +12,10 @@ import {
 import { MdOutlineDiamond } from "react-icons/md";
 import { PiStudentDuotone } from "react-icons/pi";
 import { IoMdSettings } from "react-icons/io";
-import { IoTrophyOutline } from "react-icons/io5";
+// import { IoTrophyOutline } from "react-icons/io5";
 import { FaRegCalendarAlt } from "react-icons/fa";
 import { AiOutlineDollar, AiOutlinePieChart } from "react-icons/ai";
-
+import { HiBuildingLibrary } from "react-icons/hi2";
 import { useSidebar } from "../../Context/SidebarContext";
 
 export const SIDEBAR_WIDTH = 120;
@@ -48,6 +48,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   trending:  <FiTrendingUp size={17} />,
   smartphone:<FiSmartphone size={17} />,
   list:      <FiList size={17} />,
+  branch:    <HiBuildingLibrary size={17} />,
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ const SUBMENUS: Record<string, SubMenuItem[]> = {
         { label: "Staff",            path: "/settings/ceo/staff",   icon: "users" },
         { label: "Billing",          path: "/settings/ceo/billing", icon: "brief" },
         { label: "Roadmap",          path: "/settings/ceo/roadmap", icon: "map" },
+        { label: "Branches",          path: "/settings/ceo/branches", icon: "branch" },
       ],
     },
     {
@@ -138,15 +140,15 @@ const SUBMENUS: Record<string, SubMenuItem[]> = {
 // ─── NAV ITEMS ────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
-  { label: "Dashboard",                  path: "/dashboard",                  icon: <FiHome size={35} strokeWidth={1.5} /> },
-  { label: "Leads",                      path: "/leads",                      icon: <FiDownload size={35} strokeWidth={1.5} /> },
-  { label: "Teachers",                   path: "/teachers",                   icon: <FiUsers size={35} strokeWidth={1.5} /> },
-  { label: "Groups",                     path: "/groups",                     icon: <FiLayers size={35} strokeWidth={1.5} /> },
+  { label: "Dashboard",                  path: "/dashboard",                  icon: <FiHome size={35}  /> },
+  { label: "Leads",                      path: "/leads",                      icon: <FiDownload size={35}  /> },
+  { label: "Teachers",                   path: "/teachers",                   icon: <FiUsers size={35}/> },
+  { label: "Groups",                     path: "/groups",                     icon: <FiLayers size={35} /> },
   { label: "Students",                   path: "/students",                   icon: <PiStudentDuotone size={35} /> },
-  { label: "Reminders",                  path: "/reminders",                  icon: <FiClock size={35} strokeWidth={1.5} /> },
-  { label: "Rating",                     path: "/rating",                     icon: <IoTrophyOutline size={35} /> },
+  // { label: "Reminders",                  path: "/reminders",                  icon: <FiClock size={35}  /> },
+  // { label: "Rating",                     path: "/rating",                     icon: <IoTrophyOutline size={35} /> },
   { label: "Attendance reports",         path: "/attendance-reports",         icon: <FaRegCalendarAlt size={35} /> },
-  { label: "Teacher attendance reports", path: "/teacher-attendance-reports", icon: <FaRegCalendarAlt size={35} /> },
+  // { label: "Teacher attendance reports", path: "/teacher-attendance-reports", icon: <FaRegCalendarAlt size={35} /> },
   { label: "Finance",                    path: "/finance",                    icon: <AiOutlineDollar size={35} /> },
   { label: "Reports",                    path: "/reports",                    icon: <AiOutlinePieChart size={35} /> },
   { label: "Settings",                   path: "/settings",                   icon: <IoMdSettings size={35} /> },

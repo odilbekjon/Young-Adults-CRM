@@ -1,0 +1,63 @@
+{
+  "header": {
+    "search": "Поиск",
+    "notifications": "Уведомления",
+    "viewAll": "Смотреть все",
+    "recentPages": "Недавние страницы",
+    "help": "Помощь",
+    "fullscreen": "На весь экран",
+    "exitFullscreen": "Выйти из полноэкранного режима",
+    "account": "Аккаунт",
+    "signOut": "Выйти"
+  },
+  "quickAdd": {
+    "addStudent": "Добавить студента",
+    "addPayment": "Добавить платёж"
+  },
+  "addStudent": {
+    "title": "Добавить нового студента",
+    "phone": "Телефон",
+    "name": "Имя",
+    "dob": "Дата рождения",
+    "gender": "Пол",
+    "male": "Мужской",
+    "female": "Женский",
+    "comment": "Комментарий",
+    "additionalContacts": "Дополнительные контакты",
+    "addToGroup": "+ Добавить в группу",
+    "selectGroup": "Выберите группу...",
+    "setPassword": "+ Установить пароль",
+    "passwordPlaceholder": "Пароль",
+    "submit": "Отправить",
+    "additional": {
+      "phone": "Дополнительный телефон",
+      "key": "Ключ доступа",
+      "contact": "Доп. контакт",
+      "email": "Email",
+      "telegram": "Телеграм username",
+      "education": "Образование",
+      "location": "Адрес",
+      "card": "Номер карты"
+    }
+  },
+  "addPayment": {
+    "title": "Добавить платёж",
+    "student": "Студент",
+    "selectStudent": "Выберите студента",
+    "balance": "Баланс",
+    "methodPay": "Способ оплаты",
+    "methods": {
+      "cash": "Наличные",
+      "click": "Click",
+      "card": "Карта",
+      "uzum": "Uzum",
+      "bankAccount": "Банковский счёт",
+      "humo": "Humo",
+      "payme": "Payme"
+    },
+    "amount": "Сумма",
+    "date": "Дата",
+    "comment": "Комментарий",
+    "submit": "Отправить"
+  }
+}

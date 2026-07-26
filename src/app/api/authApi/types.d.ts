@@ -1,6 +1,6 @@
 export interface LoginRequest {
-  full_name: string;
-  email: string;
+  // full_name: string;
+  // email: string;
   phone: string;
   password: string;
 }

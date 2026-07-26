@@ -1,0 +1,63 @@
+{
+  "header": {
+    "search": "Qidiruv",
+    "notifications": "Bildirishnomalar",
+    "viewAll": "Barchasini ko'rish",
+    "recentPages": "So'nggi sahifalar",
+    "help": "Yordam",
+    "fullscreen": "To'liq ekran",
+    "exitFullscreen": "To'liq ekrandan chiqish",
+    "account": "Hisob",
+    "signOut": "Chiqish"
+  },
+  "quickAdd": {
+    "addStudent": "O'quvchi qo'shish",
+    "addPayment": "To'lov qo'shish"
+  },
+  "addStudent": {
+    "title": "Yangi o'quvchi qo'shish",
+    "phone": "Telefon",
+    "name": "Ism",
+    "dob": "Tug'ilgan sana",
+    "gender": "Jinsi",
+    "male": "Erkak",
+    "female": "Ayol",
+    "comment": "Izoh",
+    "additionalContacts": "Qo'shimcha aloqalar",
+    "addToGroup": "+ Guruhga qo'shish",
+    "selectGroup": "Guruhni tanlang...",
+    "setPassword": "+ Parol o'rnatish",
+    "passwordPlaceholder": "Parol",
+    "submit": "Yuborish",
+    "additional": {
+      "phone": "Qo'shimcha telefon",
+      "key": "Kirish kaliti",
+      "contact": "Qo'shimcha kontakt",
+      "email": "Email",
+      "telegram": "Telegram username",
+      "education": "Ta'lim",
+      "location": "Manzil",
+      "card": "Karta raqami"
+    }
+  },
+  "addPayment": {
+    "title": "To'lov qo'shish",
+    "student": "O'quvchi",
+    "selectStudent": "O'quvchini tanlang",
+    "balance": "Balans",
+    "methodPay": "To'lov usuli",
+    "methods": {
+      "cash": "Naqd",
+      "click": "Click",
+      "card": "Karta",
+      "uzum": "Uzum",
+      "bankAccount": "Bank hisobi",
+      "humo": "Humo",
+      "payme": "Payme"
+    },
+    "amount": "Summa",
+    "date": "Sana",
+    "comment": "Izoh",
+    "submit": "Yuborish"
+  }
+}

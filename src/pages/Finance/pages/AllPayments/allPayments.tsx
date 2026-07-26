@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Dot,
@@ -9,12 +10,15 @@ import {
 } from "@mui/material";
 import { FiFilter, FiChevronDown, FiChevronUp, FiInfo } from "react-icons/fi";
 import { BsCash, BsGraphUp } from "react-icons/bs";
-import { TEACHERS_DATA } from "../../../../constants/Teachers";
+
+// ── Reuse the SAME student data source & types as the Students page ─────────
+import { buildFlatStudents, FlatStudent } from "../../../../constants/FlatStudents";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Payment {
   id: number;
+  studentUid: string; // links back to the FlatStudent this payment belongs to
   date: string;
   name: string;
   sum: number;
@@ -49,49 +53,44 @@ const DATES = [
   "2026-04-30","2026-04-30","2026-04-29","2026-04-29","2026-04-28",
 ];
 
-// ─── Generate 30 payments (pagination demo uchun) ─────────────────────────────
+// ─── Build complete payment history per student ───────────────────────────────
+// Every student from the shared FlatStudents source gets 1–3 payment records,
+// each tagged with studentUid so the row can link back to their real profile.
 
-function generatePayments(): Payment[] {
+function generatePayments(students: FlatStudent[]): Payment[] {
   const payments: Payment[] = [];
   let id = 1;
   let di = 0;
 
-  // 3 marta aylantiramiz — 30 ta to'lov
-  for (let round = 0; round < 3; round++) {
-    for (const teacher of TEACHERS_DATA) {
-      for (const group of teacher.groups) {
-        for (const student of group.students) {
-          if (id > 30) break;
-          const date = DATES[di % DATES.length];
-          const h = String(17 + (id % 5)).padStart(2, "0");
-          const m = String((id * 7) % 60).padStart(2, "0");
-          const s = String((id * 13) % 60).padStart(2, "0");
-          payments.push({
-            id,
-            date,
-            name: student.name,
-            sum: group.price ?? 400000,
-            methodPay: METHOD_PAY[id % METHOD_PAY.length],
-            teacher: teacher.fullName,
-            comment: COMMENTS[id % COMMENTS.length],
-            creator: CREATOR,
-            createdAt: `${date.split("-").reverse().join(".")} ${h}:${m}:${s}`,
-            groupName: group.name,
-            course: group.course,
-          });
-          id++;
-          di++;
-        }
-        if (id > 30) break;
-      }
-      if (id > 30) break;
+  for (const student of students) {
+    const historyCount = 1 + (student.id % 3); // 1–3 payments = "payment history"
+    for (let h = 0; h < historyCount; h++) {
+      const date = DATES[di % DATES.length];
+      const hh = String(17 + (id % 5)).padStart(2, "0");
+      const mm = String((id * 7) % 60).padStart(2, "0");
+      const ss = String((id * 13) % 60).padStart(2, "0");
+
+      payments.push({
+        id,
+        studentUid: student.uid,
+        date,
+        name: student.name,
+        sum: student.price || 400000,
+        methodPay: METHOD_PAY[id % METHOD_PAY.length],
+        teacher: student.teacher,
+        comment: student.comment || COMMENTS[id % COMMENTS.length],
+        creator: CREATOR,
+        createdAt: `${date.split("-").reverse().join(".")} ${hh}:${mm}:${ss}`,
+        groupName: student.groupName,
+        course: student.course,
+      });
+
+      id++;
+      di++;
     }
-    if (id > 30) break;
   }
   return payments;
 }
-
-const ALL_PAYMENTS = generatePayments();
 
 // ─── Details breakdown (method bo'yicha) ─────────────────────────────────────
 
@@ -152,10 +151,6 @@ const CHART_DATA = [
 const fmt     = (n: number) => n.toLocaleString("ru-RU");
 const fmtDate = (d: string) => d.split("-").reverse().join(".");
 
-const ALL_TEACHERS = [...new Set(TEACHERS_DATA.map((t) => t.fullName))];
-const ALL_GROUPS   = [...new Set(TEACHERS_DATA.flatMap((t) => t.groups.map((g) => g.name)))];
-const ALL_COURSES  = [...new Set(TEACHERS_DATA.flatMap((t) => t.groups.map((g) => g.course)))];
-
 // ─── Reusable UI ─────────────────────────────────────────────────────────────
 
 const Label = ({ text }: { text: string }) => (
@@ -195,6 +190,16 @@ const SortIcon = ({ active, dir }: { active: boolean; dir: "asc" | "desc" }) => 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const AllPayments = () => {
+  const navigate = useNavigate();
+
+  // Same student source/structure as the Students page
+  const students = useMemo(() => buildFlatStudents(), []);
+  const ALL_PAYMENTS = useMemo(() => generatePayments(students), [students]);
+
+  const ALL_TEACHERS = useMemo(() => [...new Set(students.map((s) => s.teacher))], [students]);
+  const ALL_GROUPS   = useMemo(() => [...new Set(students.map((s) => s.groupName))], [students]);
+  const ALL_COURSES  = useMemo(() => [...new Set(students.map((s) => s.course))], [students]);
+
   // Filter
   const [dateFrom,    setDateFrom]    = useState("01.05.2026");
   const [dateTo,      setDateTo]      = useState("31.05.2026");
@@ -236,7 +241,7 @@ export const AllPayments = () => {
         const cmp = String(a[sortKey]).localeCompare(String(b[sortKey]), undefined, { numeric: true });
         return sortDir === "asc" ? cmp : -cmp;
       });
-  }, [namePhone, group, course, teacher, methodPay, sum, sortKey, sortDir]);
+  }, [ALL_PAYMENTS, namePhone, group, course, teacher, methodPay, sum, sortKey, sortDir]);
 
   // Pagination
   const totalPages  = Math.ceil(filtered.length / PAGE_SIZE);
@@ -253,6 +258,8 @@ export const AllPayments = () => {
     setMethodPay(""); setSum(""); setStaffName(""); setFromCreated(""); setToCreated("");
     setPage(1);
   };
+
+  const goToStudent = (uid: string) => navigate(`/students/${uid}`);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -470,7 +477,9 @@ export const AllPayments = () => {
                   <TableRow
                     key={p.id}
                     hover
+                    onClick={() => goToStudent(p.studentUid)}
                     sx={{
+                      cursor: "pointer",
                       "&:hover": { backgroundColor: "#f0f6ff !important" },
                       backgroundColor: i % 2 === 0 ? "#fff" : "#fafbfc",
                     }}

@@ -1,0 +1,63 @@
+{
+  "header": {
+    "search": "Search",
+    "notifications": "Notifications",
+    "viewAll": "View all",
+    "recentPages": "Recent pages",
+    "help": "Help",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "account": "Account",
+    "signOut": "Sign out"
+  },
+  "quickAdd": {
+    "addStudent": "Add student",
+    "addPayment": "Add payment"
+  },
+  "addStudent": {
+    "title": "Add New Student",
+    "phone": "Phone",
+    "name": "Name",
+    "dob": "Date of birth",
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "comment": "Comment",
+    "additionalContacts": "Additional contacts",
+    "addToGroup": "+ Add to the group",
+    "selectGroup": "Select group...",
+    "setPassword": "+ Set password",
+    "passwordPlaceholder": "Password",
+    "submit": "Submit",
+    "additional": {
+        "phone": "Additional phone",
+        "key": "Access key",
+        "contact": "Additional contact",
+        "email": "Email",
+        "telegram": "Telegram username",
+        "education": "Education",
+        "location": "Address",
+        "card": "Card number"
+    }
+  },
+  "addPayment": {
+    "title": "Add payment",
+    "student": "Student",
+    "selectStudent": "Select student",
+    "balance": "Balance",
+    "methodPay": "Method pay",
+    "methods": {
+      "cash": "Cash",
+      "click": "Click",
+      "card": "Card",
+      "uzum": "Uzum",
+      "bankAccount": "Bank account",
+      "humo": "Humo",
+      "payme": "Payme"
+    },
+    "amount": "Amount",
+    "date": "Date",
+    "comment": "Comment",
+    "submit": "Submit"
+  }
+}

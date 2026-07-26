@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Paper, Typography, Tooltip } from "@mui/material";
@@ -15,71 +14,35 @@ import { MdViewColumn, MdViewStream } from "react-icons/md";
 import { ScheduleTab, ScheduleOrientation } from "../../types/dashboardTypes";
 import { EVENTS, ROOMS } from "../../constants/ScheduleDashboard";
 
-// ─── Chart data per tab ───────────────────────────────────────────────────────
+// ─── Monthly revenue data ──────────────────────────────────────────────────────
+// This is independent from the schedule tabs below (Odd/Even/Other days only
+// filter the schedule, they never change what the chart shows).
 
-const CHART: Record<ScheduleTab, { month: string; value: number }[]> = {
-  odd: [
-    { month: "Sep 23", value: 5000000 },   { month: "Oct 23", value: 8000000 },
-    { month: "Dec 23", value: 15000000 },  { month: "Jan 24", value: 25000000 },
-    { month: "Feb 24", value: 38000000 },  { month: "Mar 24", value: 55000000 },
-    { month: "Apr 24", value: 70000000 },  { month: "May 24", value: 65000000 },
-    { month: "Jun 24", value: 72000000 },  { month: "Jul 24", value: 78000000 },
-    { month: "Aug 24", value: 80000000 },  { month: "Sep 24", value: 82000000 },
-    { month: "Oct 24", value: 86000000 },  { month: "Nov 24", value: 90000000 },
-    { month: "Dec 24", value: 88000000 },  { month: "Jan 25", value: 92000000 },
-    { month: "Feb 25", value: 95000000 },  { month: "Mar 25", value: 110000000 },
-    { month: "Apr 25", value: 148000000 }, { month: "May 25", value: 105000000 },
-    { month: "Jun 25", value: 108000000 }, { month: "Jul 25", value: 112000000 },
-    { month: "Aug 25", value: 115000000 }, { month: "Sep 25", value: 120000000 },
-    { month: "Oct 25", value: 125000000 }, { month: "Nov 25", value: 128000000 },
-    { month: "Dec 25", value: 130000000 }, { month: "Jan 26", value: 135000000 },
-    { month: "Feb 26", value: 140000000 }, { month: "Mar 26", value: 142000000 },
-    { month: "Apr 26", value: 145000000 }, { month: "May 26", value: 138000000 },
-  ],
-  even: [
-    { month: "Sep 23", value: 4000000 },   { month: "Oct 23", value: 7000000 },
-    { month: "Dec 23", value: 12000000 },  { month: "Jan 24", value: 20000000 },
-    { month: "Feb 24", value: 32000000 },  { month: "Mar 24", value: 48000000 },
-    { month: "Apr 24", value: 62000000 },  { month: "May 24", value: 55000000 },
-    { month: "Jun 24", value: 60000000 },  { month: "Jul 24", value: 67000000 },
-    { month: "Aug 24", value: 71000000 },  { month: "Sep 24", value: 74000000 },
-    { month: "Oct 24", value: 79000000 },  { month: "Nov 24", value: 83000000 },
-    { month: "Dec 24", value: 80000000 },  { month: "Jan 25", value: 85000000 },
-    { month: "Feb 25", value: 88000000 },  { month: "Mar 25", value: 100000000 },
-    { month: "Apr 25", value: 132000000 }, { month: "May 25", value: 94000000 },
-    { month: "Jun 25", value: 98000000 },  { month: "Jul 25", value: 103000000 },
-    { month: "Aug 25", value: 107000000 }, { month: "Sep 25", value: 112000000 },
-    { month: "Oct 25", value: 118000000 }, { month: "Nov 25", value: 121000000 },
-    { month: "Dec 25", value: 124000000 }, { month: "Jan 26", value: 129000000 },
-    { month: "Feb 26", value: 133000000 }, { month: "Mar 26", value: 136000000 },
-    { month: "Apr 26", value: 139000000 }, { month: "May 26", value: 131000000 },
-  ],
-  other: [
-    { month: "Sep 23", value: 1000000 },  { month: "Oct 23", value: 2000000 },
-    { month: "Dec 23", value: 4000000 },  { month: "Jan 24", value: 6000000 },
-    { month: "Feb 24", value: 9000000 },  { month: "Mar 24", value: 14000000 },
-    { month: "Apr 24", value: 18000000 }, { month: "May 24", value: 15000000 },
-    { month: "Jun 24", value: 17000000 }, { month: "Jul 24", value: 20000000 },
-    { month: "Aug 24", value: 22000000 }, { month: "Sep 24", value: 24000000 },
-    { month: "Oct 24", value: 27000000 }, { month: "Nov 24", value: 30000000 },
-    { month: "Dec 24", value: 28000000 }, { month: "Jan 25", value: 31000000 },
-    { month: "Feb 25", value: 33000000 }, { month: "Mar 25", value: 40000000 },
-    { month: "Apr 25", value: 55000000 }, { month: "May 25", value: 38000000 },
-    { month: "Jun 25", value: 40000000 }, { month: "Jul 25", value: 43000000 },
-    { month: "Aug 25", value: 46000000 }, { month: "Sep 25", value: 49000000 },
-    { month: "Oct 25", value: 53000000 }, { month: "Nov 25", value: 56000000 },
-    { month: "Dec 25", value: 58000000 }, { month: "Jan 26", value: 62000000 },
-    { month: "Feb 26", value: 66000000 }, { month: "Mar 26", value: 69000000 },
-    { month: "Apr 26", value: 72000000 }, { month: "May 26", value: 68000000 },
-  ],
-};
+const MONTHLY_REVENUE: { month: string; value: number }[] = [
+  { month: "Sep 23", value: 5000000 },   { month: "Oct 23", value: 8000000 },
+  { month: "Dec 23", value: 15000000 },  { month: "Jan 24", value: 25000000 },
+  { month: "Feb 24", value: 38000000 },  { month: "Mar 24", value: 55000000 },
+  { month: "Apr 24", value: 70000000 },  { month: "May 24", value: 65000000 },
+  { month: "Jun 24", value: 72000000 },  { month: "Jul 24", value: 78000000 },
+  { month: "Aug 24", value: 80000000 },  { month: "Sep 24", value: 82000000 },
+  { month: "Oct 24", value: 86000000 },  { month: "Nov 24", value: 90000000 },
+  { month: "Dec 24", value: 88000000 },  { month: "Jan 25", value: 92000000 },
+  { month: "Feb 25", value: 95000000 },  { month: "Mar 25", value: 110000000 },
+  { month: "Apr 25", value: 148000000 }, { month: "May 25", value: 105000000 },
+  { month: "Jun 25", value: 108000000 }, { month: "Jul 25", value: 112000000 },
+  { month: "Aug 25", value: 115000000 }, { month: "Sep 25", value: 120000000 },
+  { month: "Oct 25", value: 125000000 }, { month: "Nov 25", value: 128000000 },
+  { month: "Dec 25", value: 130000000 }, { month: "Jan 26", value: 135000000 },
+  { month: "Feb 26", value: 140000000 }, { month: "Mar 26", value: 142000000 },
+  { month: "Apr 26", value: 145000000 }, { month: "May 26", value: 138000000 },
+];
 
-// Peak months per tab for the ReferenceDot
-const PEAKS: Record<ScheduleTab, string> = {
-  odd: "Apr 25",
-  even: "Apr 25",
-  other: "Apr 25",
-};
+// Peak point for the chart's ReferenceDot — computed from the data itself,
+// so it always matches whichever month actually has the highest value.
+const PEAK_POINT = MONTHLY_REVENUE.reduce(
+  (max, point) => (point.value > max.value ? point : max),
+  MONTHLY_REVENUE[0],
+);
 
 // ─── Stat card config ─────────────────────────────────────────────────────────
 
@@ -142,7 +105,8 @@ export const Dashboard = () => {
   const [tab,         setTab        ] = useState<ScheduleTab>("odd");
   const [orientation, setOrientation] = useState<ScheduleOrientation>("horizontal");
 
-  // Filtered events for current tab
+  // Filtered events for current tab — this only affects the schedule below,
+  // the revenue chart above is intentionally independent of it.
   const visibleEvents = useMemo(
     () => EVENTS.filter((e) => e.days.includes(tab)),
     [tab],
@@ -220,7 +184,8 @@ export const Dashboard = () => {
       </Box>
 
       {/* ═══════════════════════════════════════════════════════════════
-          CHART  —  changes when tab changes
+          CHART — monthly revenue, always the same regardless of which
+          schedule tab (Odd/Even/Other) is selected below
       ════════════════════════════════════════════════════════════════ */}
       <Paper elevation={0} sx={{
         borderRadius: "16px", border: "1px solid #f0f0f0",
@@ -228,13 +193,13 @@ export const Dashboard = () => {
       }}>
         <Box height={230}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={CHART[tab]} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
+            <LineChart data={MONTHLY_REVENUE} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
               <XAxis
                 dataKey="month"
-                tick={{ fontSize: 12, fill: "#6b7280" }}
+                tick={{ fontSize: 11, fill: "#6b7280" }}
                 axisLine={false} tickLine={false}
-                interval={3}
+                interval={0}
               />
               <YAxis
                 tick={{ fontSize: 12, fill: "#6b7280" }}
@@ -251,8 +216,8 @@ export const Dashboard = () => {
                 isAnimationActive
               />
               <ReferenceDot
-                x={PEAKS[tab]}
-                y={CHART[tab].find((d) => d.month === PEAKS[tab])?.value ?? 0}
+                x={PEAK_POINT.month}
+                y={PEAK_POINT.value}
                 r={5} fill="#f97316" stroke="#fff" strokeWidth={2}
               />
             </LineChart>

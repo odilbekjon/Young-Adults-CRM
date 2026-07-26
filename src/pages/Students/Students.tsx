@@ -1,5 +1,6 @@
 // src/pages/Students.tsx
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Avatar,
   Box,
@@ -31,7 +32,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { MdDelete, MdMail, MdEdit, MdPayment } from "react-icons/md";
+import { MdDelete, MdMail, MdEdit, MdPayment, MdAdd } from "react-icons/md";
 import { BsThreeDotsVertical, BsPersonPlus } from "react-icons/bs";
 import { TbAdjustmentsHorizontal, TbColumns3, TbCalendar } from "react-icons/tb";
 import { HiChevronDown } from "react-icons/hi";
@@ -44,6 +45,9 @@ import {
 import { FlatStudent, buildFlatStudents, formatDate } from "../../constants/FlatStudents";
 import { TEACHERS_DATA } from "../../constants/Teachers";
 import { useNavigate } from "react-router-dom";
+
+import { AddStudent } from "../../components/AddStudent";
+import { AddPayment } from "../../components/AddPayment";
 
 import { SendSmsModal } from "../../components/SendSmsModal";
 
@@ -71,15 +75,6 @@ const ALL_COLUMNS = [
   { key: "comment",  label: "Comment" },
 ];
 
-const PAY_METHODS = [
-  { value: "cash",  label: "Cash" },
-  { value: "click", label: "Click" },
-  { value: "card",  label: "Card" },
-  { value: "uzum",  label: "Uzum" },
-  { value: "bank",  label: "Bank account" },
-  { value: "humo",  label: "Humo" },
-  { value: "payme", label: "Payme" },
-];
 
 const CONTACT_ICONS = [
   { icon: <FiPhone size={16} />,    label: "Phone" },
@@ -92,8 +87,6 @@ const CONTACT_ICONS = [
   { icon: <FiCreditCard size={16} />, label: "Card" },
 ];
 
-const todayISO = new Date().toISOString().slice(0, 10);
-
 /* ─── STYLES ─────────────────────────────────────────── */
 const inputSx = {
   "& .MuiOutlinedInput-root": {
@@ -105,6 +98,32 @@ const inputSx = {
     "&.Mui-focused fieldset": { borderColor: "#5c7fa3" },
   },
 };
+
+/* ─── ICON BUTTON HELPER (Header'dan ko'chirildi) ────── */
+const IconBtn = ({ children, onClick, active, title }: {
+  children: React.ReactNode; onClick?: () => void; active?: boolean; title?: string;
+}) => (
+  <button
+    title={title}
+    onClick={onClick}
+    style={{
+      width: 34, height: 34, border: "1px solid #e0e5ec", borderRadius: 8,
+      background: active ? "#f0f4f9" : "#fff", display: "flex",
+      alignItems: "center", justifyContent: "center", cursor: "pointer",
+      color: "#6b7a8d", flexShrink: 0, transition: "background 0.15s, color 0.15s",
+    }}
+    onMouseEnter={(e) => {
+      (e.currentTarget as HTMLButtonElement).style.background = "#f0f4f9";
+      (e.currentTarget as HTMLButtonElement).style.color = "#1a2332";
+    }}
+    onMouseLeave={(e) => {
+      (e.currentTarget as HTMLButtonElement).style.background = active ? "#f0f4f9" : "#fff";
+      (e.currentTarget as HTMLButtonElement).style.color = "#6b7a8d";
+    }}
+  >
+    {children}
+  </button>
+);
 
 /* ─── DROPDOWN FILTER ────────────────────────────────── */
 interface DropdownProps {
@@ -267,105 +286,6 @@ const AddToGroupModal = ({
   );
 };
 
-/* ─── ADD PAYMENT DRAWER ─────────────────────────────── */
-const AddPaymentDrawer = ({
-  open,
-  student,
-  onClose,
-}: {
-  open: boolean;
-  student: FlatStudent | null;
-  onClose: () => void;
-}) => {
-  const [payMethod, setPayMethod] = useState("cash");
-  const [amount,    setAmount]    = useState("");
-  const [date,      setDate]      = useState(todayISO);
-  const [comment,   setComment]   = useState("");
-
-  const handleSubmit = () => {
-    onClose();
-    setAmount("");
-    setComment("");
-  };
-
-  return (
-    <Drawer anchor="right" open={open} onClose={onClose} PaperProps={{ sx: { width: 420 } }}>
-      <Stack
-        direction="row" justifyContent="space-between" alignItems="center"
-        sx={{ px: 3, py: 2.5, borderBottom: "1px solid #eaecf0", bgcolor: "white" }}
-      >
-        <Typography fontWeight={700} fontSize={17}>Add payment</Typography>
-        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}>
-          <IoClose size={20} />
-        </IconButton>
-      </Stack>
-
-      <Box sx={{ px: 3, py: 2.5, overflowY: "auto", flex: 1, bgcolor: "#f8f9fa" }}>
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Student</Typography>
-          <Box sx={{ border: "1px solid #d0d5dd", borderRadius: "6px", px: 1.5, py: 1.1, bgcolor: "white", fontSize: 13, color: "#6b7280" }}>
-            {student?.name || "—"}
-          </Box>
-        </Box>
-
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Balance</Typography>
-          <Box sx={{ display: "inline-flex", alignItems: "center", bgcolor: "#2d4a5a", color: "white", borderRadius: "20px", px: 2, py: 0.4, fontSize: 13, fontWeight: 600 }}>
-            {student?.balance?.toLocaleString("ru-RU") ?? 0} UZS
-          </Box>
-        </Box>
-
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Group</Typography>
-          <Box sx={{ border: "1px solid #d0d5dd", borderRadius: "6px", px: 1.5, py: 1.1, bgcolor: "white", fontSize: 13, color: "#374151" }}>
-            {student?.groupName} — {student?.groupSchedule}
-          </Box>
-        </Box>
-
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={1}>Method pay</Typography>
-          <RadioGroup
-            value={payMethod}
-            onChange={(e) => setPayMethod(e.target.value)}
-            sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0.5 }}
-          >
-            {PAY_METHODS.map((m) => (
-              <FormControlLabel
-                key={m.value} value={m.value}
-                control={<Radio size="small" sx={{ color: "#d0d5dd", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
-                label={<Typography fontSize={13} color="#374151">{m.label}</Typography>}
-                sx={{ m: 0, gap: 0.5 }}
-              />
-            ))}
-          </RadioGroup>
-        </Box>
-
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Amount</Typography>
-          <TextField fullWidth size="small" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} sx={inputSx} />
-        </Box>
-
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Date</Typography>
-          <TextField fullWidth size="small" type="date" value={date} onChange={(e) => setDate(e.target.value)} sx={inputSx} />
-        </Box>
-
-        <Box mb={3}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Comment</Typography>
-          <TextField fullWidth size="small" multiline rows={3} value={comment} onChange={(e) => setComment(e.target.value)} sx={inputSx} />
-        </Box>
-
-        <Button
-          variant="contained" fullWidth onClick={handleSubmit}
-          sx={{ borderRadius: "20px", py: 1.2, fontWeight: 600, fontSize: 14, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" }, boxShadow: "none", textTransform: "none" }}
-        >
-          Submit
-        </Button>
-      </Box>
-    </Drawer>
-  );
-};
-
 /* ─── EDIT STUDENT DRAWER ────────────────────────────── */
 const EditStudentDrawer = ({
   open, student, onClose, onSave,
@@ -458,101 +378,60 @@ const EditStudentDrawer = ({
   );
 };
 
-/* ─── ADD STUDENT DRAWER ─────────────────────────────── */
-const AddStudentDrawer = ({
-  open, onClose, onSubmit,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: { phone: string; name: string; dob: string; gender: string; comment: string }) => void;
-}) => {
-  const [phone,   setPhone]   = useState("");
-  const [name,    setName]    = useState("");
-  const [dob,     setDob]     = useState("");
-  const [gender,  setGender]  = useState("male");
-  const [comment, setComment] = useState("");
 
-  const handleSubmit = () => {
-    onSubmit({ phone: `+998 ${phone}`, name, dob, gender, comment });
-    setPhone(""); setName(""); setDob(""); setGender("male"); setComment("");
-    onClose();
-  };
+/* ══════════════════════════════════════════
+   Quick Add Dropdown (➕)
+══════════════════════════════════════════ */
+const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
+  onAddStudent: () => void; onAddPayment: () => void;
+}) => {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  const items = [
+    { label: t("quickAdd.addStudent"), emoji: "🎓", action: onAddStudent },
+    { label: t("quickAdd.addPayment"), emoji: "💳", action: onAddPayment },
+  ];
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose} PaperProps={{ sx: { width: 420, bgcolor: "#f8f9fa" } }}>
-      <Stack
-        direction="row" justifyContent="space-between" alignItems="center"
-        sx={{ px: 3, py: 2.5, bgcolor: "white", borderBottom: "1px solid #eaecf0" }}
-      >
-        <Typography fontWeight={600} fontSize={17} color="#111827">Add New Student</Typography>
-        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}><IoClose size={20} /></IconButton>
-      </Stack>
-
-      <Box sx={{ px: 3, py: 3, overflowY: "auto", flex: 1 }}>
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Phone</Typography>
-          <Stack direction="row" gap={1}>
-            <Box sx={{ border: "1px solid #d0d5dd", borderRadius: "6px", px: 1.5, display: "flex", alignItems: "center", bgcolor: "white", fontSize: 14, color: "#374151", whiteSpace: "nowrap", minWidth: 64, justifyContent: "center" }}>
-              +998
-            </Box>
-            <TextField fullWidth size="small" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="93 650 87 92" sx={inputSx} />
-          </Stack>
-        </Box>
-
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Name</Typography>
-          <TextField fullWidth size="small" value={name} onChange={(e) => setName(e.target.value)} sx={inputSx} />
-        </Box>
-
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Date of birth</Typography>
-          <TextField fullWidth size="small" type="date" value={dob} onChange={(e) => setDob(e.target.value)} InputLabelProps={{ shrink: true }} sx={inputSx} />
-        </Box>
-
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Gender</Typography>
-          <RadioGroup row value={gender} onChange={(e) => setGender(e.target.value)} sx={{ gap: 3 }}>
-            {["Male", "Female"].map((g) => (
-              <FormControlLabel key={g} value={g.toLowerCase()}
-                control={<Radio size="small" sx={{ color: "#d0d5dd", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
-                label={<Typography fontSize={14} color="#374151">{g}</Typography>}
-                sx={{ m: 0, gap: 0.5 }}
-              />
-            ))}
-          </RadioGroup>
-        </Box>
-
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Comment</Typography>
-          <TextField fullWidth size="small" multiline rows={3} value={comment} onChange={(e) => setComment(e.target.value)} sx={inputSx} />
-        </Box>
-
-        <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={1.2}>Additional contacts</Typography>
-          <Stack direction="row" gap={1} flexWrap="wrap">
-            {CONTACT_ICONS.map((item, i) => (
-              <Tooltip key={i} title={item.label} arrow>
-                <IconButton size="small" sx={{ width: 40, height: 40, border: "1.5px solid #c5d4e3", borderRadius: "50%", color: "#5c7fa3", bgcolor: "white" }}>
-                  {item.icon}
-                </IconButton>
-              </Tooltip>
-            ))}
-          </Stack>
-        </Box>
-
-        <Stack alignItems="flex-end" gap={0.5} mb={3}>
-          <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>+ Add to the group</Button>
-          <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>+ Set password</Button>
-        </Stack>
-
-        <Button
-          variant="contained" onClick={handleSubmit}
-          sx={{ borderRadius: "20px", py: 1.2, px: 4, fontWeight: 600, fontSize: 14, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" }, boxShadow: "none", textTransform: "none" }}
-        >
-          Submit
-        </Button>
-      </Box>
-    </Drawer>
+    <div ref={ref} style={{ position: "relative" }}>
+      <IconBtn onClick={() => setOpen((p) => !p)} title={t("quickAdd.addStudent")} active={open}>
+        <MdAdd size={18} />
+      </IconBtn>
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 8px)", left: 0,
+          background: "#fff", border: "1px solid #e0e5ec", borderRadius: 10,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 500,
+          minWidth: 180, animation: "dropDown 0.15s ease", overflow: "hidden",
+        }}>
+          <style>{`@keyframes dropDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
+          {items.map((item) => (
+            <div
+              key={item.label}
+              onClick={() => { setOpen(false); item.action(); }}
+              style={{
+                padding: "11px 16px", fontSize: 13, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 10,
+                color: "#1a2332", transition: "background 0.1s",
+              }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "#f7f8fa")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "#fff")}
+            >
+              <span style={{ fontSize: 16 }}>{item.emoji}</span>
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -573,11 +452,12 @@ export const Students = () => {
   const [columnsAnchor,     setColumnsAnchor]     = useState<null | HTMLElement>(null);
   const [actionMenu,        setActionMenu]        = useState<{ el: HTMLElement; uid: string } | null>(null);
   const [deleteUid,         setDeleteUid]         = useState<string | null>(null);
-  const [addDrawerOpen,     setAddDrawerOpen]     = useState(false);
-  const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false);
+ 
   const [editDrawerOpen,    setEditDrawerOpen]    = useState(false);
   const [activeStudent,     setActiveStudent]     = useState<FlatStudent | null>(null);
   const [addToGroupOpen,    setAddToGroupOpen]    = useState(false);
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
 
   const [filters, setFilters] = useState<Filters>({
     search: "", course: "", status: "", teacher: "", startDate: "", endDate: "",
@@ -649,23 +529,6 @@ export const Students = () => {
     setStudents((prev) => prev.map((s) => (s.uid === uid ? { ...s, ...data } : s)));
   };
 
-  const handleAddStudent = (data: { phone: string; name: string; dob: string; gender: string; comment: string }) => {
-    const teacher = TEACHERS_DATA[0];
-    const group   = teacher?.groups[0];
-    if (!group) return;
-    const newEntry: FlatStudent = {
-      uid: `${group.id}-${Date.now()}`, id: Date.now(),
-      name: data.name || "Yangi O'quvchi", phone: data.phone, active: true,
-      groupId: group.id, groupName: group.name, groupSchedule: group.schedule,
-      groupBadge: group.badge, groupBadgeColor: group.badgeColor,
-      course: group.course, teacher: teacher.fullName, teacherId: teacher.id,
-      startDate: group.startDate, endDate: group.endDate,
-      branch: group.branch ?? "", room: group.room, price: group.price ?? 0,
-      balance: 0, comment: data.comment,
-    };
-    setStudents((prev) => [newEntry, ...prev]);
-  };
-
   const openActionMenu = (e: React.MouseEvent<HTMLButtonElement>, uid: string) => {
     e.stopPropagation();
     const student = students.find((s) => s.uid === uid) || null;
@@ -693,7 +556,7 @@ export const Students = () => {
         </Stack>
         <Button
           variant="contained"
-          onClick={() => setAddDrawerOpen(true)}
+          onClick={() => setAddStudentOpen(true)}
           sx={{
             bgcolor: "#2d4a5a", color: "white", borderRadius: "8px",
             px: 3, py: 1.1, fontWeight: 700, fontSize: 13, letterSpacing: 0.5,
@@ -728,6 +591,12 @@ export const Students = () => {
             <IoClose size={13} color="#9ca3af" style={{ cursor: "pointer" }} onClick={() => setFilter("search", "")} />
           )}
         </Box>
+
+         <QuickAddBtn
+            onAddStudent={() => setAddStudentOpen(true)}
+            onAddPayment={() => setAddPaymentOpen(true)}
+          />
+
 
         <DropdownFilter
           label="By Courses" value={filters.course}
@@ -997,7 +866,7 @@ export const Students = () => {
                           <MdEdit size={16} color="#6b7280" /> Edit Student
                         </MenuItem>
                         <Divider sx={{ my: 0.5 }} />
-                        <MenuItem onClick={() => { setActionMenu(null); setPaymentDrawerOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "#16a34a" }}>
+                        <MenuItem onClick={() => { setActionMenu(null); setAddPaymentOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "#16a34a" }}>
                           <MdPayment size={16} color="#16a34a" /> Add payment
                         </MenuItem>
                         <Divider sx={{ my: 0.5 }} />
@@ -1039,16 +908,9 @@ export const Students = () => {
 
       {/* ── MODALS & DRAWERS ─────────────────────────────── */}
 
-      <AddStudentDrawer
-        open={addDrawerOpen}
-        onClose={() => setAddDrawerOpen(false)}
-        onSubmit={handleAddStudent}
-      />
-      <AddPaymentDrawer
-        open={paymentDrawerOpen}
-        student={activeStudent}
-        onClose={() => setPaymentDrawerOpen(false)}
-      />
+      <AddStudent open={addStudentOpen} onClose={() => setAddStudentOpen(false)} />
+      <AddPayment open={addPaymentOpen} onClose={() => setAddPaymentOpen(false)} />
+
       <EditStudentDrawer
         open={editDrawerOpen}
         student={activeStudent}

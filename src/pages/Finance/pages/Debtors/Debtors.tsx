@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { BsCashStack } from "react-icons/bs";
 import { FiFilter, FiCalendar, FiChevronDown, FiMail } from "react-icons/fi";
 import { IoTimeOutline } from "react-icons/io5";
 import { IoMdFlag } from "react-icons/io";
 import { buildFlatStudents } from "../../../../constants/FlatStudents";
+
+// Reuse the SAME SMS drawer/modal used on the Students page
+import { SendSmsModal } from "../../../../components/SendSmsModal";
 
 // ---------- Types ----------
 interface DebtorRow {
@@ -162,6 +166,8 @@ const badgeCls = (color: "blue" | "green" | "amber") => {
 
 // ---------- Main Component ----------
 export const Debtors = () => {
+  const navigate = useNavigate();
+
   const [searchBy, setSearchBy] = useState("Name");
   const [searchText, setSearchText] = useState("");
   const [status, setStatus] = useState("Active (Not archived)");
@@ -182,6 +188,9 @@ export const Debtors = () => {
   const [selected, setSelected] = useState<string[]>([]); // uid based
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
+  // SMS drawer state — reuses the same modal as the Students page
+  const [sendSmsOpen, setSendSmsOpen] = useState(false);
 
   // ---------- Filter ----------
   const filtered = DEBTORS_DATA.filter((d) => {
@@ -215,6 +224,8 @@ export const Debtors = () => {
     setActiveFilters({ searchBy, searchText, status, group, debtFrom, debtTo });
     setPage(1);
   };
+
+  const goToStudent = (uid: string) => navigate(`/students/${uid}`);
 
   const inputCls =
     "border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400 w-full";
@@ -363,7 +374,15 @@ export const Debtors = () => {
               <th className="px-3 py-3 text-left text-gray-500 font-medium">Task</th>
               <th className="px-3 py-3 text-left text-gray-500 font-medium">Status</th>
               <th className="px-3 py-3 w-8">
-                <FiMail size={15} className="text-yellow-500" />
+                <button
+                  type="button"
+                  title={selected.length > 0 ? "Send SMS to selected" : "Select students to send SMS"}
+                  onClick={() => { if (selected.length > 0) setSendSmsOpen(true); }}
+                  className="inline-flex items-center justify-center disabled:opacity-40"
+                  disabled={selected.length === 0}
+                >
+                  <FiMail size={15} className={selected.length > 0 ? "text-yellow-500" : "text-gray-300"} />
+                </button>
               </th>
             </tr>
           </thead>
@@ -374,8 +393,12 @@ export const Debtors = () => {
               </tr>
             ) : (
               paginated.map((d, i) => (
-                <tr key={d.uid} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3">
+                <tr
+                  key={d.uid}
+                  onClick={() => goToStudent(d.uid)}
+                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selected.includes(d.uid)}
@@ -450,6 +473,13 @@ export const Debtors = () => {
           </div>
         </div>
       )}
+
+      {/* SMS drawer/modal — reused from the Students page */}
+      <SendSmsModal
+        open={sendSmsOpen}
+        onClose={() => setSendSmsOpen(false)}
+        selectedCount={selected.length}
+      />
     </div>
   );
 };

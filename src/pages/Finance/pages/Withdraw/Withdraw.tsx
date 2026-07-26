@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Dot,
@@ -9,12 +10,15 @@ import {
 } from "@mui/material";
 import { FiXCircle } from "react-icons/fi";
 import { BsCash } from "react-icons/bs";
-import { TEACHERS_DATA } from "../../../../constants/Teachers";
+
+// ── Reuse the SAME student data source & types as the Students page ─────────
+import { buildFlatStudents, FlatStudent } from "../../../../constants/FlatStudents";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Withdrawal {
   id: number;
+  studentUid: string; // links back to the FlatStudent this withdrawal belongs to
   date: string;
   name: string;
   sum: number;
@@ -47,15 +51,13 @@ function addDays(dateStr: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function generateWithdrawals(): Withdrawal[] {
+function generateWithdrawals(students: FlatStudent[]): Withdrawal[] {
   const list: Withdrawal[] = [];
-  const allStudents = TEACHERS_DATA.flatMap((t) =>
-    t.groups.flatMap((g) => g.students.map((s) => ({ student: s, group: g })))
-  );
+  if (students.length === 0) return list;
 
   for (let i = 0; i < 30; i++) {
     const dateRaw  = RAW_DATES[i % RAW_DATES.length];
-    const entry    = allStudents[i % allStudents.length];
+    const student  = students[i % students.length];
     const hasGroup = i % 5 !== 0; // har 5-chida "not assigned"
     const badge    = BADGES[i % BADGES.length];
     const lessons  = LESSONS[i % LESSONS.length];
@@ -69,8 +71,9 @@ function generateWithdrawals(): Withdrawal[] {
 
     list.push({
       id: i + 1,
+      studentUid: student.uid,
       date: dateRaw,
-      name: entry.student.name,
+      name: student.name,
       sum: 30000 + (i * 17483) % 200000,
       comment: hasGroup ? "" : "not assigned",
       commentBadge:     hasGroup ? badge : undefined,
@@ -82,8 +85,6 @@ function generateWithdrawals(): Withdrawal[] {
   }
   return list;
 }
-
-const ALL_WITHDRAWALS = generateWithdrawals();
 
 // ─── Chart ────────────────────────────────────────────────────────────────────
 
@@ -128,9 +129,7 @@ const CHART_DATA = [
 const fmt     = (n: number) => n.toLocaleString("ru-RU");
 const fmtDate = (d: string) => d.split("-").reverse().join(".");
 
-const ALL_COURSES = [...new Set(TEACHERS_DATA.flatMap((t) => t.groups.map((g) => g.course)))];
-const PAGE_SIZE   = 20;
-const TOTAL       = ALL_WITHDRAWALS.reduce((a, w) => a + w.sum, 0);
+const PAGE_SIZE = 20;
 
 // ─── Small UI pieces ──────────────────────────────────────────────────────────
 
@@ -173,6 +172,14 @@ const SortIcon = ({ active, dir }: { active: boolean; dir: "asc" | "desc" }) => 
 type SortKey = "date" | "name" | "sum" | "creator";
 
 export const Withdraw = () => {
+  const navigate = useNavigate();
+
+  // Same student source/structure as the Students page
+  const students = useMemo(() => buildFlatStudents(), []);
+  const ALL_WITHDRAWALS = useMemo(() => generateWithdrawals(students), [students]);
+  const ALL_COURSES = useMemo(() => [...new Set(students.map((s) => s.course))], [students]);
+  const TOTAL = useMemo(() => ALL_WITHDRAWALS.reduce((a, w) => a + w.sum, 0), [ALL_WITHDRAWALS]);
+
   const [dateFrom,  setDateFrom]  = useState("01.05.2026");
   const [dateTo,    setDateTo]    = useState("31.05.2026");
   const [namePhone, setNamePhone] = useState("");
@@ -194,7 +201,7 @@ export const Withdraw = () => {
         const cmp = String(a[sortKey]).localeCompare(String(b[sortKey]), undefined, { numeric: true });
         return sortDir === "asc" ? cmp : -cmp;
       });
-  }, [namePhone, sum, sortKey, sortDir]);
+  }, [ALL_WITHDRAWALS, namePhone, sum, sortKey, sortDir]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -207,6 +214,8 @@ export const Withdraw = () => {
   const handleDelete = (id: number) => {
     console.log("Delete withdrawal:", id);
   };
+
+  const goToStudent = (uid: string) => navigate(`/students/${uid}`);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -349,7 +358,9 @@ export const Withdraw = () => {
                   <TableRow
                     key={w.id}
                     hover
+                    onClick={() => goToStudent(w.studentUid)}
                     sx={{
+                      cursor: "pointer",
                       "&:hover": { backgroundColor: "#f0f6ff !important" },
                       backgroundColor: i % 2 === 0 ? "#fff" : "#fafbfc",
                     }}
@@ -395,7 +406,7 @@ export const Withdraw = () => {
                     </TableCell>
 
                     {/* Actions */}
-                    <TableCell align="center" sx={{ py: 1.5 }}>
+                    <TableCell align="center" sx={{ py: 1.5 }} onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleDelete(w.id)}
                         className="text-red-400 hover:text-red-600 transition-colors"

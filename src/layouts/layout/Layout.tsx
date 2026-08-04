@@ -22,10 +22,12 @@ const LayoutInner = ({ children }: Props) => {
         <Sidebar />
         <Box
           sx={{
-            marginLeft: `${contentLeft}px`,
+            marginLeft: { xs: 0, md: `${contentLeft}px` },
             marginTop: `${HEADER_HEIGHT}px`,
             flex: 1,
+            minWidth: 0,
             overflowY: "auto",
+            overflowX: "hidden",
             transition: "margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
             backgroundColor: "#f4f6fa",
           }}

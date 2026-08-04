@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 
 // ─── Submenu paths that have children ────────────────────────────────────────
@@ -11,6 +11,9 @@ interface SidebarContextValue {
   openSubmenu: string | null;
   setOpenSubmenu: (path: string | null) => void;
   toggleSubmenu: (path: string) => void;
+  mobileOpen: boolean;
+  setMobileOpen: (open: boolean) => void;
+  toggleMobile: () => void;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -37,12 +40,25 @@ export const SidebarProvider = ({ children }: ProviderProps) => {
     return SUBMENU_PATHS.find((p) => pathname.startsWith(p)) ?? null;
   });
 
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // close the mobile drawer whenever the route changes (e.g. a nav link was clicked)
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   const toggleSubmenu = (path: string) => {
     setOpenSubmenu((prev) => (prev === path ? null : path));
   };
 
+  const toggleMobile = () => {
+    setMobileOpen((prev) => !prev);
+  };
+
   return (
-    <SidebarContext.Provider value={{ openSubmenu, setOpenSubmenu, toggleSubmenu }}>
+    <SidebarContext.Provider
+      value={{ openSubmenu, setOpenSubmenu, toggleSubmenu, mobileOpen, setMobileOpen, toggleMobile }}
+    >
       {children}
     </SidebarContext.Provider>
   );

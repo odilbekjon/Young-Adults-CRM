@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from "react";
-import { Box, Tooltip, Collapse } from "@mui/material";
+import { Box, Tooltip, Collapse, Drawer, useMediaQuery, useTheme } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   FiDownload, FiUsers, FiLayers,  FiHome,
@@ -21,6 +22,7 @@ import { useSidebar } from "../../Context/SidebarContext";
 export const SIDEBAR_WIDTH = 120;
 export const SUBMENU_WIDTH = 200;
 export const HEADER_HEIGHT = 64;
+export const MOBILE_DRAWER_WIDTH = 280;
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 
@@ -54,7 +56,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface SubMenuItem {
-  label: string;
+  labelKey: string;
   path: string;
   icon?: string;
   dividerBefore?: boolean;
@@ -65,73 +67,73 @@ export interface SubMenuItem {
 
 const SUBMENUS: Record<string, SubMenuItem[]> = {
   "/finance": [
-    { label: "All payments",   path: "/finance/all-payments",   icon: "file" },
-    { label: "Withdraw",       path: "/finance/withdraw",        icon: "file" },
-    { label: "Total Expenses", path: "/finance/total-expenses",  icon: "file" },
-    { label: "Salaries new",   path: "/finance/salaries",        icon: "brief" },
-    { label: "Debtors",        path: "/finance/debtors",         icon: "user", dividerBefore: true },
+    { labelKey: "sidebar.finance.allPayments",   path: "/finance/all-payments",   icon: "file" },
+    { labelKey: "sidebar.finance.withdraw",       path: "/finance/withdraw",        icon: "file" },
+    { labelKey: "sidebar.finance.totalExpenses", path: "/finance/total-expenses",  icon: "file" },
+    { labelKey: "sidebar.finance.salaries",       path: "/finance/salaries",        icon: "brief" },
+    { labelKey: "sidebar.finance.debtors",        path: "/finance/debtors",         icon: "user", dividerBefore: true },
   ],
   "/reports": [
-    { label: "Conversion reports",    path: "/reports/conversation",       icon: "userCheck" },
-    { label: "Attendance reports",    path: "/reports/attendance",       icon: "userCheck" },
-    { label: "Leads reports",         path: "/reports/leads",            icon: "userCheck" },
-    { label: "Students left the group", path: "/reports/students-left", icon: "trending" },
+    { labelKey: "sidebar.reports.conversion",    path: "/reports/conversation",       icon: "userCheck" },
+    { labelKey: "sidebar.reports.attendance",    path: "/reports/attendance",       icon: "userCheck" },
+    { labelKey: "sidebar.reports.leads",         path: "/reports/leads",            icon: "userCheck" },
+    { labelKey: "sidebar.reports.studentsLeft", path: "/reports/students-left", icon: "trending" },
     {
-      label: "Logs",
+      labelKey: "sidebar.reports.logs",
       path: "/reports/logs",
       children: [
-        { label: "Workly Report", path: "/reports/logs/workly",   icon: "user" },
-        { label: "Sent SMS log",  path: "/reports/logs/sms",      icon: "smartphone" },
-        { label: "Call log",      path: "/reports/logs/call",     icon: "phone" },
-        { label: "Logs",          path: "/reports/logs/log",      icon: "list" },
+        { labelKey: "sidebar.reports.logsWorkly", path: "/reports/logs/workly",   icon: "user" },
+        { labelKey: "sidebar.reports.logsSms",    path: "/reports/logs/sms",      icon: "smartphone" },
+        { labelKey: "sidebar.reports.logsCall",   path: "/reports/logs/call",     icon: "phone" },
+        { labelKey: "sidebar.reports.logsLog",    path: "/reports/logs/log",      icon: "list" },
       ],
     },
   ],
   "/settings": [
-    { label: "SMS settings",  path: "/settings/sms",  icon: "mail" },
-    { label: "VoIP settings", path: "/settings/voip", icon: "phone" },
-    { label: "Grade",         path: "/settings/grade", icon: "star" },
+    { labelKey: "sidebar.settings.sms",  path: "/settings/sms",  icon: "mail" },
+    { labelKey: "sidebar.settings.voip", path: "/settings/voip", icon: "phone" },
+    { labelKey: "sidebar.settings.grade", path: "/settings/grade", icon: "star" },
     {
-      label: "CEO",
+      labelKey: "sidebar.settings.ceo",
       path: "/settings/ceo",
       children: [
-        { label: "General settings", path: "/settings/ceo/general", icon: "settings" },
-        { label: "Staff",            path: "/settings/ceo/staff",   icon: "users" },
-        { label: "Billing",          path: "/settings/ceo/billing", icon: "brief" },
-        { label: "Roadmap",          path: "/settings/ceo/roadmap", icon: "map" },
-        { label: "Branches",          path: "/settings/ceo/branches", icon: "branch" },
+        { labelKey: "sidebar.settings.ceoGeneral", path: "/settings/ceo/general", icon: "settings" },
+        { labelKey: "sidebar.settings.ceoStaff",   path: "/settings/ceo/staff",   icon: "users" },
+        { labelKey: "sidebar.settings.ceoBilling", path: "/settings/ceo/billing", icon: "brief" },
+        { labelKey: "sidebar.settings.ceoRoadmap", path: "/settings/ceo/roadmap", icon: "map" },
+        { labelKey: "sidebar.settings.ceoBranches", path: "/settings/ceo/branches", icon: "branch" },
       ],
     },
     {
-      label: "Office",
+      labelKey: "sidebar.settings.office",
       path: "/settings/office",
       children: [
-        { label: "Courses",             path: "/settings/office/courses",             icon: "diamond" },
-        { label: "Rooms",               path: "/settings/office/rooms",               icon: "grid" },
-        { label: "Holidays",            path: "/settings/office/holidays",            icon: "calendar" },
-        { label: "Archive",             path: "/settings/office/archive",             icon: "archive" },
-        { label: "Students left group", path: "/settings/office/students-left-group", icon: "userMinus" },
+        { labelKey: "sidebar.settings.officeCourses",     path: "/settings/office/courses",             icon: "diamond" },
+        { labelKey: "sidebar.settings.officeRooms",       path: "/settings/office/rooms",               icon: "grid" },
+        { labelKey: "sidebar.settings.officeHolidays",    path: "/settings/office/holidays",            icon: "calendar" },
+        { labelKey: "sidebar.settings.officeArchive",     path: "/settings/office/archive",             icon: "archive" },
+        { labelKey: "sidebar.settings.officeStudentsLeft", path: "/settings/office/students-left-group", icon: "userMinus" },
       ],
     },
     {
-      label: "Forms",
+      labelKey: "sidebar.settings.forms",
       path: "/settings/forms",
       children: [
-        { label: "Forms", path: "/settings/forms/list", icon: "layers" },
+        { labelKey: "sidebar.settings.formsList", path: "/settings/forms/list", icon: "layers" },
       ],
     },
     {
-      label: "Blog",
+      labelKey: "sidebar.settings.blog",
       path: "/settings/blog",
       children: [
-        { label: "What's new", path: "/settings/blog/whats-new", icon: "rss" },
+        { labelKey: "sidebar.settings.blogWhatsNew", path: "/settings/blog/whats-new", icon: "rss" },
       ],
     },
     {
-      label: "Tags",
+      labelKey: "sidebar.settings.tags",
       path: "/settings/tags",
       children: [
-        { label: "Tags", path: "/settings/tags/list", icon: "tag" },
+        { labelKey: "sidebar.settings.tagsList", path: "/settings/tags/list", icon: "tag" },
       ],
     },
   ],
@@ -140,23 +142,24 @@ const SUBMENUS: Record<string, SubMenuItem[]> = {
 // ─── NAV ITEMS ────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
-  { label: "Dashboard",                  path: "/dashboard",                  icon: <FiHome size={35}  /> },
-  { label: "Leads",                      path: "/leads",                      icon: <FiDownload size={35}  /> },
-  { label: "Teachers",                   path: "/teachers",                   icon: <FiUsers size={35}/> },
-  { label: "Groups",                     path: "/groups",                     icon: <FiLayers size={35} /> },
-  { label: "Students",                   path: "/students",                   icon: <PiStudentDuotone size={35} /> },
-  // { label: "Reminders",                  path: "/reminders",                  icon: <FiClock size={35}  /> },
-  // { label: "Rating",                     path: "/rating",                     icon: <IoTrophyOutline size={35} /> },
-  { label: "Attendance reports",         path: "/attendance-reports",         icon: <FaRegCalendarAlt size={35} /> },
-  // { label: "Teacher attendance reports", path: "/teacher-attendance-reports", icon: <FaRegCalendarAlt size={35} /> },
-  { label: "Finance",                    path: "/finance",                    icon: <AiOutlineDollar size={35} /> },
-  { label: "Reports",                    path: "/reports",                    icon: <AiOutlinePieChart size={35} /> },
-  { label: "Settings",                   path: "/settings",                   icon: <IoMdSettings size={35} /> },
+  { labelKey: "sidebar.nav.dashboard",          path: "/dashboard",                  icon: <FiHome size={35}  /> },
+  { labelKey: "sidebar.nav.leads",               path: "/leads",                      icon: <FiDownload size={35}  /> },
+  { labelKey: "sidebar.nav.teachers",            path: "/teachers",                   icon: <FiUsers size={35}/> },
+  { labelKey: "sidebar.nav.groups",              path: "/groups",                     icon: <FiLayers size={35} /> },
+  { labelKey: "sidebar.nav.students",            path: "/students",                   icon: <PiStudentDuotone size={35} /> },
+  // { labelKey: "sidebar.nav.reminders",           path: "/reminders",                  icon: <FiClock size={35}  /> },
+  // { labelKey: "sidebar.nav.rating",              path: "/rating",                     icon: <IoTrophyOutline size={35} /> },
+  { labelKey: "sidebar.nav.attendanceReports",  path: "/attendance-reports",         icon: <FaRegCalendarAlt size={35} /> },
+  // { labelKey: "sidebar.nav.teacherAttendanceReports", path: "/teacher-attendance-reports", icon: <FaRegCalendarAlt size={35} /> },
+  { labelKey: "sidebar.nav.finance",             path: "/finance",                    icon: <AiOutlineDollar size={35} /> },
+  { labelKey: "sidebar.nav.reports",             path: "/reports",                    icon: <AiOutlinePieChart size={35} /> },
+  { labelKey: "sidebar.nav.settings",            path: "/settings",                   icon: <IoMdSettings size={35} /> },
 ];
 
 // ─── SubMenuLeaf ──────────────────────────────────────────────────────────────
 
 const SubMenuLeaf = ({ item, depth = 0 }: { item: SubMenuItem; depth?: number }) => {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const isActive = pathname === item.path;
   const iconNode = item.icon ? ICON_MAP[item.icon] : null;
@@ -185,7 +188,7 @@ const SubMenuLeaf = ({ item, depth = 0 }: { item: SubMenuItem; depth?: number })
             {iconNode}
           </Box>
         )}
-        {item.label}
+        {t(item.labelKey)}
       </Box>
     </Link>
   );
@@ -194,6 +197,7 @@ const SubMenuLeaf = ({ item, depth = 0 }: { item: SubMenuItem; depth?: number })
 // ─── SubMenuGroup ─────────────────────────────────────────────────────────────
 
 const SubMenuGroup = ({ item }: { item: SubMenuItem }) => {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const isChildActive = item.children?.some((c) => pathname.startsWith(c.path));
   const [open, setOpen] = useState(!!isChildActive);
@@ -216,7 +220,7 @@ const SubMenuGroup = ({ item }: { item: SubMenuItem }) => {
           "&:hover": { color: "#374151" },
         }}
       >
-        <span>{item.label}</span>
+        <span>{t(item.labelKey)}</span>
         {open ? <FiChevronDown size={14} /> : <FiChevronRight size={14} />}
       </Box>
       <Collapse in={open}>
@@ -230,7 +234,7 @@ const SubMenuGroup = ({ item }: { item: SubMenuItem }) => {
   );
 };
 
-// ─── SubMenuPanel ─────────────────────────────────────────────────────────────
+// ─── SubMenuPanel (desktop flyout) ─────────────────────────────────────────────
 
 interface SubMenuPanelProps {
   parentPath: string;
@@ -268,6 +272,7 @@ const SubMenuPanel = ({ items }: SubMenuPanelProps) => {
         zIndex: 10,
         overflowY: "auto",
         scrollbarWidth: "none",
+        display: { xs: "none", md: "block" },
         "&::-webkit-scrollbar": { display: "none" },
       }}
     >
@@ -291,22 +296,22 @@ const SubMenuPanel = ({ items }: SubMenuPanelProps) => {
   );
 };
 
-// ─── NavItem ──────────────────────────────────────────────────────────────────
+// ─── NavItem (desktop icon rail) ───────────────────────────────────────────────
 
 interface NavItemProps {
-  label: string;
+  labelKey: string;
   path: string;
   icon: React.ReactNode;
   active: boolean;
   hasSubmenu: boolean;
   submenuOpen: boolean;
-  // ✅ YANGI: boshqa biror submenu ochiqmi?
+  // boshqa biror submenu ochiqmi?
   anySubmenuOpen: boolean;
   onClick: () => void;
 }
 
 const NavItem = ({
-  label,
+  labelKey,
   path,
   icon,
   active,
@@ -315,11 +320,12 @@ const NavItem = ({
   anySubmenuOpen,
   onClick,
 }: NavItemProps) => {
-  // ✅ TO'G'RILANDI:
-  // - Submenu ochiq bo'lsa → shu item highlight
-  // - Submenu yopiq bo'lsa → active path highlight
-  // - Boshqa biror submenu ochiq bo'lsa → bu item highlight EMAS (active bo'lsa ham)
+  const { t } = useTranslation();
+  // Submenu ochiq bo'lsa → shu item highlight
+  // Submenu yopiq bo'lsa → active path highlight
+  // Boshqa biror submenu ochiq bo'lsa → bu item highlight EMAS (active bo'lsa ham)
   const isHighlighted = submenuOpen || (active && !anySubmenuOpen);
+  const label = t(labelKey);
 
   const inner = (
     <Box
@@ -390,11 +396,145 @@ const NavItem = ({
   );
 };
 
+// ─── Mobile drawer nav ─────────────────────────────────────────────────────────
+
+const MobileSubMenuItem = ({ item, depth = 0 }: { item: SubMenuItem; depth?: number }) => {
+  const { t } = useTranslation();
+  const { pathname } = useLocation();
+  const { setMobileOpen } = useSidebar();
+  const iconNode = item.icon ? ICON_MAP[item.icon] : null;
+  const isChildActive = !!item.children?.some((c) => pathname.startsWith(c.path));
+  const [open, setOpen] = useState(isChildActive);
+
+  if (item.children?.length) {
+    return (
+      <Box>
+        <Box
+          onClick={() => setOpen((p) => !p)}
+          sx={{
+            pl: 2 + depth * 1.5,
+            pr: 2,
+            py: 1.3,
+            fontSize: 13.5,
+            fontWeight: 500,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            color: "#374151",
+            userSelect: "none",
+          }}
+        >
+          <span>{t(item.labelKey)}</span>
+          {open ? <FiChevronDown size={14} /> : <FiChevronRight size={14} />}
+        </Box>
+        <Collapse in={open}>
+          <Box>
+            {item.children.map((child) => (
+              <MobileSubMenuItem key={child.path} item={child} depth={depth + 1} />
+            ))}
+          </Box>
+        </Collapse>
+      </Box>
+    );
+  }
+
+  const isActive = pathname === item.path;
+  return (
+    <Link to={item.path} onClick={() => setMobileOpen(false)} style={{ textDecoration: "none" }}>
+      <Box
+        sx={{
+          pl: 2 + depth * 1.5,
+          pr: 2,
+          py: 1.3,
+          fontSize: 13.5,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 1.2,
+          color: isActive ? "#003366" : "#374151",
+          fontWeight: isActive ? 600 : 400,
+          backgroundColor: isActive ? "#eef2f9" : "transparent",
+          "&:hover": { backgroundColor: "#f5f8ff" },
+        }}
+      >
+        {iconNode && (
+          <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>{iconNode}</Box>
+        )}
+        {t(item.labelKey)}
+      </Box>
+    </Link>
+  );
+};
+
+const MobileNavItem = ({ item }: { item: (typeof NAV_ITEMS)[number] }) => {
+  const { t } = useTranslation();
+  const { pathname } = useLocation();
+  const { setMobileOpen } = useSidebar();
+  const hasSubmenu = !!SUBMENUS[item.path];
+  const isActive = hasSubmenu
+    ? pathname === item.path || pathname.startsWith(item.path + "/")
+    : pathname === item.path;
+  const [open, setOpen] = useState(isActive && hasSubmenu);
+
+  const row = (
+    <Box
+      onClick={hasSubmenu ? () => setOpen((p) => !p) : () => setMobileOpen(false)}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1.5,
+        px: 2,
+        py: 1.5,
+        cursor: "pointer",
+        color: isActive ? "#003366" : "#1a2332",
+        backgroundColor: isActive && !hasSubmenu ? "#eef2f9" : "transparent",
+        fontWeight: isActive ? 600 : 500,
+        "&:hover": { backgroundColor: "#f5f8ff" },
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", "& svg": { fontSize: 20 } }}>
+        {item.icon}
+      </Box>
+      <Box sx={{ fontSize: 14, flex: 1 }}>{t(item.labelKey)}</Box>
+      {hasSubmenu && (open ? <FiChevronDown size={16} /> : <FiChevronRight size={16} />)}
+    </Box>
+  );
+
+  return (
+    <Box>
+      {hasSubmenu ? row : (
+        <Link to={item.path} style={{ textDecoration: "none", color: "inherit" }}>
+          {row}
+        </Link>
+      )}
+      {hasSubmenu && (
+        <Collapse in={open}>
+          <Box sx={{ backgroundColor: "#fafbfc" }}>
+            {SUBMENUS[item.path].map((sub) =>
+              sub.dividerBefore ? (
+                <Box key={sub.path}>
+                  <Box sx={{ height: "0.5px", bgcolor: "#e0e5ec", mx: 2, my: 0.5 }} />
+                  <MobileSubMenuItem item={sub} depth={1} />
+                </Box>
+              ) : (
+                <MobileSubMenuItem key={sub.path} item={sub} depth={1} />
+              )
+            )}
+          </Box>
+        </Collapse>
+      )}
+    </Box>
+  );
+};
+
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 export const Sidebar = () => {
   const { pathname } = useLocation();
-  const { openSubmenu, toggleSubmenu, setOpenSubmenu } = useSidebar();
+  const { openSubmenu, toggleSubmenu, setOpenSubmenu, mobileOpen, setMobileOpen } = useSidebar();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
 
   const handleNavClick = (path: string) => {
     if (SUBMENUS[path]) {
@@ -406,9 +546,11 @@ export const Sidebar = () => {
 
   return (
     <>
+      {/* Desktop icon rail */}
       <Box
         id="main-sidebar"
         sx={{
+          display: { xs: "none", md: "flex" },
           width: SIDEBAR_WIDTH,
           height: `calc(100vh - ${HEADER_HEIGHT}px)`,
           position: "fixed",
@@ -419,7 +561,6 @@ export const Sidebar = () => {
           zIndex: 11,
           borderRight: "1px solid #e0e5ec",
           backgroundColor: "#fff",
-          display: "flex",
           flexDirection: "column",
           boxSizing: "border-box",
           scrollbarWidth: "none",
@@ -430,10 +571,6 @@ export const Sidebar = () => {
           {NAV_ITEMS.map((item) => {
             const hasSubmenu = !!SUBMENUS[item.path];
             const submenuOpen = openSubmenu === item.path;
-
-            // ✅ TO'G'RILANDI: exact match yoki to'g'ridan child path
-            // "/finance".startsWith("/finance/") → false ✓
-            // "/finance/all-payments".startsWith("/finance/") → true ✓
             const isActive = hasSubmenu
               ? pathname === item.path || pathname.startsWith(item.path + "/")
               : pathname === item.path;
@@ -445,7 +582,7 @@ export const Sidebar = () => {
                 active={isActive}
                 hasSubmenu={hasSubmenu}
                 submenuOpen={submenuOpen}
-                anySubmenuOpen={!!openSubmenu} // ✅ YANGI prop
+                anySubmenuOpen={!!openSubmenu}
                 onClick={() => handleNavClick(item.path)}
               />
             );
@@ -453,12 +590,30 @@ export const Sidebar = () => {
         </Box>
       </Box>
 
-      {openSubmenu && SUBMENUS[openSubmenu] && (
-        <SubMenuPanel
-          parentPath={openSubmenu}
-          items={SUBMENUS[openSubmenu]}
-        />
+      {isDesktop && openSubmenu && SUBMENUS[openSubmenu] && (
+        <SubMenuPanel parentPath={openSubmenu} items={SUBMENUS[openSubmenu]} />
       )}
+
+      {/* Mobile / tablet drawer */}
+      <Drawer
+        anchor="left"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: "block", md: "none" },
+          "& .MuiDrawer-paper": {
+            width: MOBILE_DRAWER_WIDTH,
+            boxSizing: "border-box",
+          },
+        }}
+      >
+        <Box sx={{ pt: 1, pb: 4, overflowY: "auto" }}>
+          {NAV_ITEMS.map((item) => (
+            <MobileNavItem key={item.path} item={item} />
+          ))}
+        </Box>
+      </Drawer>
     </>
   );
 };

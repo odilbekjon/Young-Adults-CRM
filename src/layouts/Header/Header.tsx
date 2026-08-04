@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Box, Avatar, Typography, Menu, MenuItem } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { useBranch, BRANCH_OPTIONS, type BranchId } from "../../Context/BranchContext";
+import { useSidebar } from "../../Context/SidebarContext";
 
 import { SIDEBAR_WIDTH, HEADER_HEIGHT } from "../Sidebar/Sidebar";
 import { AddStudent } from "../../components/AddStudent/AddStudent";
@@ -14,7 +15,7 @@ import { AddPayment } from "../../components/AddPayment/AddPayment";
 import {
   MdSearch, MdFullscreen, MdFullscreenExit,
   MdHelpOutline, MdHistory, MdNotificationsNone,
-  MdKeyboardArrowDown, MdAdd,
+  MdKeyboardArrowDown, MdAdd, MdMenu,
 } from "react-icons/md";
 
 import logo from "../../assets/logo.svg";
@@ -389,6 +390,7 @@ export const Header = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { branch, setBranch } = useBranch();
+  const { toggleMobile } = useSidebar();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [addStudentOpen, setAddStudentOpen] = useState(false);
@@ -415,10 +417,20 @@ export const Header = () => {
           display: "flex", alignItems: "center",
         }}
       >
-        {/* Logo */}
+        {/* Mobile hamburger */}
+        <Box sx={{
+          display: { xs: "flex", md: "none" }, alignItems: "center", justifyContent: "center",
+          width: 56, height: "100%", flexShrink: 0, pl: 1,
+        }}>
+          <IconBtn onClick={toggleMobile} title={t("header.hamburgerMenu")}>
+            <MdMenu size={20} />
+          </IconBtn>
+        </Box>
+
+        {/* Logo — desktop rail column */}
         <Box sx={{
           width: SIDEBAR_WIDTH, flexShrink: 0,
-          display: "flex", alignItems: "center", justifyContent: "center",
+          display: { xs: "none", md: "flex" }, alignItems: "center", justifyContent: "center",
           height: "100%", borderRight: "1px solid #e0e5ec", px: 1.5,
         }}>
           <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
@@ -429,8 +441,21 @@ export const Header = () => {
           </Link>
         </Box>
 
-        {/* Main area */}
-        <Box sx={{ flex: 1, display: "flex", alignItems: "center", gap: 2, px: 3, height: "100%" }}>
+        {/* Logo — mobile, visually centered */}
+        <Box sx={{
+          display: { xs: "flex", md: "none" }, flex: 1,
+          alignItems: "center", justifyContent: "center", height: "100%",
+        }}>
+          <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
+            <img
+              src={logo} alt="logo"
+              style={{ width: 96, height: "auto", maxHeight: 32, objectFit: "contain", display: "block" }}
+            />
+          </Link>
+        </Box>
+
+        {/* Main area — desktop */}
+        <Box sx={{ flex: 1, display: { xs: "none", md: "flex" }, alignItems: "center", gap: 2, px: 3, height: "100%" }}>
           <BranchDropdown branch={branch} setBranch={setBranch} />
 
           <QuickAddBtn
@@ -470,24 +495,38 @@ export const Header = () => {
               O
             </Avatar>
           </button>
-
-          <Menu
-            anchorEl={userMenuAnchor}
-            open={Boolean(userMenuAnchor)}
-            onClose={() => setUserMenuAnchor(null)}
-            transformOrigin={{ horizontal: "right", vertical: "top" }}
-            anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-            PaperProps={{ sx: { borderRadius: 2, mt: 1, minWidth: 160, boxShadow: "0 8px 24px rgba(0,0,0,0.1)" } }}
-          >
-            <MenuItem sx={{ fontSize: 13 }} onClick={() => { setUserMenuAnchor(null); navigate("/profile"); }}>
-              {t("header.account")}
-            </MenuItem>
-
-            <MenuItem sx={{ fontSize: 13, color: "#e53935" }} onClick={() => setUserMenuAnchor(null)}>
-              {t("header.signOut")}
-            </MenuItem>
-          </Menu>
         </Box>
+
+        {/* Main area — mobile compact controls */}
+        <Box sx={{ display: { xs: "flex", md: "none" }, alignItems: "center", gap: 0.5, pr: 1.5, height: "100%" }}>
+          <LangToggle />
+          <NotificationBtn />
+          <button
+            onClick={(e) => setUserMenuAnchor(e.currentTarget)}
+            style={{ border: "none", background: "none", cursor: "pointer", padding: 4, borderRadius: 10, display: "flex" }}
+          >
+            <Avatar sx={{ width: 30, height: 30, backgroundColor: "#c8cdd4", fontSize: 13, fontWeight: 600 }}>
+              O
+            </Avatar>
+          </button>
+        </Box>
+
+        <Menu
+          anchorEl={userMenuAnchor}
+          open={Boolean(userMenuAnchor)}
+          onClose={() => setUserMenuAnchor(null)}
+          transformOrigin={{ horizontal: "right", vertical: "top" }}
+          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+          PaperProps={{ sx: { borderRadius: 2, mt: 1, minWidth: 160, boxShadow: "0 8px 24px rgba(0,0,0,0.1)" } }}
+        >
+          <MenuItem sx={{ fontSize: 13 }} onClick={() => { setUserMenuAnchor(null); navigate("/profile"); }}>
+            {t("header.account")}
+          </MenuItem>
+
+          <MenuItem sx={{ fontSize: 13, color: "#e53935" }} onClick={() => setUserMenuAnchor(null)}>
+            {t("header.signOut")}
+          </MenuItem>
+        </Menu>
       </Box>
 
       {/* Drawers */}

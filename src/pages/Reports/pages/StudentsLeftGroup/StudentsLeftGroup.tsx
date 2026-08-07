@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { FiCalendar, FiChevronDown, FiRefreshCw } from "react-icons/fi";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -111,6 +112,7 @@ const ChartCard = ({ title, children }: { title: string; children: React.ReactNo
 
 // ---------- Main Component ----------
 export const StudentsLeftGroup = () => {
+  const { t } = useTranslation();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [course, setCourse] = useState("");
@@ -124,8 +126,8 @@ export const StudentsLeftGroup = () => {
     <div className="min-h-screen bg-gray-100 p-6 font-sans">
       {/* Title */}
       <div className="flex items-center gap-3 mb-5">
-        <h1 className="text-2xl font-semibold text-gray-800">Students left the group</h1>
-        <span className="text-sm text-gray-500">Quantity — {total}</span>
+        <h1 className="text-2xl font-semibold text-gray-800">{t("reports.studentsLeft.title")}</h1>
+        <span className="text-sm text-gray-500">{t("reports.studentsLeft.quantity", { count: total })}</span>
       </div>
 
       {/* Filter bar */}
@@ -133,21 +135,21 @@ export const StudentsLeftGroup = () => {
         <div className="relative">
           <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
           <input type="text" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-            placeholder="Date from"
+            placeholder={t("reports.studentsLeft.filters.dateFrom")}
             className="border border-gray-300 rounded px-3 py-1.5 pl-7 text-sm bg-white focus:outline-none focus:border-blue-400 w-36 text-gray-600 placeholder-gray-400" />
         </div>
         <div className="relative">
           <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
           <input type="text" value={dateTo} onChange={e => setDateTo(e.target.value)}
-            placeholder="Date to"
+            placeholder={t("reports.studentsLeft.filters.dateTo")}
             className="border border-gray-300 rounded px-3 py-1.5 pl-7 text-sm bg-white focus:outline-none focus:border-blue-400 w-36 text-gray-600 placeholder-gray-400" />
         </div>
-        <SelectBox value={course} onChange={setCourse} options={COURSES} placeholder="Course" />
-        <SelectBox value={teacher} onChange={setTeacher} options={TEACHERS} placeholder="Teachers" />
-        <SelectBox value={reason} onChange={setReason} options={REASONS} placeholder="Reasons for archiving" />
-        <SelectBox value={status} onChange={setStatus} options={STATUSES} placeholder="Status" />
+        <SelectBox value={course} onChange={setCourse} options={COURSES} placeholder={t("reports.studentsLeft.filters.course")} />
+        <SelectBox value={teacher} onChange={setTeacher} options={TEACHERS} placeholder={t("reports.studentsLeft.filters.teachers")} />
+        <SelectBox value={reason} onChange={setReason} options={REASONS} placeholder={t("reports.studentsLeft.filters.reasons")} />
+        <SelectBox value={status} onChange={setStatus} options={STATUSES} placeholder={t("reports.studentsLeft.filters.status")} />
         <button className="bg-blue-700 hover:bg-blue-800 text-white rounded px-5 py-1.5 text-sm font-medium transition-colors">
-          Filter
+          {t("reports.studentsLeft.filters.filterBtn")}
         </button>
         <button className="border border-gray-300 bg-white hover:bg-gray-50 rounded p-1.5 text-gray-500 transition-colors">
           <FiRefreshCw size={15} />
@@ -157,7 +159,7 @@ export const StudentsLeftGroup = () => {
       {/* Charts grid */}
       <div className="grid grid-cols-2 gap-4">
         {/* Ustoz kesimida */}
-        <ChartCard title="Ustoz kesimida">
+        <ChartCard title={t("reports.studentsLeft.charts.byTeacher")}>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={TEACHER_DATA} margin={{ top: 20, right: 10, bottom: 90, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -172,7 +174,7 @@ export const StudentsLeftGroup = () => {
         </ChartCard>
 
         {/* Kurs kesimida */}
-        <ChartCard title="Kurs kesimida">
+        <ChartCard title={t("reports.studentsLeft.charts.byCourse")}>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={COURSE_DATA} margin={{ top: 20, right: 10, bottom: 90, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -187,7 +189,7 @@ export const StudentsLeftGroup = () => {
         </ChartCard>
 
         {/* Oylik kesimida */}
-        <ChartCard title="Oylik kesimida">
+        <ChartCard title={t("reports.studentsLeft.charts.byMonth")}>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={MONTHLY_DATA} margin={{ top: 20, right: 10, bottom: 30, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -202,7 +204,7 @@ export const StudentsLeftGroup = () => {
         </ChartCard>
 
         {/* Sabab kesimida */}
-        <ChartCard title="Sabab kesimida">
+        <ChartCard title={t("reports.studentsLeft.charts.byReason")}>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={REASON_DATA} margin={{ top: 20, right: 10, bottom: 30, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />

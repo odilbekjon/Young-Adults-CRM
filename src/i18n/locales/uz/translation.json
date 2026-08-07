@@ -566,5 +566,399 @@
         "withdrawals": "ta yechib olish"
       }
     }
+  },
+  "reports": {
+    "attendance": {
+      "title": "Davomat hisobotlari",
+      "summary": {
+        "visits": "O'quvchi tashrifi (kamida bir marta)",
+        "absent": "Kelmagan (belgilangan martadan ko'p)",
+        "notSet": "Davomat belgilanmagan",
+        "all": "Barchasi",
+        "statusActive": "Faol",
+        "statusDemo": "Demo",
+        "statusFrozen": "Muzlatilgan"
+      },
+      "table": {
+        "name": "Ism",
+        "status": "Holat",
+        "group": "Guruh",
+        "attendance": "Davomat",
+        "noData": "Ma'lumot yo'q"
+      },
+      "filters": {
+        "select": "Tanlang",
+        "title": "Filtr",
+        "dateFrom": "Sanadan",
+        "dateTo": "Sanagacha",
+        "branches": "Filiallar",
+        "selectBranch": "Filialni tanlang",
+        "group": "Guruh",
+        "filterBtn": "Filtr",
+        "reset": "Tozalash"
+      }
+    },
+    "conversion": {
+      "title": "Konversiya hisobotlari",
+      "subtitle": "Kengaytirilgan boshqaruv va aniq xulosalar bilan voronka samaradorligini kuzating.",
+      "stages": {
+        "incoming": "Kiruvchi",
+        "waiting": "Kutilmoqda",
+        "set": "Belgilangan",
+        "attended": "Kelgan",
+        "paid": "To'lagan"
+      },
+      "filters": {
+        "allLeadsOption": "Barcha lidlar",
+        "newLeadsOption": "Yangi lidlar",
+        "returningLeadsOption": "Qayta murojaat qilgan lidlar",
+        "leadsSources": "Lidlar manbalari",
+        "byStaff": "Xodim bo'yicha"
+      },
+      "conversionTitle": "Konversiya",
+      "total": "Jami",
+      "table": {
+        "fullName": "To'liq ism",
+        "phone": "Telefon",
+        "status": "Holat",
+        "staffName": "Xodim ismi",
+        "noDataForStage": "Bu bosqich uchun ma'lumot yo'q.",
+        "selectStagePrompt": "Hisobotni ko'rish uchun yuqoridagi voronka bosqichini tanlang."
+      },
+      "salesPipeline": "Savdo voronkasi"
+    },
+    "leads": {
+      "title": "Lidlar hisobotlari",
+      "totalLeads": "Jami lidlar: {{count}} ({{from}} — {{to}})",
+      "datePlaceholder": "KK.OO.YYYY",
+      "calculate": "Hisoblash",
+      "chart": {
+        "leadsCountSeries": "Lidlar soni"
+      }
+    },
+    "studentsLeft": {
+      "title": "Guruhni tark etgan o'quvchilar",
+      "quantity": "Soni — {{count}}",
+      "filters": {
+        "dateFrom": "Sanadan",
+        "dateTo": "Sanagacha",
+        "course": "Kurs",
+        "teachers": "O'qituvchilar",
+        "reasons": "Arxivlash sabablari",
+        "status": "Holat",
+        "filterBtn": "Filtr"
+      },
+      "charts": {
+        "byTeacher": "Ustoz kesimida",
+        "byCourse": "Kurs kesimida",
+        "byMonth": "Oylik kesimida",
+        "byReason": "Sabab kesimida"
+      }
+    },
+    "logs": {
+      "call": {
+        "title": "Qo'ng'iroqlar jurnali",
+        "filter": {
+          "all": "Barchasi",
+          "incoming": "Kiruvchi",
+          "outgoing": "Chiquvchi",
+          "missed": "O'tkazib yuborilgan"
+        },
+        "table": {
+          "type": "Turi",
+          "play": "Ijro etish",
+          "time": "Vaqt",
+          "who": "Kim",
+          "toWhom": "Kimga",
+          "gateway": "Shlyuz",
+          "call": "Qo'ng'iroq",
+          "duration": "Davomiyligi",
+          "result": "Natija"
+        },
+        "noData": "Ko'rsatish uchun ma'lumot yo'q"
+      },
+      "log": {
+        "title": "Loglar",
+        "statusFilter": "Holat filtri",
+        "filters": {
+          "user": "Foydalanuvchi",
+          "course": "Kurs",
+          "group": "Guruh",
+          "room": "Xona",
+          "payment": "To'lov",
+          "staff": "Xodim",
+          "rest": "Boshqa"
+        }
+      },
+      "sms": {
+        "title": "Yuborilgan SMS jurnali",
+        "system": "Tizim",
+        "quantity": "SMS soni: {{count}}",
+        "notInfo": "Ma'lumot yo'q"
+      },
+      "workly": {
+        "title": "Workly hisoboti",
+        "connection": {
+          "heading": "Workly ulanishi",
+          "description": "Workly bilan ulanish uchun Sozlamalar > Integratsiyalar bo'limida quyidagi ma'lumotlarni kiriting:"
+        },
+        "nav": {
+          "generalSettings": "Umumiy sozlamalar",
+          "signIn": "Kirish",
+          "leadForm": "Lid shakli",
+          "paymentMethods": "To'lov usullari",
+          "communication": "Aloqa",
+          "integrations": "Integratsiyalar",
+          "exams": "Imtihonlar",
+          "check": "Tekshirish",
+          "accrualAndPayment": "Hisoblash va to'lov",
+          "landingPage": "Landing sahifa"
+        },
+        "caption": "Workly",
+        "form": {
+          "clientId": "Workly client id",
+          "secret": "Workly secret",
+          "username": "Workly foydalanuvchi nomi",
+          "password": "Workly paroli"
+        }
+      }
+    }
+  },
+  "singleGroup": {
+    "notFound": "Guruh topilmadi.",
+    "leftPanel": {
+      "course": "Kurs",
+      "teacher": "O'qituvchi",
+      "price": "Narx",
+      "time": "Vaqt",
+      "editGroup": "Guruhni tahrirlash",
+      "deleteGroup": "Guruhni o'chirish",
+      "sendSms": "SMS yuborish",
+      "addStudent": "O'quvchi qo'shish",
+      "rooms": "Xonalar",
+      "roomCapacity": "Xona sig'imi",
+      "trainingDates": "Dars sanalari",
+      "idLabel": "id",
+      "branches": "Filiallar",
+      "sortAZ": "A-Z bo'yicha",
+      "sortZA": "Z-A bo'yicha",
+      "archivedChip": "Arxivda",
+      "showArchivedStudents": "Arxivdagi o'quvchilarni ko'rsatish",
+      "hideArchivedStudents": "Arxivdagi o'quvchilarni yashirish",
+      "exportToExcel": "Excelga eksport",
+      "export": {
+        "name": "Ism",
+        "phone": "Telefon",
+        "status": "Holat",
+        "archived": "Arxivda",
+        "active": "Faol",
+        "frozen": "Muzlatilgan",
+        "balance": "Balans",
+        "sheetName": "O'quvchilar"
+      }
+    },
+    "rightPanel": {
+      "showCoins": "Tangalarni ko'rsatish",
+      "hideCoins": "Tangalarni yashirish"
+    },
+    "tabs": {
+      "attendance": {
+        "tabLabel": "Davomat",
+        "title": "Davomat",
+        "current": "Joriy",
+        "name": "Ism",
+        "months": {
+          "jan": "Yan", "feb": "Fev", "mar": "Mar", "apr": "Apr", "may": "May", "jun": "Iyun",
+          "jul": "Iyul", "aug": "Avg", "sep": "Sen", "oct": "Okt", "nov": "Noy", "dec": "Dek"
+        },
+        "was": "Keldi",
+        "notPresent": "Yo'q"
+      },
+      "grade": {
+        "tabLabel": "Baho",
+        "title": "Baho",
+        "name": "Ism",
+        "gradeRange": "Baho (0–100)",
+        "result": "Natija",
+        "excellent": "A'lo",
+        "good": "Yaxshi",
+        "fail": "O'tmadi"
+      },
+      "onlineLessons": {
+        "tabLabel": "Onlayn darslar va materiallar",
+        "title": "Onlayn darslar va materiallar",
+        "addLesson": "Dars qo'shish",
+        "noLessonsYet": "Hozircha darslar qo'shilmagan"
+      },
+      "discountPrices": {
+        "tabLabel": "Chegirmali narxlar",
+        "title": "Individual chegirmali narxlar",
+        "hint": "Har qanday o'quvchi uchun individual o'quv to'lovini belgilashingiz mumkin. Chegirmali narxni kiriting va Enter tugmasini bosing",
+        "name": "Ism",
+        "phone": "Telefon",
+        "individualDiscount": "Individual chegirma",
+        "cause": "Sabab",
+        "editDiscount": "Chegirmani tahrirlash"
+      },
+      "exams": {
+        "tabLabel": "Imtihonlar",
+        "title": "Imtihonlar",
+        "addExam": "Imtihon qo'shish",
+        "noExamsYet": "Hozircha imtihonlar qo'shilmagan"
+      },
+      "history": {
+        "tabLabel": "Tarix",
+        "title": "Tarix",
+        "groupName": "Guruh nomi",
+        "group": "Guruh"
+      },
+      "comments": {
+        "tabLabel": "Izohlar",
+        "title": "Izohlar",
+        "writeComment": "Izoh yozing...",
+        "send": "Yuborish",
+        "noCommentsYet": "Hozircha izohlar yo'q"
+      }
+    },
+    "calendar": {
+      "weekdays": {
+        "sun": "Yak", "mon": "Dush", "tue": "Sesh", "wed": "Chor", "thu": "Pay", "fri": "Jum", "sat": "Shan"
+      },
+      "months": {
+        "january": "Yanvar", "february": "Fevral", "march": "Mart", "april": "Aprel",
+        "may": "May", "june": "Iyun", "july": "Iyul", "august": "Avgust",
+        "september": "Sentabr", "october": "Oktabr", "november": "Noyabr", "december": "Dekabr"
+      }
+    },
+    "datePickerField": {
+      "noDateSelected": "Sana tanlanmagan"
+    },
+    "activateModal": {
+      "title": "Faollashtirish sanasini tanlang",
+      "submit": "Yuborish"
+    },
+    "addNoteModal": {
+      "title": "Yangi eslatma qo'shish",
+      "student": "O'quvchi",
+      "note": "Eslatma",
+      "notePlaceholder": "Eslatmani kiriting...",
+      "save": "Saqlash",
+      "cancel": "Bekor qilish"
+    },
+    "addPaymentDrawer": {
+      "title": "To'lov qo'shish",
+      "student": "O'quvchi",
+      "balance": "Balans",
+      "methodPay": "To'lov usuli",
+      "amount": "Summa",
+      "date": "Sana",
+      "comment": "Izoh",
+      "submit": "Yuborish"
+    },
+    "addStudentDrawer": {
+      "title": "O'quvchi qo'shish",
+      "searchStudent": "O'quvchini qidirish",
+      "searchPlaceholder": "Ism yoki telefon...",
+      "noStudentsFound": "O'quvchilar topilmadi",
+      "startDate": "Boshlanish sanasi",
+      "submit": "O'quvchi qo'shish",
+      "cancel": "Bekor qilish"
+    },
+    "deleteDropdown": {
+      "title": "Guruhni o'chirish",
+      "confirmMessage": "guruhini o'chirishni tasdiqlaysizmi?",
+      "cancel": "Bekor qilish",
+      "delete": "O'chirish"
+    },
+    "editGroupDrawer": {
+      "title": "Guruhni tahrirlash",
+      "groupName": "Guruh nomi",
+      "selectCourse": "Kursni tanlang",
+      "selectTeacher": "O'qituvchini tanlang",
+      "days": "Kunlar",
+      "selectDays": "Kunlarni tanlang",
+      "selectRoom": "Xonani tanlang",
+      "daysOptions": {
+        "oddDays": "Toq kunlar",
+        "evenDays": "Juft kunlar",
+        "everyDay": "Har kuni"
+      },
+      "priceUzs": "Narx (UZS)",
+      "lessonStartTime": "Dars boshlanish vaqti",
+      "groupStartDate": "Guruh boshlanish sanasi",
+      "groupEndDate": "Guruh tugash sanasi",
+      "save": "Saqlash",
+      "cancel": "Bekor qilish"
+    },
+    "freezeModal": {
+      "title": "Sababni ko'rsating",
+      "student": "O'quvchi",
+      "dateFrom": "Sanadan",
+      "recalculateBalance": "Balansni qayta hisoblash",
+      "cancel": "Bekor qilish",
+      "confirm": "Muzlatish"
+    },
+    "moveStudentDialog": {
+      "title": "Ko'chirish",
+      "selectGroup": "Guruhni tanlang",
+      "move": "Ko'chirish",
+      "cancel": "Bekor qilish"
+    },
+    "reminderDrawer": {
+      "title": "Yangi eslatma qo'shish",
+      "name": "Ism",
+      "comment": "Izoh",
+      "selectEmployee": "Xodimni tanlang",
+      "save": "Saqlash"
+    },
+    "removeStudentDialog": {
+      "title": "Rostdan ham o'chirmoqchimisiz?",
+      "removeFromGroup": "Guruhdan o'chirish",
+      "deleteStudent": "O'quvchini o'chirish",
+      "reasonsForRemoval": "O'chirish sabablari",
+      "reasons": {
+        "noAttendance": "Davomat yo'q",
+        "disciplineProblem": "Intizom muammosi",
+        "movedToAnotherCenter": "Boshqa markazga o'tdi",
+        "parentRequest": "Ota-ona so'rovi",
+        "other": "Boshqa"
+      },
+      "commentPlaceholder": "Izoh",
+      "recalculateBalance": "Balansni qayta hisoblash",
+      "currentGroup": "Joriy guruh",
+      "allGroups": "Barcha guruhlar",
+      "yes": "Ha",
+      "cancel": "Bekor qilish"
+    },
+    "studentActionsMenu": {
+      "moveToBranchModal": {
+        "title": "O'quvchini filialga ko'chirish",
+        "selectBranch": "Filialni tanlang",
+        "submit": "Filialga ko'chirish"
+      },
+      "activate": "Faollashtirish",
+      "backToTrialLesson": "Sinov darsiga qaytarish",
+      "makeFrozen": "Muzlatish",
+      "addPayment": "To'lov qo'shish",
+      "addNewNote": "Yangi eslatma qo'shish",
+      "moveStudentToGroup": "O'quvchini guruhga ko'chirish",
+      "moveStudentToBranch": "O'quvchini filialga ko'chirish",
+      "removeFromGroup": "Guruhdan o'chirish",
+      "reminders": "Eslatmalar"
+    },
+    "studentHoverCard": {
+      "activeLearns": "Faol (o'qimoqda)",
+      "frozenPaused": "Muzlatilgan (pauza)",
+      "debtor": "Qarzdor",
+      "debt": "Qarzdorlik",
+      "balance": "Balans",
+      "frozenAt": "Muzlatilgan",
+      "recentPayments": "So'nggi to'lovlar",
+      "noPayments": "To'lovlar yo'q",
+      "phone": "Telefon",
+      "addedAt": "Qo'shilgan",
+      "activatedAt": "Faollashtirilgan",
+      "goToProfile": "Profilga o'tish →"
+    }
   }
 }

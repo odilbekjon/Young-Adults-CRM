@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { MdEdit, MdDelete, MdEmail, MdDownload } from "react-icons/md";
 import * as XLSX from "xlsx";
 import { GoPlus } from "react-icons/go";
@@ -44,9 +45,9 @@ import { AddPaymentDrawer } from "./AddPaymentDrawer";
 import { MoveStudentDialog } from "./MoveStudentDialog";
 import { RemoveStudentDialog } from "./RemoveStudentDialog";
 
-const TABS = [
-  "Attendance", "Grade", "Online lessons and materials",
-  "Discount prices", "Exams", "History", "Comments",
+const TAB_KEYS = [
+  "attendance", "grade", "onlineLessons",
+  "discountPrices", "exams", "history", "comments",
 ];
 
 const mockBalance = (id: number) => {
@@ -67,10 +68,11 @@ const enrichStudents = (list: GroupStudent[]): GroupStudent[] =>
   }));
 
 export const SingleGroup = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [tabIndex, setTabIndex] = useState(0);
-  const [sortBy, setSortBy] = useState("By A-Z");
+  const [sortBy, setSortBy] = useState("az");
   const [showCoins, setShowCoins] = useState(false);
 
   const group = findGroupById(Number(id));
@@ -116,14 +118,14 @@ export const SingleGroup = () => {
 
   if (!group) {
     return (
-      <Box p={4}><Typography>Group not found.</Typography></Box>
+      <Box p={4}><Typography>{t("singleGroup.notFound")}</Typography></Box>
     );
   }
 
   const visibleStudents = students.filter((s) => showArchived || !s.archived);
 
   const sortedStudents = [...visibleStudents].sort((a, b) =>
-    sortBy === "By A-Z" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+    sortBy === "az" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
   );
 
   const archivedCount = students.filter((s) => s.archived).length;
@@ -217,14 +219,18 @@ export const SingleGroup = () => {
   const handleExportExcel = () => {
     const data = sortedStudents.map((s, i) => ({
       "#": i + 1,
-      Name: s.name,
-      Phone: s.phone,
-      Status: s.archived ? "Archived" : s.active ? "Active" : "Frozen",
-      Balance: s.balance ?? 0,
+      [t("singleGroup.leftPanel.export.name")]: s.name,
+      [t("singleGroup.leftPanel.export.phone")]: s.phone,
+      [t("singleGroup.leftPanel.export.status")]: s.archived
+        ? t("singleGroup.leftPanel.export.archived")
+        : s.active
+        ? t("singleGroup.leftPanel.export.active")
+        : t("singleGroup.leftPanel.export.frozen"),
+      [t("singleGroup.leftPanel.export.balance")]: s.balance ?? 0,
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Students");
+    XLSX.utils.book_append_sheet(wb, ws, t("singleGroup.leftPanel.export.sheetName"));
     const safeName = group.name.replace(/[^\w\s-]/g, "").trim() || "group";
     XLSX.writeFile(wb, `${safeName}-students.xlsx`);
   };
@@ -318,25 +324,25 @@ export const SingleGroup = () => {
         <Paper sx={{ width: 300, flexShrink: 0, borderRadius: 3, p: 2.5 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
             <Box>
-              <Typography fontSize={14}><b>Course:</b> {group.course}</Typography>
-              <Typography fontSize={14}><b>Teacher:</b> {group.teacher}</Typography>
+              <Typography fontSize={14}><b>{t("singleGroup.leftPanel.course")}:</b> {group.course}</Typography>
+              <Typography fontSize={14}><b>{t("singleGroup.leftPanel.teacher")}:</b> {group.teacher}</Typography>
               <Typography fontSize={14}>
-                <b>Price:</b> {group.price ? `${group.price.toLocaleString()} UZS` : "—"}
+                <b>{t("singleGroup.leftPanel.price")}:</b> {group.price ? `${group.price.toLocaleString()} UZS` : "—"}
               </Typography>
-              <Typography fontSize={14}><b>Time:</b> {group.days} · {group.lessonStartTime}</Typography>
+              <Typography fontSize={14}><b>{t("singleGroup.leftPanel.time")}:</b> {group.days} · {group.lessonStartTime}</Typography>
             </Box>
 
             <Stack spacing={1}>
-              <ActionIconBtn label="Edit group" onClick={() => setEditOpen(true)}>
+              <ActionIconBtn label={t("singleGroup.leftPanel.editGroup")} onClick={() => setEditOpen(true)}>
                 <MdEdit size={16} color="#1976d2" />
               </ActionIconBtn>
-              <ActionIconBtn label="Delete group" btnRef={deleteAnchorRef as any} onClick={() => setDeleteOpen((p) => !p)}>
+              <ActionIconBtn label={t("singleGroup.leftPanel.deleteGroup")} btnRef={deleteAnchorRef as any} onClick={() => setDeleteOpen((p) => !p)}>
                 <MdDelete size={16} color="#e53935" />
               </ActionIconBtn>
-              <ActionIconBtn label="Send SMS" onClick={() => setSmsOpen(true)}>
+              <ActionIconBtn label={t("singleGroup.leftPanel.sendSms")} onClick={() => setSmsOpen(true)}>
                 <MdEmail size={16} color="#f57c00" />
               </ActionIconBtn>
-              <ActionIconBtn label="Add student" onClick={() => setAddStudentOpen(true)}>
+              <ActionIconBtn label={t("singleGroup.leftPanel.addStudent")} onClick={() => setAddStudentOpen(true)}>
                 <GoPlus size={16} />
               </ActionIconBtn>
             </Stack>
@@ -344,15 +350,15 @@ export const SingleGroup = () => {
 
           <Divider sx={{ my: 1.5 }} />
 
-          <Typography fontSize={14}><b>Rooms:</b> {group.room}</Typography>
-          <Typography fontSize={14}><b>Room capacity:</b> {group.roomCapacity ?? 30}</Typography>
-          <Typography fontSize={14} mt={0.5}><b>Training dates:</b></Typography>
+          <Typography fontSize={14}><b>{t("singleGroup.leftPanel.rooms")}:</b> {group.room}</Typography>
+          <Typography fontSize={14}><b>{t("singleGroup.leftPanel.roomCapacity")}:</b> {group.roomCapacity ?? 30}</Typography>
+          <Typography fontSize={14} mt={0.5}><b>{t("singleGroup.leftPanel.trainingDates")}:</b></Typography>
           <Typography fontSize={14}>{formatDate(group.startDate)} — {formatDate(group.endDate)}</Typography>
-          <Typography fontSize={12} color="text.secondary">(id: {group.id})</Typography>
+          <Typography fontSize={12} color="text.secondary">({t("singleGroup.leftPanel.idLabel")}: {group.id})</Typography>
 
           {group.branch && (
             <Box mt={1}>
-              <Typography fontSize={13} color="text.secondary">Branches:</Typography>
+              <Typography fontSize={13} color="text.secondary">{t("singleGroup.leftPanel.branches")}:</Typography>
               <Chip label={group.branch} size="small" sx={{ mt: 0.5 }} />
             </Box>
           )}
@@ -364,8 +370,8 @@ export const SingleGroup = () => {
             onChange={(e) => setSortBy(e.target.value)}
             sx={{ mb: 1.5, fontSize: 14 }}
           >
-            <MenuItem value="By A-Z">By A-Z</MenuItem>
-            <MenuItem value="By Z-A">By Z-A</MenuItem>
+            <MenuItem value="az">{t("singleGroup.leftPanel.sortAZ")}</MenuItem>
+            <MenuItem value="za">{t("singleGroup.leftPanel.sortZA")}</MenuItem>
           </Select>
 
           {/* Student list */}
@@ -433,7 +439,7 @@ export const SingleGroup = () => {
                           {s.name}
                         </Typography>
                         {isArchived && (
-                          <Chip label="Archived" size="small" sx={{ height: 20, fontSize: 10 }} />
+                          <Chip label={t("singleGroup.leftPanel.archivedChip")} size="small" sx={{ height: 20, fontSize: 10 }} />
                         )}
                       </Box>
                     }
@@ -467,12 +473,14 @@ export const SingleGroup = () => {
                   "&:hover": { bgcolor: "#1565c0", boxShadow: "none" },
                 }}
               >
-                {showArchived ? "Hide archived students" : "Show archived students"}
+                {showArchived
+                  ? t("singleGroup.leftPanel.hideArchivedStudents")
+                  : t("singleGroup.leftPanel.showArchivedStudents")}
               </Button>
             )}
             <IconButton
               onClick={handleExportExcel}
-              title="Export to excel"
+              title={t("singleGroup.leftPanel.exportToExcel")}
               sx={{
                 border: "2px solid #43a047",
                 color: "#43a047",
@@ -489,7 +497,7 @@ export const SingleGroup = () => {
         {/* ── RIGHT PANEL ── */}
         <Box sx={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
           <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={1} mb={1}>
-            <Typography fontSize={13} color={showCoins ? "primary" : "text.secondary"}>Show coins</Typography>
+            <Typography fontSize={13} color={showCoins ? "primary" : "text.secondary"}>{t("singleGroup.rightPanel.showCoins")}</Typography>
             <Box
               onClick={() => setShowCoins((p) => !p)}
               sx={{
@@ -505,7 +513,7 @@ export const SingleGroup = () => {
                 borderRadius: "50%", bgcolor: "#fff", transition: "0.2s",
               }} />
             </Box>
-            <Typography fontSize={13} color={!showCoins ? "primary" : "text.secondary"}>Hide coins</Typography>
+            <Typography fontSize={13} color={!showCoins ? "primary" : "text.secondary"}>{t("singleGroup.rightPanel.hideCoins")}</Typography>
           </Stack>
 
           <Paper sx={{ borderRadius: 3, overflow: "visible" }}>
@@ -519,7 +527,9 @@ export const SingleGroup = () => {
                 "& .MuiTab-root": { fontSize: 13, textTransform: "none", minWidth: "auto", px: 2 },
               }}
             >
-              {TABS.map((tab) => <Tab key={tab} label={tab} />)}
+              {TAB_KEYS.map((key) => (
+                <Tab key={key} label={t(`singleGroup.tabs.${key}.tabLabel`)} />
+              ))}
             </Tabs>
             <Box sx={{ p: 3, maxHeight: "calc(100vh - 220px)", overflowY: "auto", overflowX: "visible" }}>
               {tabIndex === 0 && <Attendance students={students} />}

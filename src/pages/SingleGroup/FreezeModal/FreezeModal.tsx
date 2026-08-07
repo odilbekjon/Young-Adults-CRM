@@ -1,6 +1,7 @@
 // src/pages/groups/FreezeModal.tsx
 import { useState } from "react";
 import { MdClose } from "react-icons/md";
+import { useTranslation } from "react-i18next";
 import { DatePickerField } from "../DatePickerField";
 import { labelStyle, inputStyle, submitBtn, cancelBtn } from "../styles";
 import { Student } from "../../../constants/Teachers";
@@ -13,6 +14,7 @@ interface FreezeModalProps {
 }
 
 export const FreezeModal = ({ open, onClose, student, onConfirm }: FreezeModalProps) => {
+  const { t } = useTranslation();
   const [comment, setComment] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [recalculate, setRecalculate] = useState(false);
@@ -53,7 +55,7 @@ export const FreezeModal = ({ open, onClose, student, onConfirm }: FreezeModalPr
           padding: "20px 24px", borderBottom: "1px solid #f0f0f0",
         }}>
           <span style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a" }}>
-            Indicate the reason
+            {t("singleGroup.freezeModal.title")}
           </span>
           <MdClose size={20} color="#888" style={{ cursor: "pointer" }} onClick={handleClose} />
         </div>
@@ -61,7 +63,7 @@ export const FreezeModal = ({ open, onClose, student, onConfirm }: FreezeModalPr
         <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
           {student && (
             <div style={{ fontSize: 13, color: "#9ca3af" }}>
-              Student: <span style={{ color: "#1a1a1a", fontWeight: 600 }}>{student.name}</span>
+              {t("singleGroup.freezeModal.student")}: <span style={{ color: "#1a1a1a", fontWeight: 600 }}>{student.name}</span>
             </div>
           )}
 
@@ -73,7 +75,7 @@ export const FreezeModal = ({ open, onClose, student, onConfirm }: FreezeModalPr
           />
 
           <div>
-            <label style={labelStyle}>Date from</label>
+            <label style={labelStyle}>{t("singleGroup.freezeModal.dateFrom")}</label>
             <DatePickerField value={fromDate} onChange={setFromDate} />
           </div>
 
@@ -83,13 +85,13 @@ export const FreezeModal = ({ open, onClose, student, onConfirm }: FreezeModalPr
               checked={recalculate}
               onChange={(e) => setRecalculate(e.target.checked)}
             />
-            Recalculate the balance
+            {t("singleGroup.freezeModal.recalculateBalance")}
           </label>
 
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
-            <button style={cancelBtn} onClick={handleClose}>Cancel</button>
+            <button style={cancelBtn} onClick={handleClose}>{t("singleGroup.freezeModal.cancel")}</button>
             <button style={{ ...submitBtn, background: "#1976d2" }} onClick={handleSubmit}>
-              Freeze
+              {t("singleGroup.freezeModal.confirm")}
             </button>
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
   Button,
 } from "@mui/material";
 import { FiCircle, FiUser } from "react-icons/fi";
+import { useTranslation } from "react-i18next";
 
 interface LogItem {
   id: number;
@@ -33,14 +34,15 @@ const logs: LogItem[] = [
 
 const avatarUsers = ["OS", "AE", "TJ", "UA", "Mun"];
 
-const filterButtons = ["User", "Course", "Group", "Room", "Payment", "Staff", "Rest"];
+const filterButtonIds = ["user", "course", "group", "room", "payment", "staff", "rest"];
 
 export const Log = () => {
+  const { t } = useTranslation();
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
 
-  const toggleFilter = (label: string) => {
+  const toggleFilter = (id: string) => {
     setActiveFilters((prev) =>
-      prev.includes(label) ? prev.filter((f) => f !== label) : [...prev, label]
+      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
     );
   };
 
@@ -51,7 +53,7 @@ export const Log = () => {
         {/* Header */}
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
           <Typography variant="h5" sx={{ fontWeight: 500, color: "#212121" }}>
-            Logs
+            {t("reports.logs.log.title")}
           </Typography>
           <AvatarGroup
             max={6}
@@ -132,17 +134,17 @@ export const Log = () => {
       {/* Right: Status filter */}
       <Box sx={{ width: 280, p: 3, bgcolor: "#fff", borderLeft: "1px solid #e0e0e0" }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 2, color: "#212121" }}>
-          Status filter
+          {t("reports.logs.log.statusFilter")}
         </Typography>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-          {filterButtons.map((btn) => {
-            const isActive = activeFilters.includes(btn);
+          {filterButtonIds.map((id) => {
+            const isActive = activeFilters.includes(id);
             return (
               <Button
-                key={btn}
+                key={id}
                 variant="outlined"
                 size="small"
-                onClick={() => toggleFilter(btn)}
+                onClick={() => toggleFilter(id)}
                 startIcon={<span style={{ fontSize: 10 }}>↑</span>}
                 sx={{
                   fontSize: "0.8rem",
@@ -161,7 +163,7 @@ export const Log = () => {
                   },
                 }}
               >
-                {btn}
+                {t(`reports.logs.log.filters.${id}`)}
               </Button>
             );
           })}

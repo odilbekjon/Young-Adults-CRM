@@ -6,6 +6,7 @@ import {
   Divider,
 } from "@mui/material";
 import { FiCircle } from "react-icons/fi";
+import { useTranslation } from "react-i18next";
 
 interface SmsLog {
   id: number;
@@ -96,10 +97,11 @@ const smsLogs: SmsLog[] = [
 ];
 
 export const Sms = () => {
+  const { t } = useTranslation();
   return (
     <Box sx={{ m:5, minHeight: "100vh", bgcolor: "#fff", p: 3 }}>
       <Typography variant="h5" sx={{ fontWeight: 500, mb: 3, color: "#212121" }}>
-        Sent SMS log
+        {t("reports.logs.sms.title")}
       </Typography>
 
       <Box>
@@ -121,7 +123,7 @@ export const Sms = () => {
               {/* System badge */}
               <Box sx={{ flexShrink: 0, mt: 0.1 }}>
                 <Chip
-                  label="System"
+                  label={t("reports.logs.sms.system")}
                   size="small"
                   variant="outlined"
                   sx={{
@@ -160,7 +162,7 @@ export const Sms = () => {
                     "&:hover": { bgcolor: "#122a45" },
                   }}
                 >
-                  SMS quantity: {sms.quantity}
+                  {t("reports.logs.sms.quantity", { count: sms.quantity })}
                 </Button>
               </Box>
 
@@ -182,7 +184,7 @@ export const Sms = () => {
                     "&:hover": { borderColor: "#9e9e9e", bgcolor: "transparent" },
                   }}
                 >
-                  Not info
+                  {t("reports.logs.sms.notInfo")}
                 </Button>
               </Box>
 

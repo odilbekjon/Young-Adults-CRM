@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { FiCalendar, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { useTranslation } from "react-i18next";
 
 // ---------- Types ----------
 interface Student {
@@ -39,6 +40,7 @@ type SortDir = "asc" | "desc";
 const SelectBox = ({
   value, onChange, options, placeholder, disabled,
 }: { value: string; onChange: (v: string) => void; options: string[]; placeholder?: string; disabled?: boolean }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -50,14 +52,14 @@ const SelectBox = ({
     <div className="relative" ref={ref}>
       <button type="button" disabled={disabled} onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-2 text-sm bg-white text-left hover:border-gray-400 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed">
-        <span className={value ? "text-gray-800" : "text-gray-400"}>{value || placeholder || "Select"}</span>
+        <span className={value ? "text-gray-800" : "text-gray-400"}>{value || placeholder || t("reports.attendance.filters.select")}</span>
         <FiChevronDown size={14} className="text-gray-400 flex-shrink-0" />
       </button>
       {open && !disabled && (
         <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-full py-1">
           <button className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:bg-gray-50"
             onClick={() => { onChange(""); setOpen(false); }}>
-            {placeholder || "Select"}
+            {placeholder || t("reports.attendance.filters.select")}
           </button>
           {options.map(opt => (
             <button key={opt} type="button"
@@ -92,6 +94,7 @@ const AttDot = ({ val }: { val: boolean | null }) => {
 
 // ---------- Summary table ----------
 const SummaryTable = ({ students }: { students: Student[] }) => {
+  const { t } = useTranslation();
   const visited = students.filter(s => s.attended === true).length;
   const absent = students.filter(s => s.attended === false).length;
   const notSet = students.filter(s => s.attended === null).length;
@@ -109,34 +112,34 @@ const SummaryTable = ({ students }: { students: Student[] }) => {
       {/* Left */}
       <div className="border-r border-gray-200 divide-y divide-gray-100">
         {[
-          { label: "Student visits (at least once)", val: visited },
-          { label: "Absent (more than times)", val: absent },
-          { label: "Attendance not set", val: notSet },
+          { id: "visits", label: t("reports.attendance.summary.visits"), val: visited },
+          { id: "absent", label: t("reports.attendance.summary.absent"), val: absent },
+          { id: "notSet", label: t("reports.attendance.summary.notSet"), val: notSet },
         ].map(r => (
-          <div key={r.label} className="flex items-center justify-between px-4 py-2.5">
+          <div key={r.id} className="flex items-center justify-between px-4 py-2.5">
             <span className="text-sm text-gray-600">{r.label}</span>
             <span className="text-sm text-gray-700 font-medium">{r.val}</span>
           </div>
         ))}
         <div className="flex items-center justify-between px-4 py-2.5 bg-blue-50">
-          <span className="text-sm text-gray-700 font-medium">All</span>
+          <span className="text-sm text-gray-700 font-medium">{t("reports.attendance.summary.all")}</span>
           <span className="text-sm text-gray-700 font-medium">{all}</span>
         </div>
       </div>
       {/* Right */}
       <div className="divide-y divide-gray-100">
         {[
-          { label: "Active", val: active },
-          { label: "Demo", val: demo },
-          { label: "Frozen", val: frozen },
+          { id: "active", label: t("reports.attendance.summary.statusActive"), val: active },
+          { id: "demo", label: t("reports.attendance.summary.statusDemo"), val: demo },
+          { id: "frozen", label: t("reports.attendance.summary.statusFrozen"), val: frozen },
         ].map(r => (
-          <div key={r.label} className="flex items-center justify-between px-4 py-2.5">
+          <div key={r.id} className="flex items-center justify-between px-4 py-2.5">
             <span className="text-sm text-gray-600">{r.label}</span>
             <span className="text-sm text-gray-700 font-medium">{r.val}</span>
           </div>
         ))}
         <div className="flex items-center justify-between px-4 py-2.5">
-          <span className="text-sm text-gray-600">All</span>
+          <span className="text-sm text-gray-600">{t("reports.attendance.summary.all")}</span>
           <span className="text-sm text-gray-700 font-medium">{allStatus}</span>
         </div>
       </div>
@@ -146,6 +149,7 @@ const SummaryTable = ({ students }: { students: Student[] }) => {
 
 // ---------- Main Component ----------
 export const AttendanceReports = () => {
+  const { t } = useTranslation();
   const [dateFrom, setDateFrom] = useState("13.05.2026");
   const [dateTo, setDateTo] = useState("13.05.2026");
   const [branch, setBranch] = useState("YA IELTS Campus");
@@ -184,7 +188,7 @@ export const AttendanceReports = () => {
       <div className="flex">
         {/* ===== Main content ===== */}
         <div className="flex-1 p-6 pr-4">
-          <h1 className="text-2xl font-semibold text-gray-800 mb-5">Attendance reports</h1>
+          <h1 className="text-2xl font-semibold text-gray-800 mb-5">{t("reports.attendance.title")}</h1>
 
           {/* Summary */}
           <SummaryTable students={filtered} />
@@ -195,16 +199,16 @@ export const AttendanceReports = () => {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className={thCls} onClick={() => handleSort("name")}>
-                    Name <SortIcon col="name" sortKey={sortKey} sortDir={sortDir} />
+                    {t("reports.attendance.table.name")} <SortIcon col="name" sortKey={sortKey} sortDir={sortDir} />
                   </th>
                   <th className={thCls} onClick={() => handleSort("status")}>
-                    Status <SortIcon col="status" sortKey={sortKey} sortDir={sortDir} />
+                    {t("reports.attendance.table.status")} <SortIcon col="status" sortKey={sortKey} sortDir={sortDir} />
                   </th>
                   <th className={thCls} onClick={() => handleSort("group")}>
-                    Group <SortIcon col="group" sortKey={sortKey} sortDir={sortDir} />
+                    {t("reports.attendance.table.group")} <SortIcon col="group" sortKey={sortKey} sortDir={sortDir} />
                   </th>
                   <th className={thCls} onClick={() => handleSort("attendance")}>
-                    Attendance <SortIcon col="attendance" sortKey={sortKey} sortDir={sortDir} />
+                    {t("reports.attendance.table.attendance")} <SortIcon col="attendance" sortKey={sortKey} sortDir={sortDir} />
                   </th>
                 </tr>
               </thead>
@@ -223,7 +227,7 @@ export const AttendanceReports = () => {
                   </tr>
                 ))}
                 {sorted.length === 0 && (
-                  <tr><td colSpan={4} className="text-center py-10 text-gray-400">No Data</td></tr>
+                  <tr><td colSpan={4} className="text-center py-10 text-gray-400">{t("reports.attendance.table.noData")}</td></tr>
                 )}
               </tbody>
             </table>
@@ -232,11 +236,11 @@ export const AttendanceReports = () => {
 
         {/* ===== Right sidebar filter ===== */}
         <div className="w-72 flex-shrink-0 bg-white border-l border-gray-200 p-5 min-h-screen">
-          <h2 className="text-base font-semibold text-gray-700 mb-5">Filter</h2>
+          <h2 className="text-base font-semibold text-gray-700 mb-5">{t("reports.attendance.filters.title")}</h2>
 
           <div className="flex flex-col gap-4">
             <div>
-              <label className="text-sm text-gray-600 mb-1.5 block">Date from</label>
+              <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.dateFrom")}</label>
               <div className="relative">
                 <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
                 <input type="text" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
@@ -245,7 +249,7 @@ export const AttendanceReports = () => {
             </div>
 
             <div>
-              <label className="text-sm text-gray-600 mb-1.5 block">Date to</label>
+              <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.dateTo")}</label>
               <div className="relative">
                 <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
                 <input type="text" value={dateTo} onChange={e => setDateTo(e.target.value)}
@@ -254,23 +258,23 @@ export const AttendanceReports = () => {
             </div>
 
             <div>
-              <label className="text-sm text-gray-600 mb-1.5 block">Branches</label>
-              <SelectBox value={branch} onChange={setBranch} options={BRANCHES} placeholder="Select branch" />
+              <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.branches")}</label>
+              <SelectBox value={branch} onChange={setBranch} options={BRANCHES} placeholder={t("reports.attendance.filters.selectBranch")} />
             </div>
 
             <div>
-              <label className="text-sm text-gray-600 mb-1.5 block">Group</label>
-              <SelectBox value={group} onChange={setGroup} options={GROUPS} placeholder="Select" />
+              <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.group")}</label>
+              <SelectBox value={group} onChange={setGroup} options={GROUPS} placeholder={t("reports.attendance.filters.select")} />
             </div>
 
             <div className="flex gap-2 mt-1">
               <button onClick={handleFilter}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 text-sm font-medium transition-colors">
-                Filter
+                {t("reports.attendance.filters.filterBtn")}
               </button>
               <button onClick={handleReset}
                 className="flex-1 border border-gray-300 text-gray-600 hover:bg-gray-50 rounded px-4 py-2 text-sm font-medium transition-colors">
-                Reset
+                {t("reports.attendance.filters.reset")}
               </button>
             </div>
           </div>

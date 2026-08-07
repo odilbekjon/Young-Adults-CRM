@@ -1,5 +1,6 @@
 // src/pages/groups/ReminderDrawer.tsx
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TopModal } from "../../../components/TopModal";
 import { DatePickerField } from "../DatePickerField";
 import { inputStyle, labelStyle } from "../styles";
@@ -10,6 +11,7 @@ export const ReminderDrawer = ({
 }: {
   open: boolean; onClose: () => void; student: Student | null;
 }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState(student?.name ?? "");
   const [comment, setComment] = useState("");
   const [reminderDate, setReminderDate] = useState("");
@@ -28,10 +30,10 @@ export const ReminderDrawer = ({
   };
 
   return (
-    <TopModal open={open} onClose={handleClose} title="Add new note" maxWidth={640}>
+    <TopModal open={open} onClose={handleClose} title={t("singleGroup.reminderDrawer.title")} maxWidth={640}>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div>
-          <label style={labelStyle}>Name</label>
+          <label style={labelStyle}>{t("singleGroup.reminderDrawer.name")}</label>
           <input
             style={inputStyle}
             value={name}
@@ -40,7 +42,7 @@ export const ReminderDrawer = ({
           />
         </div>
         <div>
-          <label style={labelStyle}>Comment</label>
+          <label style={labelStyle}>{t("singleGroup.reminderDrawer.comment")}</label>
           <textarea
             style={{ ...inputStyle, minHeight: 110, resize: "vertical" }}
             value={comment}
@@ -55,7 +57,7 @@ export const ReminderDrawer = ({
             value={employee}
             onChange={(e) => setEmployee(e.target.value)}
           >
-            <option value="">Select employee</option>
+            <option value="">{t("singleGroup.reminderDrawer.selectEmployee")}</option>
             <option value="Ugilbeka Abdullaeva">Ugilbeka Abdullaeva</option>
             <option value="Maksuda Abraykulova">Maksuda Abraykulova</option>
             <option value="Iskandar Tojiyev">Iskandar Tojiyev</option>
@@ -70,7 +72,7 @@ export const ReminderDrawer = ({
             }}
             onClick={handleClose}
           >
-            Save
+            {t("singleGroup.reminderDrawer.save")}
           </button>
         </div>
       </div>

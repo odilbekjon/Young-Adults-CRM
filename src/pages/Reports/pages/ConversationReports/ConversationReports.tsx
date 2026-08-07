@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { FiCalendar, FiChevronDown, FiSettings } from "react-icons/fi";
+import { useTranslation } from "react-i18next";
 
 type FunnelStage = "Incoming" | "Waiting" | "Set" | "Attended" | "Paid";
 
@@ -56,6 +57,7 @@ const SelectBox = ({
 };
 
 const FunnelChart = ({ counts }: { counts: number[] }) => {
+  const { t } = useTranslation();
   const widths = [95, 70, 50, 35, 20];
   const colors = [
     { top: "#F9A86A", bot: "#F07C5A" },
@@ -103,7 +105,7 @@ const FunnelChart = ({ counts }: { counts: number[] }) => {
             <div key={stage} className="flex items-center justify-between py-2.5">
               <div>
                 <div className="text-xl font-bold text-orange-500">{counts[i]}</div>
-                <div className="text-[13px] text-slate-500">{stage}</div>
+                <div className="text-[13px] text-slate-500">{t(`reports.conversion.stages.${stage.toLowerCase()}`)}</div>
               </div>
               <div className="text-[13px] text-slate-400">{i === 0 ? "" : `${pct}%`}</div>
             </div>
@@ -115,11 +117,12 @@ const FunnelChart = ({ counts }: { counts: number[] }) => {
 };
 
 export const ConversionReports = () => {
+  const { t } = useTranslation();
   const [dateFrom, setDateFrom] = useState("01.05.2026");
   const [dateTo, setDateTo] = useState("13.05.2026");
   const [leadSource, setLeadSource] = useState("");
   const [byStaff, setByStaff] = useState("");
-  const [leadType, setLeadType] = useState("All leads");
+  const [leadType, setLeadType] = useState(t("reports.conversion.filters.allLeadsOption"));
   const [activeStage, setActiveStage] = useState<FunnelStage | null>("Incoming");
 
   const counts = STAGES.map((s) => MOCK_LEADS.filter((l) => {
@@ -135,8 +138,8 @@ export const ConversionReports = () => {
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-8 font-sans">
       <div className="mb-5">
-        <h1 className="text-3xl font-semibold text-slate-900">Conversion reports</h1>
-        <p className="mt-2 text-[15px] text-slate-600">Track funnel performance with larger controls and clearer summaries.</p>
+        <h1 className="text-3xl font-semibold text-slate-900">{t("reports.conversion.title")}</h1>
+        <p className="mt-2 text-[15px] text-slate-600">{t("reports.conversion.subtitle")}</p>
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -151,11 +154,11 @@ export const ConversionReports = () => {
             className="w-40 rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-[15px] text-slate-700 outline-none focus:border-blue-400" />
         </div>
         <SelectBox value={leadSource} onChange={setLeadSource}
-          options={["Website", "Social Media", "Referral", "Direct"]} placeholder="Leads Sources" />
+          options={["Website", "Social Media", "Referral", "Direct"]} placeholder={t("reports.conversion.filters.leadsSources")} />
         <SelectBox value={byStaff} onChange={setByStaff}
-          options={["Odilbek Safarov", "Sherzod Tursunov", "Aziz Rahimov"]} placeholder="By staff" />
+          options={["Odilbek Safarov", "Sherzod Tursunov", "Aziz Rahimov"]} placeholder={t("reports.conversion.filters.byStaff")} />
         <SelectBox value={leadType} onChange={setLeadType}
-          options={["All leads", "New leads", "Returning leads"]} placeholder="All leads" />
+          options={[t("reports.conversion.filters.allLeadsOption"), t("reports.conversion.filters.newLeadsOption"), t("reports.conversion.filters.returningLeadsOption")]} placeholder={t("reports.conversion.filters.allLeadsOption")} />
         <button className="rounded-xl border border-slate-300 bg-white p-2.5 text-slate-500 transition-colors hover:bg-slate-50">
           <FiSettings size={16} />
         </button>
@@ -164,7 +167,7 @@ export const ConversionReports = () => {
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
         <div className="flex-1 flex flex-col gap-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-slate-800">Conversion</h2>
+            <h2 className="mb-4 text-lg font-semibold text-slate-800">{t("reports.conversion.conversionTitle")}</h2>
 
             <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-5">
               {STAGES.map((stage) => (
@@ -173,14 +176,14 @@ export const ConversionReports = () => {
                   className={`rounded-xl border py-2.5 text-[15px] font-medium transition-colors ${activeStage === stage
                     ? "border-blue-700 bg-blue-700 text-white"
                     : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}>
-                  {stage}
+                  {t(`reports.conversion.stages.${stage.toLowerCase()}`)}
                 </button>
               ))}
             </div>
 
             <div className="border-t border-slate-100 pt-3">
               <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-                <div className="flex items-center text-[15px] font-semibold text-slate-700">Total</div>
+                <div className="flex items-center text-[15px] font-semibold text-slate-700">{t("reports.conversion.total")}</div>
                 {STAGES.map((stage, i) => (
                   <div key={stage} className="flex items-center text-[15px] text-slate-700">
                     {counts[i]}
@@ -194,10 +197,10 @@ export const ConversionReports = () => {
             <table className="min-w-full text-[15px]">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-5 py-3 text-left font-semibold text-slate-700">Full name</th>
-                  <th className="px-5 py-3 text-left font-semibold text-slate-700">Phone</th>
-                  <th className="px-5 py-3 text-left font-semibold text-slate-700">Status</th>
-                  <th className="px-5 py-3 text-left font-semibold text-slate-700">Staff Name</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700">{t("reports.conversion.table.fullName")}</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700">{t("reports.conversion.table.phone")}</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700">{t("reports.conversion.table.status")}</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700">{t("reports.conversion.table.staffName")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -206,8 +209,8 @@ export const ConversionReports = () => {
                     <td colSpan={4}>
                       <div className="mx-4 my-3 rounded-xl bg-slate-50 px-4 py-5 text-center text-[15px] text-slate-500">
                         {activeStage
-                          ? "No data for this stage."
-                          : "Select a funnel stage above to view the report."}
+                          ? t("reports.conversion.table.noDataForStage")
+                          : t("reports.conversion.table.selectStagePrompt")}
                       </div>
                     </td>
                   </tr>
@@ -231,7 +234,7 @@ export const ConversionReports = () => {
         </div>
 
         <div className="w-full flex-shrink-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:w-80">
-          <h2 className="mb-4 text-lg font-semibold text-slate-800">Sales Pipeline</h2>
+          <h2 className="mb-4 text-lg font-semibold text-slate-800">{t("reports.conversion.salesPipeline")}</h2>
           <FunnelChart counts={counts} />
         </div>
       </div>

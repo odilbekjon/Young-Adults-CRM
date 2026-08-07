@@ -566,5 +566,399 @@
         "withdrawals": "withdrawals"
       }
     }
+  },
+  "reports": {
+    "attendance": {
+      "title": "Attendance reports",
+      "summary": {
+        "visits": "Student visits (at least once)",
+        "absent": "Absent (more than times)",
+        "notSet": "Attendance not set",
+        "all": "All",
+        "statusActive": "Active",
+        "statusDemo": "Demo",
+        "statusFrozen": "Frozen"
+      },
+      "table": {
+        "name": "Name",
+        "status": "Status",
+        "group": "Group",
+        "attendance": "Attendance",
+        "noData": "No Data"
+      },
+      "filters": {
+        "select": "Select",
+        "title": "Filter",
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "branches": "Branches",
+        "selectBranch": "Select branch",
+        "group": "Group",
+        "filterBtn": "Filter",
+        "reset": "Reset"
+      }
+    },
+    "conversion": {
+      "title": "Conversion reports",
+      "subtitle": "Track funnel performance with larger controls and clearer summaries.",
+      "stages": {
+        "incoming": "Incoming",
+        "waiting": "Waiting",
+        "set": "Set",
+        "attended": "Attended",
+        "paid": "Paid"
+      },
+      "filters": {
+        "allLeadsOption": "All leads",
+        "newLeadsOption": "New leads",
+        "returningLeadsOption": "Returning leads",
+        "leadsSources": "Leads Sources",
+        "byStaff": "By staff"
+      },
+      "conversionTitle": "Conversion",
+      "total": "Total",
+      "table": {
+        "fullName": "Full name",
+        "phone": "Phone",
+        "status": "Status",
+        "staffName": "Staff Name",
+        "noDataForStage": "No data for this stage.",
+        "selectStagePrompt": "Select a funnel stage above to view the report."
+      },
+      "salesPipeline": "Sales Pipeline"
+    },
+    "leads": {
+      "title": "Leads reports",
+      "totalLeads": "Total leads: {{count}} ({{from}} — {{to}})",
+      "datePlaceholder": "DD.MM.YYYY",
+      "calculate": "Calculate",
+      "chart": {
+        "leadsCountSeries": "Leads count"
+      }
+    },
+    "studentsLeft": {
+      "title": "Students left the group",
+      "quantity": "Quantity — {{count}}",
+      "filters": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "course": "Course",
+        "teachers": "Teachers",
+        "reasons": "Reasons for archiving",
+        "status": "Status",
+        "filterBtn": "Filter"
+      },
+      "charts": {
+        "byTeacher": "By teacher",
+        "byCourse": "By course",
+        "byMonth": "By month",
+        "byReason": "By reason"
+      }
+    },
+    "logs": {
+      "call": {
+        "title": "Call log",
+        "filter": {
+          "all": "All",
+          "incoming": "Incoming",
+          "outgoing": "Outgoing",
+          "missed": "Missed"
+        },
+        "table": {
+          "type": "Type",
+          "play": "Play",
+          "time": "Time",
+          "who": "Who",
+          "toWhom": "To whom",
+          "gateway": "Gateway",
+          "call": "Call",
+          "duration": "Duration",
+          "result": "Result"
+        },
+        "noData": "No data to display"
+      },
+      "log": {
+        "title": "Logs",
+        "statusFilter": "Status filter",
+        "filters": {
+          "user": "User",
+          "course": "Course",
+          "group": "Group",
+          "room": "Room",
+          "payment": "Payment",
+          "staff": "Staff",
+          "rest": "Rest"
+        }
+      },
+      "sms": {
+        "title": "Sent SMS log",
+        "system": "System",
+        "quantity": "SMS quantity: {{count}}",
+        "notInfo": "No info"
+      },
+      "workly": {
+        "title": "Workly Report",
+        "connection": {
+          "heading": "Workly connection",
+          "description": "To connect to Workly, you need to enter the following data in Settings > Integrations:"
+        },
+        "nav": {
+          "generalSettings": "General settings",
+          "signIn": "Sign in",
+          "leadForm": "Lead form",
+          "paymentMethods": "Payment methods",
+          "communication": "Communication",
+          "integrations": "Integrations",
+          "exams": "Exams",
+          "check": "Check",
+          "accrualAndPayment": "Accrual and payment",
+          "landingPage": "Landing page"
+        },
+        "caption": "Workly",
+        "form": {
+          "clientId": "Workly client id",
+          "secret": "Workly secret",
+          "username": "Workly username",
+          "password": "Workly password"
+        }
+      }
+    }
+  },
+  "singleGroup": {
+    "notFound": "Group not found.",
+    "leftPanel": {
+      "course": "Course",
+      "teacher": "Teacher",
+      "price": "Price",
+      "time": "Time",
+      "editGroup": "Edit group",
+      "deleteGroup": "Delete group",
+      "sendSms": "Send SMS",
+      "addStudent": "Add student",
+      "rooms": "Rooms",
+      "roomCapacity": "Room capacity",
+      "trainingDates": "Training dates",
+      "idLabel": "id",
+      "branches": "Branches",
+      "sortAZ": "By A-Z",
+      "sortZA": "By Z-A",
+      "archivedChip": "Archived",
+      "showArchivedStudents": "Show archived students",
+      "hideArchivedStudents": "Hide archived students",
+      "exportToExcel": "Export to excel",
+      "export": {
+        "name": "Name",
+        "phone": "Phone",
+        "status": "Status",
+        "archived": "Archived",
+        "active": "Active",
+        "frozen": "Frozen",
+        "balance": "Balance",
+        "sheetName": "Students"
+      }
+    },
+    "rightPanel": {
+      "showCoins": "Show coins",
+      "hideCoins": "Hide coins"
+    },
+    "tabs": {
+      "attendance": {
+        "tabLabel": "Attendance",
+        "title": "Attendance",
+        "current": "Current",
+        "name": "Name",
+        "months": {
+          "jan": "Jan", "feb": "Feb", "mar": "Mar", "apr": "Apr", "may": "May", "jun": "Jun",
+          "jul": "Jul", "aug": "Aug", "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Dec"
+        },
+        "was": "Was",
+        "notPresent": "Not"
+      },
+      "grade": {
+        "tabLabel": "Grade",
+        "title": "Grade",
+        "name": "Name",
+        "gradeRange": "Grade (0–100)",
+        "result": "Result",
+        "excellent": "Excellent",
+        "good": "Good",
+        "fail": "Fail"
+      },
+      "onlineLessons": {
+        "tabLabel": "Online lessons and materials",
+        "title": "Online lessons and materials",
+        "addLesson": "Add lesson",
+        "noLessonsYet": "No lessons added yet"
+      },
+      "discountPrices": {
+        "tabLabel": "Discount prices",
+        "title": "Individual discounted prices",
+        "hint": "You can specify a personalized tuition fee for any student. Specify the discounted price and press Enter",
+        "name": "Name",
+        "phone": "Phone",
+        "individualDiscount": "Individual discount",
+        "cause": "Cause",
+        "editDiscount": "Edit discount"
+      },
+      "exams": {
+        "tabLabel": "Exams",
+        "title": "Exams",
+        "addExam": "Add exam",
+        "noExamsYet": "No exams added yet"
+      },
+      "history": {
+        "tabLabel": "History",
+        "title": "History",
+        "groupName": "Group Name",
+        "group": "Group"
+      },
+      "comments": {
+        "tabLabel": "Comments",
+        "title": "Comments",
+        "writeComment": "Write a comment...",
+        "send": "Send",
+        "noCommentsYet": "No comments yet"
+      }
+    },
+    "calendar": {
+      "weekdays": {
+        "sun": "Sun", "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat"
+      },
+      "months": {
+        "january": "January", "february": "February", "march": "March", "april": "April",
+        "may": "May", "june": "June", "july": "July", "august": "August",
+        "september": "September", "october": "October", "november": "November", "december": "December"
+      }
+    },
+    "datePickerField": {
+      "noDateSelected": "No date selected"
+    },
+    "activateModal": {
+      "title": "Select activate date",
+      "submit": "Submit"
+    },
+    "addNoteModal": {
+      "title": "Add new note",
+      "student": "Student",
+      "note": "Note",
+      "notePlaceholder": "Enter note...",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "addPaymentDrawer": {
+      "title": "Add payment",
+      "student": "Student",
+      "balance": "Balance",
+      "methodPay": "Method pay",
+      "amount": "Amount",
+      "date": "Date",
+      "comment": "Comment",
+      "submit": "Submit"
+    },
+    "addStudentDrawer": {
+      "title": "Add Student",
+      "searchStudent": "Search student",
+      "searchPlaceholder": "Name or phone...",
+      "noStudentsFound": "No students found",
+      "startDate": "Start date",
+      "submit": "Add Student",
+      "cancel": "Cancel"
+    },
+    "deleteDropdown": {
+      "title": "Delete Group",
+      "confirmMessage": "will be permanently deleted. Are you sure?",
+      "cancel": "Cancel",
+      "delete": "Delete"
+    },
+    "editGroupDrawer": {
+      "title": "Edit Group",
+      "groupName": "Group name",
+      "selectCourse": "Select course",
+      "selectTeacher": "Select teacher",
+      "days": "Days",
+      "selectDays": "Select days",
+      "selectRoom": "Select room",
+      "daysOptions": {
+        "oddDays": "Odd days",
+        "evenDays": "Even days",
+        "everyDay": "Every day"
+      },
+      "priceUzs": "Price (UZS)",
+      "lessonStartTime": "Lesson start time",
+      "groupStartDate": "Group start date",
+      "groupEndDate": "Group end date",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "freezeModal": {
+      "title": "Indicate the reason",
+      "student": "Student",
+      "dateFrom": "Date from",
+      "recalculateBalance": "Recalculate the balance",
+      "cancel": "Cancel",
+      "confirm": "Freeze"
+    },
+    "moveStudentDialog": {
+      "title": "Move",
+      "selectGroup": "Select group",
+      "move": "Move",
+      "cancel": "Cancel"
+    },
+    "reminderDrawer": {
+      "title": "Add new note",
+      "name": "Name",
+      "comment": "Comment",
+      "selectEmployee": "Select employee",
+      "save": "Save"
+    },
+    "removeStudentDialog": {
+      "title": "Are you sure you want to delete it?",
+      "removeFromGroup": "Remove from group",
+      "deleteStudent": "Delete student",
+      "reasonsForRemoval": "Reasons for removal",
+      "reasons": {
+        "noAttendance": "No attendance",
+        "disciplineProblem": "Discipline problem",
+        "movedToAnotherCenter": "Moved to another center",
+        "parentRequest": "Parent request",
+        "other": "Other"
+      },
+      "commentPlaceholder": "Comment",
+      "recalculateBalance": "Recalculate the balance",
+      "currentGroup": "Current group",
+      "allGroups": "All groups",
+      "yes": "Yes",
+      "cancel": "Cancel"
+    },
+    "studentActionsMenu": {
+      "moveToBranchModal": {
+        "title": "Move student to branch",
+        "selectBranch": "Select branch",
+        "submit": "Move to branch"
+      },
+      "activate": "Activate",
+      "backToTrialLesson": "Back to trial lesson",
+      "makeFrozen": "Make Frozen",
+      "addPayment": "Add payment",
+      "addNewNote": "Add new note",
+      "moveStudentToGroup": "Move student to group",
+      "moveStudentToBranch": "Move student to branch",
+      "removeFromGroup": "Remove from group",
+      "reminders": "Reminders"
+    },
+    "studentHoverCard": {
+      "activeLearns": "Active (Learns)",
+      "frozenPaused": "Frozen (paused)",
+      "debtor": "Debtor",
+      "debt": "Debt",
+      "balance": "Balance",
+      "frozenAt": "Frozen at",
+      "recentPayments": "Recent payments",
+      "noPayments": "No payments",
+      "phone": "Phone",
+      "addedAt": "Added at",
+      "activatedAt": "Activated at",
+      "goToProfile": "Go to profile →"
+    }
   }
 }

@@ -570,5 +570,399 @@
         "withdrawals": "выводов"
       }
     }
+  },
+  "reports": {
+    "attendance": {
+      "title": "Отчёты посещаемости",
+      "summary": {
+        "visits": "Посещения студента (хотя бы раз)",
+        "absent": "Отсутствовал (более раз)",
+        "notSet": "Посещаемость не установлена",
+        "all": "Все",
+        "statusActive": "Активен",
+        "statusDemo": "Демо",
+        "statusFrozen": "Заморожен"
+      },
+      "table": {
+        "name": "Имя",
+        "status": "Статус",
+        "group": "Группа",
+        "attendance": "Посещаемость",
+        "noData": "Нет данных"
+      },
+      "filters": {
+        "select": "Выберите",
+        "title": "Фильтр",
+        "dateFrom": "Дата от",
+        "dateTo": "Дата до",
+        "branches": "Филиалы",
+        "selectBranch": "Выберите филиал",
+        "group": "Группа",
+        "filterBtn": "Фильтр",
+        "reset": "Сбросить"
+      }
+    },
+    "conversion": {
+      "title": "Отчёты конверсии",
+      "subtitle": "Отслеживайте эффективность воронки с расширенным управлением и понятной сводкой.",
+      "stages": {
+        "incoming": "Входящие",
+        "waiting": "Ожидание",
+        "set": "Назначено",
+        "attended": "Посетил",
+        "paid": "Оплатил"
+      },
+      "filters": {
+        "allLeadsOption": "Все лиды",
+        "newLeadsOption": "Новые лиды",
+        "returningLeadsOption": "Повторные лиды",
+        "leadsSources": "Источники лидов",
+        "byStaff": "По сотруднику"
+      },
+      "conversionTitle": "Конверсия",
+      "total": "Всего",
+      "table": {
+        "fullName": "Полное имя",
+        "phone": "Телефон",
+        "status": "Статус",
+        "staffName": "Имя сотрудника",
+        "noDataForStage": "Нет данных для этого этапа.",
+        "selectStagePrompt": "Выберите этап воронки выше, чтобы просмотреть отчёт."
+      },
+      "salesPipeline": "Воронка продаж"
+    },
+    "leads": {
+      "title": "Отчёты по лидам",
+      "totalLeads": "Всего лидов: {{count}} ({{from}} — {{to}})",
+      "datePlaceholder": "ДД.ММ.ГГГГ",
+      "calculate": "Рассчитать",
+      "chart": {
+        "leadsCountSeries": "Количество лидов"
+      }
+    },
+    "studentsLeft": {
+      "title": "Студенты, покинувшие группу",
+      "quantity": "Количество — {{count}}",
+      "filters": {
+        "dateFrom": "Дата от",
+        "dateTo": "Дата до",
+        "course": "Курс",
+        "teachers": "Учителя",
+        "reasons": "Причины архивации",
+        "status": "Статус",
+        "filterBtn": "Фильтр"
+      },
+      "charts": {
+        "byTeacher": "По учителю",
+        "byCourse": "По курсу",
+        "byMonth": "По месяцам",
+        "byReason": "По причине"
+      }
+    },
+    "logs": {
+      "call": {
+        "title": "Журнал звонков",
+        "filter": {
+          "all": "Все",
+          "incoming": "Входящие",
+          "outgoing": "Исходящие",
+          "missed": "Пропущенные"
+        },
+        "table": {
+          "type": "Тип",
+          "play": "Прослушать",
+          "time": "Время",
+          "who": "Кто",
+          "toWhom": "Кому",
+          "gateway": "Шлюз",
+          "call": "Звонок",
+          "duration": "Длительность",
+          "result": "Результат"
+        },
+        "noData": "Нет данных для отображения"
+      },
+      "log": {
+        "title": "Логи",
+        "statusFilter": "Фильтр статуса",
+        "filters": {
+          "user": "Пользователь",
+          "course": "Курс",
+          "group": "Группа",
+          "room": "Кабинет",
+          "payment": "Платёж",
+          "staff": "Сотрудник",
+          "rest": "Остальное"
+        }
+      },
+      "sms": {
+        "title": "Журнал отправленных SMS",
+        "system": "Система",
+        "quantity": "Количество SMS: {{count}}",
+        "notInfo": "Нет информации"
+      },
+      "workly": {
+        "title": "Отчёт Workly",
+        "connection": {
+          "heading": "Подключение Workly",
+          "description": "Чтобы подключиться к Workly, необходимо ввести следующие данные в Настройки > Интеграции:"
+        },
+        "nav": {
+          "generalSettings": "Общие настройки",
+          "signIn": "Вход",
+          "leadForm": "Форма лида",
+          "paymentMethods": "Способы оплаты",
+          "communication": "Коммуникация",
+          "integrations": "Интеграции",
+          "exams": "Экзамены",
+          "check": "Проверка",
+          "accrualAndPayment": "Начисление и оплата",
+          "landingPage": "Целевая страница"
+        },
+        "caption": "Workly",
+        "form": {
+          "clientId": "Workly client id",
+          "secret": "Workly secret",
+          "username": "Имя пользователя Workly",
+          "password": "Пароль Workly"
+        }
+      }
+    }
+  },
+  "singleGroup": {
+    "notFound": "Группа не найдена.",
+    "leftPanel": {
+      "course": "Курс",
+      "teacher": "Учитель",
+      "price": "Цена",
+      "time": "Время",
+      "editGroup": "Редактировать группу",
+      "deleteGroup": "Удалить группу",
+      "sendSms": "Отправить SMS",
+      "addStudent": "Добавить студента",
+      "rooms": "Кабинеты",
+      "roomCapacity": "Вместимость кабинета",
+      "trainingDates": "Даты занятий",
+      "idLabel": "id",
+      "branches": "Филиалы",
+      "sortAZ": "По А-Я",
+      "sortZA": "По Я-А",
+      "archivedChip": "В архиве",
+      "showArchivedStudents": "Показать архивных студентов",
+      "hideArchivedStudents": "Скрыть архивных студентов",
+      "exportToExcel": "Экспорт в Excel",
+      "export": {
+        "name": "Имя",
+        "phone": "Телефон",
+        "status": "Статус",
+        "archived": "В архиве",
+        "active": "Активен",
+        "frozen": "Заморожен",
+        "balance": "Баланс",
+        "sheetName": "Студенты"
+      }
+    },
+    "rightPanel": {
+      "showCoins": "Показать монеты",
+      "hideCoins": "Скрыть монеты"
+    },
+    "tabs": {
+      "attendance": {
+        "tabLabel": "Посещаемость",
+        "title": "Посещаемость",
+        "current": "Текущий",
+        "name": "Имя",
+        "months": {
+          "jan": "Янв", "feb": "Фев", "mar": "Мар", "apr": "Апр", "may": "Май", "jun": "Июн",
+          "jul": "Июл", "aug": "Авг", "sep": "Сен", "oct": "Окт", "nov": "Ноя", "dec": "Дек"
+        },
+        "was": "Был",
+        "notPresent": "Нет"
+      },
+      "grade": {
+        "tabLabel": "Оценка",
+        "title": "Оценка",
+        "name": "Имя",
+        "gradeRange": "Оценка (0–100)",
+        "result": "Результат",
+        "excellent": "Отлично",
+        "good": "Хорошо",
+        "fail": "Не сдал"
+      },
+      "onlineLessons": {
+        "tabLabel": "Онлайн-уроки и материалы",
+        "title": "Онлайн-уроки и материалы",
+        "addLesson": "Добавить урок",
+        "noLessonsYet": "Уроки ещё не добавлены"
+      },
+      "discountPrices": {
+        "tabLabel": "Скидочные цены",
+        "title": "Индивидуальные скидочные цены",
+        "hint": "Вы можете указать персональную стоимость обучения для любого студента. Укажите цену со скидкой и нажмите Enter",
+        "name": "Имя",
+        "phone": "Телефон",
+        "individualDiscount": "Индивидуальная скидка",
+        "cause": "Причина",
+        "editDiscount": "Изменить скидку"
+      },
+      "exams": {
+        "tabLabel": "Экзамены",
+        "title": "Экзамены",
+        "addExam": "Добавить экзамен",
+        "noExamsYet": "Экзамены ещё не добавлены"
+      },
+      "history": {
+        "tabLabel": "История",
+        "title": "История",
+        "groupName": "Название группы",
+        "group": "Группа"
+      },
+      "comments": {
+        "tabLabel": "Комментарии",
+        "title": "Комментарии",
+        "writeComment": "Написать комментарий...",
+        "send": "Отправить",
+        "noCommentsYet": "Комментариев пока нет"
+      }
+    },
+    "calendar": {
+      "weekdays": {
+        "sun": "Вс", "mon": "Пн", "tue": "Вт", "wed": "Ср", "thu": "Чт", "fri": "Пт", "sat": "Сб"
+      },
+      "months": {
+        "january": "Январь", "february": "Февраль", "march": "Март", "april": "Апрель",
+        "may": "Май", "june": "Июнь", "july": "Июль", "august": "Август",
+        "september": "Сентябрь", "october": "Октябрь", "november": "Ноябрь", "december": "Декабрь"
+      }
+    },
+    "datePickerField": {
+      "noDateSelected": "Дата не выбрана"
+    },
+    "activateModal": {
+      "title": "Выберите дату активации",
+      "submit": "Отправить"
+    },
+    "addNoteModal": {
+      "title": "Добавить новую заметку",
+      "student": "Студент",
+      "note": "Заметка",
+      "notePlaceholder": "Введите заметку...",
+      "save": "Сохранить",
+      "cancel": "Отмена"
+    },
+    "addPaymentDrawer": {
+      "title": "Добавить платёж",
+      "student": "Студент",
+      "balance": "Баланс",
+      "methodPay": "Способ оплаты",
+      "amount": "Сумма",
+      "date": "Дата",
+      "comment": "Комментарий",
+      "submit": "Отправить"
+    },
+    "addStudentDrawer": {
+      "title": "Добавить студента",
+      "searchStudent": "Поиск студента",
+      "searchPlaceholder": "Имя или телефон...",
+      "noStudentsFound": "Студенты не найдены",
+      "startDate": "Дата начала",
+      "submit": "Добавить студента",
+      "cancel": "Отмена"
+    },
+    "deleteDropdown": {
+      "title": "Удалить группу",
+      "confirmMessage": "будет удалена безвозвратно. Вы уверены?",
+      "cancel": "Отмена",
+      "delete": "Удалить"
+    },
+    "editGroupDrawer": {
+      "title": "Редактировать группу",
+      "groupName": "Название группы",
+      "selectCourse": "Выберите курс",
+      "selectTeacher": "Выберите учителя",
+      "days": "Дни",
+      "selectDays": "Выберите дни",
+      "selectRoom": "Выберите кабинет",
+      "daysOptions": {
+        "oddDays": "Нечётные дни",
+        "evenDays": "Чётные дни",
+        "everyDay": "Каждый день"
+      },
+      "priceUzs": "Цена (UZS)",
+      "lessonStartTime": "Время начала занятия",
+      "groupStartDate": "Дата начала группы",
+      "groupEndDate": "Дата окончания группы",
+      "save": "Сохранить",
+      "cancel": "Отмена"
+    },
+    "freezeModal": {
+      "title": "Укажите причину",
+      "student": "Студент",
+      "dateFrom": "Дата от",
+      "recalculateBalance": "Пересчитать баланс",
+      "cancel": "Отмена",
+      "confirm": "Заморозить"
+    },
+    "moveStudentDialog": {
+      "title": "Переместить",
+      "selectGroup": "Выберите группу",
+      "move": "Переместить",
+      "cancel": "Отмена"
+    },
+    "reminderDrawer": {
+      "title": "Добавить новую заметку",
+      "name": "Имя",
+      "comment": "Комментарий",
+      "selectEmployee": "Выберите сотрудника",
+      "save": "Сохранить"
+    },
+    "removeStudentDialog": {
+      "title": "Вы уверены, что хотите удалить?",
+      "removeFromGroup": "Удалить из группы",
+      "deleteStudent": "Удалить студента",
+      "reasonsForRemoval": "Причины удаления",
+      "reasons": {
+        "noAttendance": "Не посещал",
+        "disciplineProblem": "Проблемы с дисциплиной",
+        "movedToAnotherCenter": "Перешёл в другой центр",
+        "parentRequest": "По просьбе родителей",
+        "other": "Другое"
+      },
+      "commentPlaceholder": "Комментарий",
+      "recalculateBalance": "Пересчитать баланс",
+      "currentGroup": "Текущая группа",
+      "allGroups": "Все группы",
+      "yes": "Да",
+      "cancel": "Отмена"
+    },
+    "studentActionsMenu": {
+      "moveToBranchModal": {
+        "title": "Переместить студента в филиал",
+        "selectBranch": "Выберите филиал",
+        "submit": "Переместить в филиал"
+      },
+      "activate": "Активировать",
+      "backToTrialLesson": "Вернуть на пробный урок",
+      "makeFrozen": "Заморозить",
+      "addPayment": "Добавить платёж",
+      "addNewNote": "Добавить новую заметку",
+      "moveStudentToGroup": "Переместить студента в группу",
+      "moveStudentToBranch": "Переместить студента в филиал",
+      "removeFromGroup": "Удалить из группы",
+      "reminders": "Напоминания"
+    },
+    "studentHoverCard": {
+      "activeLearns": "Активен (учится)",
+      "frozenPaused": "Заморожен (пауза)",
+      "debtor": "Должник",
+      "debt": "Долг",
+      "balance": "Баланс",
+      "frozenAt": "Заморожен",
+      "recentPayments": "Последние платежи",
+      "noPayments": "Платежей нет",
+      "phone": "Телефон",
+      "addedAt": "Добавлен",
+      "activatedAt": "Активирован",
+      "goToProfile": "Перейти в профиль →"
+    }
   }
 }

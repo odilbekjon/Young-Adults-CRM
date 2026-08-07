@@ -1,6 +1,7 @@
 // src/pages/groups/AddPaymentDrawer.tsx
 import { useState } from "react";
 import { FormControl, FormControlLabel, Radio, RadioGroup } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { RightDrawer } from "../../../components/RightDrawer";
 import { DatePickerField } from "../DatePickerField";
 import { inputStyle, labelStyle, paymentSubmitBtn, PAYMENT_METHODS_LEFT, PAYMENT_METHODS_RIGHT } from "../styles";
@@ -11,6 +12,7 @@ export const AddPaymentDrawer = ({
 }: {
   open: boolean; onClose: () => void; student: Student | null;
 }) => {
+  const { t } = useTranslation();
   const [method, setMethod] = useState("Cash");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -30,10 +32,10 @@ export const AddPaymentDrawer = ({
     `${n < 0 ? "-" : ""}${Math.abs(n).toLocaleString("ru-RU")} UZS`;
 
   return (
-    <RightDrawer open={open} onClose={handleClose} title="Add payment" width={420}>
+    <RightDrawer open={open} onClose={handleClose} title={t("singleGroup.addPaymentDrawer.title")} width={420}>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div>
-          <label style={labelStyle}>Student</label>
+          <label style={labelStyle}>{t("singleGroup.addPaymentDrawer.student")}</label>
           <input
             style={{ ...inputStyle, background: "#f5f5f5", color: "#555", cursor: "default" }}
             value={student?.name ?? ""}
@@ -42,7 +44,7 @@ export const AddPaymentDrawer = ({
         </div>
 
         <div>
-          <label style={labelStyle}>Balance</label>
+          <label style={labelStyle}>{t("singleGroup.addPaymentDrawer.balance")}</label>
           <span
             style={{
               display: "inline-block",
@@ -59,7 +61,7 @@ export const AddPaymentDrawer = ({
         </div>
 
         <div>
-          <label style={labelStyle}>Method pay</label>
+          <label style={labelStyle}>{t("singleGroup.addPaymentDrawer.methodPay")}</label>
           <div style={{ display: "flex", gap: 24, marginTop: 4 }}>
             <FormControl component="fieldset" sx={{ flex: 1 }}>
               <RadioGroup value={method} onChange={(e) => setMethod(e.target.value)}>
@@ -91,7 +93,7 @@ export const AddPaymentDrawer = ({
         </div>
 
         <div>
-          <label style={labelStyle}>Amount</label>
+          <label style={labelStyle}>{t("singleGroup.addPaymentDrawer.amount")}</label>
           <input
             style={inputStyle}
             type="number"
@@ -102,12 +104,12 @@ export const AddPaymentDrawer = ({
         </div>
 
         <div>
-          <label style={labelStyle}>Date</label>
+          <label style={labelStyle}>{t("singleGroup.addPaymentDrawer.date")}</label>
           <DatePickerField value={date} onChange={setDate} />
         </div>
 
         <div>
-          <label style={labelStyle}>Comment</label>
+          <label style={labelStyle}>{t("singleGroup.addPaymentDrawer.comment")}</label>
           <textarea
             style={{ ...inputStyle, minHeight: 100, resize: "vertical" }}
             value={comment}
@@ -116,7 +118,7 @@ export const AddPaymentDrawer = ({
         </div>
 
         <button type="button" style={paymentSubmitBtn} onClick={handleClose}>
-          Submit
+          {t("singleGroup.addPaymentDrawer.submit")}
         </button>
       </div>
     </RightDrawer>

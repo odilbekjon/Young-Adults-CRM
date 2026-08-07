@@ -13,17 +13,19 @@ import {
   TableBody,
 } from "@mui/material";
 import { BsCalendar3 } from "react-icons/bs";
+import { useTranslation } from "react-i18next";
 
-const columns = ["Type", "Play", "Time", "Who", "To whom", "Gateway", "Call", "Duration", "Result"];
+const columnKeys = ["type", "play", "time", "who", "toWhom", "gateway", "call", "duration", "result"];
 
 export const Call = () => {
+  const { t } = useTranslation();
   const [date, setDate] = useState("07.05.2026");
   const [filter, setFilter] = useState("All");
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f5f5f5", p: 3 }}>
       <Typography variant="h5" sx={{ fontWeight: 500, mb: 3, color: "#212121" }}>
-        Call log
+        {t("reports.logs.call.title")}
       </Typography>
 
       {/* Filters */}
@@ -57,10 +59,10 @@ export const Call = () => {
             "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e0e0e0" },
           }}
         >
-          <MenuItem value="All">All</MenuItem>
-          <MenuItem value="Incoming">Incoming</MenuItem>
-          <MenuItem value="Outgoing">Outgoing</MenuItem>
-          <MenuItem value="Missed">Missed</MenuItem>
+          <MenuItem value="All">{t("reports.logs.call.filter.all")}</MenuItem>
+          <MenuItem value="Incoming">{t("reports.logs.call.filter.incoming")}</MenuItem>
+          <MenuItem value="Outgoing">{t("reports.logs.call.filter.outgoing")}</MenuItem>
+          <MenuItem value="Missed">{t("reports.logs.call.filter.missed")}</MenuItem>
         </Select>
       </Box>
 
@@ -69,9 +71,9 @@ export const Call = () => {
         <Table>
           <TableHead>
             <TableRow>
-              {columns.map((col) => (
+              {columnKeys.map((colKey) => (
                 <TableCell
-                  key={col}
+                  key={colKey}
                   sx={{
                     fontWeight: 600,
                     fontSize: "0.875rem",
@@ -81,16 +83,16 @@ export const Call = () => {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {col}
+                  {t(`reports.logs.call.table.${colKey}`)}
                 </TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
             <TableRow>
-              <TableCell colSpan={columns.length} sx={{ textAlign: "center", py: 4, border: "none" }}>
+              <TableCell colSpan={columnKeys.length} sx={{ textAlign: "center", py: 4, border: "none" }}>
                 <Typography variant="body2" color="text.secondary">
-                  No data to display
+                  {t("reports.logs.call.noData")}
                 </Typography>
               </TableCell>
             </TableRow>

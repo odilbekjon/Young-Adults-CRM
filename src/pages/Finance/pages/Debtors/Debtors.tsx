@@ -4,6 +4,7 @@ import { BsCashStack } from "react-icons/bs";
 import { FiFilter, FiCalendar, FiChevronDown, FiMail } from "react-icons/fi";
 import { IoTimeOutline } from "react-icons/io5";
 import { IoMdFlag } from "react-icons/io";
+import { useTranslation } from "react-i18next";
 import { buildFlatStudents } from "../../../../constants/FlatStudents";
 
 // Reuse the SAME SMS drawer/modal used on the Students page
@@ -75,6 +76,7 @@ const SelectBox = ({
   options: string[];
   placeholder?: string;
 }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -92,7 +94,7 @@ const SelectBox = ({
         className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-left hover:border-gray-400 transition-colors min-w-[140px]"
       >
         <span className={value ? "text-gray-800" : "text-gray-400"}>
-          {value || placeholder || "Select"}
+          {value || placeholder || t("finance.debtors.filters.selectPlaceholder")}
         </span>
         <FiChevronDown size={13} className="text-gray-400 ml-2 flex-shrink-0" />
       </button>
@@ -120,6 +122,7 @@ const SearchByDropdown = ({
   value: string;
   onChange: (v: string) => void;
 }) => {
+  const { t } = useTranslation();
   const opts = ["Name", "Phone", "Group"];
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -137,7 +140,7 @@ const SearchByDropdown = ({
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-1 border border-gray-300 rounded-l px-3 py-1.5 text-sm bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors border-r-0"
       >
-        Search by {value} <FiChevronDown size={12} />
+        {t("finance.debtors.filters.searchBy")} {value} <FiChevronDown size={12} />
       </button>
       {open && (
         <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 min-w-[120px]">
@@ -167,6 +170,7 @@ const badgeCls = (color: "blue" | "green" | "amber") => {
 // ---------- Main Component ----------
 export const Debtors = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [searchBy, setSearchBy] = useState("Name");
   const [searchText, setSearchText] = useState("");
@@ -234,22 +238,22 @@ export const Debtors = () => {
     <div className="min-h-screen bg-gray-100 p-6 font-sans">
       {/* Title */}
       <div className="flex items-center gap-3 mb-4">
-        <h1 className="text-2xl font-semibold text-gray-800">Debtors</h1>
-        <span className="text-sm text-gray-500">Quantity — {filtered.length}</span>
+        <h1 className="text-2xl font-semibold text-gray-800">{t("finance.debtors.title")}</h1>
+        <span className="text-sm text-gray-500">{t("finance.debtors.quantity", { count: filtered.length })}</span>
       </div>
 
       {/* Summary cards */}
       <div className="bg-white border border-gray-200 rounded-lg px-6 py-4 flex items-center justify-between mb-3 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-1 h-7 bg-blue-500 rounded-full mr-1" />
-          <span className="text-gray-700 font-medium">Total: {formatUZS(totalBalance)}</span>
+          <span className="text-gray-700 font-medium">{t("finance.debtors.summary.total")} {formatUZS(totalBalance)}</span>
         </div>
         <BsCashStack className="text-blue-400 text-2xl" />
       </div>
       <div className="bg-white border border-gray-200 rounded-lg px-6 py-4 flex items-center justify-between mb-5 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-1 h-7 bg-blue-500 rounded-full mr-1" />
-          <span className="text-gray-700 font-medium">Total on period: {formatUZS(totalPeriod)}</span>
+          <span className="text-gray-700 font-medium">{t("finance.debtors.summary.totalOnPeriod")} {formatUZS(totalPeriod)}</span>
         </div>
         <BsCashStack className="text-blue-400 text-2xl" />
       </div>
@@ -259,7 +263,7 @@ export const Debtors = () => {
         {/* Row 1 */}
         <div className="grid grid-cols-5 gap-3 mb-3">
           <div className="col-span-1">
-            <label className="text-xs text-gray-500 mb-1 block">Search</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.search")}</label>
             <div className="flex">
               <SearchByDropdown value={searchBy} onChange={setSearchBy} />
               <input
@@ -271,29 +275,29 @@ export const Debtors = () => {
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Status</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.status")}</label>
             <SelectBox value={status} onChange={setStatus} options={STATUSES} placeholder="Active (Not archived)" />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Group</label>
-            <SelectBox value={group} onChange={setGroup} options={GROUP_OPTIONS} placeholder="Select" />
+            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.group")}</label>
+            <SelectBox value={group} onChange={setGroup} options={GROUP_OPTIONS} placeholder={t("finance.debtors.filters.selectPlaceholder")} />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Debt amount (from)</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.debtAmountFrom")}</label>
             <SelectBox
               value={debtFrom}
               onChange={setDebtFrom}
               options={["-100000", "-200000", "-300000", "-400000"]}
-              placeholder="Select"
+              placeholder={t("finance.debtors.filters.selectPlaceholder")}
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Debt amount (to)</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.debtAmountTo")}</label>
             <SelectBox
               value={debtTo}
               onChange={setDebtTo}
               options={["-100000", "-200000", "-300000", "-400000"]}
-              placeholder="Select"
+              placeholder={t("finance.debtors.filters.selectPlaceholder")}
             />
           </div>
         </div>
@@ -301,40 +305,40 @@ export const Debtors = () => {
         {/* Row 2 */}
         <div className="flex items-end gap-3">
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Date from</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.dateFrom")}</label>
             <div className="relative">
               <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
               <input
                 type="text"
                 className={inputCls + " pl-7 w-44"}
-                placeholder="No date selected"
+                placeholder={t("finance.debtors.filters.noDateSelected")}
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
               />
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Date to</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.dateTo")}</label>
             <div className="relative">
               <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
               <input
                 type="text"
                 className={inputCls + " pl-7 w-44"}
-                placeholder="No date selected"
+                placeholder={t("finance.debtors.filters.noDateSelected")}
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
               />
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Task</label>
-            <SelectBox value={task} onChange={setTask} options={["Task 1", "Task 2", "Task 3"]} placeholder="Select" />
+            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.task")}</label>
+            <SelectBox value={task} onChange={setTask} options={["Task 1", "Task 2", "Task 3"]} placeholder={t("finance.debtors.filters.selectPlaceholder")} />
           </div>
           <button
             onClick={handleFilter}
             className="bg-blue-700 hover:bg-blue-800 text-white rounded-full px-6 py-1.5 text-sm font-medium transition-colors"
           >
-            Filter
+            {t("finance.debtors.filters.filter")}
           </button>
         </div>
       </div>
@@ -342,7 +346,7 @@ export const Debtors = () => {
       {/* Table toolbar */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Rows per page:</span>
+          <span className="text-sm text-gray-500">{t("finance.debtors.table.rowsPerPage")}</span>
           <select
             className="border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:outline-none"
             value={pageSize}
@@ -352,7 +356,7 @@ export const Debtors = () => {
           </select>
         </div>
         <button className="flex items-center gap-2 border border-gray-300 rounded px-3 py-1.5 text-sm text-gray-600 bg-white hover:bg-gray-50 transition-colors">
-          <FiFilter size={13} /> Filters
+          <FiFilter size={13} /> {t("finance.debtors.table.filtersButton")}
         </button>
       </div>
 
@@ -365,18 +369,18 @@ export const Debtors = () => {
                 <input type="checkbox" checked={allChecked} onChange={toggleAll} className="rounded accent-blue-600" />
               </th>
               <th className="px-3 py-3 text-left text-gray-500 font-medium w-8">#</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">Name</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">Phone</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">Balance</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">Total on period</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">Group</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">Comment</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">Task</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">Status</th>
+              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.name")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.phone")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.balance")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.totalOnPeriod")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.group")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.comment")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.task")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.status")}</th>
               <th className="px-3 py-3 w-8">
                 <button
                   type="button"
-                  title={selected.length > 0 ? "Send SMS to selected" : "Select students to send SMS"}
+                  title={selected.length > 0 ? t("finance.debtors.table.sendSmsSelected") : t("finance.debtors.table.selectToSendSms")}
                   onClick={() => { if (selected.length > 0) setSendSmsOpen(true); }}
                   className="inline-flex items-center justify-center disabled:opacity-40"
                   disabled={selected.length === 0}
@@ -389,7 +393,7 @@ export const Debtors = () => {
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={11} className="text-center py-10 text-gray-400">No Data</td>
+                <td colSpan={11} className="text-center py-10 text-gray-400">{t("finance.debtors.table.noData")}</td>
               </tr>
             ) : (
               paginated.map((d, i) => (
@@ -444,7 +448,7 @@ export const Debtors = () => {
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
           <span className="text-sm text-gray-500">
-            {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}
+            {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} {t("finance.debtors.pagination.of")} {filtered.length}
           </span>
           <div className="flex items-center gap-1">
             <button onClick={() => setPage(1)} disabled={page === 1}

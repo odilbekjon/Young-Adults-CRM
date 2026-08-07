@@ -123,5 +123,448 @@
       "tags": "Tags",
       "tagsList": "Tags"
     }
+  },
+  "dashboard": {
+    "stats": {
+      "activeLeads": "Active leads",
+      "activeStudents": "Active students",
+      "groups": "Groups",
+      "debtors": "Debtors",
+      "inTrialLesson": "In a trial lesson",
+      "paidDuringMonth": "Paid during the month",
+      "leftActiveGroup": "Left active group",
+      "leftAfterTrial": "Left after trial period",
+      "goToPage": "Go to {{label}} page"
+    },
+    "schedule": {
+      "title": "Schedule",
+      "tabs": {
+        "odd": "Odd days",
+        "even": "Even days",
+        "other": "Other"
+      },
+      "horizontalViewTitle": "Horizontal view",
+      "horizontal": "Horizontal",
+      "verticalViewTitle": "Vertical view",
+      "vertical": "Vertical",
+      "studentsFractionSlash": "{{count}} st./{{max}}",
+      "studentsCountSuffix": "{{count}}/{{max}} st.",
+      "emptyState": "No schedule available for this day type"
+    },
+    "chart": {
+      "currency": "UZS"
+    }
+  },
+  "students": {
+    "header": {
+      "title": "Students",
+      "quantity": "Quantity — {{count}}",
+      "addNew": "Add New"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by name or phone",
+      "byCourses": "By Courses",
+      "status": "Status",
+      "byTeacher": "By Teacher",
+      "financial": "Financial",
+      "byTags": "By Tags",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "clearAll": "Clear all",
+      "active": "Active",
+      "inactive": "Inactive",
+      "paid": "Paid",
+      "inDebt": "In debt",
+      "new": "New",
+      "vip": "VIP"
+    },
+    "table": {
+      "selectedCount_one": "{{count}} selected",
+      "selectedCount_other": "{{count}} selected",
+      "filters": "Filters",
+      "columns": "Columns",
+      "photo": "Photo",
+      "name": "Name",
+      "phone": "Phone",
+      "groups": "Groups",
+      "teachers": "Teachers",
+      "trainingDates": "Training dates",
+      "balance": "Balance",
+      "comment": "Comment",
+      "addToGroup": "Add to group",
+      "mailSelected": "Mail selected",
+      "deleteSelected": "Delete selected",
+      "noStudentsFound": "No students found"
+    },
+    "pagination": {
+      "range": "{{from}}–{{to}} of {{total}}"
+    },
+    "actions": {
+      "editStudent": "Edit Student",
+      "addPayment": "Add payment",
+      "remove": "Remove"
+    },
+    "addToGroup": {
+      "title": "Add student to group",
+      "studentsSelected_one": "{{count}} student selected",
+      "studentsSelected_other": "{{count}} students selected",
+      "selectGroup": "Select group",
+      "submit": "Add student to group"
+    },
+    "editDrawer": {
+      "title": "Edit Student",
+      "phone": "Phone",
+      "name": "Name",
+      "dob": "Date of birth",
+      "gender": "Gender",
+      "male": "Male",
+      "female": "Female",
+      "additionalContacts": "Additional contacts",
+      "addToGroup": "+ Add to the group",
+      "setPassword": "+ Set password",
+      "submit": "Submit"
+    },
+    "contacts": {
+      "phone": "Phone",
+      "key": "Key",
+      "profile": "Profile",
+      "email": "Email",
+      "telegram": "Telegram",
+      "education": "Education",
+      "location": "Location",
+      "card": "Card"
+    },
+    "deleteDialog": {
+      "title": "Delete Student",
+      "message": "Are you sure you want to remove this student?",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    }
+  },
+  "teachers": {
+    "title": "Teachers",
+    "countSuffix": "teachers",
+    "actions": {
+      "addNew": "ADD NEW",
+      "import": "Import"
+    },
+    "alert": {
+      "title": "Attention!",
+      "description": "CEO profiles can link teachers to other branches."
+    },
+    "search": {
+      "placeholder": "Search Teacher"
+    },
+    "table": {
+      "groupsCount": "groups",
+      "noData": "No data available"
+    },
+    "menu": {
+      "edit": "Edit",
+      "sms": "SMS",
+      "delete": "Delete"
+    },
+    "sms": {
+      "recipientLabel": "teacher"
+    },
+    "drawer": {
+      "editTitle": "Edit Teacher",
+      "addTitle": "Add New Teacher"
+    },
+    "form": {
+      "phone": "Phone",
+      "phonePlaceholder": "XX XXX XX XX",
+      "name": "Name",
+      "namePlaceholder": "Full name",
+      "branch": "Branch",
+      "branchPlaceholder": "Branch name",
+      "dob": "Date of birth",
+      "gender": "Gender",
+      "genderMale": "Male",
+      "genderFemale": "Female",
+      "photo": "Photo",
+      "photoPreviewAlt": "preview",
+      "noFileChosen": "No file chosen",
+      "browse": "Browse",
+      "hidePasswordToggle": "− Hide password",
+      "setPasswordToggle": "+ Set password",
+      "passwordPlaceholder": "Enter password",
+      "submit": "Submit"
+    },
+    "deleteDialog": {
+      "title": "Delete Teacher",
+      "message": "Are you sure you want to delete this teacher? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "validation": {
+      "phoneRequired": "Phone is required",
+      "nameRequired": "Name is required",
+      "dobRequired": "Date of birth is required",
+      "genderRequired": "Gender is required"
+    }
+  },
+  "groups": {
+    "pageTitle": "Groups",
+    "summary": "{{branch}} — {{count}} groups",
+    "actions": {
+      "addNew": "Add New",
+      "exportExcel": "Export to Excel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "submit": "Submit"
+    },
+    "filters": {
+      "status": "Status",
+      "teacher": "Teacher",
+      "courses": "Courses",
+      "days": "Days",
+      "tags": "Tags",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "clearAll": "Clear all",
+      "filtersButton": "Filters",
+      "columns": "Columns"
+    },
+    "options": {
+      "status": {
+        "active": "🟢 Active",
+        "archive": "🔴 Archive",
+        "completed": "🔵 Completed"
+      },
+      "days": {
+        "odd": "Odd days",
+        "even": "Even days",
+        "every": "Every day"
+      },
+      "tags": {
+        "new": "New",
+        "popular": "Popular",
+        "vip": "VIP",
+        "trial": "Trial"
+      }
+    },
+    "table": {
+      "group": "Group",
+      "course": "Course",
+      "teacher": "Teacher",
+      "days": "Days",
+      "trainingDates": "Training dates",
+      "weekOfStudy": "Week of study",
+      "room": "Room",
+      "tags": "Tags",
+      "students": "Students",
+      "actions": "Actions",
+      "empty": "No groups found"
+    },
+    "export": {
+      "number": "#",
+      "group": "Group",
+      "course": "Course",
+      "teacher": "Teacher",
+      "days": "Days",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "room": "Room",
+      "students": "Students",
+      "status": "Status"
+    },
+    "form": {
+      "addTitle": "Add New Group",
+      "editTitle": "Edit Group",
+      "name": "Name",
+      "course": "Select course",
+      "teacher": "Select teacher",
+      "days": "Days",
+      "room": "Select room",
+      "lessonStartTime": "Lesson start time",
+      "startDate": "Group start date",
+      "endDate": "Group end date",
+      "tags": "Tags",
+      "status": "Status"
+    },
+    "deleteDialog": {
+      "title": "Delete Group",
+      "body": "Are you sure you want to delete this group? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    }
+  },
+  "finance": {
+    "allPayments": {
+      "title": "All payments",
+      "stats": {
+        "totalRevenue": "Total Revenue:",
+        "totalNetProfit": "Total Net Profit:",
+        "details": "Details"
+      },
+      "filters": {
+        "title": "Filters",
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "namePhone": "Name or Phone",
+        "searchPlaceholder": "Search...",
+        "group": "Select group",
+        "course": "Course",
+        "teacher": "Teacher",
+        "methodPay": "Method pay",
+        "sum": "Sum",
+        "amountPlaceholder": "Amount",
+        "staffName": "Staff Name",
+        "fromCreatedDate": "From created date",
+        "toCreatedDate": "To created date",
+        "noDateSelected": "No date selected",
+        "reset": "Reset",
+        "filter": "Filter",
+        "selectPlaceholder": "Select"
+      },
+      "table": {
+        "date": "Date",
+        "name": "Name",
+        "sum": "Sum",
+        "methodPay": "Method pay",
+        "teacher": "Teacher",
+        "comment": "Comment",
+        "creator": "Creator",
+        "empty": "No payments found"
+      },
+      "footer": {
+        "showing": "Showing",
+        "of": "of",
+        "payments": "payments"
+      }
+    },
+    "debtors": {
+      "title": "Debtors",
+      "quantity": "Quantity — {{count}}",
+      "summary": {
+        "total": "Total:",
+        "totalOnPeriod": "Total on period:"
+      },
+      "filters": {
+        "search": "Search",
+        "searchBy": "Search by",
+        "status": "Status",
+        "group": "Group",
+        "debtAmountFrom": "Debt amount (from)",
+        "debtAmountTo": "Debt amount (to)",
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "task": "Task",
+        "noDateSelected": "No date selected",
+        "filter": "Filter",
+        "selectPlaceholder": "Select"
+      },
+      "table": {
+        "rowsPerPage": "Rows per page:",
+        "filtersButton": "Filters",
+        "name": "Name",
+        "phone": "Phone",
+        "balance": "Balance",
+        "totalOnPeriod": "Total on period",
+        "group": "Group",
+        "comment": "Comment",
+        "task": "Task",
+        "status": "Status",
+        "sendSmsSelected": "Send SMS to selected",
+        "selectToSendSms": "Select students to send SMS",
+        "noData": "No Data"
+      },
+      "pagination": {
+        "of": "of"
+      }
+    },
+    "salaries": {
+      "title": "Salaries",
+      "settingsToggle": "Setting salaries",
+      "step1": {
+        "description": "Please set default value for salary calculation"
+      },
+      "step2": {
+        "description": "You can set up individual calculations for any teachers / courses / groups / students."
+      },
+      "calcValueLabel": "Calc value",
+      "calcSettingLabel": "Calc setting",
+      "selectOptionPlaceholder": "Select option",
+      "addButton": "Add",
+      "table": {
+        "calcSetting": "Calc setting",
+        "salaryType": "Salary type",
+        "amount": "Amount",
+        "course": "Course",
+        "group": "Group",
+        "teacher": "Teacher",
+        "student": "Student",
+        "createdBy": "Created by",
+        "updatedAt": "Updated at",
+        "actions": "Actions",
+        "noData": "No Data",
+        "delete": "Delete"
+      },
+      "calculate": "Calculate",
+      "showInTeacherProfile": "Show in teacher's profile"
+    },
+    "totalExpenses": {
+      "title": "Total Expenses",
+      "summary": {
+        "totalExpenses": "Total expenses:"
+      },
+      "chart": {
+        "totalExpensesLabel": "Total Expenses"
+      },
+      "filters": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "dateFormatPlaceholder": "DD.MM.YYYY",
+        "description": "Description",
+        "selectCategory": "Select category",
+        "payee": "Payee",
+        "methodPay": "Method pay",
+        "staffName": "Staff Name",
+        "filter": "Filter"
+      },
+      "selectPlaceholder": "Select",
+      "form": {
+        "title": "New expense",
+        "description": "Description",
+        "date": "Date",
+        "category": "Category",
+        "payee": "Payee",
+        "sum": "Sum",
+        "methodPay": "Method pay",
+        "submit": "Submit"
+      }
+    },
+    "withdraw": {
+      "title": "Withdraw",
+      "stats": {
+        "totalWithdrawals": "Total withdrawals:"
+      },
+      "filters": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "namePhone": "Name or Phone",
+        "sum": "Sum",
+        "course": "Course",
+        "filter": "Filter",
+        "selectPlaceholder": "Select"
+      },
+      "table": {
+        "date": "Date",
+        "name": "Name",
+        "sum": "Sum",
+        "comment": "Comment",
+        "creator": "Creator",
+        "actions": "Actions",
+        "notAssigned": "not assigned",
+        "deleteTitle": "Delete",
+        "empty": "No withdrawals found"
+      },
+      "footer": {
+        "showing": "Showing",
+        "of": "of",
+        "withdrawals": "withdrawals"
+      }
+    }
   }
 }

@@ -123,5 +123,448 @@
       "tags": "Teglar",
       "tagsList": "Teglar"
     }
+  },
+  "dashboard": {
+    "stats": {
+      "activeLeads": "Faol lidlar",
+      "activeStudents": "Faol o'quvchilar",
+      "groups": "Guruhlar",
+      "debtors": "Qarzdorlar",
+      "inTrialLesson": "Sinov darsida",
+      "paidDuringMonth": "Oy davomida to'lagan",
+      "leftActiveGroup": "Faol guruhni tark etgan",
+      "leftAfterTrial": "Sinov davridan keyin ketgan",
+      "goToPage": "{{label}} sahifasiga o'tish"
+    },
+    "schedule": {
+      "title": "Jadval",
+      "tabs": {
+        "odd": "Toq kunlar",
+        "even": "Juft kunlar",
+        "other": "Boshqa"
+      },
+      "horizontalViewTitle": "Gorizontal ko'rinish",
+      "horizontal": "Gorizontal",
+      "verticalViewTitle": "Vertikal ko'rinish",
+      "vertical": "Vertikal",
+      "studentsFractionSlash": "{{count}} o'q./{{max}}",
+      "studentsCountSuffix": "{{count}}/{{max}} o'q.",
+      "emptyState": "Bu kun turi uchun jadval mavjud emas"
+    },
+    "chart": {
+      "currency": "UZS"
+    }
+  },
+  "students": {
+    "header": {
+      "title": "O'quvchilar",
+      "quantity": "Soni — {{count}}",
+      "addNew": "Qo'shish"
+    },
+    "filters": {
+      "searchPlaceholder": "Ism yoki telefon bo'yicha qidirish",
+      "byCourses": "Kurslar bo'yicha",
+      "status": "Holat",
+      "byTeacher": "O'qituvchi bo'yicha",
+      "financial": "Moliyaviy",
+      "byTags": "Teglar bo'yicha",
+      "startDate": "Boshlanish sanasi",
+      "endDate": "Tugash sanasi",
+      "clearAll": "Barchasini tozalash",
+      "active": "Faol",
+      "inactive": "Nofaol",
+      "paid": "To'langan",
+      "inDebt": "Qarzdor",
+      "new": "Yangi",
+      "vip": "VIP"
+    },
+    "table": {
+      "selectedCount_one": "{{count}} ta tanlandi",
+      "selectedCount_other": "{{count}} ta tanlandi",
+      "filters": "Filtrlar",
+      "columns": "Ustunlar",
+      "photo": "Rasm",
+      "name": "Ism",
+      "phone": "Telefon",
+      "groups": "Guruhlar",
+      "teachers": "O'qituvchilar",
+      "trainingDates": "Dars sanalari",
+      "balance": "Balans",
+      "comment": "Izoh",
+      "addToGroup": "Guruhga qo'shish",
+      "mailSelected": "Tanlanganlarga xabar",
+      "deleteSelected": "Tanlanganlarni o'chirish",
+      "noStudentsFound": "O'quvchilar topilmadi"
+    },
+    "pagination": {
+      "range": "{{from}}–{{to}} / {{total}}"
+    },
+    "actions": {
+      "editStudent": "O'quvchini tahrirlash",
+      "addPayment": "To'lov qo'shish",
+      "remove": "O'chirish"
+    },
+    "addToGroup": {
+      "title": "O'quvchini guruhga qo'shish",
+      "studentsSelected_one": "{{count}} ta o'quvchi tanlandi",
+      "studentsSelected_other": "{{count}} ta o'quvchi tanlandi",
+      "selectGroup": "Guruhni tanlang",
+      "submit": "O'quvchini guruhga qo'shish"
+    },
+    "editDrawer": {
+      "title": "O'quvchini tahrirlash",
+      "phone": "Telefon",
+      "name": "Ism",
+      "dob": "Tug'ilgan sana",
+      "gender": "Jinsi",
+      "male": "Erkak",
+      "female": "Ayol",
+      "additionalContacts": "Qo'shimcha aloqalar",
+      "addToGroup": "+ Guruhga qo'shish",
+      "setPassword": "+ Parol o'rnatish",
+      "submit": "Yuborish"
+    },
+    "contacts": {
+      "phone": "Telefon",
+      "key": "Kalit",
+      "profile": "Profil",
+      "email": "Email",
+      "telegram": "Telegram",
+      "education": "Ta'lim",
+      "location": "Manzil",
+      "card": "Karta"
+    },
+    "deleteDialog": {
+      "title": "O'quvchini o'chirish",
+      "message": "Ushbu o'quvchini o'chirishni xohlaysizmi?",
+      "cancel": "Bekor qilish",
+      "confirm": "O'chirish"
+    }
+  },
+  "teachers": {
+    "title": "O'qituvchilar",
+    "countSuffix": "ta",
+    "actions": {
+      "addNew": "QO'SHISH",
+      "import": "Import"
+    },
+    "alert": {
+      "title": "Diqqat!",
+      "description": "CEO profillari o'qituvchilarni boshqa filiallarga bog'lashi mumkin."
+    },
+    "search": {
+      "placeholder": "O'qituvchini qidirish"
+    },
+    "table": {
+      "groupsCount": "guruh",
+      "noData": "Ma'lumot yo'q"
+    },
+    "menu": {
+      "edit": "Tahrirlash",
+      "sms": "SMS",
+      "delete": "O'chirish"
+    },
+    "sms": {
+      "recipientLabel": "o'qituvchi"
+    },
+    "drawer": {
+      "editTitle": "O'qituvchini tahrirlash",
+      "addTitle": "Yangi o'qituvchi qo'shish"
+    },
+    "form": {
+      "phone": "Telefon",
+      "phonePlaceholder": "XX XXX XX XX",
+      "name": "Ism",
+      "namePlaceholder": "To'liq ism",
+      "branch": "Filial",
+      "branchPlaceholder": "Filial nomi",
+      "dob": "Tug'ilgan sana",
+      "gender": "Jinsi",
+      "genderMale": "Erkak",
+      "genderFemale": "Ayol",
+      "photo": "Rasm",
+      "photoPreviewAlt": "ko'rinish",
+      "noFileChosen": "Fayl tanlanmagan",
+      "browse": "Tanlash",
+      "hidePasswordToggle": "− Parolni yashirish",
+      "setPasswordToggle": "+ Parol o'rnatish",
+      "passwordPlaceholder": "Parolni kiriting",
+      "submit": "Yuborish"
+    },
+    "deleteDialog": {
+      "title": "O'qituvchini o'chirish",
+      "message": "Ushbu o'qituvchini o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
+      "cancel": "Bekor qilish",
+      "confirm": "O'chirish"
+    },
+    "validation": {
+      "phoneRequired": "Telefon kiritilishi shart",
+      "nameRequired": "Ism kiritilishi shart",
+      "dobRequired": "Tug'ilgan sana kiritilishi shart",
+      "genderRequired": "Jinsi kiritilishi shart"
+    }
+  },
+  "groups": {
+    "pageTitle": "Guruhlar",
+    "summary": "{{branch}} — {{count}} ta",
+    "actions": {
+      "addNew": "Qo'shish",
+      "exportExcel": "Excelga eksport",
+      "edit": "Tahrirlash",
+      "delete": "O'chirish",
+      "submit": "Yuborish"
+    },
+    "filters": {
+      "status": "Holat",
+      "teacher": "O'qituvchi",
+      "courses": "Kurslar",
+      "days": "Kunlar",
+      "tags": "Teglar",
+      "startDate": "Boshlanish sanasi",
+      "endDate": "Tugash sanasi",
+      "clearAll": "Barchasini tozalash",
+      "filtersButton": "Filtrlar",
+      "columns": "Ustunlar"
+    },
+    "options": {
+      "status": {
+        "active": "🟢 Faol",
+        "archive": "🔴 Arxiv",
+        "completed": "🔵 Tugallangan"
+      },
+      "days": {
+        "odd": "Toq kunlar",
+        "even": "Juft kunlar",
+        "every": "Har kuni"
+      },
+      "tags": {
+        "new": "Yangi",
+        "popular": "Mashhur",
+        "vip": "VIP",
+        "trial": "Sinov"
+      }
+    },
+    "table": {
+      "group": "Guruh",
+      "course": "Kurs",
+      "teacher": "O'qituvchi",
+      "days": "Kunlar",
+      "trainingDates": "Dars sanalari",
+      "weekOfStudy": "O'quv haftasi",
+      "room": "Xona",
+      "tags": "Teglar",
+      "students": "O'quvchilar",
+      "actions": "Amallar",
+      "empty": "Guruhlar topilmadi"
+    },
+    "export": {
+      "number": "#",
+      "group": "Guruh",
+      "course": "Kurs",
+      "teacher": "O'qituvchi",
+      "days": "Kunlar",
+      "startDate": "Boshlanish sanasi",
+      "endDate": "Tugash sanasi",
+      "room": "Xona",
+      "students": "O'quvchilar",
+      "status": "Holat"
+    },
+    "form": {
+      "addTitle": "Yangi guruh qo'shish",
+      "editTitle": "Guruhni tahrirlash",
+      "name": "Nomi",
+      "course": "Kursni tanlang",
+      "teacher": "O'qituvchini tanlang",
+      "days": "Kunlar",
+      "room": "Xonani tanlang",
+      "lessonStartTime": "Dars boshlanish vaqti",
+      "startDate": "Guruh boshlanish sanasi",
+      "endDate": "Guruh tugash sanasi",
+      "tags": "Teglar",
+      "status": "Holat"
+    },
+    "deleteDialog": {
+      "title": "Guruhni o'chirish",
+      "body": "Ushbu guruhni o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
+      "cancel": "Bekor qilish",
+      "confirm": "O'chirish"
+    }
+  },
+  "finance": {
+    "allPayments": {
+      "title": "Barcha to'lovlar",
+      "stats": {
+        "totalRevenue": "Umumiy daromad:",
+        "totalNetProfit": "Umumiy sof foyda:",
+        "details": "Batafsil"
+      },
+      "filters": {
+        "title": "Filtrlar",
+        "dateFrom": "Sanadan",
+        "dateTo": "Sanagacha",
+        "namePhone": "Ism yoki telefon",
+        "searchPlaceholder": "Qidirish...",
+        "group": "Guruhni tanlang",
+        "course": "Kurs",
+        "teacher": "O'qituvchi",
+        "methodPay": "To'lov usuli",
+        "sum": "Summa",
+        "amountPlaceholder": "Summa",
+        "staffName": "Xodim ismi",
+        "fromCreatedDate": "Yaratilgan sanadan",
+        "toCreatedDate": "Yaratilgan sanagacha",
+        "noDateSelected": "Sana tanlanmagan",
+        "reset": "Tozalash",
+        "filter": "Filtr",
+        "selectPlaceholder": "Tanlang"
+      },
+      "table": {
+        "date": "Sana",
+        "name": "Ism",
+        "sum": "Summa",
+        "methodPay": "To'lov usuli",
+        "teacher": "O'qituvchi",
+        "comment": "Izoh",
+        "creator": "Yaratuvchi",
+        "empty": "To'lovlar topilmadi"
+      },
+      "footer": {
+        "showing": "Ko'rsatilmoqda",
+        "of": "/",
+        "payments": "to'lov"
+      }
+    },
+    "debtors": {
+      "title": "Qarzdorlar",
+      "quantity": "Soni — {{count}}",
+      "summary": {
+        "total": "Jami:",
+        "totalOnPeriod": "Davr uchun jami:"
+      },
+      "filters": {
+        "search": "Qidirish",
+        "searchBy": "Qidirish (bo'yicha)",
+        "status": "Holat",
+        "group": "Guruh",
+        "debtAmountFrom": "Qarz summasi (dan)",
+        "debtAmountTo": "Qarz summasi (gacha)",
+        "dateFrom": "Sanadan",
+        "dateTo": "Sanagacha",
+        "task": "Vazifa",
+        "noDateSelected": "Sana tanlanmagan",
+        "filter": "Filtr",
+        "selectPlaceholder": "Tanlang"
+      },
+      "table": {
+        "rowsPerPage": "Sahifadagi qatorlar:",
+        "filtersButton": "Filtrlar",
+        "name": "Ism",
+        "phone": "Telefon",
+        "balance": "Balans",
+        "totalOnPeriod": "Davr uchun jami",
+        "group": "Guruh",
+        "comment": "Izoh",
+        "task": "Vazifa",
+        "status": "Holat",
+        "sendSmsSelected": "Tanlanganlarga SMS yuborish",
+        "selectToSendSms": "SMS yuborish uchun o'quvchilarni tanlang",
+        "noData": "Ma'lumot yo'q"
+      },
+      "pagination": {
+        "of": "/"
+      }
+    },
+    "salaries": {
+      "title": "Maoshlar",
+      "settingsToggle": "Maoshlarni sozlash",
+      "step1": {
+        "description": "Maosh hisoblash uchun standart qiymatni belgilang"
+      },
+      "step2": {
+        "description": "Har qanday o'qituvchi / kurs / guruh / o'quvchi uchun alohida hisob-kitob sozlashingiz mumkin."
+      },
+      "calcValueLabel": "Hisob qiymati",
+      "calcSettingLabel": "Hisob sozlamasi",
+      "selectOptionPlaceholder": "Variantni tanlang",
+      "addButton": "Qo'shish",
+      "table": {
+        "calcSetting": "Hisob sozlamasi",
+        "salaryType": "Maosh turi",
+        "amount": "Summa",
+        "course": "Kurs",
+        "group": "Guruh",
+        "teacher": "O'qituvchi",
+        "student": "O'quvchi",
+        "createdBy": "Yaratdi",
+        "updatedAt": "Yangilandi",
+        "actions": "Amallar",
+        "noData": "Ma'lumot yo'q",
+        "delete": "O'chirish"
+      },
+      "calculate": "Hisoblash",
+      "showInTeacherProfile": "O'qituvchi profilida ko'rsatish"
+    },
+    "totalExpenses": {
+      "title": "Umumiy xarajatlar",
+      "summary": {
+        "totalExpenses": "Umumiy xarajatlar:"
+      },
+      "chart": {
+        "totalExpensesLabel": "Umumiy xarajatlar"
+      },
+      "filters": {
+        "dateFrom": "Sanadan",
+        "dateTo": "Sanagacha",
+        "dateFormatPlaceholder": "KK.OO.YYYY",
+        "description": "Tavsif",
+        "selectCategory": "Kategoriyani tanlang",
+        "payee": "Qabul qiluvchi",
+        "methodPay": "To'lov usuli",
+        "staffName": "Xodim ismi",
+        "filter": "Filtr"
+      },
+      "selectPlaceholder": "Tanlang",
+      "form": {
+        "title": "Yangi xarajat",
+        "description": "Tavsif",
+        "date": "Sana",
+        "category": "Kategoriya",
+        "payee": "Qabul qiluvchi",
+        "sum": "Summa",
+        "methodPay": "To'lov usuli",
+        "submit": "Yuborish"
+      }
+    },
+    "withdraw": {
+      "title": "Yechib olish",
+      "stats": {
+        "totalWithdrawals": "Jami yechib olingan:"
+      },
+      "filters": {
+        "dateFrom": "Sanadan",
+        "dateTo": "Sanagacha",
+        "namePhone": "Ism yoki telefon",
+        "sum": "Summa",
+        "course": "Kurs",
+        "filter": "Filtr",
+        "selectPlaceholder": "Tanlang"
+      },
+      "table": {
+        "date": "Sana",
+        "name": "Ism",
+        "sum": "Summa",
+        "comment": "Izoh",
+        "creator": "Yaratuvchi",
+        "actions": "Amallar",
+        "notAssigned": "belgilanmagan",
+        "deleteTitle": "O'chirish",
+        "empty": "Yechib olishlar topilmadi"
+      },
+      "footer": {
+        "showing": "Ko'rsatilmoqda",
+        "of": "/",
+        "withdrawals": "ta yechib olish"
+      }
+    }
   }
 }

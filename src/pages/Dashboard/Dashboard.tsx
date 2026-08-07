@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Box, Paper, Typography, Tooltip } from "@mui/material";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip as RTooltip,
@@ -47,14 +48,14 @@ const PEAK_POINT = MONTHLY_REVENUE.reduce(
 // ─── Stat card config ─────────────────────────────────────────────────────────
 
 const STATS = [
-  { key: "leads",        label: "Active leads",            value: 1,   route: "/leads",    icon: <FiUsers size={35} /> },
-  { key: "students",     label: "Active students",         value: 26, route: "/students", icon: <FiUserCheck size={35} /> },
-  { key: "groups",       label: "Groups",                  value: 6,  route: "/groups",   icon: <FiLayers size={35} /> },
-  { key: "debtors",      label: "Debtors",                 value: 6, route: "/students", filter: "debt", icon: <FiAlertTriangle size={35} /> },
-  { key: "trial",        label: "In a trial lesson",       value: 2,  route: "/students", filter: "trial", icon: <FiPlayCircle size={35} /> },
-  { key: "paid",         label: "Paid during the month",   value: 4, route: "/payments", icon: <FiDollarSign size={35} /> },
-  { key: "leftActive",   label: "Left active group",       value: 1, route: "/students", filter: "left_active", icon: <FiUserMinus size={35} /> },
-  { key: "leftTrial",    label: "Left after trial period", value: 0,   route: "/students", filter: "left_trial", icon: <FiUserX size={40} /> },
+  { key: "leads",        labelKey: "dashboard.stats.activeLeads",       value: 1,   route: "/leads",    icon: <FiUsers size={35} /> },
+  { key: "students",     labelKey: "dashboard.stats.activeStudents",    value: 26, route: "/students", icon: <FiUserCheck size={35} /> },
+  { key: "groups",       labelKey: "dashboard.stats.groups",            value: 6,  route: "/groups",   icon: <FiLayers size={35} /> },
+  { key: "debtors",      labelKey: "dashboard.stats.debtors",           value: 6, route: "/students", filter: "debt", icon: <FiAlertTriangle size={35} /> },
+  { key: "trial",        labelKey: "dashboard.stats.inTrialLesson",     value: 2,  route: "/students", filter: "trial", icon: <FiPlayCircle size={35} /> },
+  { key: "paid",         labelKey: "dashboard.stats.paidDuringMonth",   value: 4, route: "/payments", icon: <FiDollarSign size={35} /> },
+  { key: "leftActive",   labelKey: "dashboard.stats.leftActiveGroup",   value: 1, route: "/students", filter: "left_active", icon: <FiUserMinus size={35} /> },
+  { key: "leftTrial",    labelKey: "dashboard.stats.leftAfterTrial",    value: 0,   route: "/students", filter: "left_trial", icon: <FiUserX size={40} /> },
 ];
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
@@ -73,16 +74,17 @@ for (let m = TIME_START; m <= TIME_END; m += 30) {
 const pct = (mins: number) =>
   `${((mins / TOTAL_MINS) * 100).toFixed(3)}%`;
 
-const formatChartValue = (value: number) => {
-  if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B UZS`;
-  if (value >= 1000000) return `${(value / 1000000).toFixed(0)} 000 000 UZS`;
-  return `${new Intl.NumberFormat("uz-UZ").format(value)} UZS`;
+const formatChartValue = (value: number, currency: string) => {
+  if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B ${currency}`;
+  if (value >= 1000000) return `${(value / 1000000).toFixed(0)} 000 000 ${currency}`;
+  return `${new Intl.NumberFormat("uz-UZ").format(value)} ${currency}`;
 };
 
 // ─── Custom chart tooltip ─────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ChartTooltip = ({ active, payload, label }: any) => {
+  const { t } = useTranslation();
   if (!active || !payload?.length) return null;
   return (
     <Box sx={{
@@ -92,7 +94,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
     }}>
       <Typography sx={{ fontSize: 12, color: "#6b7280", fontWeight: 700 }}>{label}</Typography>
       <Typography sx={{ fontSize: 15, fontWeight: 800, color: "#f97316", mt: 0.3 }}>
-        {formatChartValue(payload[0].value)}
+        {formatChartValue(payload[0].value, t("dashboard.chart.currency"))}
       </Typography>
     </Box>
   );
@@ -101,6 +103,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const Dashboard = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [tab,         setTab        ] = useState<ScheduleTab>("odd");
   const [orientation, setOrientation] = useState<ScheduleOrientation>("horizontal");
@@ -119,7 +122,9 @@ export const Dashboard = () => {
   };
 
   const tabLabel: Record<ScheduleTab, string> = {
-    odd: "Odd days", even: "Even days", other: "Other",
+    odd: t("dashboard.schedule.tabs.odd"),
+    even: t("dashboard.schedule.tabs.even"),
+    other: t("dashboard.schedule.tabs.other"),
   };
   const tabs: ScheduleTab[] = ["odd", "even", "other"];
 
@@ -141,8 +146,8 @@ export const Dashboard = () => {
         "@media(max-width:1280px)": { gridTemplateColumns: "repeat(4,1fr)" },
         "@media(max-width:640px)":  { gridTemplateColumns: "repeat(2,1fr)" },
       }}>
-        {STATS.map(({ key, label, value, route, filter, icon }) => (
-          <Tooltip key={key} title={`${label} sahifasiga o'tish`} placement="top" arrow>
+        {STATS.map(({ key, labelKey, value, route, filter, icon }) => (
+          <Tooltip key={key} title={t("dashboard.stats.goToPage", { label: t(labelKey) })} placement="top" arrow>
             <Paper
               elevation={0}
               onClick={() => goTo(route, filter)}
@@ -173,7 +178,7 @@ export const Dashboard = () => {
                  minHeight: 32, display: "flex",
                 alignItems: "center", justifyContent: "center",
               }}>
-                {label}
+                {t(labelKey)}
               </Typography>
               <Typography sx={{ fontSize: 32,  color: "#022081", lineHeight: 1 }}>
                 {value}
@@ -204,7 +209,7 @@ export const Dashboard = () => {
               <YAxis
                 tick={{ fontSize: 12, fill: "#6b7280" }}
                 axisLine={false} tickLine={false}
-                tickFormatter={(v) => formatChartValue(v as number)}
+                tickFormatter={(v) => formatChartValue(v as number, t("dashboard.chart.currency"))}
                 width={130}
               />
               <RTooltip content={<ChartTooltip />} />
@@ -263,14 +268,14 @@ export const Dashboard = () => {
 
           {/* Title */}
           <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
-            Schedule
+            {t("dashboard.schedule.title")}
           </Typography>
 
           {/* Orientation toggle */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <button
               onClick={() => setOrientation("horizontal")}
-              title="Gorizontal ko'rinish"
+              title={t("dashboard.schedule.horizontalViewTitle")}
               style={{
                 background: orientation === "horizontal" ? "#fff7ed" : "transparent",
                 border: orientation === "horizontal" ? "1px solid #f97316" : "1px solid #e5e7eb",
@@ -281,11 +286,11 @@ export const Dashboard = () => {
               }}
             >
               <MdViewStream size={16} />
-              Horizontal
+              {t("dashboard.schedule.horizontal")}
             </button>
             <button
               onClick={() => setOrientation("vertical")}
-              title="Vertikal ko'rinish"
+              title={t("dashboard.schedule.verticalViewTitle")}
               style={{
                 background: orientation === "vertical" ? "#fff7ed" : "transparent",
                 border: orientation === "vertical" ? "1px solid #f97316" : "1px solid #e5e7eb",
@@ -296,7 +301,7 @@ export const Dashboard = () => {
               }}
             >
               <MdViewColumn size={16} />
-              Vertical
+              {t("dashboard.schedule.vertical")}
             </button>
           </Box>
         </Box>
@@ -418,7 +423,7 @@ export const Dashboard = () => {
                                       background: "rgba(0,0,0,0.2)", borderRadius: "3px",
                                       px: 0.6, fontSize: 9, color: "#fff", fontWeight: 700,
                                     }}>
-                                      {ev.students ?? 0} st./{ev.maxStudents}
+                                      {t("dashboard.schedule.studentsFractionSlash", { count: ev.students ?? 0, max: ev.maxStudents })}
                                     </Box>
                                   )}
                                 </Box>
@@ -549,7 +554,7 @@ export const Dashboard = () => {
                                 </Typography>
                                 {ev.students > 0 && (
                                   <Typography sx={{ fontSize: 8, color: "rgba(255,255,255,0.8)", mt: 0.25 }}>
-                                    {ev.students}/{ev.maxStudents} st.
+                                    {t("dashboard.schedule.studentsCountSuffix", { count: ev.students, max: ev.maxStudents })}
                                   </Typography>
                                 )}
                               </Box>
@@ -578,7 +583,7 @@ export const Dashboard = () => {
         {visibleEvents.length === 0 && (
           <Box sx={{ py: 6, textAlign: "center" }}>
             <Typography sx={{ color: "#9ca3af", fontSize: 14 }}>
-              Bu kun turi uchun jadval mavjud emas
+              {t("dashboard.schedule.emptyState")}
             </Typography>
           </Box>
         )}

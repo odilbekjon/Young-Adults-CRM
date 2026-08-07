@@ -123,5 +123,452 @@
       "tags": "Теги",
       "tagsList": "Теги"
     }
+  },
+  "dashboard": {
+    "stats": {
+      "activeLeads": "Активные лиды",
+      "activeStudents": "Активные студенты",
+      "groups": "Группы",
+      "debtors": "Должники",
+      "inTrialLesson": "На пробном занятии",
+      "paidDuringMonth": "Оплатили за месяц",
+      "leftActiveGroup": "Покинули активную группу",
+      "leftAfterTrial": "Покинули после пробного периода",
+      "goToPage": "Перейти на страницу «{{label}}»"
+    },
+    "schedule": {
+      "title": "Расписание",
+      "tabs": {
+        "odd": "Нечётные дни",
+        "even": "Чётные дни",
+        "other": "Другое"
+      },
+      "horizontalViewTitle": "Горизонтальный вид",
+      "horizontal": "Горизонтально",
+      "verticalViewTitle": "Вертикальный вид",
+      "vertical": "Вертикально",
+      "studentsFractionSlash": "{{count}} ст./{{max}}",
+      "studentsCountSuffix": "{{count}}/{{max}} ст.",
+      "emptyState": "Для этого типа дня расписание отсутствует"
+    },
+    "chart": {
+      "currency": "UZS"
+    }
+  },
+  "students": {
+    "header": {
+      "title": "Студенты",
+      "quantity": "Количество — {{count}}",
+      "addNew": "Добавить"
+    },
+    "filters": {
+      "searchPlaceholder": "Поиск по имени или телефону",
+      "byCourses": "По курсам",
+      "status": "Статус",
+      "byTeacher": "По учителю",
+      "financial": "Финансы",
+      "byTags": "По тегам",
+      "startDate": "Дата начала",
+      "endDate": "Дата окончания",
+      "clearAll": "Сбросить всё",
+      "active": "Активен",
+      "inactive": "Неактивен",
+      "paid": "Оплачено",
+      "inDebt": "В долгу",
+      "new": "Новый",
+      "vip": "VIP"
+    },
+    "table": {
+      "selectedCount_one": "Выбран {{count}}",
+      "selectedCount_few": "Выбрано {{count}}",
+      "selectedCount_many": "Выбрано {{count}}",
+      "selectedCount_other": "Выбрано {{count}}",
+      "filters": "Фильтры",
+      "columns": "Столбцы",
+      "photo": "Фото",
+      "name": "Имя",
+      "phone": "Телефон",
+      "groups": "Группы",
+      "teachers": "Учителя",
+      "trainingDates": "Даты занятий",
+      "balance": "Баланс",
+      "comment": "Комментарий",
+      "addToGroup": "Добавить в группу",
+      "mailSelected": "Написать выбранным",
+      "deleteSelected": "Удалить выбранных",
+      "noStudentsFound": "Студенты не найдены"
+    },
+    "pagination": {
+      "range": "{{from}}–{{to}} из {{total}}"
+    },
+    "actions": {
+      "editStudent": "Редактировать студента",
+      "addPayment": "Добавить платёж",
+      "remove": "Удалить"
+    },
+    "addToGroup": {
+      "title": "Добавить студента в группу",
+      "studentsSelected_one": "Выбран {{count}} студент",
+      "studentsSelected_few": "Выбрано {{count}} студента",
+      "studentsSelected_many": "Выбрано {{count}} студентов",
+      "studentsSelected_other": "Выбрано {{count}} студентов",
+      "selectGroup": "Выберите группу",
+      "submit": "Добавить студента в группу"
+    },
+    "editDrawer": {
+      "title": "Редактировать студента",
+      "phone": "Телефон",
+      "name": "Имя",
+      "dob": "Дата рождения",
+      "gender": "Пол",
+      "male": "Мужской",
+      "female": "Женский",
+      "additionalContacts": "Дополнительные контакты",
+      "addToGroup": "+ Добавить в группу",
+      "setPassword": "+ Установить пароль",
+      "submit": "Отправить"
+    },
+    "contacts": {
+      "phone": "Телефон",
+      "key": "Ключ",
+      "profile": "Профиль",
+      "email": "Email",
+      "telegram": "Телеграм",
+      "education": "Образование",
+      "location": "Адрес",
+      "card": "Карта"
+    },
+    "deleteDialog": {
+      "title": "Удалить студента",
+      "message": "Вы уверены, что хотите удалить этого студента?",
+      "cancel": "Отмена",
+      "confirm": "Удалить"
+    }
+  },
+  "teachers": {
+    "title": "Учителя",
+    "countSuffix": "учителей",
+    "actions": {
+      "addNew": "ДОБАВИТЬ",
+      "import": "Импорт"
+    },
+    "alert": {
+      "title": "Внимание!",
+      "description": "Профили CEO могут связывать учителей с другими филиалами."
+    },
+    "search": {
+      "placeholder": "Поиск учителя"
+    },
+    "table": {
+      "groupsCount": "групп",
+      "noData": "Нет данных"
+    },
+    "menu": {
+      "edit": "Редактировать",
+      "sms": "SMS",
+      "delete": "Удалить"
+    },
+    "sms": {
+      "recipientLabel": "учитель"
+    },
+    "drawer": {
+      "editTitle": "Редактировать учителя",
+      "addTitle": "Добавить нового учителя"
+    },
+    "form": {
+      "phone": "Телефон",
+      "phonePlaceholder": "XX XXX XX XX",
+      "name": "Имя",
+      "namePlaceholder": "Полное имя",
+      "branch": "Филиал",
+      "branchPlaceholder": "Название филиала",
+      "dob": "Дата рождения",
+      "gender": "Пол",
+      "genderMale": "Мужской",
+      "genderFemale": "Женский",
+      "photo": "Фото",
+      "photoPreviewAlt": "превью",
+      "noFileChosen": "Файл не выбран",
+      "browse": "Обзор",
+      "hidePasswordToggle": "− Скрыть пароль",
+      "setPasswordToggle": "+ Установить пароль",
+      "passwordPlaceholder": "Введите пароль",
+      "submit": "Отправить"
+    },
+    "deleteDialog": {
+      "title": "Удалить учителя",
+      "message": "Вы уверены, что хотите удалить этого учителя? Это действие нельзя отменить.",
+      "cancel": "Отмена",
+      "confirm": "Удалить"
+    },
+    "validation": {
+      "phoneRequired": "Телефон обязателен",
+      "nameRequired": "Имя обязательно",
+      "dobRequired": "Дата рождения обязательна",
+      "genderRequired": "Пол обязателен"
+    }
+  },
+  "groups": {
+    "pageTitle": "Группы",
+    "summary": "{{branch}} — {{count}} групп",
+    "actions": {
+      "addNew": "Добавить",
+      "exportExcel": "Экспорт в Excel",
+      "edit": "Редактировать",
+      "delete": "Удалить",
+      "submit": "Отправить"
+    },
+    "filters": {
+      "status": "Статус",
+      "teacher": "Учитель",
+      "courses": "Курсы",
+      "days": "Дни",
+      "tags": "Теги",
+      "startDate": "Дата начала",
+      "endDate": "Дата окончания",
+      "clearAll": "Сбросить всё",
+      "filtersButton": "Фильтры",
+      "columns": "Столбцы"
+    },
+    "options": {
+      "status": {
+        "active": "🟢 Активна",
+        "archive": "🔴 Архив",
+        "completed": "🔵 Завершена"
+      },
+      "days": {
+        "odd": "Нечётные дни",
+        "even": "Чётные дни",
+        "every": "Каждый день"
+      },
+      "tags": {
+        "new": "Новая",
+        "popular": "Популярная",
+        "vip": "VIP",
+        "trial": "Пробная"
+      }
+    },
+    "table": {
+      "group": "Группа",
+      "course": "Курс",
+      "teacher": "Учитель",
+      "days": "Дни",
+      "trainingDates": "Даты занятий",
+      "weekOfStudy": "Неделя обучения",
+      "room": "Кабинет",
+      "tags": "Теги",
+      "students": "Студенты",
+      "actions": "Действия",
+      "empty": "Группы не найдены"
+    },
+    "export": {
+      "number": "#",
+      "group": "Группа",
+      "course": "Курс",
+      "teacher": "Учитель",
+      "days": "Дни",
+      "startDate": "Дата начала",
+      "endDate": "Дата окончания",
+      "room": "Кабинет",
+      "students": "Студенты",
+      "status": "Статус"
+    },
+    "form": {
+      "addTitle": "Добавить новую группу",
+      "editTitle": "Редактировать группу",
+      "name": "Название",
+      "course": "Выберите курс",
+      "teacher": "Выберите учителя",
+      "days": "Дни",
+      "room": "Выберите кабинет",
+      "lessonStartTime": "Время начала занятия",
+      "startDate": "Дата начала группы",
+      "endDate": "Дата окончания группы",
+      "tags": "Теги",
+      "status": "Статус"
+    },
+    "deleteDialog": {
+      "title": "Удалить группу",
+      "body": "Вы уверены, что хотите удалить эту группу? Это действие нельзя отменить.",
+      "cancel": "Отмена",
+      "confirm": "Удалить"
+    }
+  },
+  "finance": {
+    "allPayments": {
+      "title": "Все платежи",
+      "stats": {
+        "totalRevenue": "Общая выручка:",
+        "totalNetProfit": "Общая чистая прибыль:",
+        "details": "Подробнее"
+      },
+      "filters": {
+        "title": "Фильтры",
+        "dateFrom": "Дата от",
+        "dateTo": "Дата до",
+        "namePhone": "Имя или телефон",
+        "searchPlaceholder": "Поиск...",
+        "group": "Выберите группу",
+        "course": "Курс",
+        "teacher": "Учитель",
+        "methodPay": "Способ оплаты",
+        "sum": "Сумма",
+        "amountPlaceholder": "Сумма",
+        "staffName": "Имя сотрудника",
+        "fromCreatedDate": "От даты создания",
+        "toCreatedDate": "До даты создания",
+        "noDateSelected": "Дата не выбрана",
+        "reset": "Сбросить",
+        "filter": "Фильтр",
+        "selectPlaceholder": "Выберите"
+      },
+      "table": {
+        "date": "Дата",
+        "name": "Имя",
+        "sum": "Сумма",
+        "methodPay": "Способ оплаты",
+        "teacher": "Учитель",
+        "comment": "Комментарий",
+        "creator": "Создатель",
+        "empty": "Платежи не найдены"
+      },
+      "footer": {
+        "showing": "Показано",
+        "of": "из",
+        "payments": "платежей"
+      }
+    },
+    "debtors": {
+      "title": "Должники",
+      "quantity": "Количество — {{count}}",
+      "summary": {
+        "total": "Всего:",
+        "totalOnPeriod": "Всего за период:"
+      },
+      "filters": {
+        "search": "Поиск",
+        "searchBy": "Искать по",
+        "status": "Статус",
+        "group": "Группа",
+        "debtAmountFrom": "Сумма долга (от)",
+        "debtAmountTo": "Сумма долга (до)",
+        "dateFrom": "Дата от",
+        "dateTo": "Дата до",
+        "task": "Задача",
+        "noDateSelected": "Дата не выбрана",
+        "filter": "Фильтр",
+        "selectPlaceholder": "Выберите"
+      },
+      "table": {
+        "rowsPerPage": "Строк на странице:",
+        "filtersButton": "Фильтры",
+        "name": "Имя",
+        "phone": "Телефон",
+        "balance": "Баланс",
+        "totalOnPeriod": "Всего за период",
+        "group": "Группа",
+        "comment": "Комментарий",
+        "task": "Задача",
+        "status": "Статус",
+        "sendSmsSelected": "Отправить SMS выбранным",
+        "selectToSendSms": "Выберите студентов для отправки SMS",
+        "noData": "Нет данных"
+      },
+      "pagination": {
+        "of": "из"
+      }
+    },
+    "salaries": {
+      "title": "Зарплаты",
+      "settingsToggle": "Настройка зарплат",
+      "step1": {
+        "description": "Установите значение по умолчанию для расчёта зарплаты"
+      },
+      "step2": {
+        "description": "Вы можете настроить индивидуальные расчёты для любых учителей / курсов / групп / студентов."
+      },
+      "calcValueLabel": "Значение расчёта",
+      "calcSettingLabel": "Настройка расчёта",
+      "selectOptionPlaceholder": "Выберите вариант",
+      "addButton": "Добавить",
+      "table": {
+        "calcSetting": "Настройка расчёта",
+        "salaryType": "Тип зарплаты",
+        "amount": "Сумма",
+        "course": "Курс",
+        "group": "Группа",
+        "teacher": "Учитель",
+        "student": "Студент",
+        "createdBy": "Создал",
+        "updatedAt": "Обновлено",
+        "actions": "Действия",
+        "noData": "Нет данных",
+        "delete": "Удалить"
+      },
+      "calculate": "Рассчитать",
+      "showInTeacherProfile": "Показывать в профиле учителя"
+    },
+    "totalExpenses": {
+      "title": "Общие расходы",
+      "summary": {
+        "totalExpenses": "Общие расходы:"
+      },
+      "chart": {
+        "totalExpensesLabel": "Общие расходы"
+      },
+      "filters": {
+        "dateFrom": "Дата от",
+        "dateTo": "Дата до",
+        "dateFormatPlaceholder": "ДД.ММ.ГГГГ",
+        "description": "Описание",
+        "selectCategory": "Выберите категорию",
+        "payee": "Получатель",
+        "methodPay": "Способ оплаты",
+        "staffName": "Имя сотрудника",
+        "filter": "Фильтр"
+      },
+      "selectPlaceholder": "Выберите",
+      "form": {
+        "title": "Новый расход",
+        "description": "Описание",
+        "date": "Дата",
+        "category": "Категория",
+        "payee": "Получатель",
+        "sum": "Сумма",
+        "methodPay": "Способ оплаты",
+        "submit": "Отправить"
+      }
+    },
+    "withdraw": {
+      "title": "Вывод средств",
+      "stats": {
+        "totalWithdrawals": "Всего выведено:"
+      },
+      "filters": {
+        "dateFrom": "Дата от",
+        "dateTo": "Дата до",
+        "namePhone": "Имя или телефон",
+        "sum": "Сумма",
+        "course": "Курс",
+        "filter": "Фильтр",
+        "selectPlaceholder": "Выберите"
+      },
+      "table": {
+        "date": "Дата",
+        "name": "Имя",
+        "sum": "Сумма",
+        "comment": "Комментарий",
+        "creator": "Создатель",
+        "actions": "Действия",
+        "notAssigned": "не назначено",
+        "deleteTitle": "Удалить",
+        "empty": "Выводы не найдены"
+      },
+      "footer": {
+        "showing": "Показано",
+        "of": "из",
+        "withdrawals": "выводов"
+      }
+    }
   }
 }

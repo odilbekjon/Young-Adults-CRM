@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { FiXCircle } from "react-icons/fi";
 import { BsCash } from "react-icons/bs";
+import { useTranslation } from "react-i18next";
 
 // ── Reuse the SAME student data source & types as the Students page ─────────
 import { buildFlatStudents, FlatStudent } from "../../../../constants/FlatStudents";
@@ -148,18 +149,21 @@ const Input = ({ value, onChange, placeholder }: {
   />
 );
 
-const Select = ({ value, onChange, options, placeholder = "Select" }: {
+const Select = ({ value, onChange, options, placeholder }: {
   value: string; onChange: (v: string) => void; options: string[]; placeholder?: string;
-}) => (
-  <select
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    className="w-full border border-gray-200 rounded-md px-2 py-[7px] text-xs text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-[#003366] cursor-pointer"
-  >
-    <option value="">{placeholder}</option>
-    {options.map((o) => <option key={o} value={o}>{o}</option>)}
-  </select>
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full border border-gray-200 rounded-md px-2 py-[7px] text-xs text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-[#003366] cursor-pointer"
+    >
+      <option value="">{placeholder ?? t("finance.withdraw.filters.selectPlaceholder")}</option>
+      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+};
 
 const SortIcon = ({ active, dir }: { active: boolean; dir: "asc" | "desc" }) => (
   <span className={`ml-1 text-[10px] ${active ? "text-[#003366]" : "text-gray-300"}`}>
@@ -173,6 +177,7 @@ type SortKey = "date" | "name" | "sum" | "creator";
 
 export const Withdraw = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Same student source/structure as the Students page
   const students = useMemo(() => buildFlatStudents(), []);
@@ -221,7 +226,7 @@ export const Withdraw = () => {
     <div className="p-6 bg-gray-50 min-h-screen">
 
       {/* Title */}
-      <h1 className="text-2xl font-semibold text-gray-900 mb-5">Withdraw</h1>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-5">{t("finance.withdraw.title")}</h1>
 
       {/* Top: stat card + chart */}
       <div className="grid grid-cols-5 gap-4 mb-5">
@@ -230,7 +235,7 @@ export const Withdraw = () => {
         <div className="col-span-2">
           <div className="bg-white rounded-xl border border-gray-200 border-l-[5px] border-l-[#003366] px-6 py-5 flex items-center justify-between shadow-sm h-full">
             <div>
-              <p className="text-sm text-gray-500 font-medium mb-2">Total withdrawals:</p>
+              <p className="text-sm text-gray-500 font-medium mb-2">{t("finance.withdraw.stats.totalWithdrawals")}</p>
               <p className="text-2xl font-bold text-gray-900 tracking-tight">
                 {fmt(TOTAL)}{" "}
                 <span className="text-base font-semibold text-gray-500">UZS</span>
@@ -283,23 +288,23 @@ export const Withdraw = () => {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 px-5 py-4">
         <div className="grid grid-cols-6 gap-3 items-end">
           <div>
-            <Label text="Date from" />
+            <Label text={t("finance.withdraw.filters.dateFrom")} />
             <Input value={dateFrom} onChange={setDateFrom} placeholder="01.05.2026" />
           </div>
           <div>
-            <Label text="Date to" />
+            <Label text={t("finance.withdraw.filters.dateTo")} />
             <Input value={dateTo} onChange={setDateTo} placeholder="31.05.2026" />
           </div>
           <div>
-            <Label text="Name or Phone" />
+            <Label text={t("finance.withdraw.filters.namePhone")} />
             <Input value={namePhone} onChange={setNamePhone} placeholder="" />
           </div>
           <div>
-            <Label text="Sum" />
+            <Label text={t("finance.withdraw.filters.sum")} />
             <Input value={sum} onChange={setSum} placeholder="" />
           </div>
           <div>
-            <Label text="Course" />
+            <Label text={t("finance.withdraw.filters.course")} />
             <Select value={course} onChange={setCourse} options={ALL_COURSES} />
           </div>
           <div>
@@ -307,7 +312,7 @@ export const Withdraw = () => {
               className="w-full bg-[#003366] text-white rounded-md py-[7px] text-xs font-medium hover:bg-[#002244] transition-colors"
               onClick={() => setPage(1)}
             >
-              Filter
+              {t("finance.withdraw.filters.filter")}
             </button>
           </div>
         </div>
@@ -321,18 +326,18 @@ export const Withdraw = () => {
               <TableRow sx={{ backgroundColor: "#f9fafb" }}>
                 {(
                   [
-                    { key: "date",    label: "Date" },
-                    { key: "name",    label: "Name" },
-                    { key: "sum",     label: "Sum" },
-                    { key: null,      label: "Comment" },
-                    { key: "creator", label: "Creator" },
-                    { key: null,      label: "Actions" },
+                    { key: "date",    label: t("finance.withdraw.table.date") },
+                    { key: "name",    label: t("finance.withdraw.table.name") },
+                    { key: "sum",     label: t("finance.withdraw.table.sum") },
+                    { key: null,      label: t("finance.withdraw.table.comment") },
+                    { key: "creator", label: t("finance.withdraw.table.creator") },
+                    { key: null,      label: t("finance.withdraw.table.actions") },
                   ] as { key: SortKey | null; label: string }[]
-                ).map(({ key, label }) => (
+                ).map(({ key, label }, idx) => (
                   <TableCell
-                    key={label}
+                    key={idx}
                     onClick={() => key && handleSort(key)}
-                    align={label === "Actions" ? "center" : "left"}
+                    align={idx === 5 ? "center" : "left"}
                     sx={{
                       fontWeight: 700,
                       fontSize: 12,
@@ -384,7 +389,7 @@ export const Withdraw = () => {
                     {/* Comment */}
                     <TableCell sx={{ fontSize: 12, py: 1.5, minWidth: 200 }}>
                       {w.comment === "not assigned" ? (
-                        <span className="text-gray-400 italic text-xs">not assigned</span>
+                        <span className="text-gray-400 italic text-xs">{t("finance.withdraw.table.notAssigned")}</span>
                       ) : (
                         <div>
                           <div className="flex items-center gap-2 mb-0.5">
@@ -410,7 +415,7 @@ export const Withdraw = () => {
                       <button
                         onClick={() => handleDelete(w.id)}
                         className="text-red-400 hover:text-red-600 transition-colors"
-                        title="Delete"
+                        title={t("finance.withdraw.table.deleteTitle")}
                       >
                         <FiXCircle size={20} />
                       </button>
@@ -422,7 +427,7 @@ export const Withdraw = () => {
               {paginated.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 4, color: "#9ca3af", fontSize: 13 }}>
-                    No withdrawals found
+                    {t("finance.withdraw.table.empty")}
                   </TableCell>
                 </TableRow>
               )}
@@ -433,11 +438,11 @@ export const Withdraw = () => {
         {/* Footer */}
         <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100">
           <span className="text-xs text-gray-500">
-            Showing{" "}
+            {t("finance.withdraw.footer.showing")}{" "}
             <strong className="text-gray-700">
               {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)}
             </strong>{" "}
-            of <strong className="text-gray-700">{filtered.length}</strong> withdrawals
+            {t("finance.withdraw.footer.of")} <strong className="text-gray-700">{filtered.length}</strong> {t("finance.withdraw.footer.withdrawals")}
           </span>
 
           {totalPages > 1 && (

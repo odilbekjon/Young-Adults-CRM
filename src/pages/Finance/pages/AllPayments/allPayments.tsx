@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { FiFilter, FiChevronDown, FiChevronUp, FiInfo } from "react-icons/fi";
 import { BsCash, BsGraphUp } from "react-icons/bs";
+import { useTranslation } from "react-i18next";
 
 // ── Reuse the SAME student data source & types as the Students page ─────────
 import { buildFlatStudents, FlatStudent } from "../../../../constants/FlatStudents";
@@ -168,18 +169,21 @@ const Input = ({ value, onChange, placeholder }: {
   />
 );
 
-const Select = ({ value, onChange, options, placeholder = "Select" }: {
+const Select = ({ value, onChange, options, placeholder }: {
   value: string; onChange: (v: string) => void; options: string[]; placeholder?: string;
-}) => (
-  <select
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-[15px] text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-[#003366] cursor-pointer"
-  >
-    <option value="">{placeholder}</option>
-    {options.map((o) => <option key={o} value={o}>{o}</option>)}
-  </select>
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-[15px] text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-[#003366] cursor-pointer"
+    >
+      <option value="">{placeholder ?? t("finance.allPayments.filters.selectPlaceholder")}</option>
+      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+};
 
 const SortIcon = ({ active, dir }: { active: boolean; dir: "asc" | "desc" }) => (
   <span className={`ml-1 text-[12px] ${active ? "text-[#003366]" : "text-gray-300"}`}>
@@ -191,6 +195,7 @@ const SortIcon = ({ active, dir }: { active: boolean; dir: "asc" | "desc" }) => 
 
 export const AllPayments = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Same student source/structure as the Students page
   const students = useMemo(() => buildFlatStudents(), []);
@@ -265,7 +270,7 @@ export const AllPayments = () => {
     <div className="p-6 bg-gray-50 min-h-screen">
 
       {/* ── Title ── */}
-      <h1 className="text-2xl font-semibold text-gray-900 mb-5">All payments</h1>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-5">{t("finance.allPayments.title")}</h1>
 
       {/* ── Stats + Chart ── */}
       <div className="grid grid-cols-5 gap-4 mb-5">
@@ -276,7 +281,7 @@ export const AllPayments = () => {
           {/* Total Revenue */}
           <div className="flex items-center justify-between rounded-2xl border border-gray-200 border-l-[5px] border-l-[#003366] bg-white px-6 py-6 shadow-sm">
             <div>
-              <p className="mb-2 text-[15px] font-semibold text-gray-500">Total Revenue:</p>
+              <p className="mb-2 text-[15px] font-semibold text-gray-500">{t("finance.allPayments.stats.totalRevenue")}</p>
               <p className="text-3xl font-bold tracking-tight text-gray-900">
                 {fmt(totalRevenue)}
                 <span className="text-lg font-semibold text-gray-500 ml-2">UZS</span>
@@ -292,7 +297,7 @@ export const AllPayments = () => {
           <div className="rounded-2xl border border-gray-200 border-l-[5px] border-l-[#003366] bg-white px-6 py-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <p className="mb-2 text-[15px] font-semibold text-gray-500">Total Net Profit:</p>
+                <p className="mb-2 text-[15px] font-semibold text-gray-500">{t("finance.allPayments.stats.totalNetProfit")}</p>
                 <p className="text-3xl font-bold tracking-tight text-gray-900">
                   {fmt(totalRevenue)}
                   <span className="text-lg font-semibold text-gray-500 ml-2">UZS</span>
@@ -310,7 +315,7 @@ export const AllPayments = () => {
               className="group mt-4 flex items-center gap-1.5 text-[13px] text-gray-500 transition-colors hover:text-[#003366]"
             >
               <FiInfo size={13} className="group-hover:text-[#003366]" />
-              <span>Details</span>
+              <span>{t("finance.allPayments.stats.details")}</span>
               {showDetails
                 ? <FiChevronUp size={13} />
                 : <FiChevronDown size={13} />}
@@ -379,7 +384,7 @@ export const AllPayments = () => {
           className="flex w-full items-center justify-between px-5 py-3.5 text-[15px] font-semibold text-gray-700 transition-colors hover:bg-gray-50"
         >
           <span className="flex items-center gap-2">
-            <FiFilter size={14} /> Filters
+            <FiFilter size={14} /> {t("finance.allPayments.filters.title")}
           </span>
           {showFilters ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
         </button>
@@ -388,43 +393,43 @@ export const AllPayments = () => {
           <div className="px-5 pb-4 border-t border-gray-100">
             {/* Row 1 */}
             <div className="grid grid-cols-8 gap-3 mt-4">
-              <div><Label text="Date from" />
+              <div><Label text={t("finance.allPayments.filters.dateFrom")} />
                 <Input value={dateFrom} onChange={setDateFrom} placeholder="01.05.2026" /></div>
-              <div><Label text="Date to" />
+              <div><Label text={t("finance.allPayments.filters.dateTo")} />
                 <Input value={dateTo} onChange={setDateTo} placeholder="31.05.2026" /></div>
-              <div><Label text="Name or Phone" />
-                <Input value={namePhone} onChange={setNamePhone} placeholder="Search..." /></div>
-              <div><Label text="Select group" />
+              <div><Label text={t("finance.allPayments.filters.namePhone")} />
+                <Input value={namePhone} onChange={setNamePhone} placeholder={t("finance.allPayments.filters.searchPlaceholder")} /></div>
+              <div><Label text={t("finance.allPayments.filters.group")} />
                 <Select value={group} onChange={setGroup} options={ALL_GROUPS} /></div>
-              <div><Label text="Course" />
+              <div><Label text={t("finance.allPayments.filters.course")} />
                 <Select value={course} onChange={setCourse} options={ALL_COURSES} /></div>
-              <div><Label text="Teacher" />
+              <div><Label text={t("finance.allPayments.filters.teacher")} />
                 <Select value={teacher} onChange={setTeacher} options={ALL_TEACHERS} /></div>
-              <div><Label text="Method pay" />
+              <div><Label text={t("finance.allPayments.filters.methodPay")} />
                 <Select value={methodPay} onChange={setMethodPay} options={[...METHOD_PAY]} /></div>
-              <div><Label text="Sum" />
-                <Input value={sum} onChange={setSum} placeholder="Amount" /></div>
+              <div><Label text={t("finance.allPayments.filters.sum")} />
+                <Input value={sum} onChange={setSum} placeholder={t("finance.allPayments.filters.amountPlaceholder")} /></div>
             </div>
 
             {/* Row 2 */}
             <div className="grid grid-cols-8 gap-3 mt-3 items-end">
-              <div><Label text="Staff Name" />
+              <div><Label text={t("finance.allPayments.filters.staffName")} />
                 <Select value={staffName} onChange={setStaffName} options={[CREATOR]} /></div>
-              <div><Label text="From created date" />
-                <Input value={fromCreated} onChange={setFromCreated} placeholder="No date selected" /></div>
-              <div><Label text="To created date" />
-                <Input value={toCreated} onChange={setToCreated} placeholder="No date selected" /></div>
+              <div><Label text={t("finance.allPayments.filters.fromCreatedDate")} />
+                <Input value={fromCreated} onChange={setFromCreated} placeholder={t("finance.allPayments.filters.noDateSelected")} /></div>
+              <div><Label text={t("finance.allPayments.filters.toCreatedDate")} />
+                <Input value={toCreated} onChange={setToCreated} placeholder={t("finance.allPayments.filters.noDateSelected")} /></div>
               <div className="flex gap-2">
                 <button
                   onClick={resetFilters}
                   className="flex-1 rounded-lg border border-gray-200 py-2.5 text-[14px] text-gray-500 transition-colors hover:bg-gray-50"
                 >
-                  Reset
+                  {t("finance.allPayments.filters.reset")}
                 </button>
                 <button
                   className="flex-1 rounded-lg bg-[#003366] py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#002244]"
                 >
-                  Filter
+                  {t("finance.allPayments.filters.filter")}
                 </button>
               </div>
             </div>
@@ -440,13 +445,13 @@ export const AllPayments = () => {
               <TableRow sx={{ backgroundColor: "#f9fafb" }}>
                 {(
                   [
-                    { key: "date",      label: "Date" },
-                    { key: "name",      label: "Name" },
-                    { key: "sum",       label: "Sum" },
-                    { key: "methodPay", label: "Method pay" },
-                    { key: "teacher",   label: "Teacher" },
-                    { key: null,        label: "Comment" },
-                    { key: "creator",   label: "Creator" },
+                    { key: "date",      label: t("finance.allPayments.table.date") },
+                    { key: "name",      label: t("finance.allPayments.table.name") },
+                    { key: "sum",       label: t("finance.allPayments.table.sum") },
+                    { key: "methodPay", label: t("finance.allPayments.table.methodPay") },
+                    { key: "teacher",   label: t("finance.allPayments.table.teacher") },
+                    { key: null,        label: t("finance.allPayments.table.comment") },
+                    { key: "creator",   label: t("finance.allPayments.table.creator") },
                   ] as { key: SortKey | null; label: string }[]
                 ).map(({ key, label }) => (
                   <TableCell
@@ -517,7 +522,7 @@ export const AllPayments = () => {
               {paginated.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 4, color: "#9ca3af", fontSize: 14 }}>
-                    No payments found
+                    {t("finance.allPayments.table.empty")}
                   </TableCell>
                 </TableRow>
               )}
@@ -528,11 +533,11 @@ export const AllPayments = () => {
         {/* Footer: total + pagination */}
         <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100">
           <span className="text-[13px] text-gray-500">
-            Showing{" "}
+            {t("finance.allPayments.footer.showing")}{" "}
             <strong className="text-gray-700">
               {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)}
             </strong>{" "}
-            of <strong className="text-gray-700">{filtered.length}</strong> payments
+            {t("finance.allPayments.footer.of")} <strong className="text-gray-700">{filtered.length}</strong> {t("finance.allPayments.footer.payments")}
             {" · "}
             <span className="font-semibold text-[#003366]">{fmt(filteredTotal)} UZS</span>
           </span>

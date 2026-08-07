@@ -56,6 +56,7 @@ const LoginPage = () => {
         justifyContent: "center",
         minHeight: "100vh",
         bgcolor: "#b0bec5",
+        overflowY: "auto",
         px: { xs: 2, sm: 3 },
         py: { xs: 3, sm: 4 },
       }}
@@ -123,7 +124,7 @@ const LoginPage = () => {
           </Box>
 
           <Box sx={{ display: "flex", gap: 3 }}>
-            <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 1, flexShrink: 0, pt: 1 }}>
+            <Box sx={{ display: { xs: "none",  }, alignItems: "center", gap: 1, flexShrink: 0, pt: 1 }}>
               <img src={blackLogo} style={{ width: "min(100px, 22%)", height: "auto" }} alt="logo" />
             </Box>
 

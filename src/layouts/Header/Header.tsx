@@ -498,7 +498,8 @@ export const Header = () => {
         </Box>
 
         {/* Main area — mobile compact controls */}
-        <Box sx={{ display: { xs: "flex", md: "none" }, alignItems: "center", gap: 0.5, pr: 1.5, height: "100%" }}>
+        <Box sx={{ display: { xs: "flex", md: "none" }, alignItems: "center", gap: 0.5, pr: 1, height: "100%" }}>
+          <BranchDropdown branch={branch} setBranch={setBranch} />
           <LangToggle />
           <NotificationBtn />
           <button

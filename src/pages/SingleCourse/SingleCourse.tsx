@@ -7,23 +7,50 @@ import {
   Tabs,
   Tab,
   Paper,
-  Chip,
-//   Divider,
+  CircularProgress,
 } from "@mui/material";
 import { MdEdit, MdDeleteOutline, MdArrowBack } from "react-icons/md";
-import { defaultCourses } from "../../constants/CoursesData";
-// import { BookIllustration } from "../Settings/office/pages";
-// import { BookIllustration } from "../../constants/CoursesData";
+import {
+  useAllCoursesQuery,
+  useDeleteCourseMutation,
+} from "../../app/api/coursesApi/coursesApi";
+import { CARD_COLORS } from "../../constants/CardColors";
 
 const fmt = (n: number) =>
   n.toLocaleString("ru-RU").replace(/,/g, " ") + " UZS";
+
+const colorForId = (id: string) => {
+  const hash = [...id].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return CARD_COLORS[hash % CARD_COLORS.length];
+};
 
 export const SingleCourse = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [tab, setTab] = useState(0);
 
-  const course = defaultCourses.find((c) => c.id === Number(id));
+  const { data, isLoading } = useAllCoursesQuery();
+  const [deleteCourse, { isLoading: isDeleting }] = useDeleteCourseMutation();
+
+  const course = data?.data.find((c) => c.id === id);
+
+  const handleDelete = async () => {
+    if (!course) return;
+    try {
+      await deleteCourse(course.id).unwrap();
+      navigate("/settings/office/courses");
+    } catch {
+      // stay on the page — the banner icon can be retried
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   if (!course) {
     return (
@@ -39,9 +66,7 @@ export const SingleCourse = () => {
     );
   }
 
-  // Split groups into two columns
-  const leftGroups = course.groups.filter((_, i) => i % 2 === 0);
-  const rightGroups = course.groups.filter((_, i) => i % 2 !== 0);
+  const color = colorForId(course.id);
 
   return (
     <Box sx={{ p: 3, bgcolor: "#f5f5f5", minHeight: "100vh" }}>
@@ -62,7 +87,7 @@ export const SingleCourse = () => {
             {/* Banner */}
             <Box
               sx={{
-                bgcolor: course.color,
+                bgcolor: color,
                 height: 220,
                 position: "relative",
                 overflow: "hidden",
@@ -95,6 +120,7 @@ export const SingleCourse = () => {
                     bgcolor: "rgba(255,255,255,0.15)",
                     "&:hover": { bgcolor: "rgba(255,255,255,0.3)" },
                   }}
+                  onClick={() => navigate("/settings/office/courses")}
                 >
                   <MdEdit size={16} color="#fff" />
                 </Box>
@@ -107,13 +133,14 @@ export const SingleCourse = () => {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    cursor: "pointer",
+                    cursor: isDeleting ? "default" : "pointer",
                     bgcolor: "rgba(255,255,255,0.15)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.3)" },
+                    opacity: isDeleting ? 0.6 : 1,
+                    "&:hover": { bgcolor: isDeleting ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.3)" },
                   }}
-                  onClick={() => navigate("/settings/office/courses")}
+                  onClick={isDeleting ? undefined : handleDelete}
                 >
-                  <MdDeleteOutline size={16} color="#fff" />
+                  {isDeleting ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : <MdDeleteOutline size={16} color="#fff" />}
                 </Box>
               </Box>
 
@@ -126,15 +153,13 @@ export const SingleCourse = () => {
               >
                 {course.name}
               </Typography>
-              {/* <BookIllustration /> */}
             </Box>
 
             {/* Info fields */}
             <Box sx={{ p: 2.5 }}>
-              <InfoRow label="Description" value={course.description || "—"} />
-              <InfoRow label="Price" value={fmt(course.price)} />
-              <InfoRow label="Students" value={String(course.students)} />
-              <InfoRow label="Lesson duration" value={course.lessonDuration} />
+              <InfoRow label="Price" value={fmt(course.price?.d?.[0] ?? 0)} />
+              <InfoRow label="Branch" value={course.branch?.name || "—"} />
+              <InfoRow label="Status" value={course.status} />
             </Box>
           </Paper>
         </Box>
@@ -158,27 +183,9 @@ export const SingleCourse = () => {
             </Tabs>
           </Box>
 
-          {/* Groups tab */}
           {tab === 0 && (
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
-              {/* Left column */}
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {leftGroups.map((group) => (
-                  <GroupCard key={group.id} group={group} />
-                ))}
-                {leftGroups.length === 0 && course.groups.length === 0 && (
-                  <Typography fontSize={13} color="#999">No groups yet.</Typography>
-                )}
-              </Box>
-              {/* Right column */}
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {rightGroups.map((group) => (
-                  <GroupCard key={group.id} group={group} />
-                ))}
-              </Box>
-            </Box>
+            <Typography fontSize={13} color="#999">No groups yet.</Typography>
           )}
-
           {tab === 1 && (
             <Typography fontSize={13} color="#999">No subcourses available.</Typography>
           )}
@@ -199,37 +206,4 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
     <Typography fontSize={12} color="#aaa" mb={0.2}>{label}</Typography>
     <Typography fontSize={14} fontWeight={500}>{value}</Typography>
   </Box>
-);
-
-const GroupCard = ({ group }: { group: { id: number; tag: string; teacher: string; startDate: string; endDate: string; schedule: string; time: string } }) => (
-  <Paper
-    variant="outlined"
-    sx={{
-      p: 2,
-      borderRadius: 2,
-      cursor: "pointer",
-      transition: "box-shadow 0.15s",
-      "&:hover": { boxShadow: 2 },
-    }}
-  >
-    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2, justifyContent: "space-between" }}>
-      <Box>
-        <Chip
-          label={group.tag}
-          size="small"
-          sx={{ fontSize: 11, height: 22, mb: 0.8, bgcolor: "#f0f0f0", color: "#444", fontWeight: 500 }}
-        />
-        <Typography fontSize={14} fontWeight={500}>{group.teacher}</Typography>
-      </Box>
-      <Box sx={{ textAlign: "right", flexShrink: 0 }}>
-        <Typography fontSize={12} color="#888">
-          {group.startDate} —<br />{group.endDate}
-        </Typography>
-      </Box>
-      <Box sx={{ textAlign: "right", flexShrink: 0 }}>
-        <Typography fontSize={12} color="#888">{group.schedule}</Typography>
-        <Typography fontSize={13} fontWeight={500}>{group.time}</Typography>
-      </Box>
-    </Box>
-  </Paper>
 );

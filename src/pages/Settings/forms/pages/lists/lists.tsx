@@ -14,6 +14,7 @@ import {
 //   Chip,
   Tooltip,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { FiEdit2 } from "react-icons/fi";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { HiOutlineLink } from "react-icons/hi";
@@ -37,6 +38,7 @@ const initialForms: FormItem[] = [
 ];
 
 export const Lists = () => {
+  const { t } = useTranslation();
   const [forms, setForms] = useState<FormItem[]>(initialForms);
   const navigate = useNavigate();
 
@@ -83,7 +85,7 @@ export const Lists = () => {
               fontFamily: "'DM Sans', sans-serif",
             }}
           >
-            Forms
+            {t("settings.forms.lists.title")}
           </Typography>
 
           <Button
@@ -106,7 +108,7 @@ export const Lists = () => {
               },
             }}
           >
-            Add new
+            {t("settings.forms.lists.actions.addNew")}
           </Button>
         </Box>
 
@@ -129,7 +131,7 @@ export const Lists = () => {
                     width: 90,
                   }}
                 >
-                  id
+                  {t("settings.forms.lists.table.id")}
                 </TableCell>
                 <TableCell
                   sx={{
@@ -141,7 +143,7 @@ export const Lists = () => {
                     pb: 1,
                   }}
                 >
-                  Name
+                  {t("settings.forms.lists.table.name")}
                 </TableCell>
                 <TableCell
                   sx={{
@@ -154,7 +156,7 @@ export const Lists = () => {
                     width: 100,
                   }}
                 >
-                  type
+                  {t("settings.forms.lists.table.type")}
                 </TableCell>
                 <TableCell
                   align="right"
@@ -168,7 +170,7 @@ export const Lists = () => {
                     width: 150,
                   }}
                 >
-                  Actions
+                  {t("settings.forms.lists.table.actions")}
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -228,7 +230,7 @@ export const Lists = () => {
                       }}
                     >
                       {form.hasInfo && (
-                        <Tooltip title="Info">
+                        <Tooltip title={t("settings.forms.lists.tooltips.info")}>
                           <IconButton
                             size="small"
                             sx={{
@@ -241,7 +243,7 @@ export const Lists = () => {
                         </Tooltip>
                       )}
 
-                      <Tooltip title="Edit">
+                      <Tooltip title={t("settings.forms.lists.tooltips.edit")}>
                         <IconButton
                         onClick={() => navigate(`/settings/forms/edit/${form.id}` )}
 
@@ -255,7 +257,7 @@ export const Lists = () => {
                         </IconButton>
                       </Tooltip>
 
-                      <Tooltip title="Delete">
+                      <Tooltip title={t("settings.forms.lists.tooltips.delete")}>
                         <IconButton
                           size="small"
                           onClick={() => handleDelete(form.id)}
@@ -268,7 +270,7 @@ export const Lists = () => {
                         </IconButton>
                       </Tooltip>
 
-                      <Tooltip title="Copy link">
+                      <Tooltip title={t("settings.forms.lists.tooltips.copyLink")}>
                         <IconButton
                           size="small"
                           sx={{

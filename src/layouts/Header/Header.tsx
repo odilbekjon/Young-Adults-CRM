@@ -4,12 +4,18 @@ import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Avatar, Typography, Menu, MenuItem } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
-import { useBranch, BRANCH_OPTIONS, type BranchId } from "../../Context/BranchContext";
+import { useDispatch } from "react-redux";
+import { useBranch, type BranchId } from "../../Context/BranchContext";
 import { useSidebar } from "../../Context/SidebarContext";
 
 import { SIDEBAR_WIDTH, HEADER_HEIGHT } from "../Sidebar/Sidebar";
 import { AddStudent } from "../../components/AddStudent/AddStudent";
 import { AddPayment } from "../../components/AddPayment/AddPayment";
+import { logout } from "../../app/store/authSlice";
+import type { AppDispatch } from "../../app/store";
+import { useGetMeQuery } from "../../app/api/authApi/authApi";
+import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
+import { LANGUAGE_OPTIONS } from "../../constants/LanguageOptions";
 
 
 import {
@@ -54,7 +60,15 @@ const IconBtn = ({ children, onClick, active, title }: {
 const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b: BranchId) => void }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const current = BRANCH_OPTIONS.find((o) => o.value === branch);
+  const { data: branchesData, isLoading: branchesLoading } = useAllBranchesQuery();
+
+  const options: { value: BranchId; label: string }[] = [
+    { value: "all", label: "All branches" },
+    ...(branchesData?.data ?? [])
+      .filter((b) => b.status === "ACTIVE")
+      .map((b) => ({ value: b.name, label: b.name })),
+  ];
+  const current = options.find((o) => o.value === branch);
 
   useEffect(() => {
     if (!open) return;
@@ -92,22 +106,26 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
           minWidth: 200, animation: "dropDown 0.15s ease", overflow: "hidden",
         }}>
           <style>{`@keyframes dropDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-          {BRANCH_OPTIONS.map((opt) => (
-            <div
-              key={opt.value}
-              onClick={() => { setBranch(opt.value); setOpen(false); }}
-              style={{
-                padding: "10px 14px", fontSize: 13, cursor: "pointer",
-                fontWeight: opt.value === branch ? 600 : 400,
-                color: opt.value === branch ? "#185FA5" : "#1a2332",
-                background: opt.value === branch ? "#f0f7ff" : "#fff",
-              }}
-              onMouseEnter={(e) => { if (opt.value !== branch) (e.currentTarget as HTMLDivElement).style.background = "#f7f8fa"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = opt.value === branch ? "#f0f7ff" : "#fff"; }}
-            >
-              {opt.label}
-            </div>
-          ))}
+          {branchesLoading ? (
+            <div style={{ padding: "10px 14px", fontSize: 13, color: "#9ca3af" }}>Loading…</div>
+          ) : (
+            options.map((opt) => (
+              <div
+                key={opt.value}
+                onClick={() => { setBranch(opt.value); setOpen(false); }}
+                style={{
+                  padding: "10px 14px", fontSize: 13, cursor: "pointer",
+                  fontWeight: opt.value === branch ? 600 : 400,
+                  color: opt.value === branch ? "#185FA5" : "#1a2332",
+                  background: opt.value === branch ? "#f0f7ff" : "#fff",
+                }}
+                onMouseEnter={(e) => { if (opt.value !== branch) (e.currentTarget as HTMLDivElement).style.background = "#f7f8fa"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = opt.value === branch ? "#f0f7ff" : "#fff"; }}
+              >
+                {opt.label}
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>
@@ -140,12 +158,6 @@ const SearchBar = () => {
 };
 
 /* ─── Language Toggle ─── */
-const LANGUAGE_OPTIONS: { code: "en" | "ru" | "uz"; label: string }[] = [
-  { code: "en", label: "English" },
-  { code: "ru", label: "Русский" },
-  { code: "uz", label: "O'zbekcha" },
-];
-
 const LangToggle = () => {
   const { i18n } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -389,12 +401,24 @@ const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
 export const Header = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const { branch, setBranch } = useBranch();
   const { toggleMobile } = useSidebar();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
+
+  const { data: meData } = useGetMeQuery();
+  const currentUser = meData?.data;
+  const displayName = currentUser?.name || currentUser?.email || t("header.account");
+  const avatarInitial = displayName.charAt(0).toUpperCase();
+
+  const handleSignOut = () => {
+    setUserMenuAnchor(null);
+    dispatch(logout());
+    navigate("/login", { replace: true });
+  };
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -489,10 +513,13 @@ export const Header = () => {
             onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "none")}
           >
             <Typography sx={{ fontSize: 13, fontWeight: 500, color: "#1a2332" }}>
-              Odilbek Safarov
+              {displayName}
             </Typography>
-            <Avatar sx={{ width: 32, height: 32, backgroundColor: "#c8cdd4", fontSize: 13, fontWeight: 600 }}>
-              O
+            <Avatar
+              src={currentUser?.photo || undefined}
+              sx={{ width: 32, height: 32, backgroundColor: "#c8cdd4", fontSize: 13, fontWeight: 600 }}
+            >
+              {avatarInitial}
             </Avatar>
           </button>
         </Box>
@@ -506,8 +533,11 @@ export const Header = () => {
             onClick={(e) => setUserMenuAnchor(e.currentTarget)}
             style={{ border: "none", background: "none", cursor: "pointer", padding: 4, borderRadius: 10, display: "flex" }}
           >
-            <Avatar sx={{ width: 30, height: 30, backgroundColor: "#c8cdd4", fontSize: 13, fontWeight: 600 }}>
-              O
+            <Avatar
+              src={currentUser?.photo || undefined}
+              sx={{ width: 30, height: 30, backgroundColor: "#c8cdd4", fontSize: 13, fontWeight: 600 }}
+            >
+              {avatarInitial}
             </Avatar>
           </button>
         </Box>
@@ -524,7 +554,7 @@ export const Header = () => {
             {t("header.account")}
           </MenuItem>
 
-          <MenuItem sx={{ fontSize: 13, color: "#e53935" }} onClick={() => setUserMenuAnchor(null)}>
+          <MenuItem sx={{ fontSize: 13, color: "#e53935" }} onClick={handleSignOut}>
             {t("header.signOut")}
           </MenuItem>
         </Menu>

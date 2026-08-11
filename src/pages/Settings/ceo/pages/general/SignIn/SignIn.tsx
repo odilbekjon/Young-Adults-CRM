@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { TextField, Button, Typography, Box } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { RichTextEditor, DropZone } from "../Shared";
 import logo from "../../../../../../assets/logo.jpg";
 
 const SignIn = () => {
+  const { t } = useTranslation();
   const [bgPreview, setBgPreview] = useState<string | null>(null);
   const [textContent, setTextContent] = useState("<p>Young Adults LLC</p><p>Always step ahead !</p>");
   const [customCss, setCustomCss] = useState("");
@@ -17,11 +19,11 @@ const SignIn = () => {
 
   return (
     <Box sx={{ flex: 1, p: 5, maxWidth: 900 }}>
-      <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "#111827" }}>Sign in</Typography>
+      <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "#111827" }}>{t("settings.ceo.general.signIn.title")}</Typography>
 
       {/* Company form background */}
       <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>
-        Company form backgroud
+        {t("settings.ceo.general.signIn.companyFormBackground")}
       </Typography>
       <Box sx={{ display: "flex", gap: 2, mb: 0.5 }}>
         <DropZone preview={bgPreview} onFile={(f) => setBgPreview(URL.createObjectURL(f))} />
@@ -31,17 +33,17 @@ const SignIn = () => {
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           {bgPreview
-            ? <img src={bgPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ? <img src={bgPreview} alt={t("settings.ceo.general.signIn.previewAlt")} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             : (
-              <img src={logo} alt="Logo" />
+              <img src={logo} alt={t("settings.ceo.general.signIn.logoAlt")} />
             )
           }
         </Box>
       </Box>
-      <Typography sx={{ fontSize: 12, color: "#9ca3af", mb: 4 }}>Recommended image size 610x160px</Typography>
+      <Typography sx={{ fontSize: 12, color: "#9ca3af", mb: 4 }}>{t("settings.ceo.general.signIn.recommendedImageSize")}</Typography>
 
       {/* Text form */}
-      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>Text form</Typography>
+      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>{t("settings.ceo.general.signIn.textForm")}</Typography>
       <Box sx={{ display: "flex", gap: 2, mb: 4 }}>
         <Box sx={{ flex: 1 }}>
           <RichTextEditor value={textContent} onChange={setTextContent} />
@@ -54,9 +56,9 @@ const SignIn = () => {
       </Box>
 
       {/* Custom CSS */}
-      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>Custom CSS</Typography>
+      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>{t("settings.ceo.general.signIn.customCss")}</Typography>
       <TextField
-        fullWidth multiline minRows={5} placeholder="Custom CSS for this form"
+        fullWidth multiline minRows={5} placeholder={t("settings.ceo.general.signIn.customCssPlaceholder")}
         value={customCss} onChange={(e) => setCustomCss(e.target.value)}
         sx={{ mb: 4, background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13, fontFamily: "monospace" } }}
       />
@@ -66,7 +68,7 @@ const SignIn = () => {
         px: 4, py: 1, borderRadius: "24px", fontSize: "0.95rem",
         "&:hover": { background: "#2563eb" },
       }}>
-        Save
+        {t("settings.ceo.general.signIn.save")}
       </Button>
     </Box>
   );

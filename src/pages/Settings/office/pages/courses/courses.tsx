@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Typography,
@@ -10,24 +11,25 @@ import {
   IconButton,
   Divider,
   Paper,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
-import { MdClose } from "react-icons/md";
+import { MdClose, MdOutlineEdit, MdDeleteOutline, MdRefresh } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
-import { defaultCourses, type Course } from "../../../../../constants/CoursesData";
-
-const lessonDurations = [
-  "45 minutes",
-  "60 minutes",
-  "90 minutes",
-  "120 minutes",
-  "150 minutes",
-];
-
-const cardColors = [
-  "#f46b8a", "#8bc34a", "#80cbc4", "#4db6c8",
-  "#f48fb1", "#ff8a65", "#ce93d8", "#90caf9",
-  "#a5d6a7", "#ffcc80", "#ef9a9a", "#80deea",
-];
+import {
+  useAllCoursesQuery,
+  useCreateCourseMutation,
+  useUpdateCourseMutation,
+  useDeleteCourseMutation,
+} from "../../../../../app/api/coursesApi/coursesApi";
+import type { Course } from "../../../../../app/api/coursesApi/types";
+import { useAllBranchesQuery } from "../../../../../app/api/branchesApi/branchesApi";
+import { useBranch } from "../../../../../Context/BranchContext";
+import { CARD_COLORS } from "../../../../../constants/CardColors";
 
 export const BookIllustration = () => (
   <svg viewBox="0 0 160 100" width="100%" height="100%" style={{ position: "absolute", bottom: 0, left: 0 }}>
@@ -44,95 +46,129 @@ export const BookIllustration = () => (
   </svg>
 );
 
-interface NewItemForm {
+interface FormState {
   name: string;
-  codeCourse: string;
-  lessonDuration: string;
-  courseDuration: string;
+  branchId: string;
   price: string;
-  description: string;
 }
 
-const defaultForm: NewItemForm = {
-  name: "",
-  codeCourse: "",
-  lessonDuration: "90 minutes",
-  courseDuration: "",
-  price: "",
-  description: "",
-};
-
-// Shared courses state — lifted to module level for simplicity across pages
-// In real app, use Context or Redux
-let _courses: Course[] = defaultCourses;
-let _listeners: Array<() => void> = [];
-
-export const useCourses = () => {
-  const [, forceUpdate] = useState(0);
-  const notify = () => {
-    _listeners.forEach((l) => l());
-  };
-
-  const addCourse = (course: Course) => {
-    _courses = [course, ..._courses];
-    notify();
-  };
-
-  const deleteCourse = (id: number) => {
-    _courses = _courses.filter((c) => c.id !== id);
-    notify();
-  };
-
-  // subscribe
-  useState(() => {
-    const update = () => forceUpdate((n) => n + 1);
-    _listeners.push(update);
-    return () => {
-      _listeners = _listeners.filter((l) => l !== update);
-    };
-  });
-
-  return { courses: _courses, addCourse, deleteCourse };
-};
+const defaultForm: FormState = { name: "", branchId: "", price: "" };
 
 export const Courses = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const { courses, addCourse } = useCourses();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [form, setForm] = useState<NewItemForm>(defaultForm);
+  const { branch: selectedBranch } = useBranch();
 
-  const handleSave = () => {
-    if (!form.name.trim()) return;
-    const newCourse: Course = {
-      id: Date.now(),
-      name: form.name,
-      price: parseInt(form.price) || 0,
-      color: cardColors[courses.length % cardColors.length],
-      codeCourse: form.codeCourse,
-      lessonDuration: form.lessonDuration,
-      courseDuration: parseInt(form.courseDuration) || 0,
-      description: form.description,
-      groups: [],
-      students: 0,
-    };
-    addCourse(newCourse);
+  const { data, isLoading, isError, refetch, isFetching } = useAllCoursesQuery();
+  const { data: branchesData } = useAllBranchesQuery();
+  const [createCourse, { isLoading: isCreating }] = useCreateCourseMutation();
+  const [updateCourse, { isLoading: isUpdating }] = useUpdateCourseMutation();
+  const [deleteCourse, { isLoading: isDeleting }] = useDeleteCourseMutation();
+
+  const courses = (data?.data ?? [])
+    .filter((c) => c.status === "ACTIVE")
+    .filter((c) => selectedBranch === "all" || c.branch?.name === selectedBranch);
+  const activeBranches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [form, setForm] = useState<FormState>(defaultForm);
+  const [errors, setErrors] = useState<{ [k: string]: string }>({});
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const openAddDrawer = () => {
+    setEditingCourse(null);
     setForm(defaultForm);
-    setDrawerOpen(false);
+    setErrors({});
+    setSaveError(null);
+    setDrawerOpen(true);
+  };
+
+  const openEditDrawer = (course: Course) => {
+    setEditingCourse(course);
+    setForm({
+      name: course.name,
+      branchId: course.branchId,
+      price: String(course.price?.d?.[0] ?? ""),
+    });
+    setErrors({});
+    setSaveError(null);
+    setDrawerOpen(true);
+  };
+
+  const closeDrawer = () => setDrawerOpen(false);
+
+  const openDeleteConfirm = (course: Course) => {
+    setDeleteError(null);
+    setDeleteTarget(course);
+  };
+
+  const closeDeleteConfirm = () => {
+    setDeleteTarget(null);
+    setDeleteError(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteCourse(deleteTarget.id).unwrap();
+      setDeleteTarget(null);
+    } catch {
+      setDeleteError(t("settings.office.courses.deleteConfirm.error"));
+    }
+  };
+
+  const validate = () => {
+    const newErrors: { [k: string]: string } = {};
+    if (!form.name.trim()) newErrors.name = t("settings.office.courses.form.errors.name");
+    if (!form.branchId) newErrors.branchId = t("settings.office.courses.form.errors.branch");
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaveError(null);
+    const price = form.price.trim() ? parseInt(form.price, 10) : undefined;
+
+    try {
+      if (editingCourse) {
+        await updateCourse({ id: editingCourse.id, name: form.name, branchId: form.branchId, price }).unwrap();
+      } else {
+        await createCourse({ name: form.name, branchId: form.branchId, price }).unwrap();
+      }
+      setDrawerOpen(false);
+    } catch {
+      setSaveError(t("settings.office.courses.form.errors.save"));
+    }
   };
 
   const fmt = (n: number) =>
-    n.toLocaleString("ru-RU").replace(/,/g, " ") + " UZS";
+    n.toLocaleString("ru-RU").replace(/,/g, " ") + " " + t("settings.office.courses.currency");
 
   return (
     <Box sx={{ p: 3, bgcolor: "#f5f5f5", minHeight: "100vh" }}>
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-        <Typography variant="h5" fontWeight={400}>
-          Courses
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography variant="h5" fontWeight={400}>
+            {t("settings.office.courses.title")}
+          </Typography>
+          <IconButton
+            size="small"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            aria-label={t("settings.office.courses.refresh")}
+          >
+            <MdRefresh size={18} className={isFetching ? "animate-spin" : ""} />
+          </IconButton>
+        </Box>
         <Button
           variant="contained"
-          onClick={() => setDrawerOpen(true)}
+          onClick={openAddDrawer}
           sx={{
             bgcolor: "#1a3f6f",
             borderRadius: 5,
@@ -143,67 +179,116 @@ export const Courses = () => {
             "&:hover": { bgcolor: "#15345c" },
           }}
         >
-          ADD NEW
+          {t("settings.office.courses.addNew")}
         </Button>
       </Box>
 
       <Divider sx={{ mb: 3 }} />
 
+      {/* Loading state */}
+      {isLoading && (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+          <CircularProgress size={28} />
+        </Box>
+      )}
+
+      {/* Error state */}
+      {!isLoading && isError && (
+        <Box sx={{ py: 6, textAlign: "center" }}>
+          <Typography color="error" fontSize={14}>
+            {t("settings.office.courses.loadError")}
+          </Typography>
+        </Box>
+      )}
+
       {/* Course grid */}
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2 }}>
-        {courses.map((course) => (
-          <Paper
-            key={course.id}
-            elevation={1}
-            onClick={() => navigate(`/courses/${course.id}`)}
-            sx={{
-              borderRadius: 2,
-              overflow: "hidden",
-              cursor: "pointer",
-              transition: "transform 0.15s, box-shadow 0.15s",
-              "&:hover": { transform: "translateY(-3px)", boxShadow: 4 },
-            }}
-          >
-            <Box
+      {!isLoading && !isError && (
+        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2 }}>
+          {courses.map((course, i) => (
+            <Paper
+              key={course.id}
+              elevation={1}
+              onClick={() => navigate(`/courses/${course.id}`)}
               sx={{
-                bgcolor: course.color,
-                height: 180,
-                position: "relative",
+                borderRadius: 2,
                 overflow: "hidden",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                cursor: "pointer",
+                transition: "transform 0.15s, box-shadow 0.15s",
+                "&:hover": { transform: "translateY(-3px)", boxShadow: 4 },
               }}
             >
-              <Typography
-                fontWeight={700}
-                fontSize={16}
-                color="#fff"
-                textAlign="center"
-                sx={{ position: "relative", zIndex: 1, px: 2, textShadow: "0 1px 3px rgba(0,0,0,0.2)" }}
+              <Box
+                sx={{
+                  bgcolor: CARD_COLORS[i % CARD_COLORS.length],
+                  height: 180,
+                  position: "relative",
+                  overflow: "hidden",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                {course.name}
-              </Typography>
-              <BookIllustration />
-            </Box>
-            <Box sx={{ p: 2 }}>
-              <Typography fontWeight={500} fontSize={15} mb={1}>{course.name}</Typography>
-              <Typography fontSize={13} color="#888">{fmt(course.price)}</Typography>
-            </Box>
-          </Paper>
-        ))}
-      </Box>
+                <Box sx={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 0.5, zIndex: 2 }}>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => { e.stopPropagation(); openEditDrawer(course); }}
+                    aria-label={t("settings.office.courses.edit")}
+                    sx={{ bgcolor: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "#fff" }, width: 28, height: 28 }}
+                  >
+                    <MdOutlineEdit size={14} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => { e.stopPropagation(); openDeleteConfirm(course); }}
+                    aria-label={t("settings.office.courses.delete")}
+                    sx={{ bgcolor: "rgba(255,255,255,0.85)", color: "#e53935", "&:hover": { bgcolor: "#fff" }, width: 28, height: 28 }}
+                  >
+                    <MdDeleteOutline size={14} />
+                  </IconButton>
+                </Box>
+                <Typography
+                  fontWeight={700}
+                  fontSize={16}
+                  color="#fff"
+                  textAlign="center"
+                  sx={{ position: "relative", zIndex: 1, px: 2, textShadow: "0 1px 3px rgba(0,0,0,0.2)" }}
+                >
+                  {course.name}
+                </Typography>
+                <BookIllustration />
+              </Box>
+              <Box sx={{ p: 2 }}>
+                <Typography fontWeight={500} fontSize={15} mb={1}>{course.name}</Typography>
+                <Typography fontSize={13} color="#888">{fmt(course.price?.d?.[0] ?? 0)}</Typography>
+                {course.branch?.name && (
+                  <Typography fontSize={12} color="#aaa" mt={0.5}>{course.branch.name}</Typography>
+                )}
+              </Box>
+            </Paper>
+          ))}
 
-      {/* Add New Drawer */}
+          {courses.length === 0 && (
+            <Box sx={{ gridColumn: "1 / -1", textAlign: "center", color: "#9ca3af", fontSize: 13, py: 6 }}>
+              {t("settings.office.courses.emptyState")}
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {/* Add/Edit Drawer */}
       <Drawer
         anchor="right"
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={closeDrawer}
         PaperProps={{ sx: { width: 400, p: 0 } }}
       >
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 3, py: 2.5 }}>
-          <Typography fontWeight={600} fontSize={17}>Add New Item</Typography>
-          <IconButton size="small" onClick={() => setDrawerOpen(false)}>
+          <Typography fontWeight={600} fontSize={17}>
+            {editingCourse
+              ? t("settings.office.courses.form.editItem")
+              : t("settings.office.courses.form.addNewItem")}
+          </Typography>
+          <IconButton size="small" onClick={closeDrawer}>
             <MdClose size={20} />
           </IconButton>
         </Box>
@@ -211,47 +296,101 @@ export const Courses = () => {
 
         <Box sx={{ px: 3, py: 2.5, overflowY: "auto" }}>
           <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Name</Typography>
-            <TextField fullWidth size="small" value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+            <Typography fontSize={13} mb={0.5}>{t("settings.office.courses.form.name")}</Typography>
+            <TextField
+              fullWidth
+              size="small"
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              error={!!errors.name}
+              helperText={errors.name}
+            />
           </Box>
+
           <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Code Course</Typography>
-            <TextField fullWidth size="small" value={form.codeCourse}
-              onChange={(e) => setForm((p) => ({ ...p, codeCourse: e.target.value }))} />
-          </Box>
-          <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Lesson duration</Typography>
-            <Select fullWidth size="small" value={form.lessonDuration}
-              onChange={(e) => setForm((p) => ({ ...p, lessonDuration: e.target.value }))} sx={{ fontSize: 14 }}>
-              {lessonDurations.map((d) => (
-                <MenuItem key={d} value={d} sx={{ fontSize: 14 }}>{d}</MenuItem>
+            <Typography fontSize={13} mb={0.5}>{t("settings.office.courses.form.branch")}</Typography>
+            <Select
+              fullWidth
+              size="small"
+              displayEmpty
+              value={form.branchId}
+              onChange={(e) => setForm((p) => ({ ...p, branchId: e.target.value }))}
+              error={!!errors.branchId}
+            >
+              <MenuItem value="" disabled>
+                {t("settings.office.courses.form.branchPlaceholder")}
+              </MenuItem>
+              {activeBranches.map((branch) => (
+                <MenuItem key={branch.id} value={branch.id}>
+                  {branch.name}
+                </MenuItem>
               ))}
             </Select>
+            {errors.branchId && (
+              <Typography fontSize={12} color="error" mt={0.5}>{errors.branchId}</Typography>
+            )}
           </Box>
-          <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Course duration (month)</Typography>
-            <TextField fullWidth size="small" type="number" value={form.courseDuration}
-              onChange={(e) => setForm((p) => ({ ...p, courseDuration: e.target.value }))}
-              inputProps={{ min: 1 }} />
-          </Box>
-          <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Price</Typography>
+
+          <Box mb={3}>
+            <Typography fontSize={13} mb={0.5}>{t("settings.office.courses.form.price")}</Typography>
             <TextField fullWidth size="small" type="number" value={form.price}
               onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
               inputProps={{ min: 0 }} />
           </Box>
-          <Box mb={3}>
-            <Typography fontSize={13} mb={0.5}>Description</Typography>
-            <TextField fullWidth multiline rows={3} value={form.description}
-              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
-          </Box>
-          <Button variant="contained" onClick={handleSave}
+
+          {saveError && (
+            <Typography fontSize={13} color="error" mb={2}>{saveError}</Typography>
+          )}
+
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={isCreating || isUpdating}
+            startIcon={(isCreating || isUpdating) ? <CircularProgress size={16} color="inherit" /> : undefined}
             sx={{ bgcolor: "#1a3f6f", borderRadius: 5, px: 3, textTransform: "none", fontWeight: 600, fontSize: 15, "&:hover": { bgcolor: "#15345c" } }}>
-            Save
+            {t("settings.office.courses.form.save")}
           </Button>
         </Box>
       </Drawer>
+
+      {/* Delete confirmation */}
+      <Dialog
+        open={!!deleteTarget}
+        onClose={closeDeleteConfirm}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.office.courses.deleteConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.office.courses.deleteConfirm.message", { name: deleteTarget?.name ?? "" })}
+          </DialogContentText>
+          {deleteError && (
+            <Typography fontSize={13} color="error" mt={1.5}>{deleteError}</Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={closeDeleteConfirm}
+            variant="outlined"
+            disabled={isDeleting}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.courses.form.cancel")}
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            variant="contained"
+            color="error"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
+          >
+            {t("settings.office.courses.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

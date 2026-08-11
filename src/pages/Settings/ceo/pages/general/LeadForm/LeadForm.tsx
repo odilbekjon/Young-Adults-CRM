@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Button, Typography, Box, TextField } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { RichTextEditor, DropZone } from "../Shared";
 import logo from "../../../../../../assets/logo.jpg";
 import Logo from "../../../../../../assets/logo_ya_black.png";
 
 const LeadForm = () => {
+  const { t } = useTranslation();
   const [bgPreview, setBgPreview] = useState<string | null>(null);
   const [textForm, setTextForm] = useState("");
   const [textAfterFill, setTextAfterFill] = useState("");
@@ -13,12 +15,12 @@ const LeadForm = () => {
   return (
     <Box sx={{ flex: 1, p: 5, maxWidth: 960 }}>
       <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "#111827" }}>
-        Lead form
+        {t("settings.ceo.general.leadForm.title")}
       </Typography>
 
       {/* ── Company form background ── */}
       <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>
-        Company form backgroud
+        {t("settings.ceo.general.leadForm.companyFormBackground")}
       </Typography>
       <Box sx={{ display: "flex", gap: 2, mb: 0.5 }}>
         <DropZone preview={bgPreview} onFile={(f) => setBgPreview(URL.createObjectURL(f))} />
@@ -40,21 +42,21 @@ const LeadForm = () => {
           {bgPreview ? (
             <img
               src={bgPreview}
-              alt="preview"
+              alt={t("settings.ceo.general.leadForm.previewAlt")}
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           ) : (
-            <img src={logo} alt="Logo" />
+            <img src={logo} alt={t("settings.ceo.general.leadForm.logoAlt")} />
           )}
         </Box>
       </Box>
       <Typography sx={{ fontSize: 12, color: "#9ca3af", mb: 4 }}>
-        Recommended image size 610x160px
+        {t("settings.ceo.general.leadForm.recommendedImageSize")}
       </Typography>
 
       {/* ── Text form ── */}
       <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>
-        Text form
+        {t("settings.ceo.general.leadForm.textForm")}
       </Typography>
       <Box sx={{ display: "flex", gap: 2, mb: 4 }}>
         {/* Editor */}
@@ -78,17 +80,17 @@ const LeadForm = () => {
             <Typography
               sx={{ fontSize: 13, color: "#374151", flex: 1, pr: 1 }}
               dangerouslySetInnerHTML={{
-                __html: textForm || "Leave a request to the learning centre",
+                __html: textForm || t("settings.ceo.general.leadForm.defaultPreviewText"),
               }}
             />
-            <img src={Logo} alt="Logo" width={50} height={20} />
+            <img src={Logo} alt={t("settings.ceo.general.leadForm.logoAlt")} width={50} height={20} />
           </Box>
         </Box>
       </Box>
 
       {/* ── Text after filling out the form ── */}
       <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>
-        Text after filling out the form
+        {t("settings.ceo.general.leadForm.textAfterFilling")}
       </Typography>
       <Box sx={{ mb: 4 }}>
         <RichTextEditor value={textAfterFill} onChange={setTextAfterFill} />
@@ -96,16 +98,16 @@ const LeadForm = () => {
 
       {/* ── Custom CSS ── */}
       <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 0.5, color: "#111827" }}>
-        Custom CSS
+        {t("settings.ceo.general.leadForm.customCss")}
       </Typography>
       <Typography sx={{ fontSize: 12, color: "#e74c3c", mb: 1, fontFamily: "monospace" }}>
-        {'example: .lead-form-block { background-color: #fff; }'}
+        {t("settings.ceo.general.leadForm.customCssExample")}
       </Typography>
       <TextField
         fullWidth
         multiline
         minRows={5}
-        placeholder="Custom CSS for this form"
+        placeholder={t("settings.ceo.general.leadForm.customCssPlaceholder")}
         value={customCss}
         onChange={(e) => setCustomCss(e.target.value)}
         sx={{
@@ -129,7 +131,7 @@ const LeadForm = () => {
           "&:hover": { background: "#2563eb" },
         }}
       >
-        Save
+        {t("settings.ceo.general.leadForm.save")}
       </Button>
     </Box>
   );

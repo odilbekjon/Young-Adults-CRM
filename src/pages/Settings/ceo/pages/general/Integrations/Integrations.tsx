@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, Typography, Box, TextField } from "@mui/material";
 import { MdOutlineWifiOff } from "react-icons/md";
+import { useTranslation } from "react-i18next";
 
 // ── Outlined card with border-label ──
 const FieldCard = ({
@@ -51,7 +52,9 @@ const IntegrationRow = ({
   name: string;
   description: string;
   iconBg: string;
-}) => (
+}) => {
+  const { t } = useTranslation();
+  return (
   <Box
     sx={{
       display: "flex",
@@ -90,7 +93,7 @@ const IntegrationRow = ({
     {/* Status */}
     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mr: 2 }}>
       <MdOutlineWifiOff size={16} color="#9ca3af" />
-      <Typography sx={{ fontSize: 13, color: "#9ca3af" }}>Not Connected</Typography>
+      <Typography sx={{ fontSize: 13, color: "#9ca3af" }}>{t("settings.ceo.general.integrations.notConnected")}</Typography>
     </Box>
 
     {/* Connect button */}
@@ -107,12 +110,14 @@ const IntegrationRow = ({
         "&:hover": { background: "#162d4a" },
       }}
     >
-      Connect
+      {t("settings.ceo.general.integrations.connect")}
     </Button>
   </Box>
-);
+  );
+};
 
 const Integrations = () => {
+  const { t } = useTranslation();
   const [worklyClientId, setWorklyClientId] = useState("");
   const [worklySecret, setWorklySecret] = useState("");
   const [worklyUsername, setWorklyUsername] = useState("97 531 68 62");
@@ -126,10 +131,10 @@ const Integrations = () => {
 
       {/* ── Connected Integrations ── */}
       <Typography variant="h6" sx={{ fontWeight: 700, color: "#111827" }}>
-        Connected Integrations
+        {t("settings.ceo.general.integrations.connectedTitle")}
       </Typography>
       <Typography sx={{ fontSize: 13, color: "#9ca3af", mb: 3 }}>
-        Connect and manage your social media accounts and CRM systems
+        {t("settings.ceo.general.integrations.connectedSubtitle")}
       </Typography>
 
       <Box sx={{ mb: 4 }}>
@@ -138,8 +143,8 @@ const Integrations = () => {
           icon={
             <Typography sx={{ color: "#fff", fontWeight: 900, fontSize: 22 }}>f</Typography>
           }
-          name="Facebook Page"
-          description="Connect your Facebook business page"
+          name={t("settings.ceo.general.integrations.facebook.name")}
+          description={t("settings.ceo.general.integrations.facebook.description")}
         />
         <IntegrationRow
           iconBg="#00c853"
@@ -166,8 +171,8 @@ const Integrations = () => {
               />
             </Box>
           }
-          name="amoCRM | Kommo"
-          description="Sync leads with your amoCRM | Kommo account"
+          name={t("settings.ceo.general.integrations.amoCrm.name")}
+          description={t("settings.ceo.general.integrations.amoCrm.description")}
         />
       </Box>
 
@@ -175,11 +180,11 @@ const Integrations = () => {
       <Box sx={{ display: "flex", gap: 3, mb: 3, alignItems: "flex-start" }}>
 
         {/* Workly */}
-        <FieldCard title="Workly" sx={{ flex: 1 }}>
+        <FieldCard title={t("settings.ceo.general.integrations.workly.title")} sx={{ flex: 1 }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, mt: 0.5 }}>
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-                Workly client id
+                {t("settings.ceo.general.integrations.workly.clientId")}
               </Typography>
               <TextField
                 fullWidth size="small" value={worklyClientId}
@@ -189,7 +194,7 @@ const Integrations = () => {
             </Box>
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-                Workly secret
+                {t("settings.ceo.general.integrations.workly.secret")}
               </Typography>
               <TextField
                 fullWidth size="small" value={worklySecret}
@@ -199,7 +204,7 @@ const Integrations = () => {
             </Box>
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-                Workly username
+                {t("settings.ceo.general.integrations.workly.username")}
               </Typography>
               <TextField
                 fullWidth size="small" value={worklyUsername}
@@ -209,7 +214,7 @@ const Integrations = () => {
             </Box>
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-                Workly password
+                {t("settings.ceo.general.integrations.workly.password")}
               </Typography>
               <TextField
                 fullWidth size="small" type="password" value={worklyPassword}
@@ -221,7 +226,7 @@ const Integrations = () => {
         </FieldCard>
 
         {/* Telegram Reports */}
-        <FieldCard title="Telegram Reports" sx={{ flex: 1 }}>
+        <FieldCard title={t("settings.ceo.general.integrations.telegramReport.title")} sx={{ flex: 1 }}>
           <Box sx={{ mt: 0.5 }}>
             <TextField
               fullWidth size="small" value={telegramReport}
@@ -238,14 +243,14 @@ const Integrations = () => {
               }}
             >
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 1.5 }}>
-                To send an automatic report through the Telegram bot, follow these steps:
+                {t("settings.ceo.general.integrations.telegramReport.intro")}
               </Typography>
               {[
-                <>Enter <span style={{ color: "#3b82f6" }}>@getidsbot</span> on Telegram.</>,
-                <>Copy the ID.</>,
-                <>Place the ID in the input named "Telegram for Report".</>,
-                <>Click the "Save" button.</>,
-                <>Click start to modme bot ( <span style={{ color: "#3b82f6" }}>@modme_robot</span> ).</>,
+                <>{t("settings.ceo.general.integrations.telegramReport.step1Before")} <span style={{ color: "#3b82f6" }}>@getidsbot</span> {t("settings.ceo.general.integrations.telegramReport.step1After")}</>,
+                <>{t("settings.ceo.general.integrations.telegramReport.step2")}</>,
+                <>{t("settings.ceo.general.integrations.telegramReport.step3")}</>,
+                <>{t("settings.ceo.general.integrations.telegramReport.step4")}</>,
+                <>{t("settings.ceo.general.integrations.telegramReport.step5Before")} ( <span style={{ color: "#3b82f6" }}>@modme_robot</span> ).</>,
               ].map((step, i) => (
                 <Typography key={i} sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
                   {i + 1}. {step}
@@ -258,11 +263,11 @@ const Integrations = () => {
       </Box>
 
       {/* ── Social Media ── */}
-      <FieldCard title="Social Media" sx={{ maxWidth: 760, mb: 4 }}>
+      <FieldCard title={t("settings.ceo.general.integrations.socialMedia.title")} sx={{ maxWidth: 760, mb: 4 }}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, mt: 0.5 }}>
           <Box>
             <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-              Facebook pixel
+              {t("settings.ceo.general.integrations.socialMedia.facebookPixel")}
             </Typography>
             <TextField
               fullWidth size="small" value={facebookPixel}
@@ -272,7 +277,7 @@ const Integrations = () => {
           </Box>
           <Box>
             <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-              Telegram
+              {t("settings.ceo.general.integrations.socialMedia.telegram")}
             </Typography>
             <TextField
               fullWidth size="small" value={telegram}
@@ -297,7 +302,7 @@ const Integrations = () => {
           "&:hover": { background: "#162d4a" },
         }}
       >
-        Save
+        {t("settings.ceo.general.integrations.save")}
       </Button>
     </Box>
   );

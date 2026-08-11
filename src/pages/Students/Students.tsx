@@ -34,7 +34,7 @@ import {
 } from "@mui/material";
 import { MdDelete, MdMail, MdEdit, MdPayment, MdAdd } from "react-icons/md";
 import { BsThreeDotsVertical, BsPersonPlus } from "react-icons/bs";
-import { TbAdjustmentsHorizontal, TbColumns3, TbCalendar } from "react-icons/tb";
+import { TbAdjustmentsHorizontal, TbColumns3 } from "react-icons/tb";
 import { HiChevronDown } from "react-icons/hi";
 import { IoClose, IoSearchOutline } from "react-icons/io5";
 import {
@@ -42,12 +42,12 @@ import {
   FiBookOpen, FiMapPin, FiCreditCard,
 } from "react-icons/fi";
 
-import { FlatStudent, buildFlatStudents, formatDate } from "../../constants/FlatStudents";
-import { TEACHERS_DATA } from "../../constants/Teachers";
+import { FlatStudent, mapApiStudentToFlat, formatDate } from "../../constants/FlatStudents";
 import { useNavigate } from "react-router-dom";
 
 import { AddStudent } from "../../components/AddStudent";
 import { AddPayment } from "../../components/AddPayment";
+import { useAllStudentsQuery } from "../../app/api/studentsApi";
 
 import { SendSmsModal } from "../../components/SendSmsModal";
 
@@ -57,11 +57,7 @@ type SortKey = keyof FlatStudent | "";
 
 interface Filters {
   search: string;
-  course: string;
-  status: "active" | "inactive" | "";
   teacher: string;
-  startDate: string;
-  endDate: string;
 }
 
 const ALL_COLUMNS = [
@@ -445,11 +441,17 @@ export const Students = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const startDateRef = useRef<HTMLInputElement>(null);
-  const endDateRef   = useRef<HTMLInputElement>(null);
   const [sendSmsOpen, setSendSmsOpen] = useState(false);
 
-  const [students, setStudents] = useState<FlatStudent[]>(() => buildFlatStudents());
+  const [page, setPage] = useState(1);
+  const limit = 20;
+  const { data: studentsData, isLoading: studentsLoading } = useAllStudentsQuery({ page, limit });
+
+  const [students, setStudents] = useState<FlatStudent[]>([]);
+
+  useEffect(() => {
+    if (studentsData) setStudents(studentsData.data.data.map(mapApiStudentToFlat));
+  }, [studentsData]);
 
   const [selected,          setSelected]          = useState<string[]>([]);
   const [sortKey,           setSortKey]           = useState<SortKey>("");
@@ -465,32 +467,26 @@ export const Students = () => {
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
 
-  const [filters, setFilters] = useState<Filters>({
-    search: "", course: "", status: "", teacher: "", startDate: "", endDate: "",
-  });
+  const [filters, setFilters] = useState<Filters>({ search: "", teacher: "" });
 
   const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) =>
     setFilters((p) => ({ ...p, [key]: val }));
 
-  const clearAll = () =>
-    setFilters({ search: "", course: "", status: "", teacher: "", startDate: "", endDate: "" });
+  const clearAll = () => setFilters({ search: "", teacher: "" });
 
   const hasFilters = Object.values(filters).some(Boolean);
 
-  const COURSES = useMemo(
-    () => [...new Set(TEACHERS_DATA.flatMap((tc) => tc.groups.map((g) => g.course)))],
-    []
-  );
-  const TEACHERS_LIST = useMemo(
-    () => [...new Set(TEACHERS_DATA.map((tc) => tc.fullName))],
-    []
-  );
-  const ALL_GROUPS = useMemo(
-    () => TEACHERS_DATA.flatMap((tc) =>
-      tc.groups.map((g) => ({ id: String(g.id), name: g.name }))
-    ),
-    []
-  );
+  const TEACHERS_LIST = useMemo(() => {
+    const names = new Set<string>();
+    studentsData?.data.data.forEach((s) => s.teachers.forEach((tch) => names.add(tch.name)));
+    return Array.from(names);
+  }, [studentsData]);
+
+  const ALL_GROUPS = useMemo(() => {
+    const groups = new Map<string, string>();
+    studentsData?.data.data.forEach((s) => s.groups.forEach((g) => groups.set(g.id, g.name)));
+    return Array.from(groups, ([id, name]) => ({ id, name }));
+  }, [studentsData]);
 
   const filtered = useMemo(() => {
     return students
@@ -498,11 +494,7 @@ export const Students = () => {
         const search = filters.search.toLowerCase();
         return (
           (!search || s.name.toLowerCase().includes(search) || s.phone.includes(search)) &&
-          (!filters.course  || s.course  === filters.course) &&
-          (!filters.status  || (filters.status === "active" ? s.active : !s.active)) &&
-          (!filters.teacher || s.teacher === filters.teacher) &&
-          (!filters.startDate || (s.startDate && s.startDate >= filters.startDate)) &&
-          (!filters.endDate   || (s.endDate   && s.endDate   <= filters.endDate))
+          (!filters.teacher || s.teacher === filters.teacher)
         );
       })
       .sort((a, b) => {
@@ -569,7 +561,7 @@ export const Students = () => {
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
         <Stack direction="row" alignItems="baseline" gap={1.5}>
           <Typography variant="h5" fontWeight={700} fontSize={26} color="#111827">{t("students.header.title")}</Typography>
-          <Typography fontSize={14} color="#6b7280">{t("students.header.quantity", { count: filtered.length })}</Typography>
+          <Typography fontSize={14} color="#6b7280">{t("students.header.quantity", { count: studentsData?.data.meta.total ?? filtered.length })}</Typography>
         </Stack>
         <Button
           variant="contained"
@@ -616,92 +608,10 @@ export const Students = () => {
 
 
         <DropdownFilter
-          label={t("students.filters.byCourses")} value={filters.course}
-          options={COURSES.map((c) => ({ value: c, label: c }))}
-          onChange={(v) => setFilter("course", v)} onClear={() => setFilter("course", "")}
-        />
-        <DropdownFilter
-          label={t("students.filters.status")} value={filters.status}
-          options={[
-            { value: "active", label: `🟢 ${t("students.filters.active")}` },
-            { value: "inactive", label: `🔴 ${t("students.filters.inactive")}` },
-          ]}
-          onChange={(v) => setFilter("status", v as "active" | "inactive")}
-          onClear={() => setFilter("status", "")}
-        />
-        <DropdownFilter
           label={t("students.filters.byTeacher")} value={filters.teacher}
           options={TEACHERS_LIST.map((tch) => ({ value: tch, label: tch }))}
           onChange={(v) => setFilter("teacher", v)} onClear={() => setFilter("teacher", "")}
         />
-        <DropdownFilter
-          label={t("students.filters.financial")} value=""
-          options={[
-            { value: "paid", label: t("students.filters.paid") },
-            { value: "debt", label: t("students.filters.inDebt") },
-          ]}
-          onChange={() => {}} onClear={() => {}}
-        />
-        <DropdownFilter
-          label={t("students.filters.byTags")} value=""
-          options={[
-            { value: "new", label: t("students.filters.new") },
-            { value: "vip", label: t("students.filters.vip") },
-          ]}
-          onChange={() => {}} onClear={() => {}}
-        />
-
-        {/* Start date */}
-        <Button
-          variant="outlined" size="small"
-          startIcon={<TbCalendar size={13} />}
-          onClick={() => startDateRef.current?.showPicker()}
-          sx={{
-            borderRadius: "6px",
-            borderColor: filters.startDate ? "#5c7fa3" : "#d0d5dd",
-            color: filters.startDate ? "#5c7fa3" : "#667085",
-            fontSize: 13, fontWeight: 400, px: 1.5,
-            textTransform: "none", position: "relative",
-          }}
-        >
-          {filters.startDate ? (
-            <Stack direction="row" alignItems="center" gap={0.5}>
-              <span>{formatDate(filters.startDate)}</span>
-              <IoClose size={13} onClick={(e) => { e.stopPropagation(); setFilter("startDate", ""); }} />
-            </Stack>
-          ) : t("students.filters.startDate")}
-          <input
-            ref={startDateRef} type="date" value={filters.startDate}
-            onChange={(e) => setFilter("startDate", e.target.value)}
-            style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
-          />
-        </Button>
-
-        {/* End date */}
-        <Button
-          variant="outlined" size="small"
-          startIcon={<TbCalendar size={13} />}
-          onClick={() => endDateRef.current?.showPicker()}
-          sx={{
-            borderRadius: "6px",
-            borderColor: filters.endDate ? "#5c7fa3" : "#d0d5dd",
-            color: filters.endDate ? "#5c7fa3" : "#667085",
-            fontSize: 13, fontWeight: 400, px: 1.5,
-            textTransform: "none", position: "relative",
-          }}
-        >
-          {filters.endDate ? (
-            <Stack direction="row" alignItems="center" gap={0.5}>
-              <span>{formatDate(filters.endDate)}</span>
-              <IoClose size={13} onClick={(e) => { e.stopPropagation(); setFilter("endDate", ""); }} />
-            </Stack>
-          ) : t("students.filters.endDate")}
-          <input
-            ref={endDateRef} type="date" value={filters.endDate}
-            onChange={(e) => setFilter("endDate", e.target.value)}
-            style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
-          />
-        </Button>
 
         {hasFilters && (
           <Button
@@ -905,10 +815,17 @@ export const Students = () => {
                 );
               })}
 
-              {filtered.length === 0 && (
+              {!studentsLoading && filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={12} align="center" sx={{ py: 6, color: "#9ca3af" }}>
                     {t("students.table.noStudentsFound")}
+                  </TableCell>
+                </TableRow>
+              )}
+              {studentsLoading && (
+                <TableRow>
+                  <TableCell colSpan={12} align="center" sx={{ py: 6, color: "#9ca3af" }}>
+                    {t("students.table.loading")}
                   </TableCell>
                 </TableRow>
               )}
@@ -919,15 +836,31 @@ export const Students = () => {
         {/* PAGINATION */}
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 3, py: 1.5, borderTop: "1px solid #f3f4f6" }}>
           <Typography fontSize={13} color="text.secondary">
-            {t("students.pagination.range", { from: 1, to: Math.min(filtered.length, 20), total: filtered.length })}
+            {studentsData
+              ? t("students.pagination.range", {
+                  from: studentsData.data.meta.total === 0 ? 0 : (studentsData.data.meta.page - 1) * studentsData.data.meta.limit + 1,
+                  to: Math.min(studentsData.data.meta.page * studentsData.data.meta.limit, studentsData.data.meta.total),
+                  total: studentsData.data.meta.total,
+                })
+              : t("students.pagination.range", { from: 0, to: 0, total: 0 })}
           </Typography>
           <Stack direction="row" gap={0.5}>
-            {["<", ">"].map((lbl) => (
-              <Button key={lbl} size="small" variant="outlined"
-                sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: "6px", fontSize: 13 }}>
-                {lbl}
-              </Button>
-            ))}
+            <Button
+              size="small" variant="outlined"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: "6px", fontSize: 13 }}
+            >
+              {"<"}
+            </Button>
+            <Button
+              size="small" variant="outlined"
+              disabled={!studentsData || page >= studentsData.data.meta.totalPages}
+              onClick={() => setPage((p) => (studentsData && p < studentsData.data.meta.totalPages ? p + 1 : p))}
+              sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: "6px", fontSize: 13 }}
+            >
+              {">"}
+            </Button>
           </Stack>
         </Stack>
       </Paper>

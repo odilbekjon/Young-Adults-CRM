@@ -12,6 +12,7 @@ import {
   // FormHelperText,
   Paper,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 
 interface AccuralSettings {
   allowSendingSms: boolean;
@@ -30,13 +31,14 @@ const defaultSettings: AccuralSettings = {
 };
 
 const paymentModes = [
-  "Monthly (per calendar month)",
-  "Monthly (per lesson month)",
-  "Per lesson",
-  "Weekly",
+  "monthlyCalendar",
+  "monthlyLesson",
+  "perLesson",
+  "weekly",
 ];
 
 const Accural = () => {
+  const { t } = useTranslation();
   const [paymentMode, setPaymentMode] = useState("");
   const [settings, setSettings] = useState<AccuralSettings>(defaultSettings);
 
@@ -49,23 +51,23 @@ const Accural = () => {
   };
 
   const checkboxItems: { key: keyof AccuralSettings; label: string }[] = [
-    { key: "allowSendingSms", label: "Teachers: Allow sending SMS to their students" },
-    { key: "hideStudentContacts", label: "Teachers: Hide student contacts" },
-    { key: "attendanceOnlyDuringLesson", label: "Teachers: setting attendance only during the lesson" },
-    { key: "allowGroupIntersection", label: "Schedule: allow the intersection of groups with one classroom/teacher" },
-    { key: "showGroupBalance", label: "Show group balance" },
+    { key: "allowSendingSms", label: t("settings.ceo.general.accrual.checkboxes.allowSendingSms") },
+    { key: "hideStudentContacts", label: t("settings.ceo.general.accrual.checkboxes.hideStudentContacts") },
+    { key: "attendanceOnlyDuringLesson", label: t("settings.ceo.general.accrual.checkboxes.attendanceOnlyDuringLesson") },
+    { key: "allowGroupIntersection", label: t("settings.ceo.general.accrual.checkboxes.allowGroupIntersection") },
+    { key: "showGroupBalance", label: t("settings.ceo.general.accrual.checkboxes.showGroupBalance") },
   ];
 
   return (
     <Box sx={{ p: 3,  }}>
       <Typography variant="h5" fontWeight={500} mb={3}>
-        Accrual and payment
+        {t("settings.ceo.general.accrual.title")}
       </Typography>
 
       {/* Student payment mode */}
       <FormControl fullWidth sx={{ mb: 3 }}>
         <Typography fontSize={14} mb={0.5}>
-          Student payment mode{" "}
+          {t("settings.ceo.general.accrual.paymentModeLabel")}{" "}
           <Box component="span" sx={{ color: "red" }}>
             *
           </Box>
@@ -75,9 +77,11 @@ const Accural = () => {
           value={paymentMode}
           onChange={(e) => setPaymentMode(e.target.value)}
           renderValue={(val) =>
-            val ? val : (
+            val ? (
+              t(`settings.ceo.general.accrual.paymentModes.${val}`)
+            ) : (
               <Typography color="text.disabled" fontSize={14}>
-                Monthly (per calendar month)
+                {t("settings.ceo.general.accrual.paymentModes.monthlyCalendar")}
               </Typography>
             )
           }
@@ -89,7 +93,7 @@ const Accural = () => {
         >
           {paymentModes.map((mode) => (
             <MenuItem key={mode} value={mode} sx={{ fontSize: 14 }}>
-              {mode}
+              {t(`settings.ceo.general.accrual.paymentModes.${mode}`)}
             </MenuItem>
           ))}
         </Select>
@@ -111,7 +115,7 @@ const Accural = () => {
             color: "#555",
           }}
         >
-          Others
+          {t("settings.ceo.general.accrual.others")}
         </Typography>
 
         {checkboxItems.map((item) => (
@@ -145,7 +149,7 @@ const Accural = () => {
             "&:hover": { bgcolor: "#15345c" },
           }}
         >
-          Save
+          {t("settings.ceo.general.accrual.save")}
         </Button>
       </Box>
     </Box>

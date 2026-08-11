@@ -1,4 +1,8 @@
 {
+  "notFound": {
+    "message": "Siz izlagan sahifa mavjud emas.",
+    "backHome": "Bosh sahifaga"
+  },
   "header": {
     "search": "Qidiruv",
     "notifications": "Bildirishnomalar",
@@ -65,9 +69,11 @@
     "companyName": "Young Adults LLC",
     "tagline": "Har doim bir qadam oldinda!",
     "title": "Kirish",
-    "phone": "Telefon",
+    "email": "Email",
     "password": "Parol",
-    "error": "Telefon raqam yoki parol noto'g'ri. Qaytadan urinib ko'ring.",
+    "error": "Email yoki parol noto'g'ri. Qaytadan urinib ko'ring.",
+    "networkError": "Tarmoq xatosi. Internet aloqasini tekshirib, qaytadan urinib ko'ring.",
+    "requiredFields": "Email va parolni kiriting.",
     "submit": "Kirish"
   },
   "sidebar": {
@@ -153,7 +159,22 @@
     },
     "chart": {
       "currency": "UZS"
-    }
+    },
+    "attendance": {
+      "title": "Davomat",
+      "present": "Keldi",
+      "absent": "Kelmadi"
+    },
+    "recentActivities": {
+      "title": "So'nggi harakatlar",
+      "emptyState": "So'nggi harakatlar yo'q"
+    },
+    "teacherPerformance": {
+      "title": "O'qituvchilar reytingi",
+      "activeGroups": "Faol guruhlar",
+      "emptyState": "Ma'lumot yo'q"
+    },
+    "loadError": "Dashboard ma'lumotlarini yuklab bo'lmadi."
   },
   "students": {
     "header": {
@@ -163,20 +184,8 @@
     },
     "filters": {
       "searchPlaceholder": "Ism yoki telefon bo'yicha qidirish",
-      "byCourses": "Kurslar bo'yicha",
-      "status": "Holat",
       "byTeacher": "O'qituvchi bo'yicha",
-      "financial": "Moliyaviy",
-      "byTags": "Teglar bo'yicha",
-      "startDate": "Boshlanish sanasi",
-      "endDate": "Tugash sanasi",
-      "clearAll": "Barchasini tozalash",
-      "active": "Faol",
-      "inactive": "Nofaol",
-      "paid": "To'langan",
-      "inDebt": "Qarzdor",
-      "new": "Yangi",
-      "vip": "VIP"
+      "clearAll": "Barchasini tozalash"
     },
     "table": {
       "selectedCount_one": "{{count}} ta tanlandi",
@@ -194,7 +203,8 @@
       "addToGroup": "Guruhga qo'shish",
       "mailSelected": "Tanlanganlarga xabar",
       "deleteSelected": "Tanlanganlarni o'chirish",
-      "noStudentsFound": "O'quvchilar topilmadi"
+      "noStudentsFound": "O'quvchilar topilmadi",
+      "loading": "Yuklanmoqda..."
     },
     "pagination": {
       "range": "{{from}}–{{to}} / {{total}}"
@@ -959,6 +969,527 @@
       "addedAt": "Qo'shilgan",
       "activatedAt": "Faollashtirilgan",
       "goToProfile": "Profilga o'tish →"
+    }
+  },
+  "settings": {
+    "grade": {
+      "title": "Baho",
+      "attentionTitle": "Diqqat!",
+      "attentionMessage": "Baholash tizimi joriy qilingandan so'ng, agar maksimal ball o'zgartirilsa, barcha oldingi baholar o'chiriladi.",
+      "maxScoreLabel": "Maksimal ball",
+      "allowPastDates": "O'tgan sanalar uchun baholarni tahrirlashga ruxsat berish",
+      "allowNonTeaching": "O'qituvchi bo'lmagan xodimlarga baho qo'yishga ruxsat berish",
+      "showCenterRating": "O'quvchi profilida markaz bo'yicha reytingni ko'rsatish",
+      "showBranchRating": "O'quvchi profilida filial bo'yicha reytingni ko'rsatish",
+      "save": "Saqlash"
+    },
+    "sms": {
+      "title": "Avto-SMS",
+      "tabs": {
+        "autoSms": "Avto-SMS",
+        "templates": "SMS shablonlari"
+      },
+      "smsTypeHeading": "SMS turi",
+      "smsTextHeading": "SMS matni: {{label}}",
+      "exampleHeading": "Yuborilgan SMS namunasi",
+      "symbolsCount": "{{count}} belgi ( ~ {{sms}} SMS )",
+      "saveButton": "Saqlash",
+      "descriptionHeading": "Tavsif",
+      "availableVariables": "Mavjud o'zgaruvchilar:",
+      "variablesWarningPrefix": "Diqqat! O'zgaruvchilardan foydalanish quyidagilar uchun ishlaydi:",
+      "variablesWarningSuffix": ". Bu o'zgaruvchilar SMS shablonlar orqali qo'lda yuborilgan SMS larga ta'sir qilmaydi.",
+      "addNew": "Qo'shish",
+      "table": {
+        "templatesHeader": "SMS shablonlari",
+        "actions": "Amallar",
+        "empty": "Hozircha shablonlar yo'q. Yaratish uchun \"Qo'shish\" tugmasini bosing."
+      },
+      "drawer": {
+        "title": "SMS shabloni qo'shish",
+        "label": "SMS shabloni",
+        "submit": "Yuborish"
+      },
+      "types": {
+        "advancePayment": { "label": "Avans to'lovi haqida xabar", "description": "Avans to'lovi haqida xabar berish kerak bo'lganda xabar yuboriladi." },
+        "balanceNotEnough": { "label": "Balans yetarli emas", "description": "O'quvchining balansi yetarli bo'lmaganda xabar yuboriladi." },
+        "paymentDone": { "label": "To'lov amalga oshirildi", "description": "To'lov muvaffaqiyatli amalga oshirilganda xabar yuboriladi." },
+        "studentAdded": { "label": "O'quvchi guruhga qo'shildi", "description": "O'quvchi guruhga qo'shilganda xabar yuboriladi." },
+        "studentBirthday": { "label": "O'quvchining tug'ilgan kuni", "description": "O'quvchining tug'ilgan kunida, soat 9:00 da xabar yuboriladi." },
+        "absentAttendance": { "label": "Darsga kelmagan", "description": "O'quvchi darsga kelmaganda xabar yuboriladi." }
+      },
+      "variables": {
+        "student": "Guruhda ma'lumot faollashtirish",
+        "group": "Guruh nomi",
+        "sum": "To'lov summasi",
+        "lc": "O'quv markazingiz nomi",
+        "teacher": "O'qituvchi ismi",
+        "time": "Vaqt",
+        "room": "Xona",
+        "days": "Kunlar",
+        "balance": "O'quvchining joriy balansi",
+        "exId": "O'quvchining qo'shimcha ID raqami",
+        "hours": "Guruh darslarining boshlanish va tugash vaqti",
+        "course": "O'quvchi kursining nomi",
+        "indebtedness": "O'quvchining qarzi",
+        "groupInformation": "Guruh haqida ma'lumot"
+      }
+    },
+    "voip": {
+      "title": "VoIP sozlamalari",
+      "onlinePbx": "OnlinePBX",
+      "domainLabel": "OnlinePBX domeni",
+      "domainPlaceholder": "pbx000000.onpbx.ru",
+      "apiKeyLabel": "api kaliti",
+      "apiKeyPlaceholder": "xBHHR9...",
+      "descriptionHeading": "Tavsif",
+      "descriptionText": "Telefoniya sozlamalari ma'lumotlarini olish uchun Modme yoki OnlinePBX qo'llab-quvvatlash xizmatiga murojaat qiling."
+    },
+    "tags": {
+      "tag": {
+        "title": "Teglar",
+        "addNew": "Qo'shish",
+        "table": { "id": "id", "name": "Nomi", "fromWhere": "Qayerdan", "actions": "Amallar" },
+        "drawer": { "title": "Yangi teg qo'shish" },
+        "form": { "name": "Nomi", "fromWhere": "Qayerdan", "optionStudents": "O'quvchilar", "optionTeachers": "O'qituvchilar", "submit": "Yuborish" }
+      }
+    },
+    "ceo": {
+      "billing": {
+        "licenseValidity": "Platforma litsenziyasi amal qilish sanasi:",
+        "paymentTitle": "Platforma uchun to'lov",
+        "period": "Davr",
+        "selectPlaceholder": "Tanlang",
+        "pay": "To'lash",
+        "historyTitle": "To'lovlar tarixi",
+        "table": { "sum": "Summa", "createdAt": "Yaratilgan sana" },
+        "monthUnit": "OY",
+        "gamification": "Gamifikatsiya",
+        "som": "so'm"
+      },
+      "branches": {
+        "title": "Filiallar",
+        "refresh": "Yangilash",
+        "addBranch": "Filial qo'shish",
+        "tabs": { "active": "Faol", "archived": "Arxiv" },
+        "delete": "O'chirish",
+        "edit": "Tahrirlash",
+        "emptyActive": "Faol filiallar yo'q",
+        "emptyArchived": "Arxivlangan filiallar yo'q",
+        "form": { "editTitle": "Filialni tahrirlash", "name": "Filial nomi", "namePlaceholder": "Masalan: Educoin", "phone": "Telefon raqami", "address": "Manzil", "addressPlaceholder": "Masalan: Jarqo'rg'on tumani hokimiyati yonida", "cancel": "Bekor qilish", "save": "Saqlash", "errors": { "name": "Filial nomini kiriting", "phone": "Telefon raqamini to'liq kiriting", "address": "Manzilni kiriting", "save": "Nimadir xato ketdi. Qaytadan urinib ko'ring." } },
+        "close": "Yopish",
+        "loadError": "Filiallarni yuklab bo'lmadi.",
+        "deleteConfirm": {
+          "title": "Filialni o'chirish",
+          "message": "\"{{name}}\" filialini o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
+          "error": "Filialni o'chirib bo'lmadi. Qaytadan urinib ko'ring."
+        }
+      },
+      "roadmap": {
+        "title": "Audit",
+        "overallScore": "Umumiy ball",
+        "maxScore": "Maksimal ball:",
+        "yourScore": "Sizning ballingiz:",
+        "scorePlaceholder": "0",
+        "table": { "section": "Bo'lim", "question": "Savol", "score": "Ball (max. 10 ball)", "result": "Natija", "instructions": "Yo'riqnoma" },
+        "sections": {
+          "marketing": {
+            "name": "Marketing",
+            "questions": {
+              "m1": "Yillik marketing strategiyasi tuzilgan",
+              "m2": "Har chorak va oylik marketing rejalari mavjud",
+              "m3": "Internet-marketingdan foydalaniladi",
+              "m4": "Oflayn marketingdan foydalaniladi",
+              "m5": "Marketing bo'limida tizimli ish jarayoni mavjud",
+              "m6": "Marketing xodimlarida tashkiliy tuzilma mavjud",
+              "m7": "Marketing bo'limi vazifalari aniq belgilangan",
+              "m8": "Marketing xodimlarida aniq KPI mavjud",
+              "m9": "To'lovlarni qabul qilish avtomatlashtirilgan",
+              "m10": "Konversiya o'lchanadi",
+              "m11": "Ketayotgan mijozlar bilan ish yo'lga qo'yilgan",
+              "m12": "Fayllarni boshqarish uchun CRM ishlatiladi",
+              "m13": "Oylik marketing ROI byudjeti o'lchanadi",
+              "m14": "Marketing byudjeti rejalashtirilgan"
+            }
+          },
+          "sales": {
+            "name": "Savdo",
+            "questions": {
+              "s1": "Savdo bo'limi mavjud",
+              "s2": "Savdo bo'limi ishi ma'muriy bo'limdan alohida",
+              "s3": "Call-markaz mavjud",
+              "s4": "Call-markaz avtomatlashtirilgan",
+              "s5": "Oylik savdo rejalari mavjud",
+              "s6": "Savdo bo'limida bonus / KPI tizimi mavjud",
+              "s7": "Voronka CRM orqali nazorat qilinadi",
+              "s8": "Savdo skriptlari mavjud",
+              "s9": "Menejerlarni doimiy malaka oshirish tizimi mavjud"
+            }
+          },
+          "service": {
+            "name": "Xizmat",
+            "questions": {
+              "sv1": "Xizmat bo'limi alohida shakllantirilgan",
+              "sv2": "Bo'lim xodimlari vazifalari aniq belgilangan",
+              "sv3": "Bo'lim uchun alohida skript tuzilgan",
+              "sv4": "CRM orqali boshqariladi",
+              "sv5": "CJM tizimi joriy etilgan",
+              "sv6": "Xodimlarning ishga kelish vaqti kuzatiladi",
+              "sv7": "Funksiyalar checklistlari mavjud",
+              "sv8": "Ish jarayoni avtomatlashtirilgan",
+              "sv9": "Xizmat sifati standartlari mavjud"
+            }
+          },
+          "finance": {
+            "name": "Moliya",
+            "questions": {
+              "f1": "Moliyaviy jadval",
+              "f2": "Xarajatlar belgilangan stavka bo'yicha keladi",
+              "f3": "Xarajatlarni optimallashtirish bo'yicha ish olib borilmoqda",
+              "f4": "Jarayonlar avtomatlashtirilgan",
+              "f5": "Byudjetlashtirish amalga oshirilgan",
+              "f6": "KPI tizimi joriy etilgan"
+            }
+          },
+          "administrative": {
+            "name": "Ma'muriy",
+            "questions": {
+              "a1": "Xodimlarni qidirish va ishga qabul qilish avtomatlashtirilgan",
+              "a2": "Xodimlarning vazifalari belgilangan",
+              "a3": "Moslashuv davri uchun barcha materiallar tayyorlangan",
+              "a4": "Rejalashtirilgan va oylik uchrashuvlar joriy etilgan",
+              "a5": "Ko'rsatkichlarni kunlik monitoring qilish yo'lga qo'yilgan",
+              "a6": "Barcha jarayonlar CRM da nazorat qilinadi",
+              "a7": "Topshiriqlarni kuzatish qo'llaniladi",
+              "a8": "Direktor lavozimi mavjud, biznes egasi strategiya darajasida aralashadi"
+            }
+          }
+        }
+      },
+      "staff": {
+        "title": "Xodimlar",
+        "addNew": "QO'SHISH",
+        "import": "Import",
+        "table": { "id": "id", "name": "Ism", "role": "Rol", "jobTitle": "Lavozim", "phone": "Telefon", "actions": "Amallar" },
+        "form": { "title": "Yangi xodim qo'shish", "name": "Ism", "phone": "Telefon", "password": "Parol", "jobTitle": "Lavozim", "role": "Rol", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi", "photo": "Rasm", "noFileChosen": "Fayl tanlanmagan", "browse": "Tanlash", "submit": "Yuborish" },
+        "roles": { "ceo": "CEO", "branchDirector": "Filial direktori", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Cheklangan administrator", "teacher": "O'qituvchi", "marketer": "Marketolog", "cashier": "Kassir" },
+        "gender": { "male": "Erkak", "female": "Ayol" },
+        "sms": { "recipientLabel": "xodim" }
+      },
+      "general": {
+        "accrual": {
+          "title": "Hisoblash va to'lov",
+          "paymentModeLabel": "O'quvchi to'lov rejimi",
+          "paymentModes": { "monthlyCalendar": "Oylik (taqvim oyi bo'yicha)", "monthlyLesson": "Oylik (dars oyi bo'yicha)", "perLesson": "Dars uchun", "weekly": "Haftalik" },
+          "others": "Boshqa",
+          "checkboxes": {
+            "allowSendingSms": "O'qituvchilar: o'z o'quvchilariga SMS yuborishga ruxsat berish",
+            "hideStudentContacts": "O'qituvchilar: o'quvchi kontaktlarini yashirish",
+            "attendanceOnlyDuringLesson": "O'qituvchilar: davomatni faqat dars vaqtida belgilash",
+            "allowGroupIntersection": "Jadval: bitta xona/o'qituvchida guruhlar kesishishiga ruxsat berish",
+            "showGroupBalance": "Guruh balansini ko'rsatish"
+          },
+          "save": "Saqlash"
+        },
+        "communication": {
+          "title": "Aloqa",
+          "playMobile": { "title": "PlayMobile SMS", "username": "PlayMobile shlyuz foydalanuvchi nomi", "password": "PlayMobile shlyuz paroli", "nickname": "PlayMobile taxallusi" },
+          "eskiz": { "title": "Eskiz SMS", "email": "Eskiz email (login)", "secret": "Eskiz maxfiy kaliti (parol)", "nickname": "Eskiz taxallusi" },
+          "save": "Saqlash"
+        },
+        "exams": {
+          "title": "Imtihonlar",
+          "showActiveStudents": "Imtihonlar: faol o'quvchilarni ko'rsatish",
+          "showTrialStudents": "Imtihonlar: sinov darsidagi o'quvchilarni ko'rsatish",
+          "showArchivedStudents": "Imtihonlar: arxivdagi o'quvchilarni ko'rsatish",
+          "showFrozenStudents": "Imtihonlar: muzlatilgan o'quvchilarni ko'rsatish",
+          "showDeletedStudents": "Imtihonlar: o'chirilgan o'quvchilarni ko'rsatish",
+          "save": "Saqlash"
+        },
+        "generalContent": {
+          "title": "Umumiy sozlamalar",
+          "companyName": "Kompaniya nomi",
+          "companyPhone": "Kompaniya telefoni",
+          "startTime": "Boshlanish vaqti",
+          "endTime": "Tugash vaqti",
+          "lessonStartTimeStep": "Dars boshlanish vaqti: (5 daqiqalik qadam)",
+          "allStaffCoin": "Barcha xodimlar tanga bera oladi",
+          "branchSpecificPbx": "Filialga xos onlinePBX",
+          "animation": "Animatsiya",
+          "logo": "Logotip",
+          "uploadLogo": "Logotip yuklash",
+          "selectThemeColor": "Mavzu rangini tanlang",
+          "companyOferta": "Kompaniya ofertasi",
+          "selectFile": "Faylni tanlang",
+          "save": "Saqlash"
+        },
+        "integrations": {
+          "notConnected": "Ulanmagan",
+          "connect": "Ulash",
+          "connectedTitle": "Ulangan integratsiyalar",
+          "connectedSubtitle": "Ijtimoiy tarmoq va CRM tizimlaringizni ulang va boshqaring",
+          "facebook": { "name": "Facebook sahifasi", "description": "Facebook biznes sahifangizni ulang" },
+          "amoCrm": { "name": "amoCRM | Kommo", "description": "Lidlarni amoCRM | Kommo hisobingiz bilan sinxronlang" },
+          "workly": { "title": "Workly", "clientId": "Workly client id", "secret": "Workly secret", "username": "Workly foydalanuvchi nomi", "password": "Workly paroli" },
+          "telegramReport": {
+            "title": "Telegram hisobotlari",
+            "intro": "Telegram bot orqali avtomatik hisobot yuborish uchun quyidagi qadamlarni bajaring:",
+            "step1Before": "Telegramda",
+            "step1After": "ni kiriting.",
+            "step2": "ID ni nusxalang.",
+            "step3": "ID ni \"Hisobot uchun Telegram\" nomli maydonga joylashtiring.",
+            "step4": "\"Saqlash\" tugmasini bosing.",
+            "step5Before": "Modme botiga start tugmasini bosing"
+          },
+          "socialMedia": { "title": "Ijtimoiy tarmoqlar", "facebookPixel": "Facebook pixel", "telegram": "Telegram" },
+          "save": "Saqlash"
+        },
+        "invoice": {
+          "title": "Kvitansiya",
+          "checkboxes": {
+            "hideLogo": "Yashirish: Logotip",
+            "hideImageField": "Yashirish: Rasm maydoni",
+            "hideTextField": "Yashirish: Matn maydoni",
+            "hideCheckNumber": "Yashirish: Chek raqami",
+            "hideCompany": "Yashirish: Kompaniya",
+            "hideBranch": "Yashirish: Filial",
+            "hideStudent": "Yashirish: O'quvchi",
+            "hidePhone": "Yashirish: Telefon",
+            "hideBalance": "Yashirish: Balans",
+            "hideGroup": "Yashirish: Guruh",
+            "hideCoursePrice": "Yashirish: Kurs narxi",
+            "hideTeacher": "Yashirish: O'qituvchi",
+            "hideType": "Yashirish: Turi",
+            "hidePaymentAmount": "Yashirish: To'lov summasi",
+            "hideDate": "Yashirish: Sana",
+            "hideCreator": "Yashirish: Yaratuvchi",
+            "hideTime": "Yashirish: Vaqt"
+          },
+          "noFileChosen": "Fayl tanlanmagan",
+          "browse": "Tanlash",
+          "save": "Saqlash",
+          "cancel": "Bekor qilish",
+          "logoAlt": "Young Adults logotipi",
+          "preview": {
+            "checkNumber": "Chek raqami:", "company": "Kompaniya:", "branch": "Filial:", "student": "O'quvchi:", "phone": "Telefon:", "balance": "Balans:", "group": "Guruh:", "coursePrice": "Kurs narxi:", "teacher": "O'qituvchi:", "type": "Turi:", "paymentAmount": "To'lov summasi:", "date": "Sana:", "creator": "Yaratuvchi:", "time": "Vaqt:"
+          }
+        },
+        "landingPage": {
+          "title": "Landing sahifa",
+          "createTitle": "Landing sahifa yaratish",
+          "name": "*Nomi",
+          "slug": "*Slug",
+          "branch": "Filial",
+          "section": "Bo'lim",
+          "source": "Manba",
+          "create": "Yaratish",
+          "errors": { "nameRequired": "Nomi kiritilishi shart", "slugRequired": "Slug kiritilishi shart" },
+          "branches": { "branch1": "1-filial", "branch2": "2-filial", "branch3": "3-filial" },
+          "sections": { "section1": "1-bo'lim", "section2": "2-bo'lim", "section3": "3-bo'lim" },
+          "sources": { "source1": "1-manba", "source2": "2-manba", "source3": "3-manba" },
+          "table": { "name": "Nomi", "slug": "Slug", "actions": "Amallar", "noData": "Ma'lumot yo'q", "delete": "O'chirish" }
+        },
+        "leadForm": {
+          "title": "Lid shakli",
+          "companyFormBackground": "Kompaniya shakli foni",
+          "previewAlt": "ko'rinish",
+          "logoAlt": "Logotip",
+          "recommendedImageSize": "Tavsiya etilgan rasm o'lchami 610x160px",
+          "textForm": "Matn shakli",
+          "defaultPreviewText": "O'quv markaziga so'rov qoldiring",
+          "textAfterFilling": "Shaklni to'ldirgandan keyingi matn",
+          "customCss": "Maxsus CSS",
+          "customCssExample": "misol: .lead-form-block { background-color: #fff; }",
+          "customCssPlaceholder": "Ushbu shakl uchun maxsus CSS",
+          "save": "Saqlash"
+        },
+        "paymentMethods": {
+          "title": "To'lov usullari",
+          "paymeMerchantId": "Payme merchant ID",
+          "uzumServiceId": "Uzum service ID",
+          "clickServiceId": "Click service ID",
+          "payme": "Payme",
+          "companyLink": "Kompaniya havolasi",
+          "paycomMerchantId": "Paycom merchant id",
+          "paycomUsername": "Paycom foydalanuvchi nomi",
+          "paycomPassword": "Paycom paroli",
+          "midtrans": "Midtrans",
+          "midtransServerKey": "MIDTRANS SERVER KEY",
+          "midtransClientKey": "MIDTRANS CLIENT KEY",
+          "save": "Saqlash"
+        },
+        "shared": {
+          "richTextEditor": {
+            "formats": { "normal": "Oddiy", "heading1": "1-sarlavha", "heading2": "2-sarlavha", "heading3": "3-sarlavha" },
+            "fonts": { "sansSerif": "Sans Serif", "serif": "Serif", "monospace": "Monospace", "cursive": "Kursiv" },
+            "urlPrompt": "URL:",
+            "imageUrlPrompt": "Rasm URL:"
+          },
+          "dropZone": { "dropFileHere": "Faylni shu yerga tashlang yoki", "clickToUpload": "yuklash uchun bosing" }
+        },
+        "signIn": {
+          "title": "Kirish",
+          "companyFormBackground": "Kompaniya shakli foni",
+          "previewAlt": "ko'rinish",
+          "logoAlt": "Logotip",
+          "recommendedImageSize": "Tavsiya etilgan rasm o'lchami 610x160px",
+          "textForm": "Matn shakli",
+          "customCss": "Maxsus CSS",
+          "customCssPlaceholder": "Ushbu shakl uchun maxsus CSS",
+          "save": "Saqlash"
+        }
+      }
+    },
+    "office": {
+      "archive": {
+        "title": "Arxiv",
+        "quantity": "Soni — {{count}}",
+        "reasonsForArchiving": "Arxivlash sabablari",
+        "balance": "Balans",
+        "noData": "Ma'lumot yo'q",
+        "filters": { "namePhone": "Ism yoki telefon", "filterByRole": "Rol bo'yicha filtr", "student": "O'quvchi", "teacher": "O'qituvchi", "filterByReason": "Sabab bo'yicha filtr", "startDate": "Boshlanish sanasi" },
+        "actions": { "delete": "O'chirish", "reestablish": "Qayta tiklash" },
+        "table": { "name": "Ism", "phone": "Telefon", "roles": "Rollar", "reasonsForRemoval": "O'chirish sabablari", "comment": "Izoh", "archived": "Arxivda", "actions": "Amallar" },
+        "reasons": {
+          "addTemplate": "Shablon qo'shish",
+          "editTemplate": "Shablonni tahrirlash",
+          "table": { "id": "id", "name": "Nomi", "actions": "Amallar" },
+          "form": { "name": "Nomi" },
+          "submit": "Yuborish",
+          "save": "Saqlash"
+        }
+      },
+      "courses": {
+        "title": "Kurslar",
+        "addNew": "QO'SHISH",
+        "currency": "UZS",
+        "refresh": "Yangilash",
+        "edit": "Tahrirlash",
+        "delete": "O'chirish",
+        "emptyState": "Kurslar topilmadi",
+        "loadError": "Kurslarni yuklab bo'lmadi.",
+        "form": {
+          "addNewItem": "Yangi element qo'shish",
+          "editItem": "Kursni tahrirlash",
+          "name": "Nomi",
+          "codeCourse": "Kurs kodi",
+          "lessonDuration": "Dars davomiyligi",
+          "courseDuration": "Kurs davomiyligi (oy)",
+          "branch": "Filial",
+          "branchPlaceholder": "Filialni tanlang",
+          "price": "Narx",
+          "description": "Tavsif",
+          "save": "Saqlash",
+          "cancel": "Bekor qilish",
+          "errors": {
+            "name": "Kurs nomini kiriting",
+            "branch": "Filialni tanlang",
+            "save": "Nimadir xato ketdi. Qaytadan urinib ko'ring."
+          }
+        },
+        "durationOptions": { "min45": "45 daqiqa", "min60": "60 daqiqa", "min90": "90 daqiqa", "min120": "120 daqiqa", "min150": "150 daqiqa" },
+        "deleteConfirm": {
+          "title": "Kursni o'chirish",
+          "message": "\"{{name}}\" kursini o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
+          "error": "Kursni o'chirib bo'lmadi. Qaytadan urinib ko'ring."
+        }
+      },
+      "holidays": {
+        "title": "Bayramlar",
+        "addNew": "Qo'shish",
+        "addHoliday": "Bayram qo'shish",
+        "noData": "Ma'lumot yo'q",
+        "yes": "Ha",
+        "no": "Yo'q",
+        "tabs": { "upcoming": "Kelayotgan", "past": "O'tgan" },
+        "table": { "name": "Nomi", "dateOfHoliday": "Bayram sanasi", "createdAt": "Yaratilgan sana", "affectsPayment": "To'lovga ta'sir qiladi", "actions": "Amallar" },
+        "form": { "name": "Nomi", "date": "Sana", "noDateSelected": "Sana tanlanmagan", "affectsPaymentLabel": "O'quvchi to'lovi va o'qituvchi maoshi", "submit": "Yuborish" }
+      },
+      "rooms": {
+        "title": "Xonalar",
+        "addNew": "QO'SHISH",
+        "refresh": "Yangilash",
+        "delete": "O'chirish",
+        "edit": "Tahrirlash",
+        "emptyState": "Xonalar topilmadi",
+        "loadError": "Xonalarni yuklab bo'lmadi.",
+        "table": { "id": "id", "name": "Nomi", "branch": "Filial", "capacity": "Xona sig'imi", "actions": "Amallar" },
+        "form": {
+          "editRoom": "Xonani tahrirlash",
+          "addNewRoom": "Yangi xona qo'shish",
+          "name": "Nomi",
+          "branch": "Filial",
+          "branchPlaceholder": "Filialni tanlang",
+          "capacity": "Xona sig'imi",
+          "submit": "Yuborish",
+          "cancel": "Bekor qilish",
+          "errors": {
+            "name": "Xona nomini kiriting",
+            "capacity": "To'g'ri sig'imni kiriting",
+            "branch": "Filialni tanlang",
+            "save": "Nimadir xato ketdi. Qaytadan urinib ko'ring."
+          }
+        },
+        "deleteConfirm": {
+          "title": "Xonani o'chirish",
+          "message": "\"{{name}}\" xonasini o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
+          "error": "Xonani o'chirib bo'lmadi. Qaytadan urinib ko'ring."
+        }
+      },
+      "studentLeft": {
+        "title": "Guruhni tark etgan o'quvchilar",
+        "quantity": "Soni — {{count}}",
+        "noData": "Ma'lumot yo'q",
+        "attentionBanner": {
+          "title": "Diqqat!",
+          "message": "O'quv markazini tark etgan o'quvchilar hisobotidagi muammolar tuzatildi. Bundan tashqari, jadvalga yangi zarur ustunlar va filtrlar qo'shildi. 18.02.2025 sanasidan boshlab, guruhdan o'chirilgan barcha o'quvchilar \"Yangi jadval\"da qayd etiladi va endi eski jadvalga qo'shilmaydi. 18.02.2025 dan oldingi ma'lumotlarni ko'rish uchun eski jadvalga o'ting."
+        },
+        "tabs": { "new": "Yangi", "old": "Eski" },
+        "filters": { "searchByNameOrPhone": "Ism yoki telefon bo'yicha qidirish", "course": "Kurs", "group": "Guruh", "teachers": "O'qituvchilar", "staff": "Xodim", "reasonsForArchiving": "Arxivlash sabablari", "status": "Holat", "filter": "Filtr" },
+        "toolbar": { "filters": "Filtrlar", "columns": "Ustunlar" },
+        "table": { "number": "#", "student": "O'quvchi", "phone": "Telefon", "course": "Kurs", "group": "Guruh", "teacher": "O'qituvchi", "status": "Holat", "reasonsForRemoval": "O'chirish sabablari", "comment": "Izoh", "staff": "Xodim" }
+      }
+    },
+    "forms": {
+      "createForm": {
+        "tabs": { "simpleForm": "Oddiy shakl", "leadForm": "Lid shakli" },
+        "actions": { "save": "Saqlash", "update": "Yangilash", "submit": "Yuborish", "addAnswer": "Javob qo'shish", "addBlock": "Blok qo'shish" },
+        "placeholders": { "formName": "Shakl nomini kiriting", "selectBranch": "Filialni tanlang:", "selectSection": "kiritish", "leadsSources": "Lidlar manbalari" },
+        "fixedFields": { "fullName": "To'liq ism familiyangiz?", "phoneNumber": "Telefon raqamingiz?" },
+        "blockTypes": { "oneOfList": "Ro'yxatdan biri", "shortAnswer": "Qisqa javob", "longAnswer": "Batafsil javob" },
+        "defaultQuestion": "Javoblardan birini tanlang",
+        "answerLabel": "{{number}}-javob",
+        "options": {
+          "branch": { "yaIelts": "YA IELTS Campus", "branch1": "1-filial", "branch2": "2-filial" },
+          "section": { "section1": "1-bo'lim", "section2": "2-bo'lim" },
+          "source": { "source1": "1-manba", "source2": "2-manba" }
+        }
+      },
+      "lists": {
+        "title": "Formalar",
+        "actions": { "addNew": "Qo'shish" },
+        "table": { "id": "id", "name": "Nomi", "type": "turi", "actions": "Amallar" },
+        "tooltips": { "info": "Ma'lumot", "edit": "Tahrirlash", "delete": "O'chirish", "copyLink": "Havolani nusxalash" }
+      }
+    },
+    "blog": {
+      "whatsNew": {
+        "title": "Blog: Yangiliklar",
+        "actions": { "add": "Qo'shish", "save": "Saqlash", "cancel": "Bekor qilish" },
+        "list": { "header": "Bloglar", "empty": "Ma'lumot yo'q" },
+        "tooltips": { "edit": "Tahrirlash", "delete": "O'chirish" },
+        "placeholders": { "blogTitle": "Blog sarlavhasi", "blogContent": "Blog matnini shu yerga yozing..." },
+        "emptyState": { "selectBlog": "Ko'rish uchun blogni tanlang" }
+      },
+      "add": {
+        "title": "Blog: Qo'shish",
+        "fields": { "title": "Sarlavha", "public": "Ochiq" },
+        "placeholders": { "enterTitle": "Sarlavhani shu yerga kiriting", "editorPlaceholder": "Matnni shu yerga kiriting ..." },
+        "blockStyles": { "normal": "Oddiy", "heading1": "1-sarlavha", "heading2": "2-sarlavha", "heading3": "3-sarlavha" },
+        "fontFamilies": { "sansSerif": "Sans Serif", "serif": "Serif", "monospace": "Monospace" },
+        "toolbar": { "alignLeft": "Chapga tekislash", "orderedList": "Raqamlangan ro'yxat", "unorderedList": "Belgili ro'yxat", "insertLink": "Havola qo'shish", "insertImage": "Rasm qo'shish", "embedVideo": "Video joylashtirish", "textColor": "Matn rangi", "clearFormatting": "Formatlashni tozalash" },
+        "prompts": { "enterUrl": "URL kiriting:", "imageUrl": "Rasm URL:" },
+        "actions": { "save": "Saqlash" }
+      }
     }
   }
 }

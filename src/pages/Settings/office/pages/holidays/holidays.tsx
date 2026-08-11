@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Checkbox,
@@ -30,6 +31,7 @@ const formatDate = (dateStr: string) => {
 const today = new Date().toISOString().split("T")[0];
 
 export const Holidays = () => {
+  const { t } = useTranslation();
   const [tab, setTab] = useState(0);
   const [open, setOpen] = useState(false);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -70,7 +72,7 @@ export const Holidays = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <Typography variant="h5" className="!font-semibold !text-gray-800">
-          Holidays
+          {t("settings.office.holidays.title")}
         </Typography>
         <Button
           variant="contained"
@@ -87,7 +89,7 @@ export const Holidays = () => {
             boxShadow: "none",
           }}
         >
-          Add New
+          {t("settings.office.holidays.addNew")}
         </Button>
       </div>
 
@@ -110,8 +112,8 @@ export const Holidays = () => {
             "& .MuiTabs-indicator": { backgroundColor: "#29b6f6" },
           }}
         >
-          <Tab label="Upcoming" />
-          <Tab label="Past" />
+          <Tab label={t("settings.office.holidays.tabs.upcoming")} />
+          <Tab label={t("settings.office.holidays.tabs.past")} />
         </Tabs>
 
         {/* Table */}
@@ -119,7 +121,13 @@ export const Holidays = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
-                {["Name", "Date of the holiday", "Create at", "Affects to payment", "Actions"].map(
+                {[
+                  t("settings.office.holidays.table.name"),
+                  t("settings.office.holidays.table.dateOfHoliday"),
+                  t("settings.office.holidays.table.createdAt"),
+                  t("settings.office.holidays.table.affectsPayment"),
+                  t("settings.office.holidays.table.actions"),
+                ].map(
                   (col) => (
                     <th
                       key={col}
@@ -135,7 +143,7 @@ export const Holidays = () => {
               {displayed.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-10 text-gray-400">
-                    No Data
+                    {t("settings.office.holidays.noData")}
                   </td>
                 </tr>
               ) : (
@@ -152,7 +160,9 @@ export const Holidays = () => {
                             : "bg-gray-100 text-gray-500"
                         }`}
                       >
-                        {h.affectsPayment ? "Yes" : "No"}
+                        {h.affectsPayment
+                          ? t("settings.office.holidays.yes")
+                          : t("settings.office.holidays.no")}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -211,7 +221,7 @@ export const Holidays = () => {
           }}
         >
           <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937", fontSize: "1.1rem" }}>
-            Add holiday
+            {t("settings.office.holidays.addHoliday")}
           </Typography>
           <IconButton onClick={() => setOpen(false)} size="small" sx={{ color: "#9ca3af" }}>
             <MdClose size={20} />
@@ -225,7 +235,7 @@ export const Holidays = () => {
               variant="body2"
               sx={{ mb: 1, color: "#374151", fontWeight: 500, fontSize: "0.875rem" }}
             >
-              Name
+              {t("settings.office.holidays.form.name")}
             </Typography>
             <TextField
               fullWidth
@@ -250,7 +260,7 @@ export const Holidays = () => {
               variant="body2"
               sx={{ mb: 1, color: "#374151", fontWeight: 500, fontSize: "0.875rem" }}
             >
-              Date
+              {t("settings.office.holidays.form.date")}
             </Typography>
             <TextField
               fullWidth
@@ -263,7 +273,7 @@ export const Holidays = () => {
                   <MdCalendarToday size={16} className="mr-2 text-gray-400" />
                 ),
               }}
-              inputProps={{ placeholder: "No date selected" }}
+              inputProps={{ placeholder: t("settings.office.holidays.form.noDateSelected") }}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "6px",
@@ -292,7 +302,7 @@ export const Holidays = () => {
               }
               label={
                 <Typography variant="body2" sx={{ color: "#374151", fontSize: "0.875rem" }}>
-                  Student's payment and teacher's salary
+                  {t("settings.office.holidays.form.affectsPaymentLabel")}
                 </Typography>
               }
             />
@@ -316,7 +326,7 @@ export const Holidays = () => {
               fontSize: "0.95rem",
             }}
           >
-            Submit
+            {t("settings.office.holidays.form.submit")}
           </Button>
         </DialogContent>
       </Dialog>

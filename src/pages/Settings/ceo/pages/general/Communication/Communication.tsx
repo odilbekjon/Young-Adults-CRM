@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button, Typography, Box, TextField } from "@mui/material";
+import { useTranslation } from "react-i18next";
 
 // ── Outlined card with border-label (PaymentMethods dan o'xshash) ──
 const FieldCard = ({
@@ -38,6 +39,7 @@ const FieldCard = ({
 );
 
 const Communication = () => {
+  const { t } = useTranslation();
   // PlayMobile SMS
   const [pmUsername, setPmUsername] = useState("");
   const [pmPassword, setPmPassword] = useState("");
@@ -51,18 +53,18 @@ const Communication = () => {
   return (
     <Box sx={{ flex: 1, p: 5, maxWidth: 1200 }}>
       <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "#111827" }}>
-        Communication
+        {t("settings.ceo.general.communication.title")}
       </Typography>
 
       {/* ── 2 cards side by side ── */}
       <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start", mb: 4 }}>
 
         {/* PlayMobile SMS */}
-        <FieldCard title="PlayMobile SMS">
+        <FieldCard title={t("settings.ceo.general.communication.playMobile.title")}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, mt: 0.5 }}>
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-                PlayMobile gateway username
+                {t("settings.ceo.general.communication.playMobile.username")}
               </Typography>
               <TextField
                 fullWidth
@@ -75,7 +77,7 @@ const Communication = () => {
 
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-                PlayMobile gateway password
+                {t("settings.ceo.general.communication.playMobile.password")}
               </Typography>
               <TextField
                 fullWidth
@@ -89,7 +91,7 @@ const Communication = () => {
 
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-                PlayMobile Nickname
+                {t("settings.ceo.general.communication.playMobile.nickname")}
               </Typography>
               <TextField
                 fullWidth
@@ -103,11 +105,11 @@ const Communication = () => {
         </FieldCard>
 
         {/* Eskiz SMS */}
-        <FieldCard title="Eskiz SMS">
+        <FieldCard title={t("settings.ceo.general.communication.eskiz.title")}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, mt: 0.5 }}>
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-                Eskiz email (login)
+                {t("settings.ceo.general.communication.eskiz.email")}
               </Typography>
               <TextField
                 fullWidth
@@ -120,7 +122,7 @@ const Communication = () => {
 
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-                Eskiz secret key (password)
+                {t("settings.ceo.general.communication.eskiz.secret")}
               </Typography>
               <TextField
                 fullWidth
@@ -134,7 +136,7 @@ const Communication = () => {
 
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
-                Eskiz nickname
+                {t("settings.ceo.general.communication.eskiz.nickname")}
               </Typography>
               <TextField
                 fullWidth
@@ -163,7 +165,7 @@ const Communication = () => {
           "&:hover": { background: "#162d4a" },
         }}
       >
-        Save
+        {t("settings.ceo.general.communication.save")}
       </Button>
     </Box>
   );

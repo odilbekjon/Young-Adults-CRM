@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from "react";
 import { Box, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { BsCloudUpload } from "react-icons/bs";
 import {
   MdFormatAlignLeft,
@@ -39,8 +40,20 @@ export const themeColors = [
 // ─────────────────────────────────────────────
 // Rich-text editor
 // ─────────────────────────────────────────────
-const FONTS = ["Sans Serif", "Serif", "Monospace", "Cursive"];
-const FORMAT_OPTIONS = ["Normal", "Heading 1", "Heading 2", "Heading 3"];
+// value: the literal value passed to document.execCommand (must stay untranslated)
+const FONTS = [
+  { id: "sansSerif", value: "Sans Serif" },
+  { id: "serif", value: "Serif" },
+  { id: "monospace", value: "Monospace" },
+  { id: "cursive", value: "Cursive" },
+];
+// tag: the literal value passed to document.execCommand("formatBlock", tag)
+const FORMAT_OPTIONS = [
+  { id: "normal", tag: "p" },
+  { id: "heading1", tag: "h1" },
+  { id: "heading2", tag: "h2" },
+  { id: "heading3", tag: "h3" },
+];
 
 export const RichTextEditor = ({
   value,
@@ -49,9 +62,10 @@ export const RichTextEditor = ({
   value: string;
   onChange: (v: string) => void;
 }) => {
+  const { t } = useTranslation();
   const editorRef = useRef<HTMLDivElement>(null);
-  const [fmt, setFmt] = useState("Normal");
-  const [font, setFont] = useState("Sans Serif");
+  const [fmt, setFmt] = useState("normal");
+  const [font, setFont] = useState("sansSerif");
 
   const exec = (cmd: string, val?: string) => {
     document.execCommand(cmd, false, val);
@@ -78,19 +92,19 @@ export const RichTextEditor = ({
   return (
     <Box sx={{ border: "1px solid #d1d5db", borderRadius: "6px", overflow: "hidden", background: "#fff" }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 0.8, borderBottom: "1px solid #e5e7eb", background: "#fafafa", flexWrap: "wrap" }}>
-        <select value={fmt} onChange={(e) => { setFmt(e.target.value); exec("formatBlock", e.target.value === "Normal" ? "p" : e.target.value.replace(" ", "").toLowerCase()); }} style={selStyle}>
-          {FORMAT_OPTIONS.map((f) => <option key={f}>{f}</option>)}
+        <select value={fmt} onChange={(e) => { const id = e.target.value; setFmt(id); const opt = FORMAT_OPTIONS.find((o) => o.id === id); exec("formatBlock", opt ? opt.tag : "p"); }} style={selStyle}>
+          {FORMAT_OPTIONS.map((f) => <option key={f.id} value={f.id}>{t(`settings.ceo.general.shared.richTextEditor.formats.${f.id}`)}</option>)}
         </select>
-        <select value={font} onChange={(e) => { setFont(e.target.value); exec("fontName", e.target.value); }} style={selStyle}>
-          {FONTS.map((f) => <option key={f}>{f}</option>)}
+        <select value={font} onChange={(e) => { const id = e.target.value; setFont(id); const opt = FONTS.find((o) => o.id === id); exec("fontName", opt ? opt.value : "Sans Serif"); }} style={selStyle}>
+          {FONTS.map((f) => <option key={f.id} value={f.id}>{t(`settings.ceo.general.shared.richTextEditor.fonts.${f.id}`)}</option>)}
         </select>
         <Box sx={{ width: "1px", height: 20, background: "#e5e7eb", mx: 0.5 }} />
         <button onClick={() => exec("justifyLeft")} style={btnStyle}><MdFormatAlignLeft size={18} color="#374151" /></button>
         <button onClick={() => exec("insertOrderedList")} style={btnStyle}><MdFormatListNumbered size={18} color="#374151" /></button>
         <button onClick={() => exec("insertUnorderedList")} style={btnStyle}><MdFormatListBulleted size={18} color="#374151" /></button>
         <Box sx={{ width: "1px", height: 20, background: "#e5e7eb", mx: 0.5 }} />
-        <button onClick={() => { const u = prompt("URL:"); if (u) exec("createLink", u); }} style={btnStyle}><MdLink size={18} color="#374151" /></button>
-        <button onClick={() => { const u = prompt("Image URL:"); if (u) exec("insertImage", u); }} style={btnStyle}><MdImage size={18} color="#374151" /></button>
+        <button onClick={() => { const u = prompt(t("settings.ceo.general.shared.richTextEditor.urlPrompt")); if (u) exec("createLink", u); }} style={btnStyle}><MdLink size={18} color="#374151" /></button>
+        <button onClick={() => { const u = prompt(t("settings.ceo.general.shared.richTextEditor.imageUrlPrompt")); if (u) exec("insertImage", u); }} style={btnStyle}><MdImage size={18} color="#374151" /></button>
         <button style={btnStyle}><MdTableChart size={18} color="#374151" /></button>
         <Box sx={{ width: "1px", height: 20, background: "#e5e7eb", mx: 0.5 }} />
         <button style={btnStyle}><MdFormatColorText size={18} color="#374151" /></button>
@@ -112,6 +126,7 @@ export const RichTextEditor = ({
 // Drop zone
 // ─────────────────────────────────────────────
 export const DropZone = ({ onFile }: { preview: string | null; onFile: (f: File) => void }) => {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -138,8 +153,8 @@ export const DropZone = ({ onFile }: { preview: string | null; onFile: (f: File)
     >
       <BsCloudUpload size={48} color="#9ca3af" />
       <Typography sx={{ fontSize: 13, color: "#6b7280", mt: 1.5 }}>
-        Drop file here or{" "}
-        <span style={{ color: "#3b82f6", textDecoration: "underline" }}>click to upload</span>
+        {t("settings.ceo.general.shared.dropZone.dropFileHere")}{" "}
+        <span style={{ color: "#3b82f6", textDecoration: "underline" }}>{t("settings.ceo.general.shared.dropZone.clickToUpload")}</span>
       </Typography>
       <input ref={inputRef} type="file" accept="image/*" style={{ display: "none" }}
         onChange={(e) => { if (e.target.files?.[0]) onFile(e.target.files[0]); }} />

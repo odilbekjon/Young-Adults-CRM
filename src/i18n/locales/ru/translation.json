@@ -1,4 +1,8 @@
 {
+  "notFound": {
+    "message": "Страница, которую вы ищете, не существует.",
+    "backHome": "На главную"
+  },
   "header": {
     "search": "Поиск",
     "notifications": "Уведомления",
@@ -65,9 +69,11 @@
     "companyName": "Young Adults LLC",
     "tagline": "Всегда на шаг впереди!",
     "title": "Вход",
-    "phone": "Телефон",
+    "email": "Email",
     "password": "Пароль",
-    "error": "Неверный номер телефона или пароль. Попробуйте снова.",
+    "error": "Неверный email или пароль. Попробуйте снова.",
+    "networkError": "Ошибка сети. Проверьте соединение и попробуйте снова.",
+    "requiredFields": "Введите email и пароль.",
     "submit": "Войти"
   },
   "sidebar": {
@@ -153,7 +159,22 @@
     },
     "chart": {
       "currency": "UZS"
-    }
+    },
+    "attendance": {
+      "title": "Посещаемость",
+      "present": "Присутствовали",
+      "absent": "Отсутствовали"
+    },
+    "recentActivities": {
+      "title": "Последние действия",
+      "emptyState": "Нет последних действий"
+    },
+    "teacherPerformance": {
+      "title": "Эффективность преподавателей",
+      "activeGroups": "Активные группы",
+      "emptyState": "Нет данных"
+    },
+    "loadError": "Не удалось загрузить данные дашборда."
   },
   "students": {
     "header": {
@@ -163,20 +184,8 @@
     },
     "filters": {
       "searchPlaceholder": "Поиск по имени или телефону",
-      "byCourses": "По курсам",
-      "status": "Статус",
       "byTeacher": "По учителю",
-      "financial": "Финансы",
-      "byTags": "По тегам",
-      "startDate": "Дата начала",
-      "endDate": "Дата окончания",
-      "clearAll": "Сбросить всё",
-      "active": "Активен",
-      "inactive": "Неактивен",
-      "paid": "Оплачено",
-      "inDebt": "В долгу",
-      "new": "Новый",
-      "vip": "VIP"
+      "clearAll": "Сбросить всё"
     },
     "table": {
       "selectedCount_one": "Выбран {{count}}",
@@ -196,7 +205,8 @@
       "addToGroup": "Добавить в группу",
       "mailSelected": "Написать выбранным",
       "deleteSelected": "Удалить выбранных",
-      "noStudentsFound": "Студенты не найдены"
+      "noStudentsFound": "Студенты не найдены",
+      "loading": "Загрузка..."
     },
     "pagination": {
       "range": "{{from}}–{{to}} из {{total}}"
@@ -963,6 +973,527 @@
       "addedAt": "Добавлен",
       "activatedAt": "Активирован",
       "goToProfile": "Перейти в профиль →"
+    }
+  },
+  "settings": {
+    "grade": {
+      "title": "Оценка",
+      "attentionTitle": "Внимание!",
+      "attentionMessage": "После внедрения системы оценок, если максимальный балл будет изменён, все предыдущие оценки будут удалены.",
+      "maxScoreLabel": "Максимальный балл",
+      "allowPastDates": "Разрешить редактировать оценки за прошедшие даты",
+      "allowNonTeaching": "Разрешить непреподавательскому персоналу выставлять оценки",
+      "showCenterRating": "Показывать общий рейтинг центра в профиле студента",
+      "showBranchRating": "Показывать рейтинг филиала в профиле студента",
+      "save": "Сохранить"
+    },
+    "sms": {
+      "title": "Авто-SMS",
+      "tabs": {
+        "autoSms": "Авто-SMS",
+        "templates": "Шаблоны SMS"
+      },
+      "smsTypeHeading": "Тип SMS",
+      "smsTextHeading": "Текст SMS: {{label}}",
+      "exampleHeading": "Пример отправленного SMS",
+      "symbolsCount": "{{count}} символов ( ~ {{sms}} SMS )",
+      "saveButton": "Сохранить",
+      "descriptionHeading": "Описание",
+      "availableVariables": "Доступные переменные:",
+      "variablesWarningPrefix": "Внимание! Использование переменных работает для",
+      "variablesWarningSuffix": ". Эти переменные не влияют на SMS, отправленные вручную с помощью шаблонов SMS.",
+      "addNew": "Добавить",
+      "table": {
+        "templatesHeader": "Шаблоны SMS",
+        "actions": "Действия",
+        "empty": "Шаблонов пока нет. Нажмите «Добавить», чтобы создать."
+      },
+      "drawer": {
+        "title": "Добавить шаблон SMS",
+        "label": "Шаблон SMS",
+        "submit": "Отправить"
+      },
+      "types": {
+        "advancePayment": { "label": "Уведомление об авансовом платеже", "description": "Сообщение отправляется, когда требуется уведомление об авансовом платеже." },
+        "balanceNotEnough": { "label": "Недостаточный баланс", "description": "Сообщение отправляется, когда баланса студента недостаточно." },
+        "paymentDone": { "label": "Платёж выполнен", "description": "Сообщение отправляется после успешного выполнения платежа." },
+        "studentAdded": { "label": "Студент добавлен в группу", "description": "Сообщение отправляется, когда студент добавлен в группу." },
+        "studentBirthday": { "label": "День рождения студента", "description": "Сообщение отправляется в день рождения студента, в 9 утра." },
+        "absentAttendance": { "label": "Отсутствие на занятии", "description": "Сообщение отправляется, когда студент отсутствует на занятии." }
+      },
+      "variables": {
+        "student": "Активация данных в группе",
+        "group": "Название группы",
+        "sum": "Сумма платежа",
+        "lc": "Название вашего учебного центра",
+        "teacher": "Имя учителя",
+        "time": "Время",
+        "room": "Кабинет",
+        "days": "Дни",
+        "balance": "Текущий баланс студента",
+        "exId": "Дополнительный ID студента",
+        "hours": "Время начала и окончания занятий группы",
+        "course": "Название курса студента",
+        "indebtedness": "Долг студента",
+        "groupInformation": "Информация о группе"
+      }
+    },
+    "voip": {
+      "title": "Настройки VoIP",
+      "onlinePbx": "OnlinePBX",
+      "domainLabel": "Домен OnlinePBX",
+      "domainPlaceholder": "pbx000000.onpbx.ru",
+      "apiKeyLabel": "api ключ",
+      "apiKeyPlaceholder": "xBHHR9...",
+      "descriptionHeading": "Описание",
+      "descriptionText": "Для получения данных настройки телефонии обратитесь к тех.поддержке Modme или OnlinePBX."
+    },
+    "tags": {
+      "tag": {
+        "title": "Теги",
+        "addNew": "Добавить",
+        "table": { "id": "id", "name": "Название", "fromWhere": "Откуда", "actions": "Действия" },
+        "drawer": { "title": "Добавить новый тег" },
+        "form": { "name": "Название", "fromWhere": "Откуда", "optionStudents": "Студенты", "optionTeachers": "Учителя", "submit": "Отправить" }
+      }
+    },
+    "ceo": {
+      "billing": {
+        "licenseValidity": "Дата окончания лицензии платформы:",
+        "paymentTitle": "Оплата платформы",
+        "period": "Период",
+        "selectPlaceholder": "Выберите",
+        "pay": "Оплатить",
+        "historyTitle": "История платежей",
+        "table": { "sum": "Сумма", "createdAt": "Создано" },
+        "monthUnit": "МЕС",
+        "gamification": "Геймификация",
+        "som": "UZS"
+      },
+      "branches": {
+        "title": "Филиалы",
+        "refresh": "Обновить",
+        "addBranch": "Добавить филиал",
+        "tabs": { "active": "Активные", "archived": "В архиве" },
+        "delete": "Удалить",
+        "edit": "Редактировать",
+        "emptyActive": "Нет активных филиалов",
+        "emptyArchived": "Нет архивных филиалов",
+        "form": { "editTitle": "Редактировать филиал", "name": "Название филиала", "namePlaceholder": "например: Educoin", "phone": "Номер телефона", "address": "Адрес", "addressPlaceholder": "например: рядом с администрацией района Джаркурган", "cancel": "Отмена", "save": "Сохранить", "errors": { "name": "Введите название филиала", "phone": "Введите полный номер телефона", "address": "Введите адрес", "save": "Что-то пошло не так. Попробуйте еще раз." } },
+        "close": "Закрыть",
+        "loadError": "Не удалось загрузить филиалы.",
+        "deleteConfirm": {
+          "title": "Удалить филиал",
+          "message": "Вы уверены, что хотите удалить \"{{name}}\"? Это действие нельзя отменить.",
+          "error": "Не удалось удалить филиал. Попробуйте еще раз."
+        }
+      },
+      "roadmap": {
+        "title": "Аудит",
+        "overallScore": "Общий балл",
+        "maxScore": "Максимальный балл:",
+        "yourScore": "Ваш балл:",
+        "scorePlaceholder": "0",
+        "table": { "section": "Раздел", "question": "Вопрос", "score": "Балл (макс. 10)", "result": "Результат", "instructions": "Инструкции" },
+        "sections": {
+          "marketing": {
+            "name": "Маркетинг",
+            "questions": {
+              "m1": "Годовая маркетинговая стратегия структурирована",
+              "m2": "Доступны квартальные и ежемесячные маркетинговые планы",
+              "m3": "Используется интернет-маркетинг",
+              "m4": "Используется офлайн-маркетинг",
+              "m5": "У отдела маркетинга есть систематический рабочий процесс",
+              "m6": "У сотрудников маркетинга есть организационная структура",
+              "m7": "Обязанности отдела маркетинга чётко прописаны",
+              "m8": "У сотрудников маркетинга есть чёткие KPI",
+              "m9": "Автоматизирован приём платежей",
+              "m10": "Конверсия измеряется",
+              "m11": "Налажена работа с уходящими клиентами",
+              "m12": "CRM используется для управления файлами",
+              "m13": "Измеряется ежемесячный маркетинговый ROI бюджета",
+              "m14": "Проводится планирование маркетингового бюджета"
+            }
+          },
+          "sales": {
+            "name": "Продажи",
+            "questions": {
+              "s1": "Есть отдел продаж",
+              "s2": "Работа отдела продаж отделена от административного отдела",
+              "s3": "Доступен колл-центр",
+              "s4": "Колл-центр автоматизирован",
+              "s5": "Доступны ежемесячные планы продаж",
+              "s6": "В отделе продаж есть система бонусов / KPI",
+              "s7": "Воронка контролируется через CRM",
+              "s8": "Доступны скрипты продаж",
+              "s9": "Существует система непрерывного профессионального развития менеджеров"
+            }
+          },
+          "service": {
+            "name": "Сервис",
+            "questions": {
+              "sv1": "Отдел сервиса сформирован отдельно",
+              "sv2": "Обязанности сотрудников отдела чётко прописаны",
+              "sv3": "Для раздела составлен отдельный скрипт",
+              "sv4": "Управление осуществляется через CRM",
+              "sv5": "Внедрена система CJM",
+              "sv6": "Отслеживается время прихода сотрудников на работу",
+              "sv7": "Есть чек-листы функций",
+              "sv8": "Рабочий процесс автоматизирован",
+              "sv9": "Существуют стандарты качества обслуживания"
+            }
+          },
+          "finance": {
+            "name": "Финансы",
+            "questions": {
+              "f1": "Финансовый график",
+              "f2": "Расходы поступают по фиксированной ставке",
+              "f3": "Ведётся работа по оптимизации затрат",
+              "f4": "Процессы автоматизированы",
+              "f5": "Проводится бюджетирование",
+              "f6": "Внедрена система KPI"
+            }
+          },
+          "administrative": {
+            "name": "Администрирование",
+            "questions": {
+              "a1": "Поиск и подбор персонала автоматизированы",
+              "a2": "Обязанности сотрудников прописаны",
+              "a3": "Все материалы подготовлены для периода адаптации",
+              "a4": "Установлены плановые и ежемесячные встречи",
+              "a5": "Налажен ежедневный мониторинг показателей",
+              "a6": "Все процессы контролируются в CRM",
+              "a7": "Применяется отслеживание задач",
+              "a8": "Есть должность директора, владелец бизнеса вмешивается на уровне стратегии"
+            }
+          }
+        }
+      },
+      "staff": {
+        "title": "Персонал",
+        "addNew": "ДОБАВИТЬ",
+        "import": "Импорт",
+        "table": { "id": "id", "name": "Имя", "role": "Роль", "jobTitle": "Должность", "phone": "Телефон", "actions": "Действия" },
+        "form": { "title": "Добавить нового сотрудника", "name": "Имя", "phone": "Телефон", "password": "Пароль", "jobTitle": "Должность", "role": "Роль", "dateOfBirth": "Дата рождения", "gender": "Пол", "photo": "Фото", "noFileChosen": "Файл не выбран", "browse": "Обзор", "submit": "Отправить" },
+        "roles": { "ceo": "CEO", "branchDirector": "Директор филиала", "administrator": "Администратор", "administrator2": "Администратор2", "limitedAdministrator": "Ограниченный администратор", "teacher": "Учитель", "marketer": "Маркетолог", "cashier": "Кассир" },
+        "gender": { "male": "Мужской", "female": "Женский" },
+        "sms": { "recipientLabel": "сотрудник" }
+      },
+      "general": {
+        "accrual": {
+          "title": "Начисление и оплата",
+          "paymentModeLabel": "Режим оплаты студента",
+          "paymentModes": { "monthlyCalendar": "Ежемесячно (за календарный месяц)", "monthlyLesson": "Ежемесячно (за учебный месяц)", "perLesson": "За занятие", "weekly": "Еженедельно" },
+          "others": "Другое",
+          "checkboxes": {
+            "allowSendingSms": "Учителя: разрешить отправку SMS своим студентам",
+            "hideStudentContacts": "Учителя: скрыть контакты студентов",
+            "attendanceOnlyDuringLesson": "Учителя: установка посещаемости только во время занятия",
+            "allowGroupIntersection": "Расписание: разрешить пересечение групп в одном кабинете/у одного учителя",
+            "showGroupBalance": "Показывать баланс группы"
+          },
+          "save": "Сохранить"
+        },
+        "communication": {
+          "title": "Коммуникация",
+          "playMobile": { "title": "PlayMobile SMS", "username": "Имя пользователя шлюза PlayMobile", "password": "Пароль шлюза PlayMobile", "nickname": "Никнейм PlayMobile" },
+          "eskiz": { "title": "Eskiz SMS", "email": "Email Eskiz (логин)", "secret": "Секретный ключ Eskiz (пароль)", "nickname": "Никнейм Eskiz" },
+          "save": "Сохранить"
+        },
+        "exams": {
+          "title": "Экзамены",
+          "showActiveStudents": "Экзамены: показывать активных студентов",
+          "showTrialStudents": "Экзамены: показывать студентов на пробном занятии",
+          "showArchivedStudents": "Экзамены: показывать архивных студентов",
+          "showFrozenStudents": "Экзамены: показывать замороженных студентов",
+          "showDeletedStudents": "Экзамены: показывать удалённых студентов",
+          "save": "Сохранить"
+        },
+        "generalContent": {
+          "title": "Общие настройки",
+          "companyName": "Название компании",
+          "companyPhone": "Телефон компании",
+          "startTime": "Время начала",
+          "endTime": "Время окончания",
+          "lessonStartTimeStep": "Время начала занятия: (шаг 5 минут)",
+          "allStaffCoin": "Все сотрудники могут выдавать монеты",
+          "branchSpecificPbx": "Отдельный onlinePBX для филиала",
+          "animation": "Анимация",
+          "logo": "Логотип",
+          "uploadLogo": "Загрузить логотип",
+          "selectThemeColor": "Выберите цвет темы",
+          "companyOferta": "Оферта компании",
+          "selectFile": "Выберите файл",
+          "save": "Сохранить"
+        },
+        "integrations": {
+          "notConnected": "Не подключено",
+          "connect": "Подключить",
+          "connectedTitle": "Подключённые интеграции",
+          "connectedSubtitle": "Подключайте и управляйте своими аккаунтами соцсетей и CRM-системами",
+          "facebook": { "name": "Страница Facebook", "description": "Подключите вашу бизнес-страницу Facebook" },
+          "amoCrm": { "name": "amoCRM | Kommo", "description": "Синхронизируйте лиды с вашим аккаунтом amoCRM | Kommo" },
+          "workly": { "title": "Workly", "clientId": "Workly client id", "secret": "Workly secret", "username": "Имя пользователя Workly", "password": "Пароль Workly" },
+          "telegramReport": {
+            "title": "Отчёты в Telegram",
+            "intro": "Чтобы отправлять автоматический отчёт через Telegram-бота, выполните следующие шаги:",
+            "step1Before": "Введите",
+            "step1After": "в Telegram.",
+            "step2": "Скопируйте ID.",
+            "step3": "Вставьте ID в поле «Telegram для отчёта».",
+            "step4": "Нажмите кнопку «Сохранить».",
+            "step5Before": "Нажмите start в боте modme"
+          },
+          "socialMedia": { "title": "Социальные сети", "facebookPixel": "Facebook pixel", "telegram": "Telegram" },
+          "save": "Сохранить"
+        },
+        "invoice": {
+          "title": "Квитанция",
+          "checkboxes": {
+            "hideLogo": "Скрыть: Логотип",
+            "hideImageField": "Скрыть: Поле изображения",
+            "hideTextField": "Скрыть: Текстовое поле",
+            "hideCheckNumber": "Скрыть: Номер чека",
+            "hideCompany": "Скрыть: Компания",
+            "hideBranch": "Скрыть: Филиал",
+            "hideStudent": "Скрыть: Студент",
+            "hidePhone": "Скрыть: Телефон",
+            "hideBalance": "Скрыть: Баланс",
+            "hideGroup": "Скрыть: Группа",
+            "hideCoursePrice": "Скрыть: Цена курса",
+            "hideTeacher": "Скрыть: Учитель",
+            "hideType": "Скрыть: Тип",
+            "hidePaymentAmount": "Скрыть: Сумма платежа",
+            "hideDate": "Скрыть: Дата",
+            "hideCreator": "Скрыть: Создатель",
+            "hideTime": "Скрыть: Время"
+          },
+          "noFileChosen": "Файл не выбран",
+          "browse": "Обзор",
+          "save": "Сохранить",
+          "cancel": "Отмена",
+          "logoAlt": "Логотип Young Adults",
+          "preview": {
+            "checkNumber": "Номер чека:", "company": "Компания:", "branch": "Филиал:", "student": "Студент:", "phone": "Телефон:", "balance": "Баланс:", "group": "Группа:", "coursePrice": "Цена курса:", "teacher": "Учитель:", "type": "Тип:", "paymentAmount": "Сумма платежа:", "date": "Дата:", "creator": "Создатель:", "time": "Время:"
+          }
+        },
+        "landingPage": {
+          "title": "Целевая страница",
+          "createTitle": "Создать целевую страницу",
+          "name": "*Название",
+          "slug": "*Slug",
+          "branch": "Филиал",
+          "section": "Раздел",
+          "source": "Источник",
+          "create": "Создать",
+          "errors": { "nameRequired": "Название обязательно", "slugRequired": "Slug обязателен" },
+          "branches": { "branch1": "Филиал 1", "branch2": "Филиал 2", "branch3": "Филиал 3" },
+          "sections": { "section1": "Раздел 1", "section2": "Раздел 2", "section3": "Раздел 3" },
+          "sources": { "source1": "Источник 1", "source2": "Источник 2", "source3": "Источник 3" },
+          "table": { "name": "Название", "slug": "Slug", "actions": "Действия", "noData": "Нет данных", "delete": "Удалить" }
+        },
+        "leadForm": {
+          "title": "Форма лида",
+          "companyFormBackground": "Фон формы компании",
+          "previewAlt": "превью",
+          "logoAlt": "Логотип",
+          "recommendedImageSize": "Рекомендуемый размер изображения 610x160px",
+          "textForm": "Текст формы",
+          "defaultPreviewText": "Оставьте заявку в учебный центр",
+          "textAfterFilling": "Текст после заполнения формы",
+          "customCss": "Свой CSS",
+          "customCssExample": "пример: .lead-form-block { background-color: #fff; }",
+          "customCssPlaceholder": "Свой CSS для этой формы",
+          "save": "Сохранить"
+        },
+        "paymentMethods": {
+          "title": "Способы оплаты",
+          "paymeMerchantId": "Payme merchant ID",
+          "uzumServiceId": "Uzum service ID",
+          "clickServiceId": "Click service ID",
+          "payme": "Payme",
+          "companyLink": "Ссылка компании",
+          "paycomMerchantId": "Paycom merchant id",
+          "paycomUsername": "Имя пользователя Paycom",
+          "paycomPassword": "Пароль Paycom",
+          "midtrans": "Midtrans",
+          "midtransServerKey": "MIDTRANS SERVER KEY",
+          "midtransClientKey": "MIDTRANS CLIENT KEY",
+          "save": "Сохранить"
+        },
+        "shared": {
+          "richTextEditor": {
+            "formats": { "normal": "Обычный", "heading1": "Заголовок 1", "heading2": "Заголовок 2", "heading3": "Заголовок 3" },
+            "fonts": { "sansSerif": "Без засечек", "serif": "С засечками", "monospace": "Моноширинный", "cursive": "Курсив" },
+            "urlPrompt": "URL:",
+            "imageUrlPrompt": "URL изображения:"
+          },
+          "dropZone": { "dropFileHere": "Перетащите файл сюда или", "clickToUpload": "нажмите для загрузки" }
+        },
+        "signIn": {
+          "title": "Вход",
+          "companyFormBackground": "Фон формы компании",
+          "previewAlt": "превью",
+          "logoAlt": "Логотип",
+          "recommendedImageSize": "Рекомендуемый размер изображения 610x160px",
+          "textForm": "Текст формы",
+          "customCss": "Свой CSS",
+          "customCssPlaceholder": "Свой CSS для этой формы",
+          "save": "Сохранить"
+        }
+      }
+    },
+    "office": {
+      "archive": {
+        "title": "Архив",
+        "quantity": "Количество — {{count}}",
+        "reasonsForArchiving": "Причины архивации",
+        "balance": "Баланс",
+        "noData": "Нет данных",
+        "filters": { "namePhone": "Имя или телефон", "filterByRole": "Фильтр по роли", "student": "Студент", "teacher": "Учитель", "filterByReason": "Фильтр по причине", "startDate": "Дата начала" },
+        "actions": { "delete": "Удалить", "reestablish": "Восстановить" },
+        "table": { "name": "Имя", "phone": "Телефон", "roles": "Роли", "reasonsForRemoval": "Причины удаления", "comment": "Комментарий", "archived": "В архиве", "actions": "Действия" },
+        "reasons": {
+          "addTemplate": "Добавить шаблон",
+          "editTemplate": "Редактировать шаблон",
+          "table": { "id": "id", "name": "Название", "actions": "Действия" },
+          "form": { "name": "Название" },
+          "submit": "Отправить",
+          "save": "Сохранить"
+        }
+      },
+      "courses": {
+        "title": "Курсы",
+        "addNew": "ДОБАВИТЬ",
+        "currency": "UZS",
+        "refresh": "Обновить",
+        "edit": "Редактировать",
+        "delete": "Удалить",
+        "emptyState": "Курсы не найдены",
+        "loadError": "Не удалось загрузить курсы.",
+        "form": {
+          "addNewItem": "Добавить элемент",
+          "editItem": "Редактировать курс",
+          "name": "Название",
+          "codeCourse": "Код курса",
+          "lessonDuration": "Длительность занятия",
+          "courseDuration": "Длительность курса (мес.)",
+          "branch": "Филиал",
+          "branchPlaceholder": "Выберите филиал",
+          "price": "Цена",
+          "description": "Описание",
+          "save": "Сохранить",
+          "cancel": "Отмена",
+          "errors": {
+            "name": "Введите название курса",
+            "branch": "Выберите филиал",
+            "save": "Что-то пошло не так. Попробуйте еще раз."
+          }
+        },
+        "durationOptions": { "min45": "45 минут", "min60": "60 минут", "min90": "90 минут", "min120": "120 минут", "min150": "150 минут" },
+        "deleteConfirm": {
+          "title": "Удалить курс",
+          "message": "Вы уверены, что хотите удалить \"{{name}}\"? Это действие нельзя отменить.",
+          "error": "Не удалось удалить курс. Попробуйте еще раз."
+        }
+      },
+      "holidays": {
+        "title": "Праздники",
+        "addNew": "Добавить",
+        "addHoliday": "Добавить праздник",
+        "noData": "Нет данных",
+        "yes": "Да",
+        "no": "Нет",
+        "tabs": { "upcoming": "Предстоящие", "past": "Прошедшие" },
+        "table": { "name": "Название", "dateOfHoliday": "Дата праздника", "createdAt": "Создано", "affectsPayment": "Влияет на оплату", "actions": "Действия" },
+        "form": { "name": "Название", "date": "Дата", "noDateSelected": "Дата не выбрана", "affectsPaymentLabel": "Оплата студента и зарплата учителя", "submit": "Отправить" }
+      },
+      "rooms": {
+        "title": "Кабинеты",
+        "addNew": "ДОБАВИТЬ",
+        "refresh": "Обновить",
+        "delete": "Удалить",
+        "edit": "Редактировать",
+        "emptyState": "Кабинеты не найдены",
+        "loadError": "Не удалось загрузить кабинеты.",
+        "table": { "id": "id", "name": "Название", "branch": "Филиал", "capacity": "Вместимость кабинета", "actions": "Действия" },
+        "form": {
+          "editRoom": "Редактировать кабинет",
+          "addNewRoom": "Добавить новый кабинет",
+          "name": "Название",
+          "branch": "Филиал",
+          "branchPlaceholder": "Выберите филиал",
+          "capacity": "Вместимость кабинета",
+          "submit": "Отправить",
+          "cancel": "Отмена",
+          "errors": {
+            "name": "Введите название кабинета",
+            "capacity": "Введите корректную вместимость",
+            "branch": "Выберите филиал",
+            "save": "Что-то пошло не так. Попробуйте еще раз."
+          }
+        },
+        "deleteConfirm": {
+          "title": "Удалить кабинет",
+          "message": "Вы уверены, что хотите удалить \"{{name}}\"? Это действие нельзя отменить.",
+          "error": "Не удалось удалить кабинет. Попробуйте еще раз."
+        }
+      },
+      "studentLeft": {
+        "title": "Студенты, покинувшие группу",
+        "quantity": "Количество — {{count}}",
+        "noData": "Нет данных",
+        "attentionBanner": {
+          "title": "Внимание!",
+          "message": "Проблемы в отчёте о студентах, покинувших учебный центр, исправлены. Также в таблицу добавлены новые необходимые столбцы и фильтры. Начиная с 18.02.2025, все студенты, удалённые из группы, будут фиксироваться в «Новой таблице» и больше не будут добавляться в старую таблицу. Чтобы увидеть данные до 18.02.2025, перейдите в старую таблицу."
+        },
+        "tabs": { "new": "Новая", "old": "Старая" },
+        "filters": { "searchByNameOrPhone": "Поиск по имени или телефону", "course": "Курс", "group": "Группа", "teachers": "Учителя", "staff": "Сотрудник", "reasonsForArchiving": "Причины архивации", "status": "Статус", "filter": "Фильтр" },
+        "toolbar": { "filters": "Фильтры", "columns": "Столбцы" },
+        "table": { "number": "#", "student": "Студент", "phone": "Телефон", "course": "Курс", "group": "Группа", "teacher": "Учитель", "status": "Статус", "reasonsForRemoval": "Причины удаления", "comment": "Комментарий", "staff": "Сотрудник" }
+      }
+    },
+    "forms": {
+      "createForm": {
+        "tabs": { "simpleForm": "Простая форма", "leadForm": "Форма лида" },
+        "actions": { "save": "Сохранить", "update": "Обновить", "submit": "Отправить", "addAnswer": "Добавить ответ", "addBlock": "Добавить блок" },
+        "placeholders": { "formName": "Введите название формы", "selectBranch": "Выберите филиал:", "selectSection": "ввод", "leadsSources": "Источники лидов" },
+        "fixedFields": { "fullName": "Ваше полное имя и фамилия?", "phoneNumber": "Ваш номер телефона?" },
+        "blockTypes": { "oneOfList": "Один из списка", "shortAnswer": "Короткий ответ", "longAnswer": "Развёрнутый ответ" },
+        "defaultQuestion": "Выберите из ответов",
+        "answerLabel": "Ответ {{number}}",
+        "options": {
+          "branch": { "yaIelts": "YA IELTS Campus", "branch1": "Филиал 1", "branch2": "Филиал 2" },
+          "section": { "section1": "Раздел 1", "section2": "Раздел 2" },
+          "source": { "source1": "Источник 1", "source2": "Источник 2" }
+        }
+      },
+      "lists": {
+        "title": "Формы",
+        "actions": { "addNew": "Добавить" },
+        "table": { "id": "id", "name": "Название", "type": "тип", "actions": "Действия" },
+        "tooltips": { "info": "Инфо", "edit": "Редактировать", "delete": "Удалить", "copyLink": "Скопировать ссылку" }
+      }
+    },
+    "blog": {
+      "whatsNew": {
+        "title": "Блог: Что нового",
+        "actions": { "add": "Добавить", "save": "Сохранить", "cancel": "Отмена" },
+        "list": { "header": "Блоги", "empty": "Нет данных" },
+        "tooltips": { "edit": "Редактировать", "delete": "Удалить" },
+        "placeholders": { "blogTitle": "Заголовок блога", "blogContent": "Напишите содержимое блога здесь..." },
+        "emptyState": { "selectBlog": "Выберите блог для просмотра" }
+      },
+      "add": {
+        "title": "Блог: Добавить",
+        "fields": { "title": "Заголовок", "public": "Публичный" },
+        "placeholders": { "enterTitle": "Введите заголовок здесь", "editorPlaceholder": "Вставьте текст здесь ..." },
+        "blockStyles": { "normal": "Обычный", "heading1": "Заголовок 1", "heading2": "Заголовок 2", "heading3": "Заголовок 3" },
+        "fontFamilies": { "sansSerif": "Без засечек", "serif": "С засечками", "monospace": "Моноширинный" },
+        "toolbar": { "alignLeft": "Выровнять по левому краю", "orderedList": "Нумерованный список", "unorderedList": "Маркированный список", "insertLink": "Вставить ссылку", "insertImage": "Вставить изображение", "embedVideo": "Встроить видео", "textColor": "Цвет текста", "clearFormatting": "Очистить форматирование" },
+        "prompts": { "enterUrl": "Введите URL:", "imageUrl": "URL изображения:" },
+        "actions": { "save": "Сохранить" }
+      }
     }
   }
 }

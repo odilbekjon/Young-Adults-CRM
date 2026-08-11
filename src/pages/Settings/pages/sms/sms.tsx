@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { MdSms, MdSave, MdClose, MdDelete } from "react-icons/md";
 import { IoMdAdd, IoMdRemove } from "react-icons/io";
 
@@ -17,78 +18,83 @@ interface SmsTemplate {
   text: string;
 }
 
+// NOTE: `desc` holds an i18n key (not raw text) because this array is defined
+// outside the component and translated at render time via t(v.desc).
 const VARIABLES = [
-  { key: "(STUDENT)", desc: "Data activation in group" },
-  { key: "(GROUP)", desc: "Group name" },
-  { key: "(SUM)", desc: "Payment amount" },
-  { key: "(LC)", desc: "The name of your learning centre" },
-  { key: "(TEACHER)", desc: "Teacher's name" },
-  { key: "(TIME)", desc: "Time" },
-  { key: "(ROOM)", desc: "Room" },
-  { key: "(DAYS)", desc: "Days" },
-  { key: "(BALANCE)", desc: "Student's current balance" },
-  { key: "(EX-ID)", desc: "Additional student ID" },
-  { key: "(HOURS)", desc: "Start and end times for group classes" },
-  { key: "(COURSE)", desc: "Name of the student's course" },
-  { key: "(INDEBTEDNESS)", desc: "Student's debt" },
-  { key: "(GROUP INFORMATION)", desc: "Group information" },
+  { key: "(STUDENT)", desc: "settings.sms.variables.student" },
+  { key: "(GROUP)", desc: "settings.sms.variables.group" },
+  { key: "(SUM)", desc: "settings.sms.variables.sum" },
+  { key: "(LC)", desc: "settings.sms.variables.lc" },
+  { key: "(TEACHER)", desc: "settings.sms.variables.teacher" },
+  { key: "(TIME)", desc: "settings.sms.variables.time" },
+  { key: "(ROOM)", desc: "settings.sms.variables.room" },
+  { key: "(DAYS)", desc: "settings.sms.variables.days" },
+  { key: "(BALANCE)", desc: "settings.sms.variables.balance" },
+  { key: "(EX-ID)", desc: "settings.sms.variables.exId" },
+  { key: "(HOURS)", desc: "settings.sms.variables.hours" },
+  { key: "(COURSE)", desc: "settings.sms.variables.course" },
+  { key: "(INDEBTEDNESS)", desc: "settings.sms.variables.indebtedness" },
+  { key: "(GROUP INFORMATION)", desc: "settings.sms.variables.groupInformation" },
 ];
 
+// NOTE: `label` and `description` hold i18n keys (not raw text) because this
+// array is defined outside the component and translated at render time via
+// t(sms.label) / t(sms.description). `template` is actual message content
+// (already localized Uzbek business copy), not UI chrome, so it is left as-is.
 const SMS_TYPES: SmsType[] = [
   {
     id: "advance_payment",
-    label: "Advance payment notification",
+    label: "settings.sms.types.advancePayment.label",
     enabled: true,
     template:
       "Assalomu Alaykum! 🎓 (STUDENT), sizning avans to'lovingiz qabul qilindi. Miqdor: (SUM). (LC)",
-    description: "The message is sent when an advance payment notification is needed.",
+    description: "settings.sms.types.advancePayment.description",
     variables: ["(STUDENT)", "(SUM)", "(LC)"],
   },
   {
     id: "balance_not_enough",
-    label: "Balance is not enough",
+    label: "settings.sms.types.balanceNotEnough.label",
     enabled: true,
     days: 2,
     template:
       "Assalomu Alaykum! 🎓 (STUDENT), sizning hisobingizda mablag' yetarli emas. Joriy balans: (BALANCE). (LC)",
-    description: "The message is sent when the student's balance is insufficient.",
+    description: "settings.sms.types.balanceNotEnough.description",
     variables: ["(STUDENT)", "(BALANCE)", "(LC)"],
   },
   {
     id: "payment_done",
-    label: "Payment was done",
+    label: "settings.sms.types.paymentDone.label",
     enabled: true,
     template:
       "Assalomu Alaykum! 🎓 (STUDENT), to'lovingiz muvaffaqiyatli amalga oshirildi. Miqdor: (SUM). (LC)",
-    description: "The message is sent when a payment has been successfully made.",
+    description: "settings.sms.types.paymentDone.description",
     variables: ["(STUDENT)", "(SUM)", "(LC)"],
   },
   {
     id: "student_added",
-    label: "Student added to group",
+    label: "settings.sms.types.studentAdded.label",
     enabled: true,
     template:
       "Assalomu Alaykum! 🎓 (STUDENT), siz (GROUP) guruhiga qo'shildingiz. O'qituvchi: (TEACHER). (LC)",
-    description: "The message is sent when a student is added to a group.",
+    description: "settings.sms.types.studentAdded.description",
     variables: ["(STUDENT)", "(GROUP)", "(TEACHER)", "(LC)"],
   },
   {
     id: "student_birthday",
-    label: "Student birthday",
+    label: "settings.sms.types.studentBirthday.label",
     enabled: false,
     template:
       "Assalomu Alaykum! 🎂 (STUDENT), sizning tavvalud ayyomlaringiz bilan o'quv markazimiz nomidan tabriklaymiz! Sizga o'quv jarayonida omad, va har bir orzu qilgan niyatlaringizga etishingizni tilab qolamiz! (LC)",
-    description:
-      "The message is sent on the student's birthday. The message is sent at 9 am.",
+    description: "settings.sms.types.studentBirthday.description",
     variables: ["(STUDENT)", "(LC)"],
   },
   {
     id: "absent_attendance",
-    label: "Absent Attendance",
+    label: "settings.sms.types.absentAttendance.label",
     enabled: false,
     template:
       "Assalomu Alaykum! 🎓 (STUDENT), bugun darsga kelmadingiz. (GROUP) guruhida (TIME) da dars bo'ldi. (LC)",
-    description: "The message is sent when a student is absent from a class.",
+    description: "settings.sms.types.absentAttendance.description",
     variables: ["(STUDENT)", "(GROUP)", "(TIME)", "(LC)"],
   },
 ];
@@ -115,6 +121,7 @@ const Toggle = ({
 );
 
 export const SettingsSms = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"auto-sms" | "templates">("auto-sms");
   const [smsTypes, setSmsTypes] = useState<SmsType[]>(SMS_TYPES);
   const [selectedId, setSelectedId] = useState<string>("student_birthday");
@@ -179,7 +186,7 @@ export const SettingsSms = () => {
       {/* Page title */}
       <div className="flex items-center gap-2 mb-6">
         <MdSms className="text-2xl text-gray-700" />
-        <h1 className="text-2xl font-semibold text-gray-800">Auto-SMS</h1>
+        <h1 className="text-2xl font-semibold text-gray-800">{t("settings.sms.title")}</h1>
       </div>
 
       {/* Tabs */}
@@ -192,7 +199,7 @@ export const SettingsSms = () => {
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
-          Auto-SMS
+          {t("settings.sms.tabs.autoSms")}
         </button>
         <button
           onClick={() => setActiveTab("templates")}
@@ -202,7 +209,7 @@ export const SettingsSms = () => {
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
-          SMS templates
+          {t("settings.sms.tabs.templates")}
         </button>
       </div>
 
@@ -210,7 +217,7 @@ export const SettingsSms = () => {
       {activeTab === "auto-sms" && (
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-4 flex flex-col gap-2">
-            <h2 className="text-base font-semibold text-gray-700 mb-2">SMS type</h2>
+            <h2 className="text-base font-semibold text-gray-700 mb-2">{t("settings.sms.smsTypeHeading")}</h2>
             {smsTypes.map((sms) => (
               <div
                 key={sms.id}
@@ -221,7 +228,7 @@ export const SettingsSms = () => {
                     : "border-gray-200 bg-white hover:border-blue-300"
                 }`}
               >
-                <span className="text-sm text-gray-700">{sms.label}</span>
+                <span className="text-sm text-gray-700">{t(sms.label)}</span>
                 <div className="flex items-center gap-2">
                   {sms.days !== undefined && (
                     <div className="flex items-center gap-1 border border-gray-300 rounded px-1">
@@ -251,7 +258,7 @@ export const SettingsSms = () => {
           <div className="col-span-5 flex flex-col gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
               <h2 className="text-base font-semibold text-gray-700 mb-3">
-                SMS text: {selected.label}
+                {t("settings.sms.smsTextHeading", { label: t(selected.label) })}
               </h2>
               <textarea
                 value={selected.template}
@@ -263,38 +270,38 @@ export const SettingsSms = () => {
 
             <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
               <h2 className="text-base font-semibold text-gray-700 mb-3">
-                Example of a sent SMS
+                {t("settings.sms.exampleHeading")}
               </h2>
               <div className="bg-gray-100 rounded-md p-4 text-sm text-gray-600 min-h-[100px]">
                 {exampleText}
               </div>
               <p className="text-xs text-gray-400 mt-2">
-                {symbolCount} symbols ( ~ {smsCount} SMS )
+                {t("settings.sms.symbolsCount", { count: symbolCount, sms: smsCount })}
               </p>
             </div>
 
             <div className="flex justify-end">
               <button className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-6 py-2 rounded-md transition-colors">
                 <MdSave size={16} />
-                Save
+                {t("settings.sms.saveButton")}
               </button>
             </div>
           </div>
 
           <div className="col-span-3">
-            <h2 className="text-base font-semibold text-gray-700 mb-3">Description</h2>
+            <h2 className="text-base font-semibold text-gray-700 mb-3">{t("settings.sms.descriptionHeading")}</h2>
             <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
-              <p className="text-sm text-gray-600 mb-4">{selected.description}</p>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Available variables:</h3>
+              <p className="text-sm text-gray-600 mb-4">{t(selected.description)}</p>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">{t("settings.sms.availableVariables")}</h3>
               <p className="text-xs text-red-500 mb-3">
-                Attentiveness! Using the variables works for{" "}
-                <span className="font-bold">Auto-SMS</span>. These variables do not affect SMS sent
-                manually using SMS shablons.
+                {t("settings.sms.variablesWarningPrefix")}{" "}
+                <span className="font-bold">{t("settings.sms.tabs.autoSms")}</span>
+                {t("settings.sms.variablesWarningSuffix")}
               </p>
               <ul className="space-y-1">
                 {VARIABLES.map((v) => (
                   <li key={v.key} className="text-xs text-gray-600">
-                    <span className="font-medium text-gray-800">{v.key}</span> - {v.desc}
+                    <span className="font-medium text-gray-800">{v.key}</span> - {t(v.desc)}
                   </li>
                 ))}
               </ul>
@@ -312,7 +319,7 @@ export const SettingsSms = () => {
               onClick={() => setDrawerOpen(true)}
               className="bg-[#1b3d5e] hover:bg-[#162f4a] text-white text-sm font-bold px-7 py-2.5 rounded-full tracking-widest uppercase transition-colors shadow"
             >
-              Add New
+              {t("settings.sms.addNew")}
             </button>
           </div>
 
@@ -322,10 +329,10 @@ export const SettingsSms = () => {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left text-sm font-medium text-gray-600 px-5 py-3">
-                    SMS templates
+                    {t("settings.sms.table.templatesHeader")}
                   </th>
                   <th className="text-left text-sm font-medium text-gray-600 px-5 py-3 w-32">
-                    Actions
+                    {t("settings.sms.table.actions")}
                   </th>
                 </tr>
               </thead>
@@ -333,7 +340,7 @@ export const SettingsSms = () => {
                 {templates.length === 0 ? (
                   <tr>
                     <td colSpan={2} className="px-5 py-10 text-center text-sm text-gray-400">
-                      No templates yet. Click "Add New" to create one.
+                      {t("settings.sms.table.empty")}
                     </td>
                   </tr>
                 ) : (
@@ -380,7 +387,7 @@ export const SettingsSms = () => {
 
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-800">Add SMS Template</h2>
+              <h2 className="text-base font-semibold text-gray-800">{t("settings.sms.drawer.title")}</h2>
               <button
                 onClick={() => setDrawerOpen(false)}
                 className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-gray-100"
@@ -392,7 +399,7 @@ export const SettingsSms = () => {
             {/* Body */}
             <div className="flex-1 px-6 py-6 flex flex-col gap-4">
               <div>
-                <label className="block text-sm text-gray-700 mb-2">SMS template</label>
+                <label className="block text-sm text-gray-700 mb-2">{t("settings.sms.drawer.label")}</label>
                 <textarea
                   value={newTemplateText}
                   onChange={(e) => setNewTemplateText(e.target.value)}
@@ -400,7 +407,7 @@ export const SettingsSms = () => {
                   className="w-full text-sm text-gray-700 border border-gray-300 rounded-md p-3 resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  {newSymbolCount} symbols ( ~ {newSmsCount} SMS )
+                  {t("settings.sms.symbolsCount", { count: newSymbolCount, sms: newSmsCount })}
                 </p>
               </div>
 
@@ -408,7 +415,7 @@ export const SettingsSms = () => {
                 onClick={handleAddTemplate}
                 className="bg-[#1b3d5e] hover:bg-[#162f4a] text-white text-sm font-bold px-7 py-2.5 rounded-full w-fit transition-colors shadow"
               >
-                Submit
+                {t("settings.sms.drawer.submit")}
               </button>
             </div>
           </div>

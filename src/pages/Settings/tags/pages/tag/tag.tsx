@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   Box,
@@ -38,6 +39,7 @@ const rows = [
 ];
 
 export const Tag = () => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
@@ -49,7 +51,7 @@ export const Tag = () => {
     >
       {/* Header */}
       <Box className="flex items-center justify-between mb-3">
-        <h1 className="text-3xl">Tags</h1>
+        <h1 className="text-3xl">{t("settings.tags.tag.title")}</h1>
 
         <Button
           onClick={() => setOpen(true)}
@@ -66,7 +68,7 @@ export const Tag = () => {
             },
           }}
         >
-          Add new
+          {t("settings.tags.tag.addNew")}
         </Button>
       </Box>
 
@@ -92,19 +94,19 @@ export const Tag = () => {
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>
-                  id
+                  {t("settings.tags.tag.table.id")}
                 </TableCell>
 
                 <TableCell sx={{ fontWeight: 700 }}>
-                  Name
+                  {t("settings.tags.tag.table.name")}
                 </TableCell>
 
                 <TableCell sx={{ fontWeight: 700 }}>
-                  From Where
+                  {t("settings.tags.tag.table.fromWhere")}
                 </TableCell>
 
                 <TableCell sx={{ fontWeight: 700 }}>
-                  Actions
+                  {t("settings.tags.tag.table.actions")}
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -175,7 +177,7 @@ export const Tag = () => {
             }}
           >
             <h2 className="text-2xl font-medium">
-              Add new tags
+              {t("settings.tags.tag.drawer.title")}
             </h2>
 
             <IconButton onClick={() => setOpen(false)}>
@@ -195,7 +197,7 @@ export const Tag = () => {
             {/* Name */}
             <Box>
               <p className="mb-3 text-[18px] text-gray-600">
-                Name
+                {t("settings.tags.tag.form.name")}
               </p>
 
               <TextField
@@ -207,17 +209,17 @@ export const Tag = () => {
             {/* Select */}
             <Box>
               <p className="mb-3 text-[18px] text-gray-600">
-                From Where
+                {t("settings.tags.tag.form.fromWhere")}
               </p>
 
               <FormControl fullWidth>
                 <Select defaultValue="Students">
                   <MenuItem value="Students">
-                    Students
+                    {t("settings.tags.tag.form.optionStudents")}
                   </MenuItem>
 
                   <MenuItem value="Teachers">
-                    Teachers
+                    {t("settings.tags.tag.form.optionTeachers")}
                   </MenuItem>
                 </Select>
               </FormControl>
@@ -233,7 +235,7 @@ export const Tag = () => {
                 borderRadius: "8px",
               }}
             >
-              Submit
+              {t("settings.tags.tag.form.submit")}
             </Button>
           </Box>
         </Box>

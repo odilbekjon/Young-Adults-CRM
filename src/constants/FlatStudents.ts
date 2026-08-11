@@ -1,6 +1,7 @@
 // src/constants/FlatStudents.ts
 
 import { TEACHERS_DATA } from "./Teachers";
+import type { Student } from "../app/api/studentsApi/types";
 
 export interface FlatStudent {
   uid: string;
@@ -57,6 +58,33 @@ export const buildFlatStudents = (): FlatStudent[] => {
   });
 
   return result;
+};
+
+export const mapApiStudentToFlat = (s: Student): FlatStudent => {
+  const group = s.groups[0];
+  const teacher = s.teachers[0];
+  return {
+    uid: s.id,
+    id: 0,
+    name: s.name,
+    phone: s.phone,
+    active: true,
+    groupId: 0,
+    groupName: group?.name ?? "—",
+    groupSchedule: "",
+    groupBadge: group?.name ?? "—",
+    groupBadgeColor: "blue",
+    course: group?.name ?? "—",
+    teacher: teacher?.name ?? "—",
+    teacherId: 0,
+    startDate: "",
+    endDate: "",
+    branch: "",
+    room: "",
+    price: 0,
+    balance: s.balance,
+    comment: s.comments ?? undefined,
+  };
 };
 
 export const formatDate = (d: string): string => {

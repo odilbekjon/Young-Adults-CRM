@@ -15,6 +15,7 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 
 interface LandingPageItem {
   id: number;
@@ -38,11 +39,12 @@ const defaultForm: FormState = {
   source: "",
 };
 
-const branches = ["Branch 1", "Branch 2", "Branch 3"];
-const sections = ["Section 1", "Section 2", "Section 3"];
-const sources = ["Source 1", "Source 2", "Source 3"];
+const branches = ["branch1", "branch2", "branch3"];
+const sections = ["section1", "section2", "section3"];
+const sources = ["source1", "source2", "source3"];
 
 const LandingPage = () => {
+  const { t } = useTranslation();
   const [form, setForm] = useState<FormState>(defaultForm);
   const [rows, setRows] = useState<LandingPageItem[]>([]);
   const [errors, setErrors] = useState<{ name?: string; slug?: string }>({});
@@ -56,8 +58,8 @@ const LandingPage = () => {
 
   const validate = () => {
     const newErrors: { name?: string; slug?: string } = {};
-    if (!form.name.trim()) newErrors.name = "Name is required";
-    if (!form.slug.trim()) newErrors.slug = "Slug is required";
+    if (!form.name.trim()) newErrors.name = t("settings.ceo.general.landingPage.errors.nameRequired");
+    if (!form.slug.trim()) newErrors.slug = t("settings.ceo.general.landingPage.errors.slugRequired");
     return newErrors;
   };
 
@@ -78,7 +80,7 @@ const LandingPage = () => {
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }}>
       <Typography variant="h5" fontWeight={500} mb={2.5}>
-        Landing page
+        {t("settings.ceo.general.landingPage.title")}
       </Typography>
 
       {/* Form card */}
@@ -97,13 +99,13 @@ const LandingPage = () => {
             color: "#555",
           }}
         >
-          Create a landing page
+          {t("settings.ceo.general.landingPage.createTitle")}
         </Typography>
 
         {/* Name */}
         <Box mb={2}>
           <Typography fontSize={13} mb={0.5}>
-            *Name
+            {t("settings.ceo.general.landingPage.name")}
           </Typography>
           <TextField
             fullWidth
@@ -119,7 +121,7 @@ const LandingPage = () => {
         {/* Slug */}
         <Box mb={2}>
           <Typography fontSize={13} mb={0.5}>
-            *Slug
+            {t("settings.ceo.general.landingPage.slug")}
           </Typography>
           <TextField
             fullWidth
@@ -135,7 +137,7 @@ const LandingPage = () => {
         {/* Branch */}
         <Box mb={2}>
           <Typography fontSize={13} mb={0.5}>
-            Branch
+            {t("settings.ceo.general.landingPage.branch")}
           </Typography>
           <Select
             fullWidth
@@ -150,7 +152,7 @@ const LandingPage = () => {
             </MenuItem>
             {branches.map((b) => (
               <MenuItem key={b} value={b} sx={{ fontSize: 14 }}>
-                {b}
+                {t(`settings.ceo.general.landingPage.branches.${b}`)}
               </MenuItem>
             ))}
           </Select>
@@ -159,7 +161,7 @@ const LandingPage = () => {
         {/* Section */}
         <Box mb={2}>
           <Typography fontSize={13} mb={0.5}>
-            Section
+            {t("settings.ceo.general.landingPage.section")}
           </Typography>
           <Select
             fullWidth
@@ -172,7 +174,7 @@ const LandingPage = () => {
             <MenuItem value=""></MenuItem>
             {sections.map((s) => (
               <MenuItem key={s} value={s} sx={{ fontSize: 14 }}>
-                {s}
+                {t(`settings.ceo.general.landingPage.sections.${s}`)}
               </MenuItem>
             ))}
           </Select>
@@ -181,7 +183,7 @@ const LandingPage = () => {
         {/* Source */}
         <Box mb={3}>
           <Typography fontSize={13} mb={0.5}>
-            Source
+            {t("settings.ceo.general.landingPage.source")}
           </Typography>
           <Select
             fullWidth
@@ -194,7 +196,7 @@ const LandingPage = () => {
             <MenuItem value=""></MenuItem>
             {sources.map((s) => (
               <MenuItem key={s} value={s} sx={{ fontSize: 14 }}>
-                {s}
+                {t(`settings.ceo.general.landingPage.sources.${s}`)}
               </MenuItem>
             ))}
           </Select>
@@ -213,7 +215,7 @@ const LandingPage = () => {
             "&:hover": { bgcolor: "#3aa3b5" },
           }}
         >
-          Create
+          {t("settings.ceo.general.landingPage.create")}
         </Button>
       </Paper>
 
@@ -223,16 +225,16 @@ const LandingPage = () => {
           <TableHead>
             <TableRow sx={{ bgcolor: "#fafafa" }}>
               <TableCell sx={{ fontWeight: 600, fontSize: 13, width: "35%" }}>
-                Name
+                {t("settings.ceo.general.landingPage.table.name")}
               </TableCell>
               <TableCell sx={{ fontWeight: 600, fontSize: 13, width: "50%" }}>
-                Slug
+                {t("settings.ceo.general.landingPage.table.slug")}
               </TableCell>
               <TableCell
                 align="right"
                 sx={{ fontWeight: 600, fontSize: 13, width: "15%" }}
               >
-                Actions
+                {t("settings.ceo.general.landingPage.table.actions")}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -240,7 +242,7 @@ const LandingPage = () => {
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} align="center" sx={{ py: 4, color: "#999", fontSize: 13 }}>
-                  No Data
+                  {t("settings.ceo.general.landingPage.table.noData")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -257,7 +259,7 @@ const LandingPage = () => {
                         setRows((prev) => prev.filter((r) => r.id !== row.id))
                       }
                     >
-                      Delete
+                      {t("settings.ceo.general.landingPage.table.delete")}
                     </Button>
                   </TableCell>
                 </TableRow>

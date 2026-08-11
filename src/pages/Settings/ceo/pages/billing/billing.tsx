@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@mui/material";
 import { MdOutlineCalendarToday } from "react-icons/md";
+import { useTranslation } from "react-i18next";
 
 const periods = [
   "1 oy - 1 500 000 UZS",
@@ -96,6 +97,7 @@ const fmt = (n: number) =>
   n.toLocaleString("ru-RU").replace(/,/g, " ");
 
 export const Billing = () => {
+  const { t } = useTranslation();
   const [period, setPeriod] = useState("");
 
   return (
@@ -107,7 +109,7 @@ export const Billing = () => {
       >
         <MdOutlineCalendarToday size={16} color="#888" />
         <Typography fontSize={13} color="#555">
-          Platform license validity date:{" "}
+          {t("settings.ceo.billing.licenseValidity")}{" "}
           <Box component="span" sx={{ color: "#1976d2", fontWeight: 500 }}>
             01.06.2026 - 23:59
           </Box>
@@ -121,11 +123,11 @@ export const Billing = () => {
           {/* Payment form */}
           <Paper elevation={0} variant="outlined" sx={{ p: 3, borderRadius: 2, mb: 2 }}>
             <Typography fontWeight={500} fontSize={16} mb={2.5}>
-              Payment for the platform
+              {t("settings.ceo.billing.paymentTitle")}
             </Typography>
 
             <Typography fontSize={13} mb={0.5}>
-              Period{" "}
+              {t("settings.ceo.billing.period")}{" "}
               <Box component="span" sx={{ color: "red" }}>*</Box>
             </Typography>
             <Select
@@ -136,7 +138,7 @@ export const Billing = () => {
               onChange={(e) => setPeriod(e.target.value)}
               renderValue={(val) =>
                 val ? val : (
-                  <Typography color="text.disabled" fontSize={14}>Select</Typography>
+                  <Typography color="text.disabled" fontSize={14}>{t("settings.ceo.billing.selectPlaceholder")}</Typography>
                 )
               }
               sx={{ mb: 2.5, bgcolor: "#fff", fontSize: 14 }}
@@ -157,21 +159,21 @@ export const Billing = () => {
                 "&:hover": { bgcolor: "#3aa3b5" },
               }}
             >
-              Pay
+              {t("settings.ceo.billing.pay")}
             </Button>
           </Paper>
 
           {/* History payments */}
           <Box>
             <Typography fontWeight={500} fontSize={16} mb={1.5}>
-              History payments
+              {t("settings.ceo.billing.historyTitle")}
             </Typography>
             <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: "#fafafa" }}>
-                    <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Sum</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Created at</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{t("settings.ceo.billing.table.sum")}</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{t("settings.ceo.billing.table.createdAt")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -245,7 +247,7 @@ export const Billing = () => {
                           {row.months}
                         </Typography>
                         <Typography fontSize={8} fontWeight={600} color="#fff" lineHeight={1}>
-                          OY
+                          {t("settings.ceo.billing.monthUnit")}
                         </Typography>
                       </Box>
 
@@ -313,11 +315,11 @@ export const Billing = () => {
                 {/* mod<Box component="span">me</Box> */}
               </Typography>
               <Typography fontSize={13} color="#555">
-                Gamification{" "}
+                {t("settings.ceo.billing.gamification")}{" "}
                 <Box component="span" sx={{ color: "#f5a623", fontWeight: 600 }}>
                   500 000
                 </Box>{" "}
-                so'm
+                {t("settings.ceo.billing.som")}
               </Typography>
             </Box>
           </Paper>

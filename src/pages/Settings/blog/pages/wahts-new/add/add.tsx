@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   Box, Button, Checkbox, FormControlLabel, Typography, Tooltip,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 // Toolbar icons (react-icons)
@@ -68,6 +69,7 @@ const ToolbarBtn = ({
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export const BlogAdd = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [isPublic, setIsPublic] = useState(false);
@@ -137,14 +139,14 @@ export const BlogAdd = () => {
             fontFamily: "'DM Sans', sans-serif",
           }}
         >
-          Blog: Add
+          {t("settings.blog.add.title")}
         </Typography>
 
         {/* ── Title input ── */}
         <Typography
           sx={{ fontSize: "0.85rem", fontWeight: 500, color: "#555", mb: 0.8, fontFamily: "'DM Sans', sans-serif" }}
         >
-          Title
+          {t("settings.blog.add.fields.title")}
         </Typography>
         <Box
           sx={{
@@ -160,7 +162,7 @@ export const BlogAdd = () => {
             maxLength={TITLE_MAX}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter title here"
+            placeholder={t("settings.blog.add.placeholders.enterTitle")}
             style={{
               width: "100%",
               border: "none",
@@ -214,10 +216,10 @@ export const BlogAdd = () => {
             <ToolbarSelect
               value={blockStyle}
               options={[
-                { label: "Normal", value: "p" },
-                { label: "Heading 1", value: "h1" },
-                { label: "Heading 2", value: "h2" },
-                { label: "Heading 3", value: "h3" },
+                { label: t("settings.blog.add.blockStyles.normal"), value: "p" },
+                { label: t("settings.blog.add.blockStyles.heading1"), value: "h1" },
+                { label: t("settings.blog.add.blockStyles.heading2"), value: "h2" },
+                { label: t("settings.blog.add.blockStyles.heading3"), value: "h3" },
               ]}
               onChange={applyBlockStyle}
             />
@@ -226,55 +228,55 @@ export const BlogAdd = () => {
             <ToolbarSelect
               value={fontFamily}
               options={[
-                { label: "Sans Serif", value: "sans-serif" },
-                { label: "Serif", value: "serif" },
-                { label: "Monospace", value: "monospace" },
+                { label: t("settings.blog.add.fontFamilies.sansSerif"), value: "sans-serif" },
+                { label: t("settings.blog.add.fontFamilies.serif"), value: "serif" },
+                { label: t("settings.blog.add.fontFamilies.monospace"), value: "monospace" },
               ]}
               onChange={applyFont}
             />
 
             <Box sx={{ width: 1, height: 20, backgroundColor: "#e0e0e0", mx: 0.5 }} />
 
-            <ToolbarBtn title="Align left" onClick={() => execCmd("justifyLeft")}>
+            <ToolbarBtn title={t("settings.blog.add.toolbar.alignLeft")} onClick={() => execCmd("justifyLeft")}>
               <MdFormatAlignLeft />
             </ToolbarBtn>
-            <ToolbarBtn title="Ordered list" onClick={() => execCmd("insertOrderedList")}>
+            <ToolbarBtn title={t("settings.blog.add.toolbar.orderedList")} onClick={() => execCmd("insertOrderedList")}>
               <MdFormatListNumbered />
             </ToolbarBtn>
-            <ToolbarBtn title="Unordered list" onClick={() => execCmd("insertUnorderedList")}>
+            <ToolbarBtn title={t("settings.blog.add.toolbar.unorderedList")} onClick={() => execCmd("insertUnorderedList")}>
               <MdFormatListBulleted />
             </ToolbarBtn>
 
             <Box sx={{ width: 1, height: 20, backgroundColor: "#e0e0e0", mx: 0.5 }} />
 
             <ToolbarBtn
-              title="Insert link"
+              title={t("settings.blog.add.toolbar.insertLink")}
               onClick={() => {
-                const url = prompt("Enter URL:");
+                const url = prompt(t("settings.blog.add.prompts.enterUrl"));
                 if (url) execCmd("createLink", url);
               }}
             >
               <MdInsertLink />
             </ToolbarBtn>
             <ToolbarBtn
-              title="Insert image"
+              title={t("settings.blog.add.toolbar.insertImage")}
               onClick={() => {
-                const url = prompt("Image URL:");
+                const url = prompt(t("settings.blog.add.prompts.imageUrl"));
                 if (url) execCmd("insertImage", url);
               }}
             >
               <MdImage />
             </ToolbarBtn>
-            <ToolbarBtn title="Embed video" onClick={() => {}}>
+            <ToolbarBtn title={t("settings.blog.add.toolbar.embedVideo")} onClick={() => {}}>
               <MdVideoLibrary />
             </ToolbarBtn>
 
             <Box sx={{ width: 1, height: 20, backgroundColor: "#e0e0e0", mx: 0.5 }} />
 
-            <ToolbarBtn title="Text color" onClick={() => {}}>
+            <ToolbarBtn title={t("settings.blog.add.toolbar.textColor")} onClick={() => {}}>
               <MdFormatColorText />
             </ToolbarBtn>
-            <ToolbarBtn title="Clear formatting" onClick={() => execCmd("removeFormat")}>
+            <ToolbarBtn title={t("settings.blog.add.toolbar.clearFormatting")} onClick={() => execCmd("removeFormat")}>
               <MdFormatClear />
             </ToolbarBtn>
           </Box>
@@ -284,7 +286,7 @@ export const BlogAdd = () => {
             ref={editorRef}
             contentEditable
             suppressContentEditableWarning
-            data-placeholder="Insert text here ..."
+            data-placeholder={t("settings.blog.add.placeholders.editorPlaceholder")}
             onInput={() => {}}
             sx={{
               minHeight: 220,
@@ -315,7 +317,7 @@ export const BlogAdd = () => {
           }
           label={
             <Typography sx={{ fontSize: "0.9rem", color: "#444", fontFamily: "'DM Sans', sans-serif" }}>
-              Public
+              {t("settings.blog.add.fields.public")}
             </Typography>
           }
           sx={{ mb: 2.5 }}
@@ -339,7 +341,7 @@ export const BlogAdd = () => {
               "&:hover": { backgroundColor: "#2e8bc7", boxShadow: "none" },
             }}
           >
-            Save
+            {t("settings.blog.add.actions.save")}
           </Button>
         </Box>
       </Box>

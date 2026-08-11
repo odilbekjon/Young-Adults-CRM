@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Box, Button, Typography, IconButton, Tooltip, Divider, TextField,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { FiEdit2 } from "react-icons/fi";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { MdAdd } from "react-icons/md";
@@ -16,6 +17,7 @@ interface Blog {
 const initialBlogs: Blog[] = [];
 
 export const WhatsNew = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [blogs, setBlogs] = useState<Blog[]>(initialBlogs);
   const [selected, setSelected] = useState<Blog | null>(null);
@@ -69,7 +71,7 @@ export const WhatsNew = () => {
         <Typography
           sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#1a1a2e", fontFamily: "'DM Sans', sans-serif" }}
         >
-          Blog: What's new
+          {t("settings.blog.whatsNew.title")}
         </Typography>
         <Button
           variant="contained"
@@ -88,7 +90,7 @@ export const WhatsNew = () => {
             "&:hover": { backgroundColor: "#2e8bc7", boxShadow: "none" },
           }}
         >
-          Add
+          {t("settings.blog.whatsNew.actions.add")}
         </Button>
       </Box>
 
@@ -111,7 +113,7 @@ export const WhatsNew = () => {
           {/* List header */}
           <Box sx={{ px: 2.5, py: 1.8, borderBottom: "1px solid #f0f2f5" }}>
             <Typography sx={{ fontSize: "0.9rem", fontWeight: 600, color: "#555", fontFamily: "'DM Sans', sans-serif" }}>
-              Blogs
+              {t("settings.blog.whatsNew.list.header")}
             </Typography>
           </Box>
 
@@ -120,7 +122,7 @@ export const WhatsNew = () => {
             {blogs.length === 0 ? (
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 380 }}>
                 <Typography sx={{ color: "#bbb", fontSize: "0.9rem", fontFamily: "'DM Sans', sans-serif" }}>
-                  No Data
+                  {t("settings.blog.whatsNew.list.empty")}
                 </Typography>
               </Box>
             ) : (
@@ -184,7 +186,7 @@ export const WhatsNew = () => {
                   zIndex: 2,
                 }}
               >
-                <Tooltip title="Edit">
+                <Tooltip title={t("settings.blog.whatsNew.tooltips.edit")}>
                   <IconButton
                     size="small"
                     onClick={() => setIsEditing(true)}
@@ -200,7 +202,7 @@ export const WhatsNew = () => {
                     <FiEdit2 size={15} />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Delete">
+                <Tooltip title={t("settings.blog.whatsNew.tooltips.delete")}>
                   <IconButton
                     size="small"
                     onClick={handleDelete}
@@ -226,7 +228,7 @@ export const WhatsNew = () => {
                     size="small"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    placeholder="Blog title"
+                    placeholder={t("settings.blog.whatsNew.placeholders.blogTitle")}
                     variant="standard"
                     InputProps={{
                       disableUnderline: false,
@@ -259,7 +261,7 @@ export const WhatsNew = () => {
                       minRows={14}
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
-                      placeholder="Write blog content here..."
+                      placeholder={t("settings.blog.whatsNew.placeholders.blogContent")}
                       variant="outlined"
                       sx={{
                         "& .MuiOutlinedInput-root": {
@@ -299,7 +301,7 @@ export const WhatsNew = () => {
                         "&:hover": { backgroundColor: "#3b9ede", boxShadow: "none" },
                       }}
                     >
-                      Save
+                      {t("settings.blog.whatsNew.actions.save")}
                     </Button>
                     <Button
                       variant="outlined"
@@ -314,7 +316,7 @@ export const WhatsNew = () => {
                         "&:hover": { borderColor: "#aaa", backgroundColor: "#fafafa" },
                       }}
                     >
-                      Cancel
+                      {t("settings.blog.whatsNew.actions.cancel")}
                     </Button>
                   </Box>
                 )}
@@ -324,7 +326,7 @@ export const WhatsNew = () => {
             /* Empty right panel */
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 480 }}>
               <Typography sx={{ color: "#ccc", fontSize: "0.9rem", fontFamily: "'DM Sans', sans-serif" }}>
-                Select a blog to view
+                {t("settings.blog.whatsNew.emptyState.selectBlog")}
               </Typography>
             </Box>
           )}

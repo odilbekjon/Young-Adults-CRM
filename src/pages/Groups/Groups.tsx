@@ -17,6 +17,7 @@ import { HiChevronDown }                 from "react-icons/hi";
 import { useMemo, useRef, useState }     from "react";
 import * as XLSX                         from "xlsx";
 import { useNavigate }                   from "react-router-dom";
+import { useTranslation }                from "react-i18next";
 
 import { TEACHERS_DATA, type Group }     from "../../constants/Teachers";
 import { useBranch }                     from "../../Context/BranchContext";
@@ -225,9 +226,28 @@ const DateFilter = ({ label, value, onChange, onClear }: DateFilterProps) => {
 
 /* ─── Groups ─────────────────────────────────────────────── */
 export const Groups = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const { groups: branchGroups, branchLabel } = useBranch();
+
+  const TAG_LABELS: Record<string, string> = {
+    New:     t("groups.options.tags.new"),
+    Popular: t("groups.options.tags.popular"),
+    VIP:     t("groups.options.tags.vip"),
+    Trial:   t("groups.options.tags.trial"),
+  };
+
+  const COLUMN_LABELS: Record<string, string> = {
+    course:       t("groups.table.course"),
+    teacher:      t("groups.table.teacher"),
+    days:         t("groups.table.days"),
+    training:     t("groups.table.trainingDates"),
+    week:         t("groups.table.weekOfStudy"),
+    room:         t("groups.table.room"),
+    tags:         t("groups.table.tags"),
+    studentCount: t("groups.table.students"),
+  };
 
   const COURSES  = [...new Set(branchGroups.map((g) => g.course).filter(Boolean))];
   const TEACHERS = [...new Set(branchGroups.map((g) => g.teacher).filter(Boolean))];
@@ -288,9 +308,16 @@ export const Groups = () => {
 
   const handleExportExcel = () => {
     const data = filteredGroups.map((g, i) => ({
-      "#": i + 1, Group: g.name, Course: g.course, Teacher: g.teacher,
-      Days: g.days, "Start Date": formatDate(g.startDate), "End Date": formatDate(g.endDate),
-      Room: g.room, Students: g.studentCount, Status: g.status,
+      [t("groups.export.number")]:    i + 1,
+      [t("groups.export.group")]:     g.name,
+      [t("groups.export.course")]:    g.course,
+      [t("groups.export.teacher")]:   g.teacher,
+      [t("groups.export.days")]:      g.days,
+      [t("groups.export.startDate")]: formatDate(g.startDate),
+      [t("groups.export.endDate")]:   formatDate(g.endDate),
+      [t("groups.export.room")]:      g.room,
+      [t("groups.export.students")]: g.studentCount,
+      [t("groups.export.status")]:   g.status,
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -352,9 +379,9 @@ export const Groups = () => {
       {/* HEADER */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
         <Stack direction="row" alignItems="baseline" gap={1.5}>
-          <Typography variant="h5" fontWeight={700} fontSize={26}>Groups</Typography>
+          <Typography variant="h5" fontWeight={700} fontSize={26}>{t("groups.pageTitle")}</Typography>
           <Typography fontSize={14} color="text.secondary">
-            {branchLabel} — {filteredGroups.length} ta
+            {t("groups.summary", { branch: branchLabel, count: filteredGroups.length })}
           </Typography>
         </Stack>
         <Button
@@ -367,67 +394,67 @@ export const Groups = () => {
             bgcolor: "#1a3a4a", "&:hover": { bgcolor: "#122a38" }, boxShadow: "none",
           }}
         >
-          Add New
+          {t("groups.actions.addNew")}
         </Button>
       </Stack>
 
       {/* FILTERS */}
       <Stack direction="row" flexWrap="wrap" gap={1} mb={1}>
         <DropdownFilter
-          label="Status"
+          label={t("groups.filters.status")}
           value={filters.status}
           options={[
-            { value: "Active",    label: "🟢 Active" },
-            { value: "Archive",   label: "🔴 Archive" },
-            { value: "Completed", label: "🔵 Completed" },
+            { value: "Active",    label: t("groups.options.status.active") },
+            { value: "Archive",   label: t("groups.options.status.archive") },
+            { value: "Completed", label: t("groups.options.status.completed") },
           ]}
           onChange={(v) => setFilter("status", v as StatusType)}
           onClear={() => setFilter("status", "")}
         />
         <DropdownFilter
-          label="Teacher"
+          label={t("groups.filters.teacher")}
           value={filters.teacher}
           options={TEACHERS.map((t) => ({ value: t, label: t }))}
           onChange={(v) => setFilter("teacher", v)}
           onClear={() => setFilter("teacher", "")}
         />
         <DropdownFilter
-          label="Courses"
+          label={t("groups.filters.courses")}
           value={filters.course}
           options={COURSES.map((c) => ({ value: c, label: c }))}
           onChange={(v) => setFilter("course", v)}
           onClear={() => setFilter("course", "")}
         />
         <DropdownFilter
-          label="Days"
+          label={t("groups.filters.days")}
           value={filters.days}
           options={
             DAY_OPTIONS.length > 0
               ? DAY_OPTIONS
               : [
-                  { value: "Odd days",  label: "Odd days" },
-                  { value: "Even days", label: "Even days" },
-                  { value: "Every day", label: "Every day" },
+                  { value: "Odd days",  label: t("groups.options.days.odd") },
+                  { value: "Even days", label: t("groups.options.days.even") },
+                  { value: "Every day", label: t("groups.options.days.every") },
                 ]
           }
           onChange={(v) => setFilter("days", v)}
           onClear={() => setFilter("days", "")}
         />
         <DropdownFilter
-          label="Tags"
+          label={t("groups.filters.tags")}
           value={filters.tags[0] || ""}
-          options={TAGS.map((t) => ({ value: t, label: t }))}
+          options={TAGS.map((tag) => ({ value: tag, label: TAG_LABELS[tag] ?? tag }))}
           onChange={(v) => setFilter("tags", [v])}
           onClear={() => setFilter("tags", [])}
         />
         <DateFilter
-          label="Start date"
+          label={t("groups.filters.startDate")}
           value={filters.startDate}
           onChange={(v) => setFilter("startDate", v)}
           onClear={() => setFilter("startDate", "")}
         />
         <DateFilter
-          label="End date"
+          label={t("groups.filters.endDate")}
           value={filters.endDate}
           onChange={(v) => setFilter("endDate", v)}
           onClear={() => setFilter("endDate", "")}
@@ -446,7 +473,7 @@ export const Groups = () => {
               fontSize: 12, fontWeight: 400, px: 1.5, textTransform: "none",
             }}
           >
-            Clear all
+            {t("groups.filters.clearAll")}
           </Button>
         </Box>
       )}
@@ -461,7 +488,7 @@ export const Groups = () => {
             fontSize: 12, fontWeight: 500, px: 1.5, textTransform: "none",
           }}
         >
-          Filters
+          {t("groups.filters.filtersButton")}
         </Button>
         <Button
           size="small"
@@ -473,7 +500,7 @@ export const Groups = () => {
             fontSize: 12, fontWeight: 500, px: 1.5, textTransform: "none",
           }}
         >
-          Columns
+          {t("groups.filters.columns")}
         </Button>
         <Menu
           anchorEl={columnsAnchor}
@@ -505,7 +532,7 @@ export const Groups = () => {
                   <Box sx={{ width: 8, height: 8, bgcolor: "white", borderRadius: 0.25 }} />
                 )}
               </Box>
-              {c.label}
+              {COLUMN_LABELS[c.key] ?? c.label}
             </MenuItem>
           ))}
         </Menu>
@@ -531,18 +558,18 @@ export const Groups = () => {
                     direction={sortDir}
                     onClick={() => handleSort("name")}
                   >
-                    Group
+                    {t("groups.table.group")}
                   </TableSortLabel>
                 </TableCell>
-                {col("course")       && <TableCell><TableSortLabel active={sortKey === "course"}       direction={sortDir} onClick={() => handleSort("course")}>Course</TableSortLabel></TableCell>}
-                {col("teacher")      && <TableCell><TableSortLabel active={sortKey === "teacher"}      direction={sortDir} onClick={() => handleSort("teacher")}>Teacher</TableSortLabel></TableCell>}
-                {col("days")         && <TableCell><TableSortLabel active={sortKey === "days"}         direction={sortDir} onClick={() => handleSort("days")}>Days</TableSortLabel></TableCell>}
-                {col("training")     && <TableCell><TableSortLabel active={sortKey === "startDate"}    direction={sortDir} onClick={() => handleSort("startDate")}>Training dates</TableSortLabel></TableCell>}
-                {col("week")         && <TableCell>Week of study</TableCell>}
-                {col("room")         && <TableCell>Room</TableCell>}
-                {col("tags")         && <TableCell>Tags</TableCell>}
-                {col("studentCount") && <TableCell><TableSortLabel active={sortKey === "studentCount"} direction={sortDir} onClick={() => handleSort("studentCount")}>Students</TableSortLabel></TableCell>}
-                <TableCell align="right">Actions</TableCell>
+                {col("course")       && <TableCell><TableSortLabel active={sortKey === "course"}       direction={sortDir} onClick={() => handleSort("course")}>{t("groups.table.course")}</TableSortLabel></TableCell>}
+                {col("teacher")      && <TableCell><TableSortLabel active={sortKey === "teacher"}      direction={sortDir} onClick={() => handleSort("teacher")}>{t("groups.table.teacher")}</TableSortLabel></TableCell>}
+                {col("days")         && <TableCell><TableSortLabel active={sortKey === "days"}         direction={sortDir} onClick={() => handleSort("days")}>{t("groups.table.days")}</TableSortLabel></TableCell>}
+                {col("training")     && <TableCell><TableSortLabel active={sortKey === "startDate"}    direction={sortDir} onClick={() => handleSort("startDate")}>{t("groups.table.trainingDates")}</TableSortLabel></TableCell>}
+                {col("week")         && <TableCell>{t("groups.table.weekOfStudy")}</TableCell>}
+                {col("room")         && <TableCell>{t("groups.table.room")}</TableCell>}
+                {col("tags")         && <TableCell>{t("groups.table.tags")}</TableCell>}
+                {col("studentCount") && <TableCell><TableSortLabel active={sortKey === "studentCount"} direction={sortDir} onClick={() => handleSort("studentCount")}>{t("groups.table.students")}</TableSortLabel></TableCell>}
+                <TableCell align="right">{t("groups.table.actions")}</TableCell>
               </TableRow>
             </TableHead>
 
@@ -589,7 +616,7 @@ export const Groups = () => {
                         <Stack direction="row" flexWrap="wrap" gap={0.5}>
                           {g.tags.map((tag) => (
                             <Chip
-                              key={tag} label={tag} size="small"
+                              key={tag} label={TAG_LABELS[tag] ?? tag} size="small"
                               sx={{ fontSize: 10, height: 20, bgcolor: "#f3f4f6", color: "#374151" }}
                             />
                           ))}
@@ -623,14 +650,14 @@ export const Groups = () => {
                         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
                       >
                         <MenuItem onClick={() => handleOpenEdit(g)} sx={{ fontSize: 13, gap: 1 }}>
-                          <MdEdit size={15} /> Edit
+                          <MdEdit size={15} /> {t("groups.actions.edit")}
                         </MenuItem>
                         <Divider sx={{ my: 0.5 }} />
                         <MenuItem
                           onClick={() => { setDeleteId(g.id); setActionMenuAnchor(null); }}
                           sx={{ fontSize: 13, gap: 1, color: "#ef4444" }}
                         >
-                          <MdDelete size={15} /> Delete
+                          <MdDelete size={15} /> {t("groups.actions.delete")}
                         </MenuItem>
                       </Menu>
                     </TableCell>
@@ -640,7 +667,7 @@ export const Groups = () => {
               {filteredGroups.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={12} align="center" sx={{ py: 6, color: "#9ca3af" }}>
-                    No groups found
+                    {t("groups.table.empty")}
                   </TableCell>
                 </TableRow>
               )}
@@ -650,7 +677,7 @@ export const Groups = () => {
       </Paper>
 
       {/* EXCEL */}
-      <Tooltip title="Export to Excel" placement="left">
+      <Tooltip title={t("groups.actions.exportExcel")} placement="left">
         <IconButton
           onClick={handleExportExcel}
           sx={{
@@ -681,7 +708,7 @@ export const Groups = () => {
           sx={{ px: 3, py: 2.5, bgcolor: "white", borderBottom: "1px solid #eaecf0" }}
         >
           <Typography fontWeight={700} fontSize={17} color="#111827">
-            {editingId !== null ? "Edit Group" : "Add New Group"}
+            {editingId !== null ? t("groups.form.editTitle") : t("groups.form.addTitle")}
           </Typography>
           <IconButton size="small" onClick={() => setOpen(false)} sx={{ color: "#9ca3af" }}>
             <IoClose size={20} />
@@ -694,7 +721,7 @@ export const Groups = () => {
           {/* Name */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              Name
+              {t("groups.form.name")}
             </Typography>
             <TextField
               name="name"
@@ -709,7 +736,7 @@ export const Groups = () => {
           {/* Select course */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              Select course
+              {t("groups.form.course")}
             </Typography>
             <TextField
               select
@@ -729,7 +756,7 @@ export const Groups = () => {
           {/* Select teacher */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              Select teacher
+              {t("groups.form.teacher")}
             </Typography>
             <TextField
               select
@@ -749,7 +776,7 @@ export const Groups = () => {
           {/* Days */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              Days
+              {t("groups.form.days")}
             </Typography>
             <TextField
               select
@@ -760,16 +787,16 @@ export const Groups = () => {
               fullWidth
               sx={inputSx}
             >
-              <MenuItem value="Odd days"  sx={{ fontSize: 13 }}>Odd days</MenuItem>
-              <MenuItem value="Even days" sx={{ fontSize: 13 }}>Even days</MenuItem>
-              <MenuItem value="Every day" sx={{ fontSize: 13 }}>Every day</MenuItem>
+              <MenuItem value="Odd days"  sx={{ fontSize: 13 }}>{t("groups.options.days.odd")}</MenuItem>
+              <MenuItem value="Even days" sx={{ fontSize: 13 }}>{t("groups.options.days.even")}</MenuItem>
+              <MenuItem value="Every day" sx={{ fontSize: 13 }}>{t("groups.options.days.every")}</MenuItem>
             </TextField>
           </Box>
 
           {/* Select room */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              Select room
+              {t("groups.form.room")}
             </Typography>
             <TextField
               select
@@ -789,7 +816,7 @@ export const Groups = () => {
           {/* Lesson start time */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              Lesson start time
+              {t("groups.form.lessonStartTime")}
             </Typography>
             <TextField
               type="time"
@@ -806,7 +833,7 @@ export const Groups = () => {
           {/* Group start date */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              Group start date
+              {t("groups.form.startDate")}
             </Typography>
             <TextField
               type="date"
@@ -823,7 +850,7 @@ export const Groups = () => {
           {/* Group end date */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              Group end date
+              {t("groups.form.endDate")}
             </Typography>
             <TextField
               type="date"
@@ -840,13 +867,13 @@ export const Groups = () => {
           {/* Tags */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              Tags
+              {t("groups.form.tags")}
             </Typography>
             <Stack direction="row" flexWrap="wrap" gap={1}>
               {TAGS.map((tag) => (
                 <Chip
                   key={tag}
-                  label={tag}
+                  label={TAG_LABELS[tag] ?? tag}
                   clickable
                   size="small"
                   onClick={() => handleTagToggle(tag)}
@@ -869,7 +896,7 @@ export const Groups = () => {
           {/* Status */}
           <Box mb={3}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              Status
+              {t("groups.form.status")}
             </Typography>
             <TextField
               select
@@ -880,9 +907,9 @@ export const Groups = () => {
               fullWidth
               sx={inputSx}
             >
-              <MenuItem value="Active"    sx={{ fontSize: 13 }}>🟢 Active</MenuItem>
-              <MenuItem value="Archive"   sx={{ fontSize: 13 }}>🔴 Archive</MenuItem>
-              <MenuItem value="Completed" sx={{ fontSize: 13 }}>🔵 Completed</MenuItem>
+              <MenuItem value="Active"    sx={{ fontSize: 13 }}>{t("groups.options.status.active")}</MenuItem>
+              <MenuItem value="Archive"   sx={{ fontSize: 13 }}>{t("groups.options.status.archive")}</MenuItem>
+              <MenuItem value="Completed" sx={{ fontSize: 13 }}>{t("groups.options.status.completed")}</MenuItem>
             </TextField>
           </Box>
 
@@ -900,7 +927,7 @@ export const Groups = () => {
               textTransform: "none",
             }}
           >
-            Submit
+            {t("groups.actions.submit")}
           </Button>
         </Box>
       </Drawer>
@@ -911,21 +938,21 @@ export const Groups = () => {
         onClose={() => setDeleteId(null)}
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>Delete Group</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>{t("groups.deleteDialog.title")}</DialogTitle>
         <DialogContent>
           <Typography fontSize={14} color="text.secondary">
-            Are you sure you want to delete this group? This action cannot be undone.
+            {t("groups.deleteDialog.body")}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteId(null)} sx={{ color: "#667085" }}>Cancel</Button>
+          <Button onClick={() => setDeleteId(null)} sx={{ color: "#667085" }}>{t("groups.deleteDialog.cancel")}</Button>
           <Button
             variant="contained"
             color="error"
             onClick={handleDeleteConfirm}
             sx={{ borderRadius: 2 }}
           >
-            Delete
+            {t("groups.deleteDialog.confirm")}
           </Button>
         </DialogActions>
       </Dialog>

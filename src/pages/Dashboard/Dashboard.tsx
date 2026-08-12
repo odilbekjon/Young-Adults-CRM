@@ -1,41 +1,54 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Paper, Typography, Tooltip } from "@mui/material";
+import { useTranslation } from "react-i18next";
+import { Box, Paper, Typography, Tooltip, CircularProgress, Chip } from "@mui/material";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip as RTooltip,
   CartesianGrid, ResponsiveContainer, ReferenceDot,
 } from "recharts";
-import {
-  FiUsers, FiUserCheck, FiLayers, FiAlertTriangle,
-  FiPlayCircle, FiDollarSign, FiUserMinus, FiUserX,
-} from "react-icons/fi";
 import { MdViewColumn, MdViewStream } from "react-icons/md";
 
-import { ScheduleTab, ScheduleOrientation } from "../../types/dashboardTypes";
-import { EVENTS, ROOMS } from "../../constants/ScheduleDashboard";
+import { ScheduleTab, ScheduleOrientation, ScheduleEvent } from "../../types/dashboardTypes";
+import {
+  useDashboardStatsQuery,
+  useDashboardScheduleQuery,
+  useDashboardAttendanceStatsQuery,
+  useDashboardRecentActivitiesQuery,
+  useDashboardTeacherPerformanceQuery,
+} from "../../app/api/dashboardApi/dashboardApi";
+import type { ScheduleItem } from "../../app/api/dashboardApi/types";
+import {
+  MONTHLY_REVENUE, SCHEDULE_COLORS, DEFAULT_LESSON_DURATION,
+  SCHEDULE_TIME_START, SCHEDULE_TIME_END,
+} from "../../constants/DashboardData";
+import { STATS } from "../../constants/DashboardStats";
 
-// ─── Monthly revenue data ──────────────────────────────────────────────────────
-// This is independent from the schedule tabs below (Odd/Even/Other days only
-// filter the schedule, they never change what the chart shows).
+const parseTimeToMinutes = (time: string) => {
+  const [h, m] = time.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
 
-const MONTHLY_REVENUE: { month: string; value: number }[] = [
-  { month: "Sep 23", value: 5000000 },   { month: "Oct 23", value: 8000000 },
-  { month: "Dec 23", value: 15000000 },  { month: "Jan 24", value: 25000000 },
-  { month: "Feb 24", value: 38000000 },  { month: "Mar 24", value: 55000000 },
-  { month: "Apr 24", value: 70000000 },  { month: "May 24", value: 65000000 },
-  { month: "Jun 24", value: 72000000 },  { month: "Jul 24", value: 78000000 },
-  { month: "Aug 24", value: 80000000 },  { month: "Sep 24", value: 82000000 },
-  { month: "Oct 24", value: 86000000 },  { month: "Nov 24", value: 90000000 },
-  { month: "Dec 24", value: 88000000 },  { month: "Jan 25", value: 92000000 },
-  { month: "Feb 25", value: 95000000 },  { month: "Mar 25", value: 110000000 },
-  { month: "Apr 25", value: 148000000 }, { month: "May 25", value: 105000000 },
-  { month: "Jun 25", value: 108000000 }, { month: "Jul 25", value: 112000000 },
-  { month: "Aug 25", value: 115000000 }, { month: "Sep 25", value: 120000000 },
-  { month: "Oct 25", value: 125000000 }, { month: "Nov 25", value: 128000000 },
-  { month: "Dec 25", value: 130000000 }, { month: "Jan 26", value: 135000000 },
-  { month: "Feb 26", value: 140000000 }, { month: "Mar 26", value: 142000000 },
-  { month: "Apr 26", value: 145000000 }, { month: "May 26", value: 138000000 },
-];
+const mapDaysType = (daysType: string): ScheduleTab => {
+  if (daysType === "ODD") return "odd";
+  if (daysType === "EVEN") return "even";
+  return "other";
+};
+
+const toScheduleEvents = (items: ScheduleItem[]): ScheduleEvent[] =>
+  items.map((item, i) => ({
+    id: item.groupId,
+    room: item.roomName,
+    start: parseTimeToMinutes(item.time),
+    duration: DEFAULT_LESSON_DURATION,
+    groupName: item.groupName,
+    courseName: item.courseName,
+    teacher: item.teachers,
+    dateRange: "",
+    students: 0,
+    maxStudents: 0,
+    color: SCHEDULE_COLORS[i % SCHEDULE_COLORS.length],
+    days: [mapDaysType(item.daysType)],
+  }));
 
 // Peak point for the chart's ReferenceDot — computed from the data itself,
 // so it always matches whichever month actually has the highest value.
@@ -44,23 +57,10 @@ const PEAK_POINT = MONTHLY_REVENUE.reduce(
   MONTHLY_REVENUE[0],
 );
 
-// ─── Stat card config ─────────────────────────────────────────────────────────
-
-const STATS = [
-  { key: "leads",        label: "Active leads",            value: 1,   route: "/leads",    icon: <FiUsers size={35} /> },
-  { key: "students",     label: "Active students",         value: 26, route: "/students", icon: <FiUserCheck size={35} /> },
-  { key: "groups",       label: "Groups",                  value: 6,  route: "/groups",   icon: <FiLayers size={35} /> },
-  { key: "debtors",      label: "Debtors",                 value: 6, route: "/students", filter: "debt", icon: <FiAlertTriangle size={35} /> },
-  { key: "trial",        label: "In a trial lesson",       value: 2,  route: "/students", filter: "trial", icon: <FiPlayCircle size={35} /> },
-  { key: "paid",         label: "Paid during the month",   value: 4, route: "/payments", icon: <FiDollarSign size={35} /> },
-  { key: "leftActive",   label: "Left active group",       value: 1, route: "/students", filter: "left_active", icon: <FiUserMinus size={35} /> },
-  { key: "leftTrial",    label: "Left after trial period", value: 0,   route: "/students", filter: "left_trial", icon: <FiUserX size={40} /> },
-];
-
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
-const TIME_START = 8 * 60;
-const TIME_END   = 18 * 60 + 30;
+const TIME_START = SCHEDULE_TIME_START;
+const TIME_END   = SCHEDULE_TIME_END;
 const TOTAL_MINS = TIME_END - TIME_START;
 
 const TIME_LABELS: string[] = [];
@@ -73,16 +73,17 @@ for (let m = TIME_START; m <= TIME_END; m += 30) {
 const pct = (mins: number) =>
   `${((mins / TOTAL_MINS) * 100).toFixed(3)}%`;
 
-const formatChartValue = (value: number) => {
-  if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B UZS`;
-  if (value >= 1000000) return `${(value / 1000000).toFixed(0)} 000 000 UZS`;
-  return `${new Intl.NumberFormat("uz-UZ").format(value)} UZS`;
+const formatChartValue = (value: number, currency: string) => {
+  if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B ${currency}`;
+  if (value >= 1000000) return `${(value / 1000000).toFixed(0)} 000 000 ${currency}`;
+  return `${new Intl.NumberFormat("uz-UZ").format(value)} ${currency}`;
 };
 
 // ─── Custom chart tooltip ─────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ChartTooltip = ({ active, payload, label }: any) => {
+  const { t } = useTranslation();
   if (!active || !payload?.length) return null;
   return (
     <Box sx={{
@@ -92,7 +93,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
     }}>
       <Typography sx={{ fontSize: 12, color: "#6b7280", fontWeight: 700 }}>{label}</Typography>
       <Typography sx={{ fontSize: 15, fontWeight: 800, color: "#f97316", mt: 0.3 }}>
-        {formatChartValue(payload[0].value)}
+        {formatChartValue(payload[0].value, t("dashboard.chart.currency"))}
       </Typography>
     </Box>
   );
@@ -101,15 +102,40 @@ const ChartTooltip = ({ active, payload, label }: any) => {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const Dashboard = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [tab,         setTab        ] = useState<ScheduleTab>("odd");
   const [orientation, setOrientation] = useState<ScheduleOrientation>("horizontal");
 
+  const { data: statsData } = useDashboardStatsQuery();
+  const { data: scheduleData, isLoading: scheduleLoading, isError: scheduleError } = useDashboardScheduleQuery();
+  const { data: attendanceData, isLoading: attendanceLoading } = useDashboardAttendanceStatsQuery();
+  const { data: activitiesData, isLoading: activitiesLoading } = useDashboardRecentActivitiesQuery();
+  const { data: teacherPerfData, isLoading: teacherPerfLoading } = useDashboardTeacherPerformanceQuery();
+
+  const liveStatValues: Record<string, number | undefined> = {
+    students: statsData?.data.activeStudentsCount,
+    groups: statsData?.data.activeGroupsCount,
+  };
+
+  const attendance = attendanceData?.data;
+  const activities = activitiesData?.data ?? [];
+  const teacherPerf = teacherPerfData?.data ?? [];
+
+  const events = useMemo(
+    () => toScheduleEvents(scheduleData?.data ?? []),
+    [scheduleData],
+  );
+  const rooms = useMemo(
+    () => [...new Set(events.map((e) => e.room))],
+    [events],
+  );
+
   // Filtered events for current tab — this only affects the schedule below,
   // the revenue chart above is intentionally independent of it.
   const visibleEvents = useMemo(
-    () => EVENTS.filter((e) => e.days.includes(tab)),
-    [tab],
+    () => events.filter((e) => e.days.includes(tab)),
+    [events, tab],
   );
 
   // Navigate stat card → page (with optional ?filter=xxx)
@@ -119,7 +145,9 @@ export const Dashboard = () => {
   };
 
   const tabLabel: Record<ScheduleTab, string> = {
-    odd: "Odd days", even: "Even days", other: "Other",
+    odd: t("dashboard.schedule.tabs.odd"),
+    even: t("dashboard.schedule.tabs.even"),
+    other: t("dashboard.schedule.tabs.other"),
   };
   const tabs: ScheduleTab[] = ["odd", "even", "other"];
 
@@ -141,8 +169,8 @@ export const Dashboard = () => {
         "@media(max-width:1280px)": { gridTemplateColumns: "repeat(4,1fr)" },
         "@media(max-width:640px)":  { gridTemplateColumns: "repeat(2,1fr)" },
       }}>
-        {STATS.map(({ key, label, value, route, filter, icon }) => (
-          <Tooltip key={key} title={`${label} sahifasiga o'tish`} placement="top" arrow>
+        {STATS.map(({ key, labelKey, value, route, filter, icon }) => (
+          <Tooltip key={key} title={t("dashboard.stats.goToPage", { label: t(labelKey) })} placement="top" arrow>
             <Paper
               elevation={0}
               onClick={() => goTo(route, filter)}
@@ -173,10 +201,10 @@ export const Dashboard = () => {
                  minHeight: 32, display: "flex",
                 alignItems: "center", justifyContent: "center",
               }}>
-                {label}
+                {t(labelKey)}
               </Typography>
               <Typography sx={{ fontSize: 32,  color: "#022081", lineHeight: 1 }}>
-                {value}
+                {liveStatValues[key] ?? value}
               </Typography>
             </Paper>
           </Tooltip>
@@ -204,7 +232,7 @@ export const Dashboard = () => {
               <YAxis
                 tick={{ fontSize: 12, fill: "#6b7280" }}
                 axisLine={false} tickLine={false}
-                tickFormatter={(v) => formatChartValue(v as number)}
+                tickFormatter={(v) => formatChartValue(v as number, t("dashboard.chart.currency"))}
                 width={130}
               />
               <RTooltip content={<ChartTooltip />} />
@@ -224,6 +252,86 @@ export const Dashboard = () => {
           </ResponsiveContainer>
         </Box>
       </Paper>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SUMMARY PANELS — Attendance / Recent activity / Teacher performance
+      ════════════════════════════════════════════════════════════════ */}
+      <Box sx={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 1.5, mb: 3,
+        "@media(max-width:960px)": { gridTemplateColumns: "1fr" },
+      }}>
+        {/* Attendance */}
+        <Paper elevation={0} sx={{ borderRadius: "16px", border: "1px solid #f0f0f0", background: "#fff", p: 2.5 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#111827", mb: 1.5 }}>
+            {t("dashboard.attendance.title")}
+          </Typography>
+          {attendanceLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
+          ) : (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
+              <Typography sx={{ fontSize: 32, fontWeight: 700, color: "#f97316" }}>
+                {attendance?.percentage ?? 0}%
+              </Typography>
+              <Box>
+                <Typography sx={{ fontSize: 12, color: "#6b7280" }}>
+                  {t("dashboard.attendance.present")}: {attendance?.present ?? 0}
+                </Typography>
+                <Typography sx={{ fontSize: 12, color: "#6b7280" }}>
+                  {t("dashboard.attendance.absent")}: {attendance?.absent ?? 0}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </Paper>
+
+        {/* Recent activities */}
+        <Paper elevation={0} sx={{ borderRadius: "16px", border: "1px solid #f0f0f0", background: "#fff", p: 2.5, maxHeight: 220, overflowY: "auto" }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#111827", mb: 1.5 }}>
+            {t("dashboard.recentActivities.title")}
+          </Typography>
+          {activitiesLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
+          ) : activities.length === 0 ? (
+            <Typography sx={{ fontSize: 12, color: "#9ca3af" }}>{t("dashboard.recentActivities.emptyState")}</Typography>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {activities.map((a, i) => (
+                <Box key={i} sx={{ borderBottom: "1px solid #f9fafb", pb: 0.75 }}>
+                  <Typography sx={{ fontSize: 12.5, color: "#374151" }}>{a.message}</Typography>
+                  <Typography sx={{ fontSize: 10.5, color: "#9ca3af" }}>{new Date(a.date).toLocaleString()}</Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Paper>
+
+        {/* Teacher performance */}
+        <Paper elevation={0} sx={{ borderRadius: "16px", border: "1px solid #f0f0f0", background: "#fff", p: 2.5, maxHeight: 220, overflowY: "auto" }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#111827", mb: 1.5 }}>
+            {t("dashboard.teacherPerformance.title")}
+          </Typography>
+          {teacherPerfLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
+          ) : teacherPerf.length === 0 ? (
+            <Typography sx={{ fontSize: 12, color: "#9ca3af" }}>{t("dashboard.teacherPerformance.emptyState")}</Typography>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {teacherPerf.map((tp) => (
+                <Box key={tp.id} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <Typography sx={{ fontSize: 12.5, color: "#374151" }}>{tp.name}</Typography>
+                  <Chip
+                    label={`${t("dashboard.teacherPerformance.activeGroups")}: ${tp.activeGroups}`}
+                    size="small"
+                    sx={{ fontSize: 10.5, height: 20, bgcolor: "#fff7ed", color: "#f97316" }}
+                  />
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Paper>
+      </Box>
 
       {/* ═══════════════════════════════════════════════════════════════
           SCHEDULE
@@ -263,14 +371,14 @@ export const Dashboard = () => {
 
           {/* Title */}
           <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
-            Schedule
+            {t("dashboard.schedule.title")}
           </Typography>
 
           {/* Orientation toggle */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <button
               onClick={() => setOrientation("horizontal")}
-              title="Gorizontal ko'rinish"
+              title={t("dashboard.schedule.horizontalViewTitle")}
               style={{
                 background: orientation === "horizontal" ? "#fff7ed" : "transparent",
                 border: orientation === "horizontal" ? "1px solid #f97316" : "1px solid #e5e7eb",
@@ -281,11 +389,11 @@ export const Dashboard = () => {
               }}
             >
               <MdViewStream size={16} />
-              Horizontal
+              {t("dashboard.schedule.horizontal")}
             </button>
             <button
               onClick={() => setOrientation("vertical")}
-              title="Vertikal ko'rinish"
+              title={t("dashboard.schedule.verticalViewTitle")}
               style={{
                 background: orientation === "vertical" ? "#fff7ed" : "transparent",
                 border: orientation === "vertical" ? "1px solid #f97316" : "1px solid #e5e7eb",
@@ -296,13 +404,27 @@ export const Dashboard = () => {
               }}
             >
               <MdViewColumn size={16} />
-              Vertical
+              {t("dashboard.schedule.vertical")}
             </button>
           </Box>
         </Box>
 
+        {scheduleLoading && (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+            <CircularProgress size={28} />
+          </Box>
+        )}
+
+        {!scheduleLoading && scheduleError && (
+          <Box sx={{ py: 6, textAlign: "center" }}>
+            <Typography sx={{ color: "#e53935", fontSize: 13 }}>
+              {t("dashboard.loadError")}
+            </Typography>
+          </Box>
+        )}
+
         {/* ── HORIZONTAL layout ── */}
-        {orientation === "horizontal" && (
+        {!scheduleLoading && !scheduleError && orientation === "horizontal" && (
           <Box sx={{ overflowX: "auto" }}>
             <Box sx={{ minWidth: 1100 }}>
 
@@ -335,7 +457,7 @@ export const Dashboard = () => {
               </Box>
 
               {/* Room rows */}
-              {ROOMS.map((room: string) => {
+              {rooms.map((room: string) => {
                 const roomEvents = visibleEvents.filter((e: { room: string }) => e.room === room);
                 return (
                   <Box
@@ -418,7 +540,7 @@ export const Dashboard = () => {
                                       background: "rgba(0,0,0,0.2)", borderRadius: "3px",
                                       px: 0.6, fontSize: 9, color: "#fff", fontWeight: 700,
                                     }}>
-                                      {ev.students ?? 0} st./{ev.maxStudents}
+                                      {t("dashboard.schedule.studentsFractionSlash", { count: ev.students ?? 0, max: ev.maxStudents })}
                                     </Box>
                                   )}
                                 </Box>
@@ -436,19 +558,19 @@ export const Dashboard = () => {
         )}
 
         {/* ── VERTICAL layout ── */}
-        {orientation === "vertical" && (
+        {!scheduleLoading && !scheduleError && orientation === "vertical" && (
           <Box sx={{ overflowX: "auto" }}>
             <Box sx={{ minWidth: 900 }}>
               {/* Column headers = rooms */}
               <Box sx={{
                 display: "grid",
-                gridTemplateColumns: `80px repeat(${ROOMS.length}, 1fr)`,
+                gridTemplateColumns: `80px repeat(${rooms.length}, 1fr)`,
                 borderBottom: "1px solid #f3f4f6",
                 background: "#fafafa",
                 position: "sticky", top: 0, zIndex: 2,
               }}>
                 <Box sx={{ borderRight: "1px solid #f3f4f6", py: 1 }} />
-                {ROOMS.map((r: string) => (
+                {rooms.map((r: string) => (
                   <Box key={r} sx={{
                     py: 1, px: 1,
                     borderRight: "1px solid #f3f4f6",
@@ -470,7 +592,7 @@ export const Dashboard = () => {
                     key={timeLabel}
                     sx={{
                       display: "grid",
-                      gridTemplateColumns: `80px repeat(${ROOMS.length}, 1fr)`,
+                      gridTemplateColumns: `80px repeat(${rooms.length}, 1fr)`,
                       borderBottom: "1px solid #f9fafb",
                       minHeight: 48,
                     }}
@@ -491,7 +613,7 @@ export const Dashboard = () => {
                     </Box>
 
                     {/* Room cells */}
-                    {ROOMS.map((room ) => {
+                    {rooms.map((room ) => {
                       const cellEvents = visibleEvents.filter(
                         (e) => e.room === room && e.start >= slotStart && e.start < slotEnd,
                       );
@@ -549,7 +671,7 @@ export const Dashboard = () => {
                                 </Typography>
                                 {ev.students > 0 && (
                                   <Typography sx={{ fontSize: 8, color: "rgba(255,255,255,0.8)", mt: 0.25 }}>
-                                    {ev.students}/{ev.maxStudents} st.
+                                    {t("dashboard.schedule.studentsCountSuffix", { count: ev.students, max: ev.maxStudents })}
                                   </Typography>
                                 )}
                               </Box>
@@ -575,10 +697,10 @@ export const Dashboard = () => {
         )}
 
         {/* Empty state */}
-        {visibleEvents.length === 0 && (
+        {!scheduleLoading && !scheduleError && visibleEvents.length === 0 && (
           <Box sx={{ py: 6, textAlign: "center" }}>
             <Typography sx={{ color: "#9ca3af", fontSize: 14 }}>
-              Bu kun turi uchun jadval mavjud emas
+              {t("dashboard.schedule.emptyState")}
             </Typography>
           </Box>
         )}

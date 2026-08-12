@@ -4,24 +4,26 @@ import {
   Typography, TextField
 } from "@mui/material";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Student } from "../../../types/group";
 
 interface Props { students: Student[] }
 
 export const Grade = ({ students }: Props) => {
+  const { t } = useTranslation();
   const [grades, setGrades] = useState<Record<number, string>>({});
 
   return (
     <Box>
-      <Typography variant="h6" fontWeight={600} mb={2}>Grade</Typography>
+      <Typography variant="h6" fontWeight={600} mb={2}>{t("singleGroup.tabs.grade.title")}</Typography>
       <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
         <Table size="small">
           <TableHead>
             <TableRow>
               <TableCell>#</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Grade (0–100)</TableCell>
-              <TableCell>Result</TableCell>
+              <TableCell>{t("singleGroup.tabs.grade.name")}</TableCell>
+              <TableCell>{t("singleGroup.tabs.grade.gradeRange")}</TableCell>
+              <TableCell>{t("singleGroup.tabs.grade.result")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -57,7 +59,13 @@ export const Grade = ({ students }: Props) => {
                         color: g >= 80 ? "#2e7d32" : g >= 60 ? "#f57f17" : g > 0 ? "#c62828" : "#999",
                       }}
                     >
-                      {g >= 80 ? "Excellent" : g >= 60 ? "Good" : g > 0 ? "Fail" : "—"}
+                      {g >= 80
+                        ? t("singleGroup.tabs.grade.excellent")
+                        : g >= 60
+                        ? t("singleGroup.tabs.grade.good")
+                        : g > 0
+                        ? t("singleGroup.tabs.grade.fail")
+                        : "—"}
                     </Box>
                   </TableCell>
                 </TableRow>

@@ -1,5 +1,6 @@
 import {useState} from "react";
 import { MdClose, MdSearch,  } from "react-icons/md";
+import { useTranslation } from "react-i18next";
 import { Student } from "../../../types";
 
 const MOCK_STUDENTS = [
@@ -107,6 +108,7 @@ export const AddStudentDrawer = ({
   open: boolean; onClose: () => void;
   onAdd: (s: Student & { startDate?: string }) => void;
 }) => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<(typeof MOCK_STUDENTS)[0] | null>(null);
   const [startDate, setStartDate] = useState("");
@@ -125,15 +127,15 @@ export const AddStudentDrawer = ({
   };
 
   return (
-    <RightDrawer open={open} onClose={onClose} title="Add Student" width={440}>
+    <RightDrawer open={open} onClose={onClose} title={t("singleGroup.addStudentDrawer.title")} width={440}>
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <div>
-          <label style={labelStyle}>Search student</label>
+          <label style={labelStyle}>{t("singleGroup.addStudentDrawer.searchStudent")}</label>
           <div style={{ position: "relative" }}>
             <MdSearch size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#aaa" }} />
             <input
               style={{ ...inputStyle, paddingLeft: 36 }}
-              placeholder="Name or phone..."
+              placeholder={t("singleGroup.addStudentDrawer.searchPlaceholder")}
               value={query}
               onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
             />
@@ -155,7 +157,7 @@ export const AddStudentDrawer = ({
             </div>
           )}
           {query.length > 0 && filtered.length === 0 && !selected && (
-            <div style={{ fontSize: 12, color: "#aaa", marginTop: 6 }}>No students found</div>
+            <div style={{ fontSize: 12, color: "#aaa", marginTop: 6 }}>{t("singleGroup.addStudentDrawer.noStudentsFound")}</div>
           )}
         </div>
         {selected && (
@@ -170,14 +172,14 @@ export const AddStudentDrawer = ({
           </div>
         )}
         <div>
-          <label style={labelStyle}>Start date</label>
+          <label style={labelStyle}>{t("singleGroup.addStudentDrawer.startDate")}</label>
           <input type="date" style={inputStyle} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <button style={{ ...submitBtn, opacity: selected ? 1 : 0.5 }} onClick={handleAdd} disabled={!selected}>
-            Add Student
+            {t("singleGroup.addStudentDrawer.submit")}
           </button>
-          <button style={cancelBtn} onClick={onClose}>Cancel</button>
+          <button style={cancelBtn} onClick={onClose}>{t("singleGroup.addStudentDrawer.cancel")}</button>
         </div>
       </div>
     </RightDrawer>

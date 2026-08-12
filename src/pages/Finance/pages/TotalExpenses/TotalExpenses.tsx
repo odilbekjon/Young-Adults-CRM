@@ -13,6 +13,7 @@ import {
   Legend,
 } from "recharts";
 import { BsCashStack } from "react-icons/bs";
+import { useTranslation } from "react-i18next";
 
 // ---------- Types ----------
 interface Expense {
@@ -40,6 +41,7 @@ const today = new Date();
 const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
 export const TotalExpenses = () => {
+  const { t } = useTranslation();
   // ---- State ----
   const [expenses, setExpenses] = useState<Expense[]>([
     {
@@ -163,7 +165,7 @@ export const TotalExpenses = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6 font-sans">
       {/* Page title */}
-      <h1 className="text-2xl font-semibold text-gray-800 mb-4">Total Expenses</h1>
+      <h1 className="text-2xl font-semibold text-gray-800 mb-4">{t("finance.totalExpenses.title")}</h1>
 
       <div className="flex gap-4">
         {/* ===== Left: charts + filters ===== */}
@@ -173,7 +175,7 @@ export const TotalExpenses = () => {
             <div className="flex items-center gap-2">
               <div className="w-1 h-8 bg-blue-500 rounded-full mr-1" />
               <span className="text-gray-700 font-medium">
-                Total expenses: {formatUZS(totalExpenses)}
+                {t("finance.totalExpenses.summary.totalExpenses")} {formatUZS(totalExpenses)}
               </span>
             </div>
             <BsCashStack className="text-blue-400 text-2xl" />
@@ -195,12 +197,12 @@ export const TotalExpenses = () => {
                   />
                   <Tooltip formatter={(v) => formatUZS(Number(v))} />
                   <Legend
-                    formatter={() => "Total Expenses"}
+                    formatter={() => t("finance.totalExpenses.chart.totalExpensesLabel")}
                     iconType="square"
                     iconSize={10}
                     wrapperStyle={{ fontSize: 12 }}
                   />
-                  <Bar dataKey="value" fill="#f28b82" radius={[2, 2, 0, 0]} name="Total Expenses" />
+                  <Bar dataKey="value" fill="#f28b82" radius={[2, 2, 0, 0]} name={t("finance.totalExpenses.chart.totalExpensesLabel")} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -245,7 +247,7 @@ export const TotalExpenses = () => {
             <div className="grid grid-cols-6 gap-3 items-end">
               <div>
                 <label className={labelCls}>
-                  Date from <span className="text-red-500">*</span>
+                  {t("finance.totalExpenses.filters.dateFrom")} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">📅</span>
@@ -254,13 +256,13 @@ export const TotalExpenses = () => {
                     className={inputCls + " pl-7"}
                     value={filters.dateFrom}
                     onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
-                    placeholder="DD.MM.YYYY"
+                    placeholder={t("finance.totalExpenses.filters.dateFormatPlaceholder")}
                   />
                 </div>
               </div>
               <div>
                 <label className={labelCls}>
-                  Date to <span className="text-red-500">*</span>
+                  {t("finance.totalExpenses.filters.dateTo")} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">📅</span>
@@ -269,12 +271,12 @@ export const TotalExpenses = () => {
                     className={inputCls + " pl-7"}
                     value={filters.dateTo}
                     onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
-                    placeholder="DD.MM.YYYY"
+                    placeholder={t("finance.totalExpenses.filters.dateFormatPlaceholder")}
                   />
                 </div>
               </div>
               <div>
-                <label className={labelCls}>Description</label>
+                <label className={labelCls}>{t("finance.totalExpenses.filters.description")}</label>
                 <input
                   type="text"
                   className={inputCls}
@@ -283,20 +285,20 @@ export const TotalExpenses = () => {
                 />
               </div>
               <div>
-                <label className={labelCls}>Select category</label>
+                <label className={labelCls}>{t("finance.totalExpenses.filters.selectCategory")}</label>
                 <select
                   className={inputCls}
                   value={filters.category}
                   onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))}
                 >
-                  <option value="">Select</option>
+                  <option value="">{t("finance.totalExpenses.selectPlaceholder")}</option>
                   {CATEGORIES.map((c) => (
                     <option key={c}>{c}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className={labelCls}>Payee</label>
+                <label className={labelCls}>{t("finance.totalExpenses.filters.payee")}</label>
                 <input
                   type="text"
                   className={inputCls}
@@ -305,13 +307,13 @@ export const TotalExpenses = () => {
                 />
               </div>
               <div>
-                <label className={labelCls}>Method pay</label>
+                <label className={labelCls}>{t("finance.totalExpenses.filters.methodPay")}</label>
                 <select
                   className={inputCls}
                   value={filters.methodPay}
                   onChange={(e) => setFilters((f) => ({ ...f, methodPay: e.target.value }))}
                 >
-                  <option value="">Select</option>
+                  <option value="">{t("finance.totalExpenses.selectPlaceholder")}</option>
                   {METHODS.map((m) => (
                     <option key={m}>{m}</option>
                   ))}
@@ -322,13 +324,13 @@ export const TotalExpenses = () => {
             {/* Second row */}
             <div className="grid grid-cols-6 gap-3 items-end mt-3">
               <div>
-                <label className={labelCls}>Staff Name</label>
+                <label className={labelCls}>{t("finance.totalExpenses.filters.staffName")}</label>
                 <select
                   className={inputCls}
                   value={filters.staffName}
                   onChange={(e) => setFilters((f) => ({ ...f, staffName: e.target.value }))}
                 >
-                  <option value="">Select</option>
+                  <option value="">{t("finance.totalExpenses.selectPlaceholder")}</option>
                   <option>Kamoliddin</option>
                   <option>Aziz</option>
                 </select>
@@ -338,7 +340,7 @@ export const TotalExpenses = () => {
                   className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-1.5 rounded transition-colors"
                   onClick={() => setActiveFilters({ ...filters })}
                 >
-                  Filter
+                  {t("finance.totalExpenses.filters.filter")}
                 </button>
               </div>
             </div>
@@ -347,11 +349,11 @@ export const TotalExpenses = () => {
 
         {/* ===== Right: New expense form ===== */}
         <div className="w-72 bg-white rounded-lg shadow-sm border border-gray-200 px-5 py-5 flex flex-col gap-4 self-start">
-          <h2 className="text-base font-semibold text-gray-800">New expense</h2>
+          <h2 className="text-base font-semibold text-gray-800">{t("finance.totalExpenses.form.title")}</h2>
 
           <div>
             <label className={labelCls}>
-              Description <span className="text-red-500">*</span>
+              {t("finance.totalExpenses.form.description")} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -363,7 +365,7 @@ export const TotalExpenses = () => {
 
           <div>
             <label className={labelCls}>
-              Date <span className="text-red-500">*</span>
+              {t("finance.totalExpenses.form.date")} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">📅</span>
@@ -372,21 +374,21 @@ export const TotalExpenses = () => {
                 className={inputCls + " pl-7"}
                 value={form.date}
                 onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                placeholder="DD.MM.YYYY"
+                placeholder={t("finance.totalExpenses.filters.dateFormatPlaceholder")}
               />
             </div>
           </div>
 
           <div>
             <label className={labelCls}>
-              Category <span className="text-red-500">*</span>
+              {t("finance.totalExpenses.form.category")} <span className="text-red-500">*</span>
             </label>
             <select
               className={inputCls}
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
             >
-              <option value="">Select</option>
+              <option value="">{t("finance.totalExpenses.selectPlaceholder")}</option>
               {CATEGORIES.map((c) => (
                 <option key={c}>{c}</option>
               ))}
@@ -394,7 +396,7 @@ export const TotalExpenses = () => {
           </div>
 
           <div>
-            <label className={labelCls}>Payee</label>
+            <label className={labelCls}>{t("finance.totalExpenses.form.payee")}</label>
             <input
               type="text"
               className={inputCls}
@@ -405,7 +407,7 @@ export const TotalExpenses = () => {
 
           <div>
             <label className={labelCls}>
-              Sum <span className="text-red-500">*</span>
+              {t("finance.totalExpenses.form.sum")} <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
@@ -417,7 +419,7 @@ export const TotalExpenses = () => {
 
           <div>
             <label className={labelCls}>
-              Method pay <span className="text-red-500">*</span>
+              {t("finance.totalExpenses.form.methodPay")} <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-1">
               {METHODS.map((m) => (
@@ -440,7 +442,7 @@ export const TotalExpenses = () => {
             className="mt-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded transition-colors self-start"
             onClick={handleSubmit}
           >
-            Submit
+            {t("finance.totalExpenses.form.submit")}
           </button>
         </div>
       </div>

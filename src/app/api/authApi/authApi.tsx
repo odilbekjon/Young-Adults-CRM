@@ -1,20 +1,29 @@
 import { PATHS } from "./paths";
-import { LoginRequest, LoginResponse } from "./types";
+import { LoginRequest, LoginResponse, MeResponse } from "./types";
 import { baseApi } from "../baseApi";
 
 export const authApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         login: builder.mutation<LoginResponse, LoginRequest>({
-            query: (body) => ({
-                url: PATHS.LOGIN,
-                method: 'POST',
-                body,
-                // headers: {
-                //     'Content-Type': 'application/json'
-                // }
-            })
+            query: ({ identifier, password }) => {
+                const formData = new FormData();
+                formData.append('identifier', identifier);
+                formData.append('password', password);
+                return {
+                    url: PATHS.LOGIN,
+                    method: 'POST',
+                    body: formData,
+                }
+            }
+        }),
+        getMe: builder.query<MeResponse, void>({
+            query: () => ({
+                url: PATHS.GET,
+                method: 'GET',
+            }),
+            providesTags: ["user"],
         })
     })
 })
 
-export const { useLoginMutation, } = authApi;
+export const { useLoginMutation, useGetMeQuery } = authApi;

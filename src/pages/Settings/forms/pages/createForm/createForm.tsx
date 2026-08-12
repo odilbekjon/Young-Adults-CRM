@@ -5,6 +5,7 @@ import {
   MenuItem, Radio, Select, TextField, Typography,
   Paper, IconButton,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { FiPlus } from "react-icons/fi";
 import { MdClose } from "react-icons/md";
 import { useParams } from "react-router-dom";
@@ -15,14 +16,24 @@ interface Answer { id: number; label: string; }
 interface Block { id: number; type: BlockType; question: string; answers: Answer[]; isRequired: boolean; }
 
 const BLOCK_TYPES: BlockType[] = ["One of the list", "Short answer", "Long answer"];
+const BLOCK_TYPE_LABEL_KEYS: Record<BlockType, string> = {
+  "One of the list": "settings.forms.createForm.blockTypes.oneOfList",
+  "Short answer": "settings.forms.createForm.blockTypes.shortAnswer",
+  "Long answer": "settings.forms.createForm.blockTypes.longAnswer",
+};
 const TEAL = "#4a7fa5";
 const TEAL_DARK = "#1a4d6e";
 
-const defaultBlock = (): Block => ({
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+const defaultBlock = (t: TFn): Block => ({
   id: Date.now(),
   type: "One of the list",
-  question: "Choose of the Answers",
-  answers: [{ id: 1, label: "Answer 1" }, { id: 2, label: "Answer 2" }],
+  question: t("settings.forms.createForm.defaultQuestion"),
+  answers: [
+    { id: 1, label: t("settings.forms.createForm.answerLabel", { number: 1 }) },
+    { id: 2, label: t("settings.forms.createForm.answerLabel", { number: 2 }) },
+  ],
   isRequired: true,
 });
 
@@ -45,13 +56,14 @@ const FixedFieldCard = ({ index, label }: { index: number; label: string }) => (
 
 // ─── Lead Form Editor ─────────────────────────────────────────────────────────
 function LeadFormEditor() {
+  const { t } = useTranslation();
   const [formName, setFormName] = useState("");
   const [branch, setBranch] = useState("");
   const [section, setSection] = useState("");
   const [leadSource, setLeadSource] = useState("");
   const [blocks, setBlocks] = useState<Block[]>([]);
 
-  const addBlock = () => setBlocks((prev) => [...prev, { ...defaultBlock(), id: Date.now() }]);
+  const addBlock = () => setBlocks((prev) => [...prev, { ...defaultBlock(t), id: Date.now() }]);
   const removeBlock = (id: number) => setBlocks((prev) => prev.filter((b) => b.id !== id));
   const updateBlock = (id: number, patch: Partial<Block>) =>
     setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
@@ -59,7 +71,7 @@ function LeadFormEditor() {
     setBlocks((prev) =>
       prev.map((b) =>
         b.id === blockId
-          ? { ...b, answers: [...b.answers, { id: Date.now(), label: `Answer ${b.answers.length + 1}` }] }
+          ? { ...b, answers: [...b.answers, { id: Date.now(), label: t("settings.forms.createForm.answerLabel", { number: b.answers.length + 1 }) }] }
           : b
       )
     );
@@ -78,7 +90,10 @@ function LeadFormEditor() {
       )
     );
 
-  const fixedFields = ["To'liq ism familyangiz ?", "Telefon raqamingiz ?"];
+  const fixedFields = [
+    t("settings.forms.createForm.fixedFields.fullName"),
+    t("settings.forms.createForm.fixedFields.phoneNumber"),
+  ];
 
   // Preview
   const Preview = () => (
@@ -87,19 +102,19 @@ function LeadFormEditor() {
       sx={{ p: 4, borderRadius: 3, backgroundColor: "#fff", border: "1px solid #eee" }}
     >
       <Typography variant="h6" sx={{ mb: 3, color: formName ? "#1a1a2e" : "#aaa", fontWeight: 600, fontSize: "1.1rem" }}>
-        {formName || "Enter form name"}
+        {formName || t("settings.forms.createForm.placeholders.formName")}
       </Typography>
 
       {/* Fixed preview fields */}
       <Box sx={{ mb: 2.5 }}>
         <Typography sx={{ mb: 0.8, fontSize: "0.85rem", color: "#333" }}>
-          To'liq ism familyangiz ?<span style={{ color: "red", marginLeft: 4 }}>*</span>
+          {t("settings.forms.createForm.fixedFields.fullName")}<span style={{ color: "red", marginLeft: 4 }}>*</span>
         </Typography>
         <TextField fullWidth size="small" variant="outlined" disabled sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1 } }} />
       </Box>
       <Box sx={{ mb: 2.5 }}>
         <Typography sx={{ mb: 0.8, fontSize: "0.85rem", color: "#333" }}>
-          Telefon raqamingiz ?<span style={{ color: "red", marginLeft: 4 }}>*</span>
+          {t("settings.forms.createForm.fixedFields.phoneNumber")}<span style={{ color: "red", marginLeft: 4 }}>*</span>
         </Typography>
         <TextField fullWidth size="small" defaultValue="+998" variant="outlined" InputProps={{ readOnly: true }} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1 } }} />
       </Box>
@@ -131,7 +146,7 @@ function LeadFormEditor() {
         variant="contained"
         sx={{ mt: 1, backgroundColor: TEAL, borderRadius: "50px", px: 3, textTransform: "none", fontSize: "0.85rem", boxShadow: "none", "&:hover": { backgroundColor: TEAL_DARK, boxShadow: "none" } }}
       >
-        Submit
+        {t("settings.forms.createForm.actions.submit")}
       </Button>
     </Paper>
   );
@@ -150,7 +165,7 @@ function LeadFormEditor() {
         {/* Form name */}
         <TextField
           fullWidth
-          placeholder="Enter form name"
+          placeholder={t("settings.forms.createForm.placeholders.formName")}
           value={formName}
           onChange={(e) => setFormName(e.target.value)}
           size="small"
@@ -159,21 +174,21 @@ function LeadFormEditor() {
 
         {/* Selects */}
         <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-          <Select value={branch} onChange={(e) => setBranch(e.target.value)} displayEmpty renderValue={(v) => v || <span style={{ color: "#aaa" }}>Select branch:</span>} sx={selectSx}>
-            <MenuItem value="ya_ielts">YA IELTS Campus</MenuItem>
-            <MenuItem value="branch2">Branch 2</MenuItem>
+          <Select value={branch} onChange={(e) => setBranch(e.target.value)} displayEmpty renderValue={(v) => v || <span style={{ color: "#aaa" }}>{t("settings.forms.createForm.placeholders.selectBranch")}</span>} sx={selectSx}>
+            <MenuItem value="ya_ielts">{t("settings.forms.createForm.options.branch.yaIelts")}</MenuItem>
+            <MenuItem value="branch2">{t("settings.forms.createForm.options.branch.branch2")}</MenuItem>
           </Select>
         </FormControl>
         <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-          <Select value={section} onChange={(e) => setSection(e.target.value)} displayEmpty renderValue={(v) => v || <span style={{ color: "#aaa" }}>input</span>} sx={selectSx}>
-            <MenuItem value="sec1">Section 1</MenuItem>
-            <MenuItem value="sec2">Section 2</MenuItem>
+          <Select value={section} onChange={(e) => setSection(e.target.value)} displayEmpty renderValue={(v) => v || <span style={{ color: "#aaa" }}>{t("settings.forms.createForm.placeholders.selectSection")}</span>} sx={selectSx}>
+            <MenuItem value="sec1">{t("settings.forms.createForm.options.section.section1")}</MenuItem>
+            <MenuItem value="sec2">{t("settings.forms.createForm.options.section.section2")}</MenuItem>
           </Select>
         </FormControl>
         <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-          <Select value={leadSource} onChange={(e) => setLeadSource(e.target.value)} displayEmpty renderValue={(v) => v || <span style={{ color: "#aaa" }}>Leads Sources</span>} sx={selectSx}>
-            <MenuItem value="src1">Source 1</MenuItem>
-            <MenuItem value="src2">Source 2</MenuItem>
+          <Select value={leadSource} onChange={(e) => setLeadSource(e.target.value)} displayEmpty renderValue={(v) => v || <span style={{ color: "#aaa" }}>{t("settings.forms.createForm.placeholders.leadsSources")}</span>} sx={selectSx}>
+            <MenuItem value="src1">{t("settings.forms.createForm.options.source.source1")}</MenuItem>
+            <MenuItem value="src2">{t("settings.forms.createForm.options.source.source2")}</MenuItem>
           </Select>
         </FormControl>
 
@@ -200,7 +215,7 @@ function LeadFormEditor() {
                   onChange={(e) => updateBlock(block.id, { type: e.target.value as BlockType })}
                   sx={{ fontSize: "0.85rem", "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e0e0e0" } }}
                 >
-                  {BLOCK_TYPES.map((t) => <MenuItem key={t} value={t} sx={{ fontSize: "0.85rem" }}>{t}</MenuItem>)}
+                  {BLOCK_TYPES.map((bt) => <MenuItem key={bt} value={bt} sx={{ fontSize: "0.85rem" }}>{t(BLOCK_TYPE_LABEL_KEYS[bt])}</MenuItem>)}
                 </Select>
               </FormControl>
               <Box sx={{ flex: 1 }} />
@@ -251,7 +266,7 @@ function LeadFormEditor() {
                     onClick={() => addAnswer(block.id)}
                     sx={{ mt: 1, backgroundColor: TEAL_DARK, borderRadius: "50px", textTransform: "none", boxShadow: "none", fontSize: "0.8rem", px: 2, "&:hover": { backgroundColor: TEAL, boxShadow: "none" } }}
                   >
-                    Add answer
+                    {t("settings.forms.createForm.actions.addAnswer")}
                   </Button>
                 </Box>
               )}
@@ -266,7 +281,7 @@ function LeadFormEditor() {
           onClick={addBlock}
           sx={{ backgroundColor: TEAL_DARK, borderRadius: "50px", textTransform: "none", boxShadow: "none", px: 3, py: 1, fontSize: "0.85rem", mt: 0.5, "&:hover": { backgroundColor: TEAL, boxShadow: "none" } }}
         >
-          Add block
+          {t("settings.forms.createForm.actions.addBlock")}
         </Button>
       </Box>
 
@@ -280,11 +295,12 @@ function LeadFormEditor() {
 
 // ─── Simple Form Editor ───────────────────────────────────────────────────────
 function SimpleFormEditor() {
+  const { t } = useTranslation();
   const [formName, setFormName] = useState("");
   const [branch, setBranch] = useState("");
-  const [blocks, setBlocks] = useState<Block[]>([defaultBlock()]);
+  const [blocks, setBlocks] = useState<Block[]>([defaultBlock(t)]);
 
-  const addBlock = () => setBlocks((prev) => [...prev, { ...defaultBlock(), id: Date.now() }]);
+  const addBlock = () => setBlocks((prev) => [...prev, { ...defaultBlock(t), id: Date.now() }]);
   const removeBlock = (id: number) => setBlocks((prev) => prev.filter((b) => b.id !== id));
   const updateBlock = (id: number, patch: Partial<Block>) =>
     setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
@@ -292,7 +308,7 @@ function SimpleFormEditor() {
     setBlocks((prev) =>
       prev.map((b) =>
         b.id === blockId
-          ? { ...b, answers: [...b.answers, { id: Date.now(), label: `Answer ${b.answers.length + 1}` }] }
+          ? { ...b, answers: [...b.answers, { id: Date.now(), label: t("settings.forms.createForm.answerLabel", { number: b.answers.length + 1 }) }] }
           : b
       )
     );
@@ -314,7 +330,7 @@ function SimpleFormEditor() {
   const Preview = () => (
     <Paper elevation={0} sx={{ p: 4, borderRadius: 3, backgroundColor: "#fff", border: "1px solid #eee" }}>
       <Typography variant="h6" sx={{ mb: 3, color: formName ? "#1a1a2e" : "#aaa", fontWeight: 600, fontSize: "1.1rem" }}>
-        {formName || "Enter form name"}
+        {formName || t("settings.forms.createForm.placeholders.formName")}
       </Typography>
       {blocks.map((block) => (
         <Box key={block.id} sx={{ mb: 3 }}>
@@ -332,18 +348,18 @@ function SimpleFormEditor() {
           {block.type === "Long answer" && <TextField size="small" fullWidth multiline rows={3} variant="outlined" disabled />}
         </Box>
       ))}
-      <Button variant="contained" sx={{ mt: 1, backgroundColor: TEAL, borderRadius: "50px", px: 3, textTransform: "none", boxShadow: "none", "&:hover": { backgroundColor: TEAL_DARK, boxShadow: "none" } }}>Submit</Button>
+      <Button variant="contained" sx={{ mt: 1, backgroundColor: TEAL, borderRadius: "50px", px: 3, textTransform: "none", boxShadow: "none", "&:hover": { backgroundColor: TEAL_DARK, boxShadow: "none" } }}>{t("settings.forms.createForm.actions.submit")}</Button>
     </Paper>
   );
 
   return (
     <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <TextField fullWidth placeholder="Enter form name" value={formName} onChange={(e) => setFormName(e.target.value)} variant="outlined" size="small" sx={{ mb: 1.5, backgroundColor: "#fff", borderRadius: 1.5 }} />
+        <TextField fullWidth placeholder={t("settings.forms.createForm.placeholders.formName")} value={formName} onChange={(e) => setFormName(e.target.value)} variant="outlined" size="small" sx={{ mb: 1.5, backgroundColor: "#fff", borderRadius: 1.5 }} />
         <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-          <Select value={branch} onChange={(e) => setBranch(e.target.value)} displayEmpty renderValue={(v) => v || <span style={{ color: "#aaa" }}>Select branch:</span>} sx={{ backgroundColor: "#fff", borderRadius: 1.5 }}>
-            <MenuItem value="branch1">Branch 1</MenuItem>
-            <MenuItem value="branch2">Branch 2</MenuItem>
+          <Select value={branch} onChange={(e) => setBranch(e.target.value)} displayEmpty renderValue={(v) => v || <span style={{ color: "#aaa" }}>{t("settings.forms.createForm.placeholders.selectBranch")}</span>} sx={{ backgroundColor: "#fff", borderRadius: 1.5 }}>
+            <MenuItem value="branch1">{t("settings.forms.createForm.options.branch.branch1")}</MenuItem>
+            <MenuItem value="branch2">{t("settings.forms.createForm.options.branch.branch2")}</MenuItem>
           </Select>
         </FormControl>
 
@@ -353,7 +369,7 @@ function SimpleFormEditor() {
               <Typography sx={{ fontWeight: 600, color: "#555", minWidth: 20, fontSize: "0.85rem" }}>{idx + 1}</Typography>
               <FormControl size="small" sx={{ minWidth: 140 }}>
                 <Select value={block.type} onChange={(e) => updateBlock(block.id, { type: e.target.value as BlockType })} sx={{ fontSize: "0.85rem" }}>
-                  {BLOCK_TYPES.map((t) => <MenuItem key={t} value={t} sx={{ fontSize: "0.85rem" }}>{t}</MenuItem>)}
+                  {BLOCK_TYPES.map((bt) => <MenuItem key={bt} value={bt} sx={{ fontSize: "0.85rem" }}>{t(BLOCK_TYPE_LABEL_KEYS[bt])}</MenuItem>)}
                 </Select>
               </FormControl>
               <Box sx={{ flex: 1 }} />
@@ -370,14 +386,14 @@ function SimpleFormEditor() {
                       {block.answers.length > 1 && <IconButton size="small" onClick={() => removeAnswer(block.id, answer.id)} sx={{ color: "#ccc" }}><MdClose size={13} /></IconButton>}
                     </Box>
                   ))}
-                  <Button size="small" variant="contained" startIcon={<FiPlus size={13} />} onClick={() => addAnswer(block.id)} sx={{ mt: 1, backgroundColor: TEAL_DARK, borderRadius: "50px", textTransform: "none", boxShadow: "none", fontSize: "0.8rem", px: 2, "&:hover": { backgroundColor: TEAL, boxShadow: "none" } }}>Add answer</Button>
+                  <Button size="small" variant="contained" startIcon={<FiPlus size={13} />} onClick={() => addAnswer(block.id)} sx={{ mt: 1, backgroundColor: TEAL_DARK, borderRadius: "50px", textTransform: "none", boxShadow: "none", fontSize: "0.8rem", px: 2, "&:hover": { backgroundColor: TEAL, boxShadow: "none" } }}>{t("settings.forms.createForm.actions.addAnswer")}</Button>
                 </Box>
               )}
             </Box>
           </Paper>
         ))}
 
-        <Button variant="contained" startIcon={<FiPlus size={15} />} onClick={addBlock} sx={{ backgroundColor: TEAL_DARK, borderRadius: "50px", textTransform: "none", boxShadow: "none", px: 3, py: 1, fontSize: "0.85rem", mt: 0.5, "&:hover": { backgroundColor: TEAL, boxShadow: "none" } }}>Add block</Button>
+        <Button variant="contained" startIcon={<FiPlus size={15} />} onClick={addBlock} sx={{ backgroundColor: TEAL_DARK, borderRadius: "50px", textTransform: "none", boxShadow: "none", px: 3, py: 1, fontSize: "0.85rem", mt: 0.5, "&:hover": { backgroundColor: TEAL, boxShadow: "none" } }}>{t("settings.forms.createForm.actions.addBlock")}</Button>
       </Box>
       <Box sx={{ width: 560, flexShrink: 0 }}><Preview /></Box>
     </Box>
@@ -386,6 +402,7 @@ function SimpleFormEditor() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export const CreateForm = () => {
+  const { t } = useTranslation();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
 
@@ -424,7 +441,7 @@ export const CreateForm = () => {
               borderWidth: tab === 0 ? 2 : 1,
             }}
           >
-            Simple form
+            {t("settings.forms.createForm.tabs.simpleForm")}
           </Box>
           <Box
             onClick={() => setTab(1)}
@@ -438,7 +455,7 @@ export const CreateForm = () => {
               borderWidth: tab === 1 ? 2 : 1,
             }}
           >
-            Lead form
+            {t("settings.forms.createForm.tabs.leadForm")}
           </Box>
         </Box>
 
@@ -447,7 +464,7 @@ export const CreateForm = () => {
           variant="contained"
           sx={{ backgroundColor: TEAL_DARK, borderRadius: "50px", textTransform: "none", fontWeight: 600, px: 4, py: 1.2, boxShadow: "none", whiteSpace: "nowrap", fontSize: "0.9rem", "&:hover": { backgroundColor: TEAL, boxShadow: "none" } }}
         >
-          {isEdit ? "Update" : "Save"}
+          {isEdit ? t("settings.forms.createForm.actions.update") : t("settings.forms.createForm.actions.save")}
         </Button>
       </Box>
 

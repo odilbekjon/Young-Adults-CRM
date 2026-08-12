@@ -1,4 +1,8 @@
 {
+  "notFound": {
+    "message": "The page you're looking for doesn't exist.",
+    "backHome": "Back to home"
+  },
   "header": {
     "search": "Search",
     "notifications": "Notifications",
@@ -65,9 +69,11 @@
     "companyName": "Young Adults LLC",
     "tagline": "Always step ahead!",
     "title": "Login",
-    "phone": "Phone",
+    "email": "Email",
     "password": "Password",
-    "error": "Incorrect phone number or password. Please try again.",
+    "error": "Incorrect email or password. Please try again.",
+    "networkError": "Network error. Please check your connection and try again.",
+    "requiredFields": "Please enter both email and password.",
     "submit": "Login"
   },
   "sidebar": {
@@ -122,6 +128,1368 @@
       "blogWhatsNew": "What's new",
       "tags": "Tags",
       "tagsList": "Tags"
+    }
+  },
+  "dashboard": {
+    "stats": {
+      "activeLeads": "Active leads",
+      "activeStudents": "Active students",
+      "groups": "Groups",
+      "debtors": "Debtors",
+      "inTrialLesson": "In a trial lesson",
+      "paidDuringMonth": "Paid during the month",
+      "leftActiveGroup": "Left active group",
+      "leftAfterTrial": "Left after trial period",
+      "goToPage": "Go to {{label}} page"
+    },
+    "schedule": {
+      "title": "Schedule",
+      "tabs": {
+        "odd": "Odd days",
+        "even": "Even days",
+        "other": "Other"
+      },
+      "horizontalViewTitle": "Horizontal view",
+      "horizontal": "Horizontal",
+      "verticalViewTitle": "Vertical view",
+      "vertical": "Vertical",
+      "studentsFractionSlash": "{{count}} st./{{max}}",
+      "studentsCountSuffix": "{{count}}/{{max}} st.",
+      "emptyState": "No schedule available for this day type"
+    },
+    "chart": {
+      "currency": "UZS"
+    },
+    "attendance": {
+      "title": "Attendance",
+      "present": "Present",
+      "absent": "Absent"
+    },
+    "recentActivities": {
+      "title": "Recent activity",
+      "emptyState": "No recent activity"
+    },
+    "teacherPerformance": {
+      "title": "Teacher performance",
+      "activeGroups": "Active groups",
+      "emptyState": "No data"
+    },
+    "loadError": "Failed to load dashboard data."
+  },
+  "students": {
+    "header": {
+      "title": "Students",
+      "quantity": "Quantity — {{count}}",
+      "addNew": "Add New"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by name or phone",
+      "byTeacher": "By Teacher",
+      "clearAll": "Clear all"
+    },
+    "table": {
+      "selectedCount_one": "{{count}} selected",
+      "selectedCount_other": "{{count}} selected",
+      "filters": "Filters",
+      "columns": "Columns",
+      "photo": "Photo",
+      "name": "Name",
+      "phone": "Phone",
+      "groups": "Groups",
+      "teachers": "Teachers",
+      "trainingDates": "Training dates",
+      "balance": "Balance",
+      "comment": "Comment",
+      "addToGroup": "Add to group",
+      "mailSelected": "Mail selected",
+      "deleteSelected": "Delete selected",
+      "noStudentsFound": "No students found",
+      "loading": "Loading..."
+    },
+    "pagination": {
+      "range": "{{from}}–{{to}} of {{total}}"
+    },
+    "actions": {
+      "editStudent": "Edit Student",
+      "addPayment": "Add payment",
+      "remove": "Remove"
+    },
+    "addToGroup": {
+      "title": "Add student to group",
+      "studentsSelected_one": "{{count}} student selected",
+      "studentsSelected_other": "{{count}} students selected",
+      "selectGroup": "Select group",
+      "submit": "Add student to group"
+    },
+    "editDrawer": {
+      "title": "Edit Student",
+      "phone": "Phone",
+      "name": "Name",
+      "dob": "Date of birth",
+      "gender": "Gender",
+      "male": "Male",
+      "female": "Female",
+      "additionalContacts": "Additional contacts",
+      "addToGroup": "+ Add to the group",
+      "setPassword": "+ Set password",
+      "submit": "Submit"
+    },
+    "contacts": {
+      "phone": "Phone",
+      "key": "Key",
+      "profile": "Profile",
+      "email": "Email",
+      "telegram": "Telegram",
+      "education": "Education",
+      "location": "Location",
+      "card": "Card"
+    },
+    "deleteDialog": {
+      "title": "Delete Student",
+      "message": "Are you sure you want to remove this student?",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    }
+  },
+  "teachers": {
+    "title": "Teachers",
+    "countSuffix": "teachers",
+    "actions": {
+      "addNew": "ADD NEW",
+      "import": "Import"
+    },
+    "alert": {
+      "title": "Attention!",
+      "description": "CEO profiles can link teachers to other branches."
+    },
+    "search": {
+      "placeholder": "Search Teacher"
+    },
+    "table": {
+      "groupsCount": "groups",
+      "noData": "No data available"
+    },
+    "menu": {
+      "edit": "Edit",
+      "sms": "SMS",
+      "delete": "Delete"
+    },
+    "sms": {
+      "recipientLabel": "teacher"
+    },
+    "drawer": {
+      "editTitle": "Edit Teacher",
+      "addTitle": "Add New Teacher"
+    },
+    "form": {
+      "phone": "Phone",
+      "phonePlaceholder": "XX XXX XX XX",
+      "name": "Name",
+      "namePlaceholder": "Full name",
+      "branch": "Branch",
+      "branchPlaceholder": "Branch name",
+      "dob": "Date of birth",
+      "gender": "Gender",
+      "genderMale": "Male",
+      "genderFemale": "Female",
+      "photo": "Photo",
+      "photoPreviewAlt": "preview",
+      "noFileChosen": "No file chosen",
+      "browse": "Browse",
+      "hidePasswordToggle": "− Hide password",
+      "setPasswordToggle": "+ Set password",
+      "passwordPlaceholder": "Enter password",
+      "submit": "Submit"
+    },
+    "deleteDialog": {
+      "title": "Delete Teacher",
+      "message": "Are you sure you want to delete this teacher? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "validation": {
+      "phoneRequired": "Phone is required",
+      "nameRequired": "Name is required",
+      "dobRequired": "Date of birth is required",
+      "genderRequired": "Gender is required"
+    }
+  },
+  "groups": {
+    "pageTitle": "Groups",
+    "summary": "{{branch}} — {{count}} groups",
+    "actions": {
+      "addNew": "Add New",
+      "exportExcel": "Export to Excel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "submit": "Submit"
+    },
+    "filters": {
+      "status": "Status",
+      "teacher": "Teacher",
+      "courses": "Courses",
+      "days": "Days",
+      "tags": "Tags",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "clearAll": "Clear all",
+      "filtersButton": "Filters",
+      "columns": "Columns"
+    },
+    "options": {
+      "status": {
+        "active": "🟢 Active",
+        "archive": "🔴 Archive",
+        "completed": "🔵 Completed"
+      },
+      "days": {
+        "odd": "Odd days",
+        "even": "Even days",
+        "every": "Every day"
+      },
+      "tags": {
+        "new": "New",
+        "popular": "Popular",
+        "vip": "VIP",
+        "trial": "Trial"
+      }
+    },
+    "table": {
+      "group": "Group",
+      "course": "Course",
+      "teacher": "Teacher",
+      "days": "Days",
+      "trainingDates": "Training dates",
+      "weekOfStudy": "Week of study",
+      "room": "Room",
+      "tags": "Tags",
+      "students": "Students",
+      "actions": "Actions",
+      "empty": "No groups found"
+    },
+    "export": {
+      "number": "#",
+      "group": "Group",
+      "course": "Course",
+      "teacher": "Teacher",
+      "days": "Days",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "room": "Room",
+      "students": "Students",
+      "status": "Status"
+    },
+    "form": {
+      "addTitle": "Add New Group",
+      "editTitle": "Edit Group",
+      "name": "Name",
+      "course": "Select course",
+      "teacher": "Select teacher",
+      "days": "Days",
+      "room": "Select room",
+      "lessonStartTime": "Lesson start time",
+      "startDate": "Group start date",
+      "endDate": "Group end date",
+      "tags": "Tags",
+      "status": "Status"
+    },
+    "deleteDialog": {
+      "title": "Delete Group",
+      "body": "Are you sure you want to delete this group? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    }
+  },
+  "finance": {
+    "allPayments": {
+      "title": "All payments",
+      "stats": {
+        "totalRevenue": "Total Revenue:",
+        "totalNetProfit": "Total Net Profit:",
+        "details": "Details"
+      },
+      "filters": {
+        "title": "Filters",
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "namePhone": "Name or Phone",
+        "searchPlaceholder": "Search...",
+        "group": "Select group",
+        "course": "Course",
+        "teacher": "Teacher",
+        "methodPay": "Method pay",
+        "sum": "Sum",
+        "amountPlaceholder": "Amount",
+        "staffName": "Staff Name",
+        "fromCreatedDate": "From created date",
+        "toCreatedDate": "To created date",
+        "noDateSelected": "No date selected",
+        "reset": "Reset",
+        "filter": "Filter",
+        "selectPlaceholder": "Select"
+      },
+      "table": {
+        "date": "Date",
+        "name": "Name",
+        "sum": "Sum",
+        "methodPay": "Method pay",
+        "teacher": "Teacher",
+        "comment": "Comment",
+        "creator": "Creator",
+        "empty": "No payments found"
+      },
+      "footer": {
+        "showing": "Showing",
+        "of": "of",
+        "payments": "payments"
+      }
+    },
+    "debtors": {
+      "title": "Debtors",
+      "quantity": "Quantity — {{count}}",
+      "summary": {
+        "total": "Total:",
+        "totalOnPeriod": "Total on period:"
+      },
+      "filters": {
+        "search": "Search",
+        "searchBy": "Search by",
+        "status": "Status",
+        "group": "Group",
+        "debtAmountFrom": "Debt amount (from)",
+        "debtAmountTo": "Debt amount (to)",
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "task": "Task",
+        "noDateSelected": "No date selected",
+        "filter": "Filter",
+        "selectPlaceholder": "Select"
+      },
+      "table": {
+        "rowsPerPage": "Rows per page:",
+        "filtersButton": "Filters",
+        "name": "Name",
+        "phone": "Phone",
+        "balance": "Balance",
+        "totalOnPeriod": "Total on period",
+        "group": "Group",
+        "comment": "Comment",
+        "task": "Task",
+        "status": "Status",
+        "sendSmsSelected": "Send SMS to selected",
+        "selectToSendSms": "Select students to send SMS",
+        "noData": "No Data"
+      },
+      "pagination": {
+        "of": "of"
+      }
+    },
+    "salaries": {
+      "title": "Salaries",
+      "settingsToggle": "Setting salaries",
+      "step1": {
+        "description": "Please set default value for salary calculation"
+      },
+      "step2": {
+        "description": "You can set up individual calculations for any teachers / courses / groups / students."
+      },
+      "calcValueLabel": "Calc value",
+      "calcSettingLabel": "Calc setting",
+      "selectOptionPlaceholder": "Select option",
+      "addButton": "Add",
+      "table": {
+        "calcSetting": "Calc setting",
+        "salaryType": "Salary type",
+        "amount": "Amount",
+        "course": "Course",
+        "group": "Group",
+        "teacher": "Teacher",
+        "student": "Student",
+        "createdBy": "Created by",
+        "updatedAt": "Updated at",
+        "actions": "Actions",
+        "noData": "No Data",
+        "delete": "Delete"
+      },
+      "calculate": "Calculate",
+      "showInTeacherProfile": "Show in teacher's profile"
+    },
+    "totalExpenses": {
+      "title": "Total Expenses",
+      "summary": {
+        "totalExpenses": "Total expenses:"
+      },
+      "chart": {
+        "totalExpensesLabel": "Total Expenses"
+      },
+      "filters": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "dateFormatPlaceholder": "DD.MM.YYYY",
+        "description": "Description",
+        "selectCategory": "Select category",
+        "payee": "Payee",
+        "methodPay": "Method pay",
+        "staffName": "Staff Name",
+        "filter": "Filter"
+      },
+      "selectPlaceholder": "Select",
+      "form": {
+        "title": "New expense",
+        "description": "Description",
+        "date": "Date",
+        "category": "Category",
+        "payee": "Payee",
+        "sum": "Sum",
+        "methodPay": "Method pay",
+        "submit": "Submit"
+      }
+    },
+    "withdraw": {
+      "title": "Withdraw",
+      "stats": {
+        "totalWithdrawals": "Total withdrawals:"
+      },
+      "filters": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "namePhone": "Name or Phone",
+        "sum": "Sum",
+        "course": "Course",
+        "filter": "Filter",
+        "selectPlaceholder": "Select"
+      },
+      "table": {
+        "date": "Date",
+        "name": "Name",
+        "sum": "Sum",
+        "comment": "Comment",
+        "creator": "Creator",
+        "actions": "Actions",
+        "notAssigned": "not assigned",
+        "deleteTitle": "Delete",
+        "empty": "No withdrawals found"
+      },
+      "footer": {
+        "showing": "Showing",
+        "of": "of",
+        "withdrawals": "withdrawals"
+      }
+    }
+  },
+  "reports": {
+    "attendance": {
+      "title": "Attendance reports",
+      "summary": {
+        "visits": "Student visits (at least once)",
+        "absent": "Absent (more than times)",
+        "notSet": "Attendance not set",
+        "all": "All",
+        "statusActive": "Active",
+        "statusDemo": "Demo",
+        "statusFrozen": "Frozen"
+      },
+      "table": {
+        "name": "Name",
+        "status": "Status",
+        "group": "Group",
+        "attendance": "Attendance",
+        "noData": "No Data"
+      },
+      "filters": {
+        "select": "Select",
+        "title": "Filter",
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "branches": "Branches",
+        "selectBranch": "Select branch",
+        "group": "Group",
+        "filterBtn": "Filter",
+        "reset": "Reset"
+      }
+    },
+    "conversion": {
+      "title": "Conversion reports",
+      "subtitle": "Track funnel performance with larger controls and clearer summaries.",
+      "stages": {
+        "incoming": "Incoming",
+        "waiting": "Waiting",
+        "set": "Set",
+        "attended": "Attended",
+        "paid": "Paid"
+      },
+      "filters": {
+        "allLeadsOption": "All leads",
+        "newLeadsOption": "New leads",
+        "returningLeadsOption": "Returning leads",
+        "leadsSources": "Leads Sources",
+        "byStaff": "By staff"
+      },
+      "conversionTitle": "Conversion",
+      "total": "Total",
+      "table": {
+        "fullName": "Full name",
+        "phone": "Phone",
+        "status": "Status",
+        "staffName": "Staff Name",
+        "noDataForStage": "No data for this stage.",
+        "selectStagePrompt": "Select a funnel stage above to view the report."
+      },
+      "salesPipeline": "Sales Pipeline"
+    },
+    "leads": {
+      "title": "Leads reports",
+      "totalLeads": "Total leads: {{count}} ({{from}} — {{to}})",
+      "datePlaceholder": "DD.MM.YYYY",
+      "calculate": "Calculate",
+      "chart": {
+        "leadsCountSeries": "Leads count"
+      }
+    },
+    "studentsLeft": {
+      "title": "Students left the group",
+      "quantity": "Quantity — {{count}}",
+      "filters": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "course": "Course",
+        "teachers": "Teachers",
+        "reasons": "Reasons for archiving",
+        "status": "Status",
+        "filterBtn": "Filter"
+      },
+      "charts": {
+        "byTeacher": "By teacher",
+        "byCourse": "By course",
+        "byMonth": "By month",
+        "byReason": "By reason"
+      }
+    },
+    "logs": {
+      "call": {
+        "title": "Call log",
+        "filter": {
+          "all": "All",
+          "incoming": "Incoming",
+          "outgoing": "Outgoing",
+          "missed": "Missed"
+        },
+        "table": {
+          "type": "Type",
+          "play": "Play",
+          "time": "Time",
+          "who": "Who",
+          "toWhom": "To whom",
+          "gateway": "Gateway",
+          "call": "Call",
+          "duration": "Duration",
+          "result": "Result"
+        },
+        "noData": "No data to display"
+      },
+      "log": {
+        "title": "Logs",
+        "statusFilter": "Status filter",
+        "filters": {
+          "user": "User",
+          "course": "Course",
+          "group": "Group",
+          "room": "Room",
+          "payment": "Payment",
+          "staff": "Staff",
+          "rest": "Rest"
+        }
+      },
+      "sms": {
+        "title": "Sent SMS log",
+        "system": "System",
+        "quantity": "SMS quantity: {{count}}",
+        "notInfo": "No info"
+      },
+      "workly": {
+        "title": "Workly Report",
+        "connection": {
+          "heading": "Workly connection",
+          "description": "To connect to Workly, you need to enter the following data in Settings > Integrations:"
+        },
+        "nav": {
+          "generalSettings": "General settings",
+          "signIn": "Sign in",
+          "leadForm": "Lead form",
+          "paymentMethods": "Payment methods",
+          "communication": "Communication",
+          "integrations": "Integrations",
+          "exams": "Exams",
+          "check": "Check",
+          "accrualAndPayment": "Accrual and payment",
+          "landingPage": "Landing page"
+        },
+        "caption": "Workly",
+        "form": {
+          "clientId": "Workly client id",
+          "secret": "Workly secret",
+          "username": "Workly username",
+          "password": "Workly password"
+        }
+      }
+    }
+  },
+  "singleGroup": {
+    "notFound": "Group not found.",
+    "leftPanel": {
+      "course": "Course",
+      "teacher": "Teacher",
+      "price": "Price",
+      "time": "Time",
+      "editGroup": "Edit group",
+      "deleteGroup": "Delete group",
+      "sendSms": "Send SMS",
+      "addStudent": "Add student",
+      "rooms": "Rooms",
+      "roomCapacity": "Room capacity",
+      "trainingDates": "Training dates",
+      "idLabel": "id",
+      "branches": "Branches",
+      "sortAZ": "By A-Z",
+      "sortZA": "By Z-A",
+      "archivedChip": "Archived",
+      "showArchivedStudents": "Show archived students",
+      "hideArchivedStudents": "Hide archived students",
+      "exportToExcel": "Export to excel",
+      "export": {
+        "name": "Name",
+        "phone": "Phone",
+        "status": "Status",
+        "archived": "Archived",
+        "active": "Active",
+        "frozen": "Frozen",
+        "balance": "Balance",
+        "sheetName": "Students"
+      }
+    },
+    "rightPanel": {
+      "showCoins": "Show coins",
+      "hideCoins": "Hide coins"
+    },
+    "tabs": {
+      "attendance": {
+        "tabLabel": "Attendance",
+        "title": "Attendance",
+        "current": "Current",
+        "name": "Name",
+        "months": {
+          "jan": "Jan", "feb": "Feb", "mar": "Mar", "apr": "Apr", "may": "May", "jun": "Jun",
+          "jul": "Jul", "aug": "Aug", "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Dec"
+        },
+        "was": "Was",
+        "notPresent": "Not"
+      },
+      "grade": {
+        "tabLabel": "Grade",
+        "title": "Grade",
+        "name": "Name",
+        "gradeRange": "Grade (0–100)",
+        "result": "Result",
+        "excellent": "Excellent",
+        "good": "Good",
+        "fail": "Fail"
+      },
+      "onlineLessons": {
+        "tabLabel": "Online lessons and materials",
+        "title": "Online lessons and materials",
+        "addLesson": "Add lesson",
+        "noLessonsYet": "No lessons added yet"
+      },
+      "discountPrices": {
+        "tabLabel": "Discount prices",
+        "title": "Individual discounted prices",
+        "hint": "You can specify a personalized tuition fee for any student. Specify the discounted price and press Enter",
+        "name": "Name",
+        "phone": "Phone",
+        "individualDiscount": "Individual discount",
+        "cause": "Cause",
+        "editDiscount": "Edit discount"
+      },
+      "exams": {
+        "tabLabel": "Exams",
+        "title": "Exams",
+        "addExam": "Add exam",
+        "noExamsYet": "No exams added yet"
+      },
+      "history": {
+        "tabLabel": "History",
+        "title": "History",
+        "groupName": "Group Name",
+        "group": "Group"
+      },
+      "comments": {
+        "tabLabel": "Comments",
+        "title": "Comments",
+        "writeComment": "Write a comment...",
+        "send": "Send",
+        "noCommentsYet": "No comments yet"
+      }
+    },
+    "calendar": {
+      "weekdays": {
+        "sun": "Sun", "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat"
+      },
+      "months": {
+        "january": "January", "february": "February", "march": "March", "april": "April",
+        "may": "May", "june": "June", "july": "July", "august": "August",
+        "september": "September", "october": "October", "november": "November", "december": "December"
+      }
+    },
+    "datePickerField": {
+      "noDateSelected": "No date selected"
+    },
+    "activateModal": {
+      "title": "Select activate date",
+      "submit": "Submit"
+    },
+    "addNoteModal": {
+      "title": "Add new note",
+      "student": "Student",
+      "note": "Note",
+      "notePlaceholder": "Enter note...",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "addPaymentDrawer": {
+      "title": "Add payment",
+      "student": "Student",
+      "balance": "Balance",
+      "methodPay": "Method pay",
+      "amount": "Amount",
+      "date": "Date",
+      "comment": "Comment",
+      "submit": "Submit"
+    },
+    "addStudentDrawer": {
+      "title": "Add Student",
+      "searchStudent": "Search student",
+      "searchPlaceholder": "Name or phone...",
+      "noStudentsFound": "No students found",
+      "startDate": "Start date",
+      "submit": "Add Student",
+      "cancel": "Cancel"
+    },
+    "deleteDropdown": {
+      "title": "Delete Group",
+      "confirmMessage": "will be permanently deleted. Are you sure?",
+      "cancel": "Cancel",
+      "delete": "Delete"
+    },
+    "editGroupDrawer": {
+      "title": "Edit Group",
+      "groupName": "Group name",
+      "selectCourse": "Select course",
+      "selectTeacher": "Select teacher",
+      "days": "Days",
+      "selectDays": "Select days",
+      "selectRoom": "Select room",
+      "daysOptions": {
+        "oddDays": "Odd days",
+        "evenDays": "Even days",
+        "everyDay": "Every day"
+      },
+      "priceUzs": "Price (UZS)",
+      "lessonStartTime": "Lesson start time",
+      "groupStartDate": "Group start date",
+      "groupEndDate": "Group end date",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "freezeModal": {
+      "title": "Indicate the reason",
+      "student": "Student",
+      "dateFrom": "Date from",
+      "recalculateBalance": "Recalculate the balance",
+      "cancel": "Cancel",
+      "confirm": "Freeze"
+    },
+    "moveStudentDialog": {
+      "title": "Move",
+      "selectGroup": "Select group",
+      "move": "Move",
+      "cancel": "Cancel"
+    },
+    "reminderDrawer": {
+      "title": "Add new note",
+      "name": "Name",
+      "comment": "Comment",
+      "selectEmployee": "Select employee",
+      "save": "Save"
+    },
+    "removeStudentDialog": {
+      "title": "Are you sure you want to delete it?",
+      "removeFromGroup": "Remove from group",
+      "deleteStudent": "Delete student",
+      "reasonsForRemoval": "Reasons for removal",
+      "reasons": {
+        "noAttendance": "No attendance",
+        "disciplineProblem": "Discipline problem",
+        "movedToAnotherCenter": "Moved to another center",
+        "parentRequest": "Parent request",
+        "other": "Other"
+      },
+      "commentPlaceholder": "Comment",
+      "recalculateBalance": "Recalculate the balance",
+      "currentGroup": "Current group",
+      "allGroups": "All groups",
+      "yes": "Yes",
+      "cancel": "Cancel"
+    },
+    "studentActionsMenu": {
+      "moveToBranchModal": {
+        "title": "Move student to branch",
+        "selectBranch": "Select branch",
+        "submit": "Move to branch"
+      },
+      "activate": "Activate",
+      "backToTrialLesson": "Back to trial lesson",
+      "makeFrozen": "Make Frozen",
+      "addPayment": "Add payment",
+      "addNewNote": "Add new note",
+      "moveStudentToGroup": "Move student to group",
+      "moveStudentToBranch": "Move student to branch",
+      "removeFromGroup": "Remove from group",
+      "reminders": "Reminders"
+    },
+    "studentHoverCard": {
+      "activeLearns": "Active (Learns)",
+      "frozenPaused": "Frozen (paused)",
+      "debtor": "Debtor",
+      "debt": "Debt",
+      "balance": "Balance",
+      "frozenAt": "Frozen at",
+      "recentPayments": "Recent payments",
+      "noPayments": "No payments",
+      "phone": "Phone",
+      "addedAt": "Added at",
+      "activatedAt": "Activated at",
+      "goToProfile": "Go to profile →"
+    }
+  },
+  "settings": {
+    "grade": {
+      "title": "Grade",
+      "attentionTitle": "Attention!",
+      "attentionMessage": "After the grading system is introduced, if the maximum score is changed, all previous grades will be deleted.",
+      "maxScoreLabel": "Maximum score",
+      "allowPastDates": "Allow editing grades for past dates",
+      "allowNonTeaching": "Allow non-teaching staff to give grades",
+      "showCenterRating": "Show center-wide rating in student profile",
+      "showBranchRating": "Show branch-wide rating in student profile",
+      "save": "Save"
+    },
+    "sms": {
+      "title": "Auto-SMS",
+      "tabs": {
+        "autoSms": "Auto-SMS",
+        "templates": "SMS templates"
+      },
+      "smsTypeHeading": "SMS type",
+      "smsTextHeading": "SMS text: {{label}}",
+      "exampleHeading": "Example of a sent SMS",
+      "symbolsCount": "{{count}} symbols ( ~ {{sms}} SMS )",
+      "saveButton": "Save",
+      "descriptionHeading": "Description",
+      "availableVariables": "Available variables:",
+      "variablesWarningPrefix": "Attentiveness! Using the variables works for",
+      "variablesWarningSuffix": ". These variables do not affect SMS sent manually using SMS shablons.",
+      "addNew": "Add New",
+      "table": {
+        "templatesHeader": "SMS templates",
+        "actions": "Actions",
+        "empty": "No templates yet. Click \"Add New\" to create one."
+      },
+      "drawer": {
+        "title": "Add SMS Template",
+        "label": "SMS template",
+        "submit": "Submit"
+      },
+      "types": {
+        "advancePayment": { "label": "Advance payment notification", "description": "The message is sent when an advance payment notification is needed." },
+        "balanceNotEnough": { "label": "Balance is not enough", "description": "The message is sent when the student's balance is insufficient." },
+        "paymentDone": { "label": "Payment was done", "description": "The message is sent when a payment has been successfully made." },
+        "studentAdded": { "label": "Student added to group", "description": "The message is sent when a student is added to a group." },
+        "studentBirthday": { "label": "Student birthday", "description": "The message is sent on the student's birthday. The message is sent at 9 am." },
+        "absentAttendance": { "label": "Absent Attendance", "description": "The message is sent when a student is absent from a class." }
+      },
+      "variables": {
+        "student": "Data activation in group",
+        "group": "Group name",
+        "sum": "Payment amount",
+        "lc": "The name of your learning centre",
+        "teacher": "Teacher's name",
+        "time": "Time",
+        "room": "Room",
+        "days": "Days",
+        "balance": "Student's current balance",
+        "exId": "Additional student ID",
+        "hours": "Start and end times for group classes",
+        "course": "Name of the student's course",
+        "indebtedness": "Student's debt",
+        "groupInformation": "Group information"
+      }
+    },
+    "voip": {
+      "title": "VoIP settings",
+      "onlinePbx": "OnlinePBX",
+      "domainLabel": "OnlinePBX domain",
+      "domainPlaceholder": "pbx000000.onpbx.ru",
+      "apiKeyLabel": "api key",
+      "apiKeyPlaceholder": "xBHHR9...",
+      "descriptionHeading": "Description",
+      "descriptionText": "To get telephony setup details, contact Modme or OnlinePBX support."
+    },
+    "tags": {
+      "tag": {
+        "title": "Tags",
+        "addNew": "Add new",
+        "table": { "id": "id", "name": "Name", "fromWhere": "From Where", "actions": "Actions" },
+        "drawer": { "title": "Add new tags" },
+        "form": { "name": "Name", "fromWhere": "From Where", "optionStudents": "Students", "optionTeachers": "Teachers", "submit": "Submit" }
+      }
+    },
+    "ceo": {
+      "billing": {
+        "licenseValidity": "Platform license validity date:",
+        "paymentTitle": "Payment for the platform",
+        "period": "Period",
+        "selectPlaceholder": "Select",
+        "pay": "Pay",
+        "historyTitle": "History payments",
+        "table": { "sum": "Sum", "createdAt": "Created at" },
+        "monthUnit": "MONTH",
+        "gamification": "Gamification",
+        "som": "UZS"
+      },
+      "branches": {
+        "title": "Branches",
+        "refresh": "Refresh",
+        "addBranch": "Add branch",
+        "tabs": { "active": "Active", "archived": "Archived" },
+        "delete": "Delete",
+        "edit": "Edit",
+        "emptyActive": "No active branches",
+        "emptyArchived": "No archived branches",
+        "form": { "editTitle": "Edit branch", "name": "Branch name", "namePlaceholder": "e.g. Educoin", "phone": "Phone number", "address": "Address", "addressPlaceholder": "e.g. next to Jarqo'rg'on district administration", "cancel": "Cancel", "save": "Save", "errors": { "name": "Enter the branch name", "phone": "Enter the full phone number", "address": "Enter the address", "save": "Something went wrong. Please try again." } },
+        "close": "Close",
+        "loadError": "Failed to load branches.",
+        "deleteConfirm": {
+          "title": "Delete branch",
+          "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+          "error": "Failed to delete the branch. Please try again."
+        }
+      },
+      "roadmap": {
+        "title": "Audit",
+        "overallScore": "Overall score",
+        "maxScore": "Maximum Score:",
+        "yourScore": "Your score:",
+        "scorePlaceholder": "0",
+        "table": { "section": "Section", "question": "Question", "score": "Ball (max. score 10)", "result": "Result", "instructions": "Instructions" },
+        "sections": {
+          "marketing": {
+            "name": "Marketing",
+            "questions": {
+              "m1": "Annual marketing strategy structured",
+              "m2": "Every quarter and monthly marketing plans are available",
+              "m3": "Used in internet marketing",
+              "m4": "Used in offline marketing",
+              "m5": "The marketing department has a systematic workflow",
+              "m6": "Marketing employees have an organizational structure",
+              "m7": "The responsibilities of the marketing department are clearly spelled out",
+              "m8": "Marketing employees have clear KPIs",
+              "m9": "Automated payment acceptance",
+              "m10": "Conversion is measured",
+              "m11": "Established work with departing clients",
+              "m12": "CRM is used for file management",
+              "m13": "Monthly Marketing ROI Budget Measured",
+              "m14": "Marketing budget planning is done"
+            }
+          },
+          "sales": {
+            "name": "Sales",
+            "questions": {
+              "s1": "There is a sales department",
+              "s2": "The work of the sales department is separate from the administrative department",
+              "s3": "Call center available",
+              "s4": "Call center automated",
+              "s5": "Monthly sales plans are available",
+              "s6": "The sales department has a bonus / KPI system",
+              "s7": "The funnel is controlled through CRM",
+              "s8": "Sales scripts available",
+              "s9": "There is a system of continuous professional development of managers"
+            }
+          },
+          "service": {
+            "name": "Service",
+            "questions": {
+              "sv1": "Service department is formed separately",
+              "sv2": "The responsibilities of the department employees are clearly spelled out",
+              "sv3": "A separate script is made for the section",
+              "sv4": "Managed through CRM",
+              "sv5": "CJM system established",
+              "sv6": "The arrival time of employees to work is monitored",
+              "sv7": "There are checklists of functions",
+              "sv8": "The workflow is automated",
+              "sv9": "There are quality standards for service"
+            }
+          },
+          "finance": {
+            "name": "Finance",
+            "questions": {
+              "f1": "Financial timetable",
+              "f2": "Costs come with a flat rate",
+              "f3": "Work on cost optimization",
+              "f4": "Processes are automated",
+              "f5": "Budgeting done",
+              "f6": "KPI system established"
+            }
+          },
+          "administrative": {
+            "name": "Administrative",
+            "questions": {
+              "a1": "Search and recruitment of personnel are automated",
+              "a2": "Employee responsibilities are spelled out",
+              "a3": "All materials are prepared for the adaptation period",
+              "a4": "Scheduled appointments and monthly appointments established",
+              "a5": "Established daily monitoring of indicators",
+              "a6": "All processes are controlled in CRM",
+              "a7": "Tracking of assignments is applied",
+              "a8": "There is a director's position, the business owner intervenes at the strategy level"
+            }
+          }
+        }
+      },
+      "staff": {
+        "title": "Staff",
+        "addNew": "ADD NEW",
+        "import": "Import",
+        "table": { "id": "id", "name": "Name", "role": "Role", "jobTitle": "Job title", "phone": "Phone", "actions": "Actions" },
+        "form": { "title": "Add New Staff", "name": "Name", "phone": "Phone", "password": "Password", "jobTitle": "Job title", "role": "Role", "dateOfBirth": "Date of birth", "gender": "Gender", "photo": "Photo", "noFileChosen": "No file chosen", "browse": "Browse", "submit": "Submit" },
+        "roles": { "ceo": "CEO", "branchDirector": "Branch Director", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Limited Administrator", "teacher": "Teacher", "marketer": "Marketer", "cashier": "Cashier" },
+        "gender": { "male": "Male", "female": "Female" },
+        "sms": { "recipientLabel": "staff" }
+      },
+      "general": {
+        "accrual": {
+          "title": "Accrual and payment",
+          "paymentModeLabel": "Student payment mode",
+          "paymentModes": { "monthlyCalendar": "Monthly (per calendar month)", "monthlyLesson": "Monthly (per lesson month)", "perLesson": "Per lesson", "weekly": "Weekly" },
+          "others": "Others",
+          "checkboxes": {
+            "allowSendingSms": "Teachers: Allow sending SMS to their students",
+            "hideStudentContacts": "Teachers: Hide student contacts",
+            "attendanceOnlyDuringLesson": "Teachers: setting attendance only during the lesson",
+            "allowGroupIntersection": "Schedule: allow the intersection of groups with one classroom/teacher",
+            "showGroupBalance": "Show group balance"
+          },
+          "save": "Save"
+        },
+        "communication": {
+          "title": "Communication",
+          "playMobile": { "title": "PlayMobile SMS", "username": "PlayMobile gateway username", "password": "PlayMobile gateway password", "nickname": "PlayMobile Nickname" },
+          "eskiz": { "title": "Eskiz SMS", "email": "Eskiz email (login)", "secret": "Eskiz secret key (password)", "nickname": "Eskiz nickname" },
+          "save": "Save"
+        },
+        "exams": {
+          "title": "Exams",
+          "showActiveStudents": "Exams: show active students",
+          "showTrialStudents": "Exams: show students in a trial lesson",
+          "showArchivedStudents": "Exams: show archived students",
+          "showFrozenStudents": "Exams: show frozen students",
+          "showDeletedStudents": "Exams: show deleted students",
+          "save": "Save"
+        },
+        "generalContent": {
+          "title": "General settings",
+          "companyName": "Company Name",
+          "companyPhone": "Company Phone",
+          "startTime": "Start time",
+          "endTime": "End time",
+          "lessonStartTimeStep": "Lesson start time: (step 5 minutes)",
+          "allStaffCoin": "All staff can give coin",
+          "branchSpecificPbx": "Branch specific onlinePBX",
+          "animation": "Animation",
+          "logo": "Logo",
+          "uploadLogo": "Upload logo",
+          "selectThemeColor": "Select theme color",
+          "companyOferta": "Company Oferta",
+          "selectFile": "Select file",
+          "save": "Save"
+        },
+        "integrations": {
+          "notConnected": "Not Connected",
+          "connect": "Connect",
+          "connectedTitle": "Connected Integrations",
+          "connectedSubtitle": "Connect and manage your social media accounts and CRM systems",
+          "facebook": { "name": "Facebook Page", "description": "Connect your Facebook business page" },
+          "amoCrm": { "name": "amoCRM | Kommo", "description": "Sync leads with your amoCRM | Kommo account" },
+          "workly": { "title": "Workly", "clientId": "Workly client id", "secret": "Workly secret", "username": "Workly username", "password": "Workly password" },
+          "telegramReport": {
+            "title": "Telegram Reports",
+            "intro": "To send an automatic report through the Telegram bot, follow these steps:",
+            "step1Before": "Enter",
+            "step1After": "on Telegram.",
+            "step2": "Copy the ID.",
+            "step3": "Place the ID in the input named \"Telegram for Report\".",
+            "step4": "Click the \"Save\" button.",
+            "step5Before": "Click start to modme bot"
+          },
+          "socialMedia": { "title": "Social Media", "facebookPixel": "Facebook pixel", "telegram": "Telegram" },
+          "save": "Save"
+        },
+        "invoice": {
+          "title": "Invoice",
+          "checkboxes": {
+            "hideLogo": "Hide: Logo",
+            "hideImageField": "Hide: Image field",
+            "hideTextField": "Hide: Text field",
+            "hideCheckNumber": "Hide: Check number",
+            "hideCompany": "Hide: Company",
+            "hideBranch": "Hide: Branch",
+            "hideStudent": "Hide: Student",
+            "hidePhone": "Hide: Phone",
+            "hideBalance": "Hide: Balance",
+            "hideGroup": "Hide: Group",
+            "hideCoursePrice": "Hide: Course price",
+            "hideTeacher": "Hide: Teacher",
+            "hideType": "Hide: Type",
+            "hidePaymentAmount": "Hide: Payment amount",
+            "hideDate": "Hide: Date",
+            "hideCreator": "Hide: Creator",
+            "hideTime": "Hide: Time"
+          },
+          "noFileChosen": "No file chosen",
+          "browse": "Browse",
+          "save": "Save",
+          "cancel": "Cancel",
+          "logoAlt": "Young Adults Logo",
+          "preview": {
+            "checkNumber": "Check number:", "company": "Company:", "branch": "Branch:", "student": "Student:", "phone": "Phone:", "balance": "Balance:", "group": "Group:", "coursePrice": "Course price:", "teacher": "Teacher:", "type": "Type:", "paymentAmount": "Payment amount:", "date": "Date:", "creator": "Creator:", "time": "Time:"
+          }
+        },
+        "landingPage": {
+          "title": "Landing page",
+          "createTitle": "Create a landing page",
+          "name": "*Name",
+          "slug": "*Slug",
+          "branch": "Branch",
+          "section": "Section",
+          "source": "Source",
+          "create": "Create",
+          "errors": { "nameRequired": "Name is required", "slugRequired": "Slug is required" },
+          "branches": { "branch1": "Branch 1", "branch2": "Branch 2", "branch3": "Branch 3" },
+          "sections": { "section1": "Section 1", "section2": "Section 2", "section3": "Section 3" },
+          "sources": { "source1": "Source 1", "source2": "Source 2", "source3": "Source 3" },
+          "table": { "name": "Name", "slug": "Slug", "actions": "Actions", "noData": "No Data", "delete": "Delete" }
+        },
+        "leadForm": {
+          "title": "Lead form",
+          "companyFormBackground": "Company form background",
+          "previewAlt": "preview",
+          "logoAlt": "Logo",
+          "recommendedImageSize": "Recommended image size 610x160px",
+          "textForm": "Text form",
+          "defaultPreviewText": "Leave a request to the learning centre",
+          "textAfterFilling": "Text after filling out the form",
+          "customCss": "Custom CSS",
+          "customCssExample": "example: .lead-form-block { background-color: #fff; }",
+          "customCssPlaceholder": "Custom CSS for this form",
+          "save": "Save"
+        },
+        "paymentMethods": {
+          "title": "Payment methods",
+          "paymeMerchantId": "Payme merchant ID",
+          "uzumServiceId": "Uzum service ID",
+          "clickServiceId": "Click service ID",
+          "payme": "Payme",
+          "companyLink": "Company link",
+          "paycomMerchantId": "Paycom merchant id",
+          "paycomUsername": "Paycom username",
+          "paycomPassword": "Paycom password",
+          "midtrans": "Midtrans",
+          "midtransServerKey": "MIDTRANS SERVER KEY",
+          "midtransClientKey": "MIDTRANS CLIENT KEY",
+          "save": "Save"
+        },
+        "shared": {
+          "richTextEditor": {
+            "formats": { "normal": "Normal", "heading1": "Heading 1", "heading2": "Heading 2", "heading3": "Heading 3" },
+            "fonts": { "sansSerif": "Sans Serif", "serif": "Serif", "monospace": "Monospace", "cursive": "Cursive" },
+            "urlPrompt": "URL:",
+            "imageUrlPrompt": "Image URL:"
+          },
+          "dropZone": { "dropFileHere": "Drop file here or", "clickToUpload": "click to upload" }
+        },
+        "signIn": {
+          "title": "Sign in",
+          "companyFormBackground": "Company form background",
+          "previewAlt": "preview",
+          "logoAlt": "Logo",
+          "recommendedImageSize": "Recommended image size 610x160px",
+          "textForm": "Text form",
+          "customCss": "Custom CSS",
+          "customCssPlaceholder": "Custom CSS for this form",
+          "save": "Save"
+        }
+      }
+    },
+    "office": {
+      "archive": {
+        "title": "Archive",
+        "quantity": "Quantity — {{count}}",
+        "reasonsForArchiving": "Reasons for archiving",
+        "balance": "Balance",
+        "noData": "No Data",
+        "filters": { "namePhone": "Name or Phone", "filterByRole": "Filter by role", "student": "Student", "teacher": "Teacher", "filterByReason": "Filter by reason", "startDate": "Start date" },
+        "actions": { "delete": "Delete", "reestablish": "Reestablish" },
+        "table": { "name": "Name", "phone": "Phone", "roles": "Roles", "reasonsForRemoval": "Reasons for removal", "comment": "Comment", "archived": "Archived", "actions": "Actions" },
+        "reasons": {
+          "addTemplate": "Add template",
+          "editTemplate": "Edit template",
+          "table": { "id": "id", "name": "Name", "actions": "Actions" },
+          "form": { "name": "Name" },
+          "submit": "Submit",
+          "save": "Save"
+        }
+      },
+      "courses": {
+        "title": "Courses",
+        "addNew": "ADD NEW",
+        "currency": "UZS",
+        "refresh": "Refresh",
+        "edit": "Edit",
+        "delete": "Delete",
+        "emptyState": "No courses found",
+        "loadError": "Failed to load courses.",
+        "form": {
+          "addNewItem": "Add New Item",
+          "editItem": "Edit course",
+          "name": "Name",
+          "codeCourse": "Code Course",
+          "lessonDuration": "Lesson duration",
+          "courseDuration": "Course duration (month)",
+          "branch": "Branch",
+          "branchPlaceholder": "Select branch",
+          "price": "Price",
+          "description": "Description",
+          "save": "Save",
+          "cancel": "Cancel",
+          "errors": {
+            "name": "Enter the course name",
+            "branch": "Select a branch",
+            "save": "Something went wrong. Please try again."
+          }
+        },
+        "durationOptions": { "min45": "45 minutes", "min60": "60 minutes", "min90": "90 minutes", "min120": "120 minutes", "min150": "150 minutes" },
+        "deleteConfirm": {
+          "title": "Delete course",
+          "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+          "error": "Failed to delete the course. Please try again."
+        }
+      },
+      "holidays": {
+        "title": "Holidays",
+        "addNew": "Add New",
+        "addHoliday": "Add holiday",
+        "noData": "No Data",
+        "yes": "Yes",
+        "no": "No",
+        "tabs": { "upcoming": "Upcoming", "past": "Past" },
+        "table": { "name": "Name", "dateOfHoliday": "Date of the holiday", "createdAt": "Create at", "affectsPayment": "Affects to payment", "actions": "Actions" },
+        "form": { "name": "Name", "date": "Date", "noDateSelected": "No date selected", "affectsPaymentLabel": "Student's payment and teacher's salary", "submit": "Submit" }
+      },
+      "rooms": {
+        "title": "Rooms",
+        "addNew": "ADD NEW",
+        "refresh": "Refresh",
+        "delete": "Delete",
+        "edit": "Edit",
+        "emptyState": "No rooms found",
+        "loadError": "Failed to load rooms.",
+        "table": { "id": "id", "name": "Name", "branch": "Branch", "capacity": "Room capacity", "actions": "Actions" },
+        "form": {
+          "editRoom": "Edit room",
+          "addNewRoom": "Add new room",
+          "name": "Name",
+          "branch": "Branch",
+          "branchPlaceholder": "Select branch",
+          "capacity": "Room capacity",
+          "submit": "Submit",
+          "cancel": "Cancel",
+          "errors": {
+            "name": "Enter the room name",
+            "capacity": "Enter a valid capacity",
+            "branch": "Select a branch",
+            "save": "Something went wrong. Please try again."
+          }
+        },
+        "deleteConfirm": {
+          "title": "Delete room",
+          "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+          "error": "Failed to delete the room. Please try again."
+        }
+      },
+      "studentLeft": {
+        "title": "Students left the group",
+        "quantity": "Quantity — {{count}}",
+        "noData": "No Data",
+        "attentionBanner": {
+          "title": "Attention!",
+          "message": "The issues in the report about students who left the learning center have been fixed. Additionally, new necessary columns and filters have been added to the table. Starting from 18.02.2025, all students removed from the group will be recorded in the \"New Table,\" and they will no longer be added to the old table. To see data before 18.02.2025, go to the old table."
+        },
+        "tabs": { "new": "New", "old": "Old" },
+        "filters": { "searchByNameOrPhone": "Search by name or phone", "course": "Course", "group": "Group", "teachers": "Teachers", "staff": "Staff", "reasonsForArchiving": "Reasons for archiving", "status": "Status", "filter": "Filter" },
+        "toolbar": { "filters": "Filters", "columns": "Columns" },
+        "table": { "number": "#", "student": "Student", "phone": "Phone", "course": "Course", "group": "Group", "teacher": "Teacher", "status": "Status", "reasonsForRemoval": "Reasons for removal", "comment": "Comment", "staff": "Staff" }
+      }
+    },
+    "forms": {
+      "createForm": {
+        "tabs": { "simpleForm": "Simple form", "leadForm": "Lead form" },
+        "actions": { "save": "Save", "update": "Update", "submit": "Submit", "addAnswer": "Add answer", "addBlock": "Add block" },
+        "placeholders": { "formName": "Enter form name", "selectBranch": "Select branch:", "selectSection": "input", "leadsSources": "Leads Sources" },
+        "fixedFields": { "fullName": "Full name and surname?", "phoneNumber": "Your phone number?" },
+        "blockTypes": { "oneOfList": "One of the list", "shortAnswer": "Short answer", "longAnswer": "Long answer" },
+        "defaultQuestion": "Choose of the Answers",
+        "answerLabel": "Answer {{number}}",
+        "options": {
+          "branch": { "yaIelts": "YA IELTS Campus", "branch1": "Branch 1", "branch2": "Branch 2" },
+          "section": { "section1": "Section 1", "section2": "Section 2" },
+          "source": { "source1": "Source 1", "source2": "Source 2" }
+        }
+      },
+      "lists": {
+        "title": "Forms",
+        "actions": { "addNew": "Add new" },
+        "table": { "id": "id", "name": "Name", "type": "type", "actions": "Actions" },
+        "tooltips": { "info": "Info", "edit": "Edit", "delete": "Delete", "copyLink": "Copy link" }
+      }
+    },
+    "blog": {
+      "whatsNew": {
+        "title": "Blog: What's new",
+        "actions": { "add": "Add", "save": "Save", "cancel": "Cancel" },
+        "list": { "header": "Blogs", "empty": "No Data" },
+        "tooltips": { "edit": "Edit", "delete": "Delete" },
+        "placeholders": { "blogTitle": "Blog title", "blogContent": "Write blog content here..." },
+        "emptyState": { "selectBlog": "Select a blog to view" }
+      },
+      "add": {
+        "title": "Blog: Add",
+        "fields": { "title": "Title", "public": "Public" },
+        "placeholders": { "enterTitle": "Enter title here", "editorPlaceholder": "Insert text here ..." },
+        "blockStyles": { "normal": "Normal", "heading1": "Heading 1", "heading2": "Heading 2", "heading3": "Heading 3" },
+        "fontFamilies": { "sansSerif": "Sans Serif", "serif": "Serif", "monospace": "Monospace" },
+        "toolbar": { "alignLeft": "Align left", "orderedList": "Ordered list", "unorderedList": "Unordered list", "insertLink": "Insert link", "insertImage": "Insert image", "embedVideo": "Embed video", "textColor": "Text color", "clearFormatting": "Clear formatting" },
+        "prompts": { "enterUrl": "Enter URL:", "imageUrl": "Image URL:" },
+        "actions": { "save": "Save" }
+      }
     }
   }
 }

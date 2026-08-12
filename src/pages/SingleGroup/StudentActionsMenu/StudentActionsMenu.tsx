@@ -14,6 +14,7 @@ import {
 } from "react-icons/tb";
 import { HiBuildingLibrary } from "react-icons/hi2";
 import { FiX } from "react-icons/fi";
+import { useTranslation } from "react-i18next";
 import { BRANCH_OPTIONS, type BranchId } from "../../../Context/BranchContext";
 
 interface StudentActionsMenuProps {
@@ -57,6 +58,7 @@ const MoveToBranchModal = ({
   onClose: () => void;
   onSubmit: (branch: BranchId) => void;
 }) => {
+  const { t } = useTranslation();
   const [branch, setBranch] = useState<BranchId | "">("");
 
   const handleClose = () => {
@@ -75,7 +77,7 @@ const MoveToBranchModal = ({
       <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid #e5e7eb" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 16, fontWeight: 600, color: "#2e2e2e" }}>
-            Move student to branch
+            {t("singleGroup.studentActionsMenu.moveToBranchModal.title")}
           </span>
           <IconButton size="small" onClick={handleClose}>
             <FiX size={20} />
@@ -97,7 +99,7 @@ const MoveToBranchModal = ({
             marginBottom: 18,
           }}
         >
-          <option value="">Select branch</option>
+          <option value="">{t("singleGroup.studentActionsMenu.moveToBranchModal.selectBranch")}</option>
           {BRANCH_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -118,7 +120,7 @@ const MoveToBranchModal = ({
             "&:hover": { bgcolor: "#55b3c7" },
           }}
         >
-          Move to branch
+          {t("singleGroup.studentActionsMenu.moveToBranchModal.submit")}
         </Button>
       </DialogContent>
     </Dialog>
@@ -141,6 +143,7 @@ export const StudentActionsMenu = ({
   onReminders,
   onMoveToBranch,
 }: StudentActionsMenuProps) => {
+  const { t } = useTranslation();
   const [branchModalOpen, setBranchModalOpen] = useState(false);
 
   const handleOpenBranchModal = () => {
@@ -173,11 +176,11 @@ export const StudentActionsMenu = ({
           <div>
             <MenuItem onClick={onActivateArchived} sx={itemSx}>
               <TbPlayerPlay size={18} color={iconColor} />
-              Activate
+              {t("singleGroup.studentActionsMenu.activate")}
             </MenuItem>
             <MenuItem onClick={onBackToTrialLesson} sx={itemSx}>
               <TbClock size={18} color={iconColor} />
-              Back to trial lesson
+              {t("singleGroup.studentActionsMenu.backToTrialLesson")}
             </MenuItem>
           </div>
         ) : (
@@ -185,37 +188,37 @@ export const StudentActionsMenu = ({
             {isFrozen ? (
               <MenuItem onClick={onActivate} sx={itemSx}>
                 <TbPlayerPlay size={18} color={iconColor} />
-                Activate
+                {t("singleGroup.studentActionsMenu.activate")}
               </MenuItem>
             ) : (
               <MenuItem onClick={onMakeFrozen} sx={itemSx}>
                 <TbColumns size={18} color={iconColor} />
-                Make Frozen
+                {t("singleGroup.studentActionsMenu.makeFrozen")}
               </MenuItem>
             )}
             <MenuItem onClick={onAddPayment} sx={itemSx}>
               <TbWallet size={18} color={iconColor} />
-              Add payment
+              {t("singleGroup.studentActionsMenu.addPayment")}
             </MenuItem>
             <MenuItem onClick={onAddNote} sx={itemSx}>
               <TbFlag size={18} color={iconColor} />
-              Add new note
+              {t("singleGroup.studentActionsMenu.addNewNote")}
             </MenuItem>
             <MenuItem onClick={onMoveGroup} sx={itemSx}>
               <TbInbox size={18} color={iconColor} />
-              Move student to group
+              {t("singleGroup.studentActionsMenu.moveStudentToGroup")}
             </MenuItem>
             <MenuItem onClick={handleOpenBranchModal} sx={itemSx}>
               <HiBuildingLibrary size={18} color={iconColor} />
-              Move student to branch
+              {t("singleGroup.studentActionsMenu.moveStudentToBranch")}
             </MenuItem>
             <MenuItem onClick={onRemove} sx={itemSx}>
               <TbTrash size={18} color={iconColor} />
-              Remove from group
+              {t("singleGroup.studentActionsMenu.removeFromGroup")}
             </MenuItem>
             <MenuItem onClick={onReminders} sx={itemSx}>
               <TbClock size={18} color={iconColor} />
-              Reminders
+              {t("singleGroup.studentActionsMenu.reminders")}
             </MenuItem>
           </div>
         )}

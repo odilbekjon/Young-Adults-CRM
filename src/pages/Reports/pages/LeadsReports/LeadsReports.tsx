@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BsCashStack } from "react-icons/bs";
 import { FiCalendar } from "react-icons/fi";
 import {
@@ -60,6 +61,7 @@ const parseDate = (str: string) => {
 
 // ---------- Main Component ----------
 export const LeadsReports = () => {
+  const { t } = useTranslation();
   const [dateFrom, setDateFrom] = useState("01.01.2026");
   const [dateTo, setDateTo] = useState("31.05.2026");
   const [activeDateFrom, setActiveDateFrom] = useState("01.01.2026");
@@ -102,14 +104,14 @@ export const LeadsReports = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6 font-sans">
       {/* Title */}
-      <h1 className="text-2xl font-semibold text-gray-800 mb-4">Leads reports</h1>
+      <h1 className="text-2xl font-semibold text-gray-800 mb-4">{t("reports.leads.title")}</h1>
 
       {/* Summary card */}
       <div className="bg-white border border-gray-200 rounded-lg px-6 py-4 flex items-center justify-between mb-4 shadow-sm max-w-3xl">
         <div className="flex items-center gap-2">
           <div className="w-1 h-8 bg-blue-500 rounded-full mr-1" />
           <span className="text-gray-700 font-medium">
-            Total leads: {filtered.length} ({activeDateFrom} — {activeDateTo})
+            {t("reports.leads.totalLeads", { count: filtered.length, from: activeDateFrom, to: activeDateTo })}
           </span>
         </div>
         <BsCashStack className="text-blue-400 text-2xl" />
@@ -125,7 +127,7 @@ export const LeadsReports = () => {
               type="text"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              placeholder="DD.MM.YYYY"
+              placeholder={t("reports.leads.datePlaceholder")}
               className="border border-gray-300 rounded px-3 py-1.5 pl-8 text-sm bg-white focus:outline-none focus:border-blue-400 w-40 text-gray-700"
             />
           </div>
@@ -135,7 +137,7 @@ export const LeadsReports = () => {
               type="text"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              placeholder="DD.MM.YYYY"
+              placeholder={t("reports.leads.datePlaceholder")}
               className="border border-gray-300 rounded px-3 py-1.5 pl-8 text-sm bg-white focus:outline-none focus:border-blue-400 w-40 text-gray-700"
             />
           </div>
@@ -143,7 +145,7 @@ export const LeadsReports = () => {
             onClick={handleCalculate}
             className="bg-blue-700 hover:bg-blue-800 text-white rounded-full px-6 py-1.5 text-sm font-medium transition-colors"
           >
-            Calculate
+            {t("reports.leads.calculate")}
           </button>
         </div>
 
@@ -203,12 +205,12 @@ export const LeadsReports = () => {
                 />
                 <Tooltip />
                 <Legend
-                  formatter={() => "Leads count"}
+                  formatter={() => t("reports.leads.chart.leadsCountSeries")}
                   iconType="square"
                   iconSize={10}
                   wrapperStyle={{ fontSize: 12 }}
                 />
-                <Bar dataKey="value" fill="#f28b82" radius={[2, 2, 0, 0]} name="Leads count">
+                <Bar dataKey="value" fill="#f28b82" radius={[2, 2, 0, 0]} name={t("reports.leads.chart.leadsCountSeries")}>
                   <LabelList
                     dataKey="value"
                     position="top"

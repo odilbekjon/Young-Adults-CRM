@@ -14,9 +14,10 @@ import {
   InputAdornment, Menu, MenuItem,
 } from "@mui/material";
 
-import { FlatStudent, buildFlatStudents, formatDate } from "../../constants/FlatStudents";
+import { FlatStudent, mapApiStudentToFlat, formatDate } from "../../constants/FlatStudents";
 import { TEACHERS_DATA } from "../../constants/Teachers";
 import { useNavigate, useParams } from "react-router-dom";
+import { useStudentByIdQuery } from "../../app/api/studentsApi";
 
 /* ─── TYPES ─────────────────────────────────────────── */
 interface Payment {
@@ -1536,9 +1537,9 @@ export const StudentProfile = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
-  // ✅ uid (string) orqali topiladi — navigate('/students/101-1') bilan mos
-  const allStudents = buildFlatStudents();
-  const student = allStudents.find((s) => s.uid === id);
+  // ✅ uid (string) — real API id orqali topiladi, navigate('/students/:id') bilan mos
+  const { data, isLoading } = useStudentByIdQuery(id ?? "", { skip: !id });
+  const student = data ? mapApiStudentToFlat(data.data) : undefined;
 
   const [activeTab, setActiveTab] = useState(0);
   const [editOpen, setEditOpen] = useState(false);
@@ -1549,6 +1550,14 @@ export const StudentProfile = () => {
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
   const [groupMenuAnchor, setGroupMenuAnchor] = useState<null | HTMLElement>(null);
   const [paymentMenuAnchor, setPaymentMenuAnchor] = useState<null | HTMLElement>(null);
+
+  if (isLoading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f0f2f5", padding: 24, color: "#6b7280" }}>
+        Loading...
+      </div>
+    );
+  }
 
   if (!student) {
     return (

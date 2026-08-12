@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Checkbox,
@@ -81,6 +82,7 @@ const PAGE_SIZE = 10;
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const Archive = () => {
+  const { t } = useTranslation();
   const [view, setView] = useState<"archive" | "reasons">("archive");
   const [reasons, setReasons] = useState<ArchiveReason[]>(INITIAL_REASONS);
 
@@ -172,7 +174,7 @@ export const Archive = () => {
               <MdArrowBack size={20} />
             </IconButton>
             <Typography variant="h5" sx={{ fontWeight: 600, color: "#1f2937" }}>
-              Reasons for archiving
+              {t("settings.office.archive.reasonsForArchiving")}
             </Typography>
           </div>
           <Button
@@ -188,7 +190,7 @@ export const Archive = () => {
               boxShadow: "none",
             }}
           >
-            Add template
+            {t("settings.office.archive.reasons.addTemplate")}
           </Button>
         </div>
 
@@ -197,9 +199,9 @@ export const Archive = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
-                <th className="text-left px-6 py-4 text-gray-700 font-semibold w-24">id</th>
-                <th className="text-left px-6 py-4 text-gray-700 font-semibold">Name</th>
-                <th className="text-left px-6 py-4 text-gray-700 font-semibold">Actions</th>
+                <th className="text-left px-6 py-4 text-gray-700 font-semibold w-24">{t("settings.office.archive.reasons.table.id")}</th>
+                <th className="text-left px-6 py-4 text-gray-700 font-semibold">{t("settings.office.archive.reasons.table.name")}</th>
+                <th className="text-left px-6 py-4 text-gray-700 font-semibold">{t("settings.office.archive.reasons.table.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -257,7 +259,7 @@ export const Archive = () => {
         >
           <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1 }}>
             <Typography sx={{ fontWeight: 600, fontSize: "1rem", color: "#1f2937" }}>
-              Add template
+              {t("settings.office.archive.reasons.addTemplate")}
             </Typography>
             <IconButton onClick={() => setAddOpen(false)} size="small" sx={{ color: "#9ca3af" }}>
               <MdClose size={18} />
@@ -265,7 +267,7 @@ export const Archive = () => {
           </DialogTitle>
           <DialogContent sx={{ pt: 1, pb: 2 }}>
             <Typography variant="body2" sx={{ mb: 1, color: "#374151", fontWeight: 500 }}>
-              Name
+              {t("settings.office.archive.reasons.form.name")}
             </Typography>
             <TextField
               fullWidth
@@ -290,7 +292,7 @@ export const Archive = () => {
                 px: 3,
               }}
             >
-              Submit
+              {t("settings.office.archive.reasons.submit")}
             </Button>
           </DialogContent>
         </Dialog>
@@ -313,7 +315,7 @@ export const Archive = () => {
         >
           <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1 }}>
             <Typography sx={{ fontWeight: 600, fontSize: "1rem", color: "#1f2937" }}>
-              Edit template
+              {t("settings.office.archive.reasons.editTemplate")}
             </Typography>
             <IconButton onClick={() => setEditOpen(false)} size="small" sx={{ color: "#9ca3af" }}>
               <MdClose size={18} />
@@ -321,7 +323,7 @@ export const Archive = () => {
           </DialogTitle>
           <DialogContent sx={{ pt: 1, pb: 2 }}>
             <Typography variant="body2" sx={{ mb: 1, color: "#374151", fontWeight: 500 }}>
-              Name
+              {t("settings.office.archive.reasons.form.name")}
             </Typography>
             <TextField
               fullWidth
@@ -343,7 +345,7 @@ export const Archive = () => {
                 px: 3,
               }}
             >
-              Save
+              {t("settings.office.archive.reasons.save")}
             </Button>
           </DialogContent>
         </Dialog>
@@ -360,10 +362,10 @@ export const Archive = () => {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <Typography variant="h5" sx={{ fontWeight: 700, color: "#1f2937" }}>
-            Archive
+            {t("settings.office.archive.title")}
           </Typography>
           <Typography variant="body2" sx={{ color: "#6b7280" }}>
-            Quantity — {filtered.length}
+            {t("settings.office.archive.quantity", { count: filtered.length })}
           </Typography>
         </div>
         <Button
@@ -379,14 +381,14 @@ export const Archive = () => {
             "&:hover": { borderColor: "#9ca3af", backgroundColor: "#f9fafb" },
           }}
         >
-          Reasons for archiving
+          {t("settings.office.archive.reasonsForArchiving")}
         </Button>
       </div>
 
       {/* Filters */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <TextField
-          placeholder="Name or Phone"
+          placeholder={t("settings.office.archive.filters.namePhone")}
           size="small"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -400,9 +402,9 @@ export const Archive = () => {
           onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
           sx={{ ...inputSx["& .MuiOutlinedInput-root"], width: 160, height: 38, fontSize: "0.82rem", borderRadius: "6px", backgroundColor: "#fff", "& fieldset": { borderColor: "#e5e7eb" } }}
         >
-          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>Filter by role</em></MenuItem>
-          <MenuItem value="Student">Student</MenuItem>
-          <MenuItem value="Teacher">Teacher</MenuItem>
+          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.archive.filters.filterByRole")}</em></MenuItem>
+          <MenuItem value="Student">{t("settings.office.archive.filters.student")}</MenuItem>
+          <MenuItem value="Teacher">{t("settings.office.archive.filters.teacher")}</MenuItem>
         </Select>
 
         <Select
@@ -412,7 +414,7 @@ export const Archive = () => {
           onChange={(e) => { setFilterReason(e.target.value); setPage(1); }}
           sx={{ width: 180, height: 38, fontSize: "0.82rem", borderRadius: "6px", backgroundColor: "#fff", "& fieldset": { borderColor: "#e5e7eb" } }}
         >
-          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>Filter by reason</em></MenuItem>
+          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.archive.filters.filterByReason")}</em></MenuItem>
           {reasons.map((r) => (
             <MenuItem key={r.id} value={r.name}>{r.name}</MenuItem>
           ))}
@@ -424,7 +426,7 @@ export const Archive = () => {
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
           InputProps={{ startAdornment: <MdCalendarToday size={14} className="mr-1 text-gray-400" /> }}
-          inputProps={{ placeholder: "Start date" }}
+          inputProps={{ placeholder: t("settings.office.archive.filters.startDate") }}
           sx={{ ...inputSx, width: 160 }}
         />
 
@@ -439,10 +441,10 @@ export const Archive = () => {
 
         <div className="flex items-center gap-3 ml-2">
           <button className="flex items-center gap-1 text-red-500 hover:text-red-600 text-sm font-medium transition-colors">
-            <MdDelete size={18} /> Delete
+            <MdDelete size={18} /> {t("settings.office.archive.actions.delete")}
           </button>
           <button className="flex items-center gap-1 text-green-600 hover:text-green-700 text-sm font-medium transition-colors">
-            <MdRefresh size={18} /> Reestablish
+            <MdRefresh size={18} /> {t("settings.office.archive.actions.reestablish")}
           </button>
           <button className="flex items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors">
             <MdEmail size={18} />
@@ -463,7 +465,15 @@ export const Archive = () => {
                   sx={{ color: "#d1d5db", "&.Mui-checked": { color: "#29b6f6" } }}
                 />
               </th>
-              {["Name", "Phone", "Roles", "Reasons for removal", "Comment", "Archived", "Actions"].map((h) => (
+              {[
+                t("settings.office.archive.table.name"),
+                t("settings.office.archive.table.phone"),
+                t("settings.office.archive.table.roles"),
+                t("settings.office.archive.table.reasonsForRemoval"),
+                t("settings.office.archive.table.comment"),
+                t("settings.office.archive.table.archived"),
+                t("settings.office.archive.table.actions"),
+              ].map((h) => (
                 <th key={h} className="text-left px-4 py-4 text-gray-600 font-semibold text-sm">
                   {h}
                 </th>
@@ -474,7 +484,7 @@ export const Archive = () => {
             {pageData.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center py-12 text-gray-400">
-                  No Data
+                  {t("settings.office.archive.noData")}
                 </td>
               </tr>
             ) : (
@@ -494,7 +504,7 @@ export const Archive = () => {
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5">{r.campus}</div>
                     <div className={`text-xs mt-0.5 font-medium ${balanceColor(r.balance)}`}>
-                      Balance: {r.balance.toLocaleString()}
+                      {t("settings.office.archive.balance")}: {r.balance.toLocaleString()}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{r.phone}</td>

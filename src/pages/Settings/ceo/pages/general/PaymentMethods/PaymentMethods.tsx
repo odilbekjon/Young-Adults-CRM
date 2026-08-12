@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button, Typography, Box, TextField } from "@mui/material";
+import { useTranslation } from "react-i18next";
 
 // ── Branch rows shared across all 3 service columns ──
 const BRANCHES = [
@@ -81,6 +82,7 @@ const ServiceColumn = ({ title }: { title: string }) => {
 
 // ── Main component ──
 const PaymentMethods = () => {
+  const { t } = useTranslation();
   const [companyLink] = useState("https://api.modme.uz/v1/payme_billing/5281");
   const [merchantId, setMerchantId] = useState("");
   const [username, setUsername] = useState("97 531 68 62");
@@ -91,25 +93,25 @@ const PaymentMethods = () => {
   return (
     <Box sx={{ flex: 1, p: 5, maxWidth: 1200 }}>
       <Typography variant="h5" sx={{ fontWeight: 600, mb: 3, color: "#111827" }}>
-        Payment methods
+        {t("settings.ceo.general.paymentMethods.title")}
       </Typography>
 
       {/* ── Row 1: 3 service ID cards ── */}
       <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-        <ServiceColumn title="Payme merchant ID" />
-        <ServiceColumn title="Uzum service ID" />
-        <ServiceColumn title="Click service ID" />
+        <ServiceColumn title={t("settings.ceo.general.paymentMethods.paymeMerchantId")} />
+        <ServiceColumn title={t("settings.ceo.general.paymentMethods.uzumServiceId")} />
+        <ServiceColumn title={t("settings.ceo.general.paymentMethods.clickServiceId")} />
       </Box>
 
       {/* ── Row 2: Payme + Midtrans ── */}
       <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
         {/* Payme section */}
-        <FieldCard title="Payme">
+        <FieldCard title={t("settings.ceo.general.paymentMethods.payme")}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 0.5, flex: 1 }}>
             {/* Company link */}
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
-                Company link
+                {t("settings.ceo.general.paymentMethods.companyLink")}
               </Typography>
               <TextField
                 fullWidth
@@ -126,7 +128,7 @@ const PaymentMethods = () => {
             {/* Paycom merchant id */}
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
-                Paycom merchant id
+                {t("settings.ceo.general.paymentMethods.paycomMerchantId")}
               </Typography>
               <TextField
                 fullWidth
@@ -143,7 +145,7 @@ const PaymentMethods = () => {
             {/* Paycom username */}
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
-                Paycom username
+                {t("settings.ceo.general.paymentMethods.paycomUsername")}
               </Typography>
               <TextField
                 fullWidth
@@ -160,7 +162,7 @@ const PaymentMethods = () => {
             {/* Paycom password */}
             <Box>
               <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
-                Paycom password
+                {t("settings.ceo.general.paymentMethods.paycomPassword")}
               </Typography>
               <TextField
                 fullWidth
@@ -179,11 +181,11 @@ const PaymentMethods = () => {
 
         {/* Midtrans section */}
         <Box sx={{ width: 360, flexShrink: 0 }}>
-          <FieldCard title="Midtrans">
+          <FieldCard title={t("settings.ceo.general.paymentMethods.midtrans")}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 0.5 }}>
               <Box>
                 <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
-                  MIDTRANS SERVER KEY
+                  {t("settings.ceo.general.paymentMethods.midtransServerKey")}
                 </Typography>
                 <TextField
                   fullWidth
@@ -199,7 +201,7 @@ const PaymentMethods = () => {
 
               <Box>
                 <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
-                  MIDTRANS CLIENT KEY
+                  {t("settings.ceo.general.paymentMethods.midtransClientKey")}
                 </Typography>
                 <TextField
                   fullWidth
@@ -232,7 +234,7 @@ const PaymentMethods = () => {
             "&:hover": { background: "#162d4a" },
           }}
         >
-          Save
+          {t("settings.ceo.general.paymentMethods.save")}
         </Button>
       </Box>
     </Box>

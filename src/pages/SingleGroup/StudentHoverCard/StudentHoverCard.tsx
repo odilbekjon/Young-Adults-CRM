@@ -1,5 +1,6 @@
 // src/pages/groups/StudentHoverCard.tsx
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StudentCardData } from "../types";
 
 export const StudentHoverCard = ({
@@ -13,6 +14,7 @@ export const StudentHoverCard = ({
   onClose: () => void;
   onGoToProfile: () => void;
 }) => {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
 
@@ -80,7 +82,9 @@ export const StudentHoverCard = ({
           <span style={{ fontSize: 12, color: "#aaa" }}>(id:{student.id})</span>
         </div>
         <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
-          {student.active ? "Active (Learns)" : "Frozen (paused)"}
+          {student.active
+            ? t("singleGroup.studentHoverCard.activeLearns")
+            : t("singleGroup.studentHoverCard.frozenPaused")}
         </div>
         {isDebtor && (
           <span style={{
@@ -88,7 +92,7 @@ export const StudentHoverCard = ({
             background: "#e53935", color: "#fff",
             fontSize: 11, fontWeight: 600, borderRadius: 20, padding: "3px 10px",
           }}>
-            Debtor
+            {t("singleGroup.studentHoverCard.debtor")}
           </span>
         )}
       </div>
@@ -103,7 +107,7 @@ export const StudentHoverCard = ({
             marginBottom: 12,
           }}>
             <div style={{ fontSize: 11, color: "#888", marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>
-              {isDebtor ? "Qarzdorlik" : "Balans"}
+              {isDebtor ? t("singleGroup.studentHoverCard.debt") : t("singleGroup.studentHoverCard.balance")}
             </div>
             <div style={{
               fontSize: 18, fontWeight: 700,
@@ -115,13 +119,13 @@ export const StudentHoverCard = ({
             </div>
             {student.frozenAt && (
               <div style={{ fontSize: 11, color: "#888", marginTop: 6 }}>
-                Muzlatilgan: {student.frozenAt}
+                {t("singleGroup.studentHoverCard.frozenAt")}: {student.frozenAt}
               </div>
             )}
           </div>
 
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: "#aaa", marginBottom: 8, fontWeight: 600 }}>So'nggi to'lovlar</div>
+            <div style={{ fontSize: 11, color: "#aaa", marginBottom: 8, fontWeight: 600 }}>{t("singleGroup.studentHoverCard.recentPayments")}</div>
             {mockPayments.length > 0 ? (
               mockPayments.map((p, idx) => (
                 <div
@@ -137,7 +141,7 @@ export const StudentHoverCard = ({
                 </div>
               ))
             ) : (
-              <span style={{ fontSize: 12, color: "#bbb" }}>To'lovlar yo'q</span>
+              <span style={{ fontSize: 12, color: "#bbb" }}>{t("singleGroup.studentHoverCard.noPayments")}</span>
             )}
           </div>
         </>
@@ -146,7 +150,7 @@ export const StudentHoverCard = ({
       <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
 
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>Phone</div>
+        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.phone")}</div>
         <div style={{ fontSize: 13, color: "#1a1a1a", fontWeight: 500 }}>{student.phone}</div>
       </div>
 
@@ -154,7 +158,7 @@ export const StudentHoverCard = ({
 
       {!isFrozen && (
         <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>Balance</div>
+          <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>{t("singleGroup.studentHoverCard.balance")}</div>
           {student.balance !== undefined && student.balance !== 0 ? (
             <span style={{
               display: "inline-block",
@@ -174,14 +178,14 @@ export const StudentHoverCard = ({
       <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
 
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>Added at</div>
+        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.addedAt")}</div>
         <div style={{ fontSize: 13, color: "#1a1a1a" }}>{student.addedAt || dateStr}</div>
       </div>
 
       <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
 
       <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>Activated at</div>
+        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.activatedAt")}</div>
         <div style={{ fontSize: 13, color: "#1a1a1a" }}>{student.activatedAt || dateStr}</div>
       </div>
 
@@ -192,7 +196,7 @@ export const StudentHoverCard = ({
           onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
           onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
         >
-          Go to profile →
+          {t("singleGroup.studentHoverCard.goToProfile")}
         </span>
       </div>
     </div>

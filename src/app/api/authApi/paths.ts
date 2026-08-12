@@ -1,3 +1,4 @@
 export enum PATHS {
-  LOGIN = "auth/register-student",
+  LOGIN = "auth/login",
+  GET = "auth/me",
 }

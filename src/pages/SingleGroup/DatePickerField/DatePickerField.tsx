@@ -1,6 +1,7 @@
 // src/pages/groups/DatePickerField.tsx
 import { useEffect, useRef, useState } from "react";
 import { MdCalendarToday } from "react-icons/md";
+import { useTranslation } from "react-i18next";
 import { Calendar } from "../Calendar";
 
 interface DatePickerFieldProps {
@@ -23,7 +24,9 @@ const formatDisplay = (iso: string) => {
   return `${d}.${m}.${y}`;
 };
 
-export const DatePickerField = ({ value, onChange, placeholder = "No date selected" }: DatePickerFieldProps) => {
+export const DatePickerField = ({ value, onChange, placeholder }: DatePickerFieldProps) => {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t("singleGroup.datePickerField.noDateSelected");
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -50,7 +53,7 @@ export const DatePickerField = ({ value, onChange, placeholder = "No date select
       >
         <MdCalendarToday size={17} color="#9e9e9e" />
         <span style={{ fontSize: 14, color: value ? "#1a1a1a" : "#b0b0b0" }}>
-          {value ? formatDisplay(value) : placeholder}
+          {value ? formatDisplay(value) : resolvedPlaceholder}
         </span>
       </div>
 

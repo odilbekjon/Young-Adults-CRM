@@ -1,10 +1,11 @@
 // src/pages/groups/Calendar.tsx
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const MONTH_KEYS = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
 ];
 
 const isSameDay = (a: Date, b: Date) =>
@@ -18,6 +19,7 @@ interface CalendarProps {
 }
 
 export const Calendar = ({ value, onChange }: CalendarProps) => {
+  const { t } = useTranslation();
   const [viewDate, setViewDate] = useState<Date>(value ?? new Date());
 
   const year = viewDate.getFullYear();
@@ -60,7 +62,7 @@ export const Calendar = ({ value, onChange }: CalendarProps) => {
           <NavBtn onClick={goPrevMonth}>‹</NavBtn>
         </div>
         <span style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>
-          {year} {MONTH_NAMES[month]}
+          {year} {t(`singleGroup.calendar.months.${MONTH_KEYS[month]}`)}
         </span>
         <div style={{ display: "flex", gap: 2 }}>
           <NavBtn onClick={goNextMonth}>›</NavBtn>
@@ -69,9 +71,9 @@ export const Calendar = ({ value, onChange }: CalendarProps) => {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 4 }}>
-        {WEEKDAYS.map((w) => (
+        {WEEKDAY_KEYS.map((w) => (
           <div key={w} style={{ textAlign: "center", fontSize: 12, color: "#9ca3af", padding: "4px 0" }}>
-            {w}
+            {t(`singleGroup.calendar.weekdays.${w}`)}
           </div>
         ))}
       </div>

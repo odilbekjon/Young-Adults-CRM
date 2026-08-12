@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import { MdClose, MdOutlineLocalOffer } from "react-icons/md";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Student } from "../../../types/group";
 
 interface Props {
@@ -51,6 +52,7 @@ const defaultDateRange = () => {
 };
 
 export const DiscountPrices = ({ students }: Props) => {
+  const { t } = useTranslation();
   const [discounts, setDiscounts] = useState<Record<number, DiscountEntry>>({});
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draftAmount, setDraftAmount] = useState("");
@@ -97,7 +99,7 @@ export const DiscountPrices = ({ students }: Props) => {
   return (
     <Box>
       <Typography variant="h6" fontWeight={600} mb={2}>
-        Individual discounted prices
+        {t("singleGroup.tabs.discountPrices.title")}
       </Typography>
 
       <Box
@@ -115,8 +117,7 @@ export const DiscountPrices = ({ students }: Props) => {
         }}
       >
         <Typography fontSize={14} color="text.secondary" lineHeight={1.5}>
-          You can specify a personalized tuition fee for any student. Specify the
-          discounted price and press Enter
+          {t("singleGroup.tabs.discountPrices.hint")}
         </Typography>
         <MdOutlineLocalOffer size={32} color="#1976d2" style={{ flexShrink: 0 }} />
       </Box>
@@ -129,12 +130,12 @@ export const DiscountPrices = ({ students }: Props) => {
         <Table size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: "#fafafa" }}>
-              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Name</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Phone</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{t("singleGroup.tabs.discountPrices.name")}</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{t("singleGroup.tabs.discountPrices.phone")}</TableCell>
               <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>
-                Individual discount
+                {t("singleGroup.tabs.discountPrices.individualDiscount")}
               </TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>Cause</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{t("singleGroup.tabs.discountPrices.cause")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -222,7 +223,7 @@ export const DiscountPrices = ({ students }: Props) => {
                           "&:hover": { bgcolor: "#388e3c", boxShadow: "none" },
                         }}
                       >
-                        Edit discount
+                        {t("singleGroup.tabs.discountPrices.editDiscount")}
                       </Button>
                     )}
                   </TableCell>
@@ -231,7 +232,7 @@ export const DiscountPrices = ({ students }: Props) => {
                       <TextField
                         size="small"
                         fullWidth
-                        placeholder="Cause"
+                        placeholder={t("singleGroup.tabs.discountPrices.cause")}
                         value={draftCause}
                         onChange={(e) => setDraftCause(e.target.value)}
                         onKeyDown={(e) => {

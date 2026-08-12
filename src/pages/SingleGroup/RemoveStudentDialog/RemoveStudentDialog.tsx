@@ -1,8 +1,19 @@
 // src/pages/groups/RemoveStudentDialog.tsx
 import { Checkbox, FormControl, FormControlLabel, Radio, RadioGroup, Switch } from "@mui/material";
 import { MdClose } from "react-icons/md";
+import { useTranslation } from "react-i18next";
 import { inputStyle } from "../styles";
 import { RemoveReason } from "../types";
+
+// NOTE: option values are kept as-is (they match the RemoveReason literal
+// union type in ../types/types.ts); only the displayed label is translated.
+const REMOVE_REASON_LABEL_KEYS: Record<Exclude<RemoveReason, "">, string> = {
+  "No attendance": "noAttendance",
+  "Discipline problem": "disciplineProblem",
+  "Moved to another center": "movedToAnotherCenter",
+  "Parent request": "parentRequest",
+  "Other": "other",
+};
 
 interface RemoveStudentDialogProps {
   open: boolean;
@@ -28,6 +39,7 @@ export const RemoveStudentDialog = ({
   recalculate, onRecalculateChange,
   scope, onScopeChange,
 }: RemoveStudentDialogProps) => {
+  const { t } = useTranslation();
   if (!open) return null;
 
   return (
@@ -40,12 +52,12 @@ export const RemoveStudentDialog = ({
         style={{ background: "#fff", borderRadius: 12, width: 600, maxWidth: "95vw", overflow: "hidden" }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid #ececec" }}>
-          <span style={{ fontSize: 16, fontWeight: 500, color: "#2e2e2e" }}>Do you realy want to delete it?</span>
+          <span style={{ fontSize: 16, fontWeight: 500, color: "#2e2e2e" }}>{t("singleGroup.removeStudentDialog.title")}</span>
           <MdClose size={22} style={{ cursor: "pointer", color: "#888" }} onClick={onClose} />
         </div>
         <div style={{ padding: "22px 34px 30px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 22 }}>
-            <span style={{ fontSize: 14, color: deleteMode ? "#7d7d7d" : "#5f9bb8" }}>Remove from group</span>
+            <span style={{ fontSize: 14, color: deleteMode ? "#7d7d7d" : "#5f9bb8" }}>{t("singleGroup.removeStudentDialog.removeFromGroup")}</span>
             <Switch
               checked={deleteMode}
               onChange={(e) => onDeleteModeChange(e.target.checked)}
@@ -54,7 +66,7 @@ export const RemoveStudentDialog = ({
                 "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#3d87ad" },
               }}
             />
-            <span style={{ fontSize: 14, color: deleteMode ? "#2f2f2f" : "#7d7d7d" }}>Delete student</span>
+            <span style={{ fontSize: 14, color: deleteMode ? "#2f2f2f" : "#7d7d7d" }}>{t("singleGroup.removeStudentDialog.deleteStudent")}</span>
           </div>
 
           <div style={{ marginBottom: 14 }}>
@@ -63,12 +75,12 @@ export const RemoveStudentDialog = ({
               value={reason}
               onChange={(e) => onReasonChange(e.target.value as RemoveReason)}
             >
-              <option value="">Reasons for removal</option>
-              <option value="No attendance">No attendance</option>
-              <option value="Discipline problem">Discipline problem</option>
-              <option value="Moved to another center">Moved to another center</option>
-              <option value="Parent request">Parent request</option>
-              <option value="Other">Other</option>
+              <option value="">{t("singleGroup.removeStudentDialog.reasonsForRemoval")}</option>
+              {(Object.keys(REMOVE_REASON_LABEL_KEYS) as Exclude<RemoveReason, "">[]).map((r) => (
+                <option key={r} value={r}>
+                  {t(`singleGroup.removeStudentDialog.reasons.${REMOVE_REASON_LABEL_KEYS[r]}`)}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -77,7 +89,7 @@ export const RemoveStudentDialog = ({
               style={{ ...inputStyle, minHeight: 70, resize: "vertical", fontSize: 14, color: "#555" }}
               value={comment}
               onChange={(e) => onCommentChange(e.target.value)}
-              placeholder="Comment"
+              placeholder={t("singleGroup.removeStudentDialog.commentPlaceholder")}
             />
           </div>
 
@@ -89,7 +101,7 @@ export const RemoveStudentDialog = ({
                 size="small"
               />
             }
-            label={<span style={{ fontSize: 14, color: "#3f3f3f" }}>Recalculate the balance</span>}
+            label={<span style={{ fontSize: 14, color: "#3f3f3f" }}>{t("singleGroup.removeStudentDialog.recalculateBalance")}</span>}
             sx={{ m: 0, mb: 1.2 }}
           />
 
@@ -100,8 +112,8 @@ export const RemoveStudentDialog = ({
               onChange={(e) => onScopeChange(e.target.value as "current" | "all")}
               sx={{ gap: 2 }}
             >
-              <FormControlLabel value="current" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>Current group</span>} />
-              <FormControlLabel value="all" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>All groups</span>} />
+              <FormControlLabel value="current" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{t("singleGroup.removeStudentDialog.currentGroup")}</span>} />
+              <FormControlLabel value="all" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{t("singleGroup.removeStudentDialog.allGroups")}</span>} />
             </RadioGroup>
           </FormControl>
 
@@ -115,13 +127,13 @@ export const RemoveStudentDialog = ({
               }}
               onClick={onConfirm}
             >
-              Yes
+              {t("singleGroup.removeStudentDialog.yes")}
             </button>
             <button
               style={{ background: "#fff", border: "none", color: "#8a8a8a", fontSize: 15, padding: "0 8px", cursor: "pointer" }}
               onClick={onClose}
             >
-              Cancel
+              {t("singleGroup.removeStudentDialog.cancel")}
             </button>
           </div>
         </div>

@@ -30,6 +30,7 @@ import {
   MdCalendarToday,
 } from "react-icons/md";
 import { HiEye, HiEyeOff } from "react-icons/hi";
+import { useTranslation } from "react-i18next";
 import { TEACHERS_DATA } from "../../../../../constants/Teachers";
 import { SendSmsModal } from "../../../../../components/SendSmsModal";
 
@@ -64,6 +65,20 @@ const rolesList = [
   "Cashier",
 ];
 
+// Maps the internal role identifier (used for state/comparisons) to its i18n key.
+const roleTranslationKeys: Record<string, string> = {
+  "CEO": "ceo",
+  "Branch Director": "branchDirector",
+  "Administrator": "administrator",
+  "Administrator2": "administrator2",
+  "Limited Administrator": "limitedAdministrator",
+  "Teacher": "teacher",
+  "Marketer": "marketer",
+  "Cashier": "cashier",
+};
+
+const staffColumns = ["id", "name", "role", "jobTitle", "phone", "actions"] as const;
+
 interface NewStaffForm {
   name: string;
   phone: string;
@@ -88,6 +103,7 @@ const defaultForm: NewStaffForm = {
 
 // ---------- Component ----------
 export const Staff = () => {
+  const { t } = useTranslation();
   const [staff, setStaff] = useState<StaffMember[]>(buildStaffFromTeachers());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<NewStaffForm>(defaultForm);
@@ -138,7 +154,7 @@ export const Staff = () => {
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h5" fontWeight={500}>
-          Staff
+          {t("settings.ceo.staff.title")}
         </Typography>
         <Box sx={{ display: "flex", gap: 1.5 }}>
           <Button
@@ -154,7 +170,7 @@ export const Staff = () => {
               "&:hover": { bgcolor: "#15345c" },
             }}
           >
-            ADD NEW
+            {t("settings.ceo.staff.addNew")}
           </Button>
           <Button
             variant="outlined"
@@ -169,7 +185,7 @@ export const Staff = () => {
               "&:hover": { borderColor: "#aaa" },
             }}
           >
-            Import
+            {t("settings.ceo.staff.import")}
           </Button>
         </Box>
       </Box>
@@ -179,10 +195,10 @@ export const Staff = () => {
         <Table>
           <TableHead>
             <TableRow>
-              {["id", "Name", "Role", "Job title", "Phone", "Actions"].map((col) => (
+              {staffColumns.map((col) => (
                 <TableCell
                   key={col}
-                  align={col === "Actions" ? "right" : "left"}
+                  align={col === "actions" ? "right" : "left"}
                   sx={{
                     fontWeight: 600,
                     fontSize: 13,
@@ -190,7 +206,7 @@ export const Staff = () => {
                     borderBottom: "1px solid #e0e0e0",
                   }}
                 >
-                  {col}
+                  {t(`settings.ceo.staff.table.${col}`)}
                 </TableCell>
               ))}
             </TableRow>
@@ -254,7 +270,7 @@ export const Staff = () => {
       >
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 3, py: 2.5 }}>
           <Typography fontWeight={600} fontSize={17}>
-            Add New Staff
+            {t("settings.ceo.staff.form.title")}
           </Typography>
           <IconButton size="small" onClick={() => setDrawerOpen(false)}>
             <MdClose size={20} />
@@ -265,7 +281,7 @@ export const Staff = () => {
         <Box sx={{ px: 3, py: 2, overflowY: "auto", flex: 1 }}>
           {/* Name */}
           <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Name</Typography>
+            <Typography fontSize={13} mb={0.5}>{t("settings.ceo.staff.form.name")}</Typography>
             <TextField
               fullWidth size="small"
               value={form.name}
@@ -275,7 +291,7 @@ export const Staff = () => {
 
           {/* Phone */}
           <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Phone</Typography>
+            <Typography fontSize={13} mb={0.5}>{t("settings.ceo.staff.form.phone")}</Typography>
             <Box sx={{ display: "flex" }}>
               <Box
                 sx={{
@@ -309,7 +325,7 @@ export const Staff = () => {
 
           {/* Password */}
           <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Password</Typography>
+            <Typography fontSize={13} mb={0.5}>{t("settings.ceo.staff.form.password")}</Typography>
             <TextField
               fullWidth size="small"
               type={showPassword ? "text" : "password"}
@@ -330,7 +346,7 @@ export const Staff = () => {
 
           {/* Job title */}
           <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Job title</Typography>
+            <Typography fontSize={13} mb={0.5}>{t("settings.ceo.staff.form.jobTitle")}</Typography>
             <TextField
               fullWidth size="small"
               value={form.jobTitle}
@@ -340,7 +356,7 @@ export const Staff = () => {
 
           {/* Role */}
           <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Role</Typography>
+            <Typography fontSize={13} mb={0.5}>{t("settings.ceo.staff.form.role")}</Typography>
             <Box sx={{ display: "flex", flexWrap: "wrap" }}>
               {rolesList.map((role) => (
                 <FormControlLabel
@@ -353,7 +369,7 @@ export const Staff = () => {
                       sx={{ py: 0.3 }}
                     />
                   }
-                  label={<Typography fontSize={13}>{role}</Typography>}
+                  label={<Typography fontSize={13}>{t(`settings.ceo.staff.roles.${roleTranslationKeys[role]}`)}</Typography>}
                   sx={{ width: "50%", m: 0 }}
                 />
               ))}
@@ -362,7 +378,7 @@ export const Staff = () => {
 
           {/* Date of birth */}
           <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Date of birth</Typography>
+            <Typography fontSize={13} mb={0.5}>{t("settings.ceo.staff.form.dateOfBirth")}</Typography>
             <TextField
               fullWidth size="small"
               type="date"
@@ -384,20 +400,20 @@ export const Staff = () => {
 
           {/* Gender */}
           <Box mb={2}>
-            <Typography fontSize={13} mb={0.5}>Gender</Typography>
+            <Typography fontSize={13} mb={0.5}>{t("settings.ceo.staff.form.gender")}</Typography>
             <RadioGroup
               row
               value={form.gender}
               onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value }))}
             >
-              <FormControlLabel value="male" control={<Radio size="small" />} label={<Typography fontSize={13}>Male</Typography>} />
-              <FormControlLabel value="female" control={<Radio size="small" />} label={<Typography fontSize={13}>Female</Typography>} />
+              <FormControlLabel value="male" control={<Radio size="small" />} label={<Typography fontSize={13}>{t("settings.ceo.staff.gender.male")}</Typography>} />
+              <FormControlLabel value="female" control={<Radio size="small" />} label={<Typography fontSize={13}>{t("settings.ceo.staff.gender.female")}</Typography>} />
             </RadioGroup>
           </Box>
 
           {/* Photo */}
           <Box mb={3}>
-            <Typography fontSize={13} mb={0.5}>Photo</Typography>
+            <Typography fontSize={13} mb={0.5}>{t("settings.ceo.staff.form.photo")}</Typography>
             <Box sx={{ display: "flex" }}>
               <Box
                 sx={{
@@ -415,7 +431,7 @@ export const Staff = () => {
                   bgcolor: "#fff",
                 }}
               >
-                {fileName || "No file chosen"}
+                {fileName || t("settings.ceo.staff.form.noFileChosen")}
               </Box>
               <Button
                 variant="outlined"
@@ -431,7 +447,7 @@ export const Staff = () => {
                   minWidth: 85,
                 }}
               >
-                Browse
+                {t("settings.ceo.staff.form.browse")}
               </Button>
               <input
                 ref={fileInputRef}
@@ -460,7 +476,7 @@ export const Staff = () => {
               "&:hover": { bgcolor: "#3aa3b5" },
             }}
           >
-            Submit
+            {t("settings.ceo.staff.form.submit")}
           </Button>
         </Box>
       </Drawer>
@@ -470,7 +486,7 @@ export const Staff = () => {
         open={smsOpen}
         onClose={() => { setSmsOpen(false); setSmsMember(null); }}
         selectedCount={1}
-        recipientLabel="staff"
+        recipientLabel={t("settings.ceo.staff.sms.recipientLabel")}
         sender="3700"
       />
     </Box>

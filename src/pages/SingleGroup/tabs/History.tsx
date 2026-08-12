@@ -1,5 +1,6 @@
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { MdOutlinePerson } from "react-icons/md";
+import { useTranslation } from "react-i18next";
 import { Student } from "../../../types/group";
 
 interface Props {
@@ -65,7 +66,9 @@ const buildMockHistory = (
   ];
 };
 
-const HistoryEntryRow = ({ entry }: { entry: HistoryEntry }) => (
+const HistoryEntryRow = ({ entry }: { entry: HistoryEntry }) => {
+  const { t } = useTranslation();
+  return (
   <Box
     sx={{
       display: "flex",
@@ -103,14 +106,14 @@ const HistoryEntryRow = ({ entry }: { entry: HistoryEntry }) => (
       )}
 
       <Typography fontSize={13} color="text.primary">
-        Group Name:{" "}
+        {t("singleGroup.tabs.history.groupName")}:{" "}
         <Box component="span" sx={{ color: "#1976d2" }}>
           {entry.groupName}
         </Box>
       </Typography>
 
       <Typography fontSize={13} color="text.primary">
-        Group:{" "}
+        {t("singleGroup.tabs.history.group")}:{" "}
         <Box component="span" sx={{ color: "#1976d2" }}>
           #{entry.groupId}
         </Box>
@@ -130,15 +133,17 @@ const HistoryEntryRow = ({ entry }: { entry: HistoryEntry }) => (
       </Typography>
     </Stack>
   </Box>
-);
+  );
+};
 
 export const History = ({ groupId, groupName, students = [] }: Props) => {
+  const { t } = useTranslation();
   const entries = buildMockHistory(groupId, groupName, students);
 
   return (
     <Box>
       <Typography variant="h6" fontWeight={600} mb={2}>
-        History
+        {t("singleGroup.tabs.history.title")}
       </Typography>
 
       <Box

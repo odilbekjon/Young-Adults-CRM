@@ -3,146 +3,136 @@ import {
   Drawer,
   TextField,
   Button,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import {
   FiPlus,
   FiTrash2,
   FiEdit2,
-  FiPhone,
   FiMapPin,
   FiRefreshCw,
   FiX,
 } from "react-icons/fi";
-
-interface Branch {
-  id: string;
-  name: string;
-  phone: string;
-  address: string;
-  archived: boolean;
-}
-
-const initialBranches: Branch[] = [
-  {
-    id: "1",
-    name: "IELTS campus",
-    phone: "998902957007",
-    address: "Jarqo'rg'on tumani hokimiyati yonida",
-    archived: false,
-  },
-  {
-    id: "2",
-    name: "Yangi Uzbekiston",
-    phone: "998915785930",
-    address: "Jarqo'rg'on, Yangi Uzbekiston",
-    archived: false,
-  },
-];
-
-// const formatPhoneInput = (raw: string) => {
-//   const digits = raw.replace(/\D/g, "").slice(0, 9); // 9 ta raqam (998 dan keyin)
-//   const p1 = digits.slice(0, 2);
-//   const p2 = digits.slice(2, 5);
-//   const p3 = digits.slice(5, 7);
-//   const p4 = digits.slice(7, 9);
-
-//   let result = "+998";
-//   if (p1) result += p1;
-//   if (p2) result += ` ${p2}`;
-//   if (p3) result += ` ${p3}`;
-//   if (p4) result += ` ${p4}`;
-//   return result;
-// };
+import { useTranslation } from "react-i18next";
+import {
+  useAllBranchesQuery,
+  useCreateBranchMutation,
+  useUpdateBranchMutation,
+  useDeleteBranchMutation,
+} from "../../../../../app/api/branchesApi/branchesApi";
+import type { Branch } from "../../../../../app/api/branchesApi/types";
 
 export const Branches = () => {
-  const [branches, setBranches] = useState<Branch[]>(initialBranches);
+  const { t } = useTranslation();
+
+  const { data, isLoading, isError, refetch, isFetching } = useAllBranchesQuery();
+  const [createBranch, { isLoading: isCreating }] = useCreateBranchMutation();
+  const [updateBranch, { isLoading: isUpdating }] = useUpdateBranchMutation();
+  const [deleteBranch, { isLoading: isDeleting }] = useDeleteBranchMutation();
+
+  const branches = data?.data ?? [];
+
   const [tab, setTab] = useState<"faol" | "arxiv">("faol");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("+998 ");
   const [address, setAddress] = useState("");
   const [errors, setErrors] = useState<{ [k: string]: string }>({});
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const openCreateModal = () => {
     setEditingId(null);
     setName("");
-    setPhone("+998 ");
     setAddress("");
     setErrors({});
+    setSaveError(null);
     setModalOpen(true);
   };
 
   const openEditModal = (branch: Branch) => {
     setEditingId(branch.id);
     setName(branch.name);
-    setPhone(branch.phone);
     setAddress(branch.address);
     setErrors({});
+    setSaveError(null);
     setModalOpen(true);
   };
 
   const closeModal = () => setModalOpen(false);
 
-  const handleDelete = (id: string) => {
-    setBranches((prev) => prev.filter((b) => b.id !== id));
+  const openDeleteConfirm = (branch: Branch) => {
+    setDeleteError(null);
+    setDeleteTarget(branch);
+  };
+
+  const closeDeleteConfirm = () => {
+    setDeleteTarget(null);
+    setDeleteError(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteBranch(deleteTarget.id).unwrap();
+      setDeleteTarget(null);
+    } catch {
+      setDeleteError(t("settings.ceo.branches.deleteConfirm.error"));
+    }
   };
 
   const validate = () => {
     const newErrors: { [k: string]: string } = {};
-    if (!name.trim()) newErrors.name = "Filial nomini kiriting";
-    if (phone.replace(/\D/g, "").length < 12)
-      newErrors.phone = "Telefon raqamini to'liq kiriting";
-    if (!address.trim()) newErrors.address = "Manzilni kiriting";
+    if (!name.trim()) newErrors.name = t("settings.ceo.branches.form.errors.name");
+    if (!address.trim()) newErrors.address = t("settings.ceo.branches.form.errors.address");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
+    setSaveError(null);
 
-    const cleanPhone = phone.replace(/\D/g, "");
-
-    if (editingId) {
-      setBranches((prev) =>
-        prev.map((b) =>
-          b.id === editingId
-            ? { ...b, name, phone: cleanPhone, address }
-            : b
-        )
-      );
-    } else {
-      setBranches((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          name,
-          phone: cleanPhone,
-          address,
-          archived: false,
-        },
-      ]);
+    try {
+      if (editingId) {
+        await updateBranch({ id: editingId, name, address }).unwrap();
+      } else {
+        await createBranch({ name, address }).unwrap();
+      }
+      setModalOpen(false);
+    } catch {
+      setSaveError(t("settings.ceo.branches.form.errors.save"));
     }
-    setModalOpen(false);
   };
 
   const visibleBranches = branches.filter((b) =>
-    tab === "faol" ? !b.archived : b.archived
+    tab === "faol" ? b.status === "ACTIVE" : b.status !== "ACTIVE"
   );
+
+  const isSaving = isCreating || isUpdating;
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm m-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold text-gray-900">Filiallar</h1>
+          <h1 className="text-xl font-semibold text-gray-900">{t("settings.ceo.branches.title")}</h1>
           <button
             type="button"
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label="Yangilash"
+            onClick={() => refetch()}
+            className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+            aria-label={t("settings.ceo.branches.refresh")}
+            disabled={isFetching}
           >
-            <FiRefreshCw size={16} />
+            <FiRefreshCw size={16} className={isFetching ? "animate-spin" : ""} />
           </button>
         </div>
 
@@ -162,7 +152,7 @@ export const Branches = () => {
           }}
           variant="contained"
         >
-          Filial qo'shish
+          {t("settings.ceo.branches.addBranch")}
         </Button>
       </div>
 
@@ -177,7 +167,7 @@ export const Branches = () => {
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          Faol
+          {t("settings.ceo.branches.tabs.active")}
         </button>
         <button
           type="button"
@@ -188,60 +178,72 @@ export const Branches = () => {
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          Arxiv
+          {t("settings.ceo.branches.tabs.archived")}
         </button>
       </div>
 
+      {/* Loading state */}
+      {isLoading && (
+        <div className="mt-8 flex justify-center py-10">
+          <CircularProgress size={28} />
+        </div>
+      )}
+
+      {/* Error state */}
+      {!isLoading && isError && (
+        <div className="mt-8 py-10 text-center text-sm text-red-500">
+          {t("settings.ceo.branches.loadError")}
+        </div>
+      )}
+
       {/* Cards */}
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {visibleBranches.map((branch) => (
-          <div
-            key={branch.id}
-            className="rounded-xl border border-amber-100 bg-amber-50/60 p-4"
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-gray-900">
-                {branch.name}
-              </span>
-              <div className="flex items-center gap-3 text-gray-400">
-                <button
-                  type="button"
-                  onClick={() => handleDelete(branch.id)}
-                  className="hover:text-red-500 transition-colors"
-                  aria-label="O'chirish"
-                >
-                  <FiTrash2 size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openEditModal(branch)}
-                  className="hover:text-gray-700 transition-colors"
-                  aria-label="Tahrirlash"
-                >
-                  <FiEdit2 size={16} />
-                </button>
+      {!isLoading && !isError && (
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleBranches.map((branch) => (
+            <div
+              key={branch.id}
+              className="rounded-xl border border-amber-100 bg-amber-50/60 p-4"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-gray-900">
+                  {branch.name}
+                </span>
+                <div className="flex items-center gap-3 text-gray-400">
+                  <button
+                    type="button"
+                    onClick={() => openDeleteConfirm(branch)}
+                    className="hover:text-red-500 transition-colors"
+                    aria-label={t("settings.ceo.branches.delete")}
+                  >
+                    <FiTrash2 size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(branch)}
+                    className="hover:text-gray-700 transition-colors"
+                    aria-label={t("settings.ceo.branches.edit")}
+                  >
+                    <FiEdit2 size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-lg bg-white p-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <FiMapPin size={14} className="text-gray-400" />
+                  <span className="text-amber-600">{branch.address}</span>
+                </div>
               </div>
             </div>
+          ))}
 
-            <div className="mt-3 rounded-lg bg-white p-3">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <FiPhone size={14} className="text-gray-400" />
-                <span>{branch.phone}</span>
-              </div>
-              <div className="mt-2 flex items-center gap-2 text-sm">
-                <FiMapPin size={14} className="text-gray-400" />
-                <span className="text-amber-600">{branch.address}</span>
-              </div>
+          {visibleBranches.length === 0 && (
+            <div className="col-span-full py-10 text-center text-sm text-gray-400">
+              {tab === "faol" ? t("settings.ceo.branches.emptyActive") : t("settings.ceo.branches.emptyArchived")}
             </div>
-          </div>
-        ))}
-
-        {visibleBranches.length === 0 && (
-          <div className="col-span-full py-10 text-center text-sm text-gray-400">
-            {tab === "faol" ? "Faol filiallar yo'q" : "Arxivlangan filiallar yo'q"}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* O'ng tomondan chiqadigan panel */}
       <Drawer
@@ -259,13 +261,13 @@ export const Branches = () => {
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">
-            {editingId ? "Filialni tahrirlash" : "Filial qo'shish"}
+            {editingId ? t("settings.ceo.branches.form.editTitle") : t("settings.ceo.branches.addBranch")}
           </h2>
           <button
             type="button"
             onClick={closeModal}
             className="text-gray-400 hover:text-gray-600"
-            aria-label="Yopish"
+            aria-label={t("settings.ceo.branches.close")}
           >
             <FiX size={18} />
           </button>
@@ -274,12 +276,12 @@ export const Branches = () => {
         <div className="mt-5 flex flex-col gap-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-800">
-              Filial nomi <span className="text-red-500">*</span>
+              {t("settings.ceo.branches.form.name")} <span className="text-red-500">*</span>
             </label>
             <TextField
               fullWidth
               size="small"
-              placeholder="Masalan: Educoin"
+              placeholder={t("settings.ceo.branches.form.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               error={!!errors.name}
@@ -295,33 +297,12 @@ export const Branches = () => {
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-800">
-              Telefon raqami <span className="text-red-500">*</span>
-            </label>
-            <TextField
-                type="number"
-              fullWidth
-              size="small"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              error={!!errors.phone}
-              helperText={errors.phone}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "10px",
-                  "&.Mui-focused fieldset": { borderColor: "#F5B301" },
-                },
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-800">
-              Manzil <span className="text-red-500">*</span>
+              {t("settings.ceo.branches.form.address")} <span className="text-red-500">*</span>
             </label>
             <TextField
               fullWidth
               size="small"
-              placeholder="Masalan: Jarqo'rg'on tumani hokimiyati yonida"
+              placeholder={t("settings.ceo.branches.form.addressPlaceholder")}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               error={!!errors.address}
@@ -334,12 +315,17 @@ export const Branches = () => {
               }}
             />
           </div>
+
+          {saveError && (
+            <div className="text-sm text-red-500">{saveError}</div>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-5">
           <Button
             onClick={closeModal}
             variant="outlined"
+            disabled={isSaving}
             sx={{
               textTransform: "none",
               borderRadius: "10px",
@@ -349,11 +335,13 @@ export const Branches = () => {
               "&:hover": { borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" },
             }}
           >
-            Bekor qilish
+            {t("settings.ceo.branches.form.cancel")}
           </Button>
           <Button
             onClick={handleSave}
             variant="contained"
+            disabled={isSaving}
+            startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : undefined}
             sx={{
               textTransform: "none",
               backgroundColor: "#FBBF24",
@@ -365,10 +353,62 @@ export const Branches = () => {
               "&:hover": { backgroundColor: "#F5B301", boxShadow: "none" },
             }}
           >
-            Saqlash
+            {t("settings.ceo.branches.form.save")}
           </Button>
         </div>
       </Drawer>
+
+      {/* Delete confirmation */}
+      <Dialog
+        open={!!deleteTarget}
+        onClose={closeDeleteConfirm}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.ceo.branches.deleteConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.ceo.branches.deleteConfirm.message", { name: deleteTarget?.name ?? "" })}
+          </DialogContentText>
+          {deleteError && (
+            <div className="mt-3 text-sm text-red-500">{deleteError}</div>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={closeDeleteConfirm}
+            variant="outlined"
+            disabled={isDeleting}
+            sx={{
+              textTransform: "none",
+              borderRadius: "10px",
+              borderColor: "#E5E7EB",
+              color: "#374151",
+              paddingX: "18px",
+              "&:hover": { borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" },
+            }}
+          >
+            {t("settings.ceo.branches.form.cancel")}
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            variant="contained"
+            color="error"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{
+              textTransform: "none",
+              borderRadius: "10px",
+              paddingX: "18px",
+              fontWeight: 600,
+              boxShadow: "none",
+            }}
+          >
+            {t("settings.ceo.branches.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

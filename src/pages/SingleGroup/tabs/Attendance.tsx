@@ -23,16 +23,25 @@ import {
   MdCheck,
 } from "react-icons/md";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Student } from "../../../types/group";
 
 interface Props {
   students: Student[];
 }
 
-const MONTH_NAMES = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+const MONTH_KEYS = [
+  "jan", "feb", "mar", "apr", "may", "jun",
+  "jul", "aug", "sep", "oct", "nov", "dec",
 ];
+
+// NOTE: attendance values ("Was"/"Not") are kept as internal state codes
+// (this AttVal type is local to this file, not shared with other modules);
+// only the rendered text is translated via ATT_VAL_LABEL_KEYS.
+const ATT_VAL_LABEL_KEYS: Record<"Was" | "Not", string> = {
+  Was: "was",
+  Not: "notPresent",
+};
 
 const getDaysInMonth = (year: number, month: number) =>
   new Date(year, month + 1, 0).getDate();
@@ -40,6 +49,7 @@ const getDaysInMonth = (year: number, month: number) =>
 type AttVal = "Was" | "Not" | null;
 
 export const Attendance = ({ students }: Props) => {
+  const { t } = useTranslation();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -105,11 +115,11 @@ export const Attendance = ({ students }: Props) => {
         gap={1}
       >
         <Typography variant="h6" fontWeight={600}>
-          Attendance
+          {t("singleGroup.tabs.attendance.title")}
         </Typography>
         <Stack direction="row" alignItems="center" spacing={0.5}>
           <Button variant="outlined" size="small" onClick={goToCurrent}>
-            Current
+            {t("singleGroup.tabs.attendance.current")}
           </Button>
           <IconButton size="small" onClick={prevYear}>
             <MdKeyboardDoubleArrowLeft />
@@ -118,7 +128,7 @@ export const Attendance = ({ students }: Props) => {
             <MdKeyboardArrowLeft />
           </IconButton>
           <Typography sx={{ minWidth: 90, textAlign: "center", fontSize: 14 }}>
-            {MONTH_NAMES[month]} {year}
+            {t(`singleGroup.tabs.attendance.months.${MONTH_KEYS[month]}`)} {year}
           </Typography>
           <IconButton size="small" onClick={nextMonth}>
             <MdKeyboardArrowRight />
@@ -160,7 +170,7 @@ export const Attendance = ({ students }: Props) => {
                   borderRight: "1px solid #e0e0e0",
                 }}
               >
-                Name
+                {t("singleGroup.tabs.attendance.name")}
               </TableCell>
 
               {lessonDays.map((d) => {
@@ -184,7 +194,7 @@ export const Attendance = ({ students }: Props) => {
                     {d}
                     <br />
                     <span style={{ fontSize: 10, opacity: 0.7 }}>
-                      {MONTH_NAMES[month]}
+                      {t(`singleGroup.tabs.attendance.months.${MONTH_KEYS[month]}`)}
                     </span>
                   </TableCell>
                 );
@@ -286,7 +296,7 @@ export const Attendance = ({ students }: Props) => {
                                 : "#bdbdbd",
                           }}
                         >
-                          {val ?? "·"}
+                          {val ? t(`singleGroup.tabs.attendance.${ATT_VAL_LABEL_KEYS[val]}`) : "·"}
                         </Box>
 
                         <Box
@@ -308,7 +318,7 @@ export const Attendance = ({ students }: Props) => {
                             boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
                           }}
                         >
-                          <Tooltip title="Was" placement="top" arrow disableInteractive>
+                          <Tooltip title={t("singleGroup.tabs.attendance.was")} placement="top" arrow disableInteractive>
                             <IconButton
                               size="small"
                               onClick={(e) => {
@@ -329,7 +339,7 @@ export const Attendance = ({ students }: Props) => {
                               <MdCheck size={13} />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Not" placement="top" arrow disableInteractive>
+                          <Tooltip title={t("singleGroup.tabs.attendance.notPresent")} placement="top" arrow disableInteractive>
                             <IconButton
                               size="small"
                               onClick={(e) => {

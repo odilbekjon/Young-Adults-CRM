@@ -1,99 +1,102 @@
 import { useState } from "react";
 import { Box, Typography, TextField, Paper } from "@mui/material";
+import { useTranslation } from "react-i18next";
 
 interface Question {
   id: string;
-  text: string;
 }
 
 interface Section {
-  name: string;
+  key: string;
   color: string;
   questions: Question[];
 }
 
 const sections: Section[] = [
   {
-    name: "Marketing",
+    key: "marketing",
     color: "#fef9e7",
     questions: [
-      { id: "m1", text: "Annual marketing strategy structured" },
-      { id: "m2", text: "Every quarter and monthly marketing plans are available" },
-      { id: "m3", text: "Used in internet marketing" },
-      { id: "m4", text: "Used in offline marketing" },
-      { id: "m5", text: "The marketing department has a systematic workflow" },
-      { id: "m6", text: "Marketing employees have an organizational structure" },
-      { id: "m7", text: "The responsibilities of the marketing department are clearly spelled out" },
-      { id: "m8", text: "Marketing employees have clear KPIs" },
-      { id: "m9", text: "Automated payment acceptance" },
-      { id: "m10", text: "Conversion is measured" },
-      { id: "m11", text: "Established work with departing clients" },
-      { id: "m12", text: "CRM is used for file management" },
-      { id: "m13", text: "Monthly Marketing ROI Budget Measured" },
-      { id: "m14", text: "Marketing budget planning is done" },
+      { id: "m1" },
+      { id: "m2" },
+      { id: "m3" },
+      { id: "m4" },
+      { id: "m5" },
+      { id: "m6" },
+      { id: "m7" },
+      { id: "m8" },
+      { id: "m9" },
+      { id: "m10" },
+      { id: "m11" },
+      { id: "m12" },
+      { id: "m13" },
+      { id: "m14" },
     ],
   },
   {
-    name: "Sales",
+    key: "sales",
     color: "#eaf4ea",
     questions: [
-      { id: "s1", text: "There is a sales department" },
-      { id: "s2", text: "The work of the sales department is separate from the administrative department" },
-      { id: "s3", text: "Call center available" },
-      { id: "s4", text: "Call center automated" },
-      { id: "s5", text: "Monthly sales plans are available" },
-      { id: "s6", text: "The sales department has a bonus / KPI system" },
-      { id: "s7", text: "The funnel is controlled through CRM" },
-      { id: "s8", text: "Sales scripts available" },
-      { id: "s9", text: "There is a system of continuous professional development of managers" },
+      { id: "s1" },
+      { id: "s2" },
+      { id: "s3" },
+      { id: "s4" },
+      { id: "s5" },
+      { id: "s6" },
+      { id: "s7" },
+      { id: "s8" },
+      { id: "s9" },
     ],
   },
   {
-    name: "Service",
+    key: "service",
     color: "#fdecea",
     questions: [
-      { id: "sv1", text: "Service department is formed separately" },
-      { id: "sv2", text: "The responsibilities of the department employees are clearly spelled out" },
-      { id: "sv3", text: "A separate script is made for the section" },
-      { id: "sv4", text: "Managed through CRM" },
-      { id: "sv5", text: "CJM system established" },
-      { id: "sv6", text: "The arrival time of employees to work is monitored" },
-      { id: "sv7", text: "There are checklists of functions" },
-      { id: "sv8", text: "The workflow is automated" },
-      { id: "sv9", text: "There are quality standards for service" },
+      { id: "sv1" },
+      { id: "sv2" },
+      { id: "sv3" },
+      { id: "sv4" },
+      { id: "sv5" },
+      { id: "sv6" },
+      { id: "sv7" },
+      { id: "sv8" },
+      { id: "sv9" },
     ],
   },
   {
-    name: "Finance",
+    key: "finance",
     color: "#f0f0f0",
     questions: [
-      { id: "f1", text: "Financial timetable" },
-      { id: "f2", text: "Costs come with a flat rate" },
-      { id: "f3", text: "Work on cost optimization" },
-      { id: "f4", text: "Processes are automated" },
-      { id: "f5", text: "Budgeting done" },
-      { id: "f6", text: "KPI system established" },
+      { id: "f1" },
+      { id: "f2" },
+      { id: "f3" },
+      { id: "f4" },
+      { id: "f5" },
+      { id: "f6" },
     ],
   },
   {
-    name: "Administrative",
+    key: "administrative",
     color: "#fdf3e7",
     questions: [
-      { id: "a1", text: "Search and recruitment of personnel are automated" },
-      { id: "a2", text: "Employee responsibilities are spelled out" },
-      { id: "a3", text: "All materials are prepared for the adaptation period" },
-      { id: "a4", text: "Scheduled appointments and monthly appointments established" },
-      { id: "a5", text: "Established daily monitoring of indicators" },
-      { id: "a6", text: "All processes are controlled in CRM" },
-      { id: "a7", text: "Tracking of assignments is applied" },
-      { id: "a8", text: "There is a director's position, the business owner intervenes at the strategy level" },
+      { id: "a1" },
+      { id: "a2" },
+      { id: "a3" },
+      { id: "a4" },
+      { id: "a5" },
+      { id: "a6" },
+      { id: "a7" },
+      { id: "a8" },
     ],
   },
 ];
 
+const columnKeys = ["section", "question", "score", "result", "instructions"] as const;
+
 const MAX_SCORE = 60;
 
 export const Roadmap = () => {
+  const { t } = useTranslation();
   const [scores, setScores] = useState<Record<string, string>>({});
 
   const handleScore = (id: string, val: string) => {
@@ -120,14 +123,14 @@ export const Roadmap = () => {
     >
       <Box />
       <Box sx={{ p: 2 }}>
-        <Typography fontWeight={600} fontSize={16}>Overall score</Typography>
+        <Typography fontWeight={600} fontSize={16}>{t("settings.ceo.roadmap.overallScore")}</Typography>
       </Box>
       <Box sx={{ p: 2 }}>
-        <Typography fontSize={13} color="#555">Maximum Score:</Typography>
+        <Typography fontSize={13} color="#555">{t("settings.ceo.roadmap.maxScore")}</Typography>
         <Typography fontWeight={600} fontSize={14}>{MAX_SCORE}</Typography>
       </Box>
       <Box sx={{ p: 1.5 }}>
-        <Typography fontSize={13} color="#555" mb={0.5}>Your score:</Typography>
+        <Typography fontSize={13} color="#555" mb={0.5}>{t("settings.ceo.roadmap.yourScore")}</Typography>
         <Box sx={{ bgcolor: "#f5c842", borderRadius: 1, py: 0.6, px: 1, textAlign: "center" }}>
           <Typography fontWeight={600} fontSize={14}>{totalScore.toFixed(1)}</Typography>
         </Box>
@@ -138,7 +141,7 @@ export const Roadmap = () => {
 
   return (
     <Box sx={{ p: 3, bgcolor: "#f5f5f5", minHeight: "100vh" }}>
-      <Typography variant="h5" fontWeight={400} mb={3}>Audit</Typography>
+      <Typography variant="h5" fontWeight={400} mb={3}>{t("settings.ceo.roadmap.title")}</Typography>
 
       <Paper elevation={0} variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
         {/* Top score header */}
@@ -153,16 +156,16 @@ export const Roadmap = () => {
             bgcolor: "#fff",
           }}
         >
-          {["Section", "Question", "Ball (max. score 10)", "Result", "Instructions"].map((col) => (
-            <Box key={col} sx={{ px: 2, py: 1.2 }}>
-              <Typography fontSize={13} fontWeight={600} color="#333">{col}</Typography>
+          {columnKeys.map((colKey) => (
+            <Box key={colKey} sx={{ px: 2, py: 1.2 }}>
+              <Typography fontSize={13} fontWeight={600} color="#333">{t(`settings.ceo.roadmap.table.${colKey}`)}</Typography>
             </Box>
           ))}
         </Box>
 
         {/* Sections */}
         {sections.map((section) => (
-          <Box key={section.name} sx={{ display: "flex", flexDirection: "column" }}>
+          <Box key={section.key} sx={{ display: "flex", flexDirection: "column" }}>
             {section.questions.map((q, qi) => (
               <Box
                 key={q.id}
@@ -197,14 +200,14 @@ export const Roadmap = () => {
                         userSelect: "none",
                       }}
                     >
-                      {section.name}
+                      {t(`settings.ceo.roadmap.sections.${section.key}.name`)}
                     </Typography>
                   )}
                 </Box>
 
                 {/* Question */}
                 <Box sx={{ px: 2, py: 1 }}>
-                  <Typography fontSize={13} color="#333">{q.text}</Typography>
+                  <Typography fontSize={13} color="#333">{t(`settings.ceo.roadmap.sections.${section.key}.questions.${q.id}`)}</Typography>
                 </Box>
 
                 {/* Ball input */}
@@ -213,7 +216,7 @@ export const Roadmap = () => {
                     size="small"
                     value={scores[q.id] ?? ""}
                     onChange={(e) => handleScore(q.id, e.target.value)}
-                    placeholder="0"
+                    placeholder={t("settings.ceo.roadmap.scorePlaceholder")}
                     inputProps={{
                       style: { textAlign: "center", fontSize: 13, width: 50 },
                       min: 0,
@@ -249,14 +252,14 @@ export const Roadmap = () => {
         >
           <Box />
           <Box sx={{ p: 2 }}>
-            <Typography fontWeight={600} fontSize={16}>Overall score</Typography>
+            <Typography fontWeight={600} fontSize={16}>{t("settings.ceo.roadmap.overallScore")}</Typography>
           </Box>
           <Box sx={{ p: 2 }}>
-            <Typography fontSize={13} color="#555">Maximum Score:</Typography>
+            <Typography fontSize={13} color="#555">{t("settings.ceo.roadmap.maxScore")}</Typography>
             <Typography fontWeight={600} fontSize={14}>{MAX_SCORE}</Typography>
           </Box>
           <Box sx={{ p: 1.5 }}>
-            <Typography fontSize={13} color="#555" mb={0.5}>Your score:</Typography>
+            <Typography fontSize={13} color="#555" mb={0.5}>{t("settings.ceo.roadmap.yourScore")}</Typography>
             <Box sx={{ bgcolor: "#f5c842", borderRadius: 1, py: 0.6, px: 1, textAlign: "center" }}>
               <Typography fontWeight={600} fontSize={14}>{totalScore.toFixed(1)}</Typography>
             </Box>

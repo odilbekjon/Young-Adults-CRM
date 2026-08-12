@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton, Button } from "@mui/material";
 import { MdClose } from "react-icons/md";
+import { useTranslation } from "react-i18next";
 import { DatePickerField } from "../DatePickerField";
 
 export const ActivateModal = ({
@@ -11,6 +12,7 @@ export const ActivateModal = ({
   onClose: () => void;
   onConfirm: (activateDate: string) => void;
 }) => {
+  const { t } = useTranslation();
   const [activateDate, setActivateDate] = useState("");
 
   const handleSubmit = () => {
@@ -33,7 +35,7 @@ export const ActivateModal = ({
     >
       <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pb: 1, pt: 2.5, px: 2.5 }}>
         <Typography fontWeight={600} fontSize={16} color="#1a1a1a">
-          Select activate date
+          {t("singleGroup.activateModal.title")}
         </Typography>
         <IconButton size="small" onClick={handleClose} sx={{ color: "#9ca3af" }}>
           <MdClose size={18} />
@@ -62,7 +64,7 @@ export const ActivateModal = ({
             "&:hover": { bgcolor: activateDate ? "#6b7f96" : "#c5cdd8", boxShadow: "none" },
           }}
         >
-          Submit
+          {t("singleGroup.activateModal.submit")}
         </Button>
       </DialogActions>
     </Dialog>

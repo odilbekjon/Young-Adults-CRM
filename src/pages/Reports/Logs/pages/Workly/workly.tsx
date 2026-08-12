@@ -9,22 +9,24 @@ import {
   ListItemText,
   Divider,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 
-const navItems = [
-  "General settings",
-  "Sign in",
-  "Lead form",
-  "Payment methods",
-  "Communication",
-  "Integrations",
-  "Exams",
-  "Check",
-  "Accrual and payment",
-  "Landing page",
+const navItemIds = [
+  "generalSettings",
+  "signIn",
+  "leadForm",
+  "paymentMethods",
+  "communication",
+  "integrations",
+  "exams",
+  "check",
+  "accrualAndPayment",
+  "landingPage",
 ];
 
 export const Workly = () => {
-  const [activeNav, setActiveNav] = useState("Integrations");
+  const { t } = useTranslation();
+  const [activeNav, setActiveNav] = useState("integrations");
   const [form, setForm] = useState({
     clientId: "",
     secret: "",
@@ -43,7 +45,7 @@ export const Workly = () => {
         variant="h5"
         sx={{ fontWeight: 500, mb: 3, color: "#212121" }}
       >
-        Workly Report
+        {t("reports.logs.workly.title")}
       </Typography>
 
       <Paper
@@ -57,11 +59,10 @@ export const Workly = () => {
         {/* Header */}
         <Box sx={{ p: 3, borderBottom: "1px solid #e0e0e0" }}>
           <Typography variant="h6" sx={{ fontWeight: 500, mb: 1 }}>
-            Workly connection
+            {t("reports.logs.workly.connection.heading")}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            To connect to Workly, you need to enter the following data in
-            Settings &gt; Integrations:
+            {t("reports.logs.workly.connection.description")}
           </Typography>
         </Box>
 
@@ -75,11 +76,11 @@ export const Workly = () => {
             }}
           >
             <List disablePadding>
-              {navItems.map((item, index) => (
-                <Box key={item}>
+              {navItemIds.map((itemId, index) => (
+                <Box key={itemId}>
                   <ListItemButton
-                    selected={activeNav === item}
-                    onClick={() => setActiveNav(item)}
+                    selected={activeNav === itemId}
+                    onClick={() => setActiveNav(itemId)}
                     sx={{
                       py: 1.25,
                       px: 2,
@@ -96,14 +97,14 @@ export const Workly = () => {
                     }}
                   >
                     <ListItemText
-                      primary={item}
+                      primary={t(`reports.logs.workly.nav.${itemId}`)}
                       primaryTypographyProps={{
                         fontSize: "0.875rem",
-                        color: activeNav === item ? "#1976d2" : "#555",
+                        color: activeNav === itemId ? "#1976d2" : "#555",
                       }}
                     />
                   </ListItemButton>
-                  {index < navItems.length - 1 && (
+                  {index < navItemIds.length - 1 && (
                     <Divider sx={{ mx: 0 }} />
                   )}
                 </Box>
@@ -114,7 +115,7 @@ export const Workly = () => {
           {/* Main Content */}
           <Box sx={{ flex: 1, p: 3 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 2 }}>
-              Integrations
+              {t("reports.logs.workly.nav.integrations")}
             </Typography>
 
             <Paper
@@ -125,13 +126,13 @@ export const Workly = () => {
                 variant="caption"
                 sx={{ color: "#888", display: "block", mb: 1.5 }}
               >
-                Workly
+                {t("reports.logs.workly.caption")}
               </Typography>
 
               {/* Workly Client ID */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  Workly client id
+                  {t("reports.logs.workly.form.clientId")}
                 </Typography>
                 <TextField
                   fullWidth
@@ -151,7 +152,7 @@ export const Workly = () => {
               {/* Workly Secret */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  Workly secret
+                  {t("reports.logs.workly.form.secret")}
                 </Typography>
                 <TextField
                   fullWidth
@@ -171,7 +172,7 @@ export const Workly = () => {
               {/* Workly Username */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  Workly username
+                  {t("reports.logs.workly.form.username")}
                 </Typography>
                 <TextField
                   fullWidth
@@ -191,7 +192,7 @@ export const Workly = () => {
               {/* Workly Password */}
               <Box>
                 <Typography variant="body2" sx={{ mb: 0.5 }}>
-                  Workly password
+                  {t("reports.logs.workly.form.password")}
                 </Typography>
                 <TextField
                   fullWidth

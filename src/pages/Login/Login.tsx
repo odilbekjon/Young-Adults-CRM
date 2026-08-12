@@ -1,10 +1,14 @@
 import { Box, Button, TextField, Typography, Alert, InputAdornment, IconButton, CircularProgress } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import logo from "../../assets/logo_ya.png";
 import blackLogo from "../../assets/logo_ya_black.png"
+import { useLoginMutation } from "../../app/api/authApi";
+import { loginSuccess } from "../../app/store/authSlice";
+import type { AppDispatch } from "../../app/store";
+import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 
 const LANGUAGE_OPTIONS: { code: "en" | "ru" | "uz"; label: string }[] = [
   { code: "en", label: "EN" },
@@ -12,18 +16,15 @@ const LANGUAGE_OPTIONS: { code: "en" | "ru" | "uz"; label: string }[] = [
   { code: "uz", label: "UZ" },
 ];
 
-const CORRECT_PHONE = "915179774";
-const CORRECT_PASSWORD = "1111";
-
 const LoginPage = () => {
-  const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const { t, i18n } = useTranslation();
+  const [login, { isLoading: loading }] = useLoginMutation();
 
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const currentLang = (i18n.language as "en" | "ru" | "uz") || "uz";
 
@@ -32,20 +33,29 @@ const LoginPage = () => {
     localStorage.setItem("appLanguage", code);
   };
 
-  const handleLogin = () => {
+  const canSubmit = !loading && email.trim() !== "" && password !== "";
+
+  const handleLogin = async () => {
     if (loading) return;
-    setLoading(true);
-    // brief delay so the loading state is visible; swap for a real API call later
-    setTimeout(() => {
-      const cleaned = phone.replace(/\s/g, "");
-      if (cleaned === CORRECT_PHONE && password === CORRECT_PASSWORD) {
-        setError("");
-        navigate("/dashboard");
-      } else {
-        setError(t("login.error"));
+    if (!email.trim() || !password) {
+      setError(t("login.requiredFields"));
+      return;
+    }
+    setError("");
+    try {
+      const res = await login({ identifier: email.trim(), password }).unwrap();
+      // No manual navigate() here: PublicRoute reacts to the auth state
+      // change and redirects to the originally-requested page (or /dashboard).
+      dispatch(loginSuccess(res.data.token));
+    } catch (err: unknown) {
+      const fetchError = err as FetchBaseQueryError;
+      if (fetchError?.status === "FETCH_ERROR" || fetchError?.status === "TIMEOUT_ERROR") {
+        setError(t("login.networkError"));
+        return;
       }
-      setLoading(false);
-    }, 400);
+      const data = fetchError?.data as { message?: string } | undefined;
+      setError(data?.message || t("login.error"));
+    }
   };
 
   return (
@@ -141,34 +151,15 @@ const LoginPage = () => {
 
               <TextField
                 fullWidth
-                label={t("login.phone")}
+                label={t("login.email")}
                 required
                 size="small"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="99 891 51 79"
-                inputProps={{ maxLength: 12 }}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                placeholder="example@adults.uz"
                 sx={{ mb: 2 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Box
-                        sx={{
-                          pr: 1.5,
-                          mr: 0.5,
-                          borderRight: "1px solid",
-                          borderColor: "divider",
-                          fontSize: 14,
-                          fontWeight: 500,
-                          color: "text.primary",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        +998
-                      </Box>
-                    </InputAdornment>
-                  ),
-                }}
               />
 
               <TextField
@@ -195,7 +186,7 @@ const LoginPage = () => {
               <Button
                 variant="contained"
                 onClick={handleLogin}
-                disabled={loading}
+                disabled={!canSubmit}
                 startIcon={loading ? <CircularProgress size={16} color="inherit" /> : undefined}
                 fullWidth={false}
                 sx={{

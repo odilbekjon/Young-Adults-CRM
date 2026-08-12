@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BsCheckCircleFill } from "react-icons/bs";
 import { FiMinus, FiPlus } from "react-icons/fi";
 
@@ -24,6 +25,7 @@ const Toggle = ({
 );
 
 export const Grade = () => {
+  const { t } = useTranslation();
   const [maxScore, setMaxScore] = useState<5 | 10>(5);
   const [customScore, setCustomScore] = useState(5);
 
@@ -47,24 +49,23 @@ export const Grade = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <h1 className="text-2xl font-semibold text-gray-800 mb-4">Grade</h1>
+      <h1 className="text-2xl font-semibold text-gray-800 mb-4">{t("settings.grade.title")}</h1>
 
       <div className="bg-white rounded-xl shadow-sm p-6 max-w-4xl">
         {/* Attention Banner */}
         <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
           <BsCheckCircleFill className="text-green-500 mt-0.5 shrink-0" size={20} />
           <div>
-            <p className="text-green-700 font-semibold text-sm">Attention!</p>
+            <p className="text-green-700 font-semibold text-sm">{t("settings.grade.attentionTitle")}</p>
             <p className="text-green-700 text-sm mt-0.5">
-              After the grading system is introduced, if the maximum score is
-              changed, all previous grades will be deleted.
+              {t("settings.grade.attentionMessage")}
             </p>
           </div>
         </div>
 
         {/* Maximum Score */}
         <div className="mb-6">
-          <p className="text-sm text-gray-700 mb-2">Maximum score</p>
+          <p className="text-sm text-gray-700 mb-2">{t("settings.grade.maxScoreLabel")}</p>
           <div className="flex items-center gap-2">
             {/* Preset Buttons */}
             <button
@@ -116,7 +117,7 @@ export const Grade = () => {
         <div className="space-y-5 mb-8">
           <div className="flex flex-col gap-1.5">
             <span className="text-sm text-gray-700">
-              Allow editing grades for past dates
+              {t("settings.grade.allowPastDates")}
             </span>
             <Toggle
               checked={allowPastDates}
@@ -126,7 +127,7 @@ export const Grade = () => {
 
           <div className="flex flex-col gap-1.5">
             <span className="text-sm text-gray-700">
-              Allow non-teaching staff to give grades
+              {t("settings.grade.allowNonTeaching")}
             </span>
             <Toggle
               checked={allowNonTeaching}
@@ -136,7 +137,7 @@ export const Grade = () => {
 
           <div className="flex flex-col gap-1.5">
             <span className="text-sm text-gray-700">
-              Show center-wide rating in student profile
+              {t("settings.grade.showCenterRating")}
             </span>
             <Toggle
               checked={showCenterRating}
@@ -146,7 +147,7 @@ export const Grade = () => {
 
           <div className="flex flex-col gap-1.5">
             <span className="text-sm text-gray-700">
-              Show branch-wide rating in student profile
+              {t("settings.grade.showBranchRating")}
             </span>
             <Toggle
               checked={showBranchRating}
@@ -158,7 +159,7 @@ export const Grade = () => {
         {/* Save Button */}
         <div className="flex justify-center">
           <button className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-2.5 rounded-md text-sm font-medium transition-colors">
-            Save
+            {t("settings.grade.save")}
           </button>
         </div>
       </div>

@@ -9,6 +9,7 @@ import {
   Divider,
 } from "@mui/material";
 import { FiUpload } from "react-icons/fi";
+import { useTranslation } from "react-i18next";
 
 import logo from "../../../../../../assets/logo_ya_black.png";
 
@@ -53,6 +54,7 @@ const defaultSettings: InvoiceSettings = {
 };
 
 const Invoice = () => {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<InvoiceSettings>(defaultSettings);
   const [fileName, setFileName] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,29 +79,29 @@ const Invoice = () => {
   };
 
   const checkboxItems: { key: keyof InvoiceSettings; label: string }[] = [
-    { key: "hideLogo", label: "Hide: Logo" },
-    { key: "hideImageField", label: "Hide: Image fild" },
-    { key: "hideTextField", label: "Hide: Text fild" },
-    { key: "hideCheckNumber", label: "Hide: Check number" },
-    { key: "hideCompany", label: "Hide: Company" },
-    { key: "hideBranch", label: "Hide: Branch" },
-    { key: "hideStudent", label: "Hide: Student" },
-    { key: "hidePhone", label: "Hide: Phone" },
-    { key: "hideBalance", label: "Hide: Balance" },
-    { key: "hideGroup", label: "Hide: Group" },
-    { key: "hideCoursePrice", label: "Hide: Course price" },
-    { key: "hideTeacher", label: "Hide: Teacher" },
-    { key: "hideType", label: "Hide: Type" },
-    { key: "hidePaymentAmount", label: "Hide: Payment amount" },
-    { key: "hideDate", label: "Hide: Date" },
-    { key: "hideCreator", label: "Hide: Creator" },
-    { key: "hideTime", label: "Hide: Time" },
+    { key: "hideLogo", label: t("settings.ceo.general.invoice.checkboxes.hideLogo") },
+    { key: "hideImageField", label: t("settings.ceo.general.invoice.checkboxes.hideImageField") },
+    { key: "hideTextField", label: t("settings.ceo.general.invoice.checkboxes.hideTextField") },
+    { key: "hideCheckNumber", label: t("settings.ceo.general.invoice.checkboxes.hideCheckNumber") },
+    { key: "hideCompany", label: t("settings.ceo.general.invoice.checkboxes.hideCompany") },
+    { key: "hideBranch", label: t("settings.ceo.general.invoice.checkboxes.hideBranch") },
+    { key: "hideStudent", label: t("settings.ceo.general.invoice.checkboxes.hideStudent") },
+    { key: "hidePhone", label: t("settings.ceo.general.invoice.checkboxes.hidePhone") },
+    { key: "hideBalance", label: t("settings.ceo.general.invoice.checkboxes.hideBalance") },
+    { key: "hideGroup", label: t("settings.ceo.general.invoice.checkboxes.hideGroup") },
+    { key: "hideCoursePrice", label: t("settings.ceo.general.invoice.checkboxes.hideCoursePrice") },
+    { key: "hideTeacher", label: t("settings.ceo.general.invoice.checkboxes.hideTeacher") },
+    { key: "hideType", label: t("settings.ceo.general.invoice.checkboxes.hideType") },
+    { key: "hidePaymentAmount", label: t("settings.ceo.general.invoice.checkboxes.hidePaymentAmount") },
+    { key: "hideDate", label: t("settings.ceo.general.invoice.checkboxes.hideDate") },
+    { key: "hideCreator", label: t("settings.ceo.general.invoice.checkboxes.hideCreator") },
+    { key: "hideTime", label: t("settings.ceo.general.invoice.checkboxes.hideTime") },
   ];
 
   return (
     <Box sx={{ p: 3, }}>
       <Typography variant="h6" fontWeight={600} mb={3}>
-        Invoice
+        {t("settings.ceo.general.invoice.title")}
       </Typography>
 
       <Box sx={{ display: "flex", gap: 30, alignItems: "flex-start" }}>
@@ -131,7 +133,7 @@ const Invoice = () => {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {fileName || "No file chosen"}
+                    {fileName || t("settings.ceo.general.invoice.noFileChosen")}
                   </Box>
                   <Button
                     variant="outlined"
@@ -148,7 +150,7 @@ const Invoice = () => {
                       height: 36,
                     }}
                   >
-                    Browse
+                    {t("settings.ceo.general.invoice.browse")}
                   </Button>
                   <input
                     ref={fileInputRef}
@@ -187,7 +189,7 @@ const Invoice = () => {
                 fontWeight: 500,
               }}
             >
-              Save
+              {t("settings.ceo.general.invoice.save")}
             </Button>
             <Button
               variant="outlined"
@@ -200,7 +202,7 @@ const Invoice = () => {
                 fontWeight: 500,
               }}
             >
-              Cancel
+              {t("settings.ceo.general.invoice.cancel")}
             </Button>
           </Box>
         </Box>
@@ -239,7 +241,7 @@ const Invoice = () => {
                       gap: 0.5,
                     }}
                   >
-                    <img className="block mx-auto" src={logo} width={100} height={100} alt="Young Adults Logo" />
+                    <img className="block mx-auto" src={logo} width={100} height={100} alt={t("settings.ceo.general.invoice.logoAlt")} />
                   </Box>
                 </Box>
               )}
@@ -263,40 +265,40 @@ const Invoice = () => {
               {/* Invoice fields */}
               <Box sx={{ "& > *": { mb: 0.3 } }}>
                 {!settings.hideCheckNumber && (
-                  <PreviewRow label="Check number:" value="№12345" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.checkNumber")} value="№12345" />
                 )}
                 {!settings.hideCompany && (
-                  <PreviewRow label="Company:" value="Young Adults" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.company")} value="Young Adults" />
                 )}
                 {!settings.hideBranch && (
-                  <PreviewRow label="Branch:" value="YA IELTS Campus" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.branch")} value="YA IELTS Campus" />
                 )}
                 {!settings.hideStudent && (
-                  <PreviewRow label="Student:" value="Student Name" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.student")} value="Student Name" />
                 )}
                 {!settings.hidePhone && (
-                  <PreviewRow label="Phone:" value="+998901234567" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.phone")} value="+998901234567" />
                 )}
                 {!settings.hideBalance && (
-                  <PreviewRow label="Balance:" value="1,000 UZS" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.balance")} value="1,000 UZS" />
                 )}
                 {!settings.hideGroup && (
-                  <PreviewRow label="Group:" value="Group Name" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.group")} value="Group Name" />
                 )}
                 {!settings.hideCoursePrice && (
-                  <PreviewRow label="Course price:" value="200,000 UZS" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.coursePrice")} value="200,000 UZS" />
                 )}
                 {!settings.hideTeacher && (
-                  <PreviewRow label="Teacher:" value="Teacher Name" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.teacher")} value="Teacher Name" />
                 )}
                 {!settings.hideType && (
-                  <PreviewRow label="Type:" value="Cash" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.type")} value="Cash" />
                 )}
                 {!settings.hidePaymentAmount && (
-                  <PreviewRow label="Payment amount:" value="200,000 UZS" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.paymentAmount")} value="200,000 UZS" />
                 )}
                 {!settings.hideDate && (
-                  <PreviewRow label="Date:" value="01.01.2025" />
+                  <PreviewRow label={t("settings.ceo.general.invoice.preview.date")} value="01.01.2025" />
                 )}
               </Box>
 
@@ -304,11 +306,11 @@ const Invoice = () => {
               {(!settings.hideCreator || !settings.hideTime) && (
                 <Box sx={{ mt: 1.5 }}>
                   {!settings.hideCreator && (
-                    <PreviewRow label="Creator:" value="Admin Name" small />
+                    <PreviewRow label={t("settings.ceo.general.invoice.preview.creator")} value="Admin Name" small />
                   )}
                   {!settings.hideTime && (
                     <PreviewRow
-                      label="Time:"
+                      label={t("settings.ceo.general.invoice.preview.time")}
                       value="01.01.2025 10:00"
                       small
                     />

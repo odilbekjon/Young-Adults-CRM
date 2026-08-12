@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { FiSettings, FiChevronUp, FiChevronDown, FiCalendar } from "react-icons/fi";
+import { useTranslation } from "react-i18next";
 
 // ---------- Types ----------
 type SalaryType =
@@ -148,6 +149,7 @@ const Select = ({
 
 // ---------- Main Component ----------
 export const Salaries = () => {
+  const { t } = useTranslation();
   const [settingsOpen, setSettingsOpen] = useState(true);
 
   // Section 1
@@ -216,7 +218,7 @@ export const Salaries = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6 font-sans">
       {/* Page title */}
-      <h1 className="text-2xl font-semibold text-gray-800 mb-5">Salaries</h1>
+      <h1 className="text-2xl font-semibold text-gray-800 mb-5">{t("finance.salaries.title")}</h1>
 
       {/* Settings card */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -227,7 +229,7 @@ export const Salaries = () => {
             onClick={() => setSettingsOpen((o) => !o)}
           >
             <FiSettings size={15} />
-            <span>Setting salaries</span>
+            <span>{t("finance.salaries.settingsToggle")}</span>
             {settingsOpen ? <FiChevronUp size={15} /> : <FiChevronDown size={15} />}
           </button>
           <button className="border border-gray-300 rounded p-1.5 text-gray-500 hover:bg-gray-50 transition-colors">
@@ -244,12 +246,12 @@ export const Salaries = () => {
                   1
                 </div>
                 <p className="text-gray-700 text-base">
-                  Please set default value for salary calculation
+                  {t("finance.salaries.step1.description")}
                 </p>
               </div>
 
               <div className="mb-1.5">
-                <label className="text-sm text-gray-600">Calc value</label>
+                <label className="text-sm text-gray-600">{t("finance.salaries.calcValueLabel")}</label>
               </div>
               <div className="flex items-center gap-3">
                 <input
@@ -267,7 +269,7 @@ export const Salaries = () => {
                   onClick={handleAddDefault}
                   className="border border-teal-400 text-teal-500 rounded-full px-5 py-1.5 text-sm hover:bg-teal-50 transition-colors font-medium"
                 >
-                  Add
+                  {t("finance.salaries.addButton")}
                 </button>
               </div>
             </div>
@@ -281,13 +283,13 @@ export const Salaries = () => {
                   2
                 </div>
                 <p className="text-gray-700 text-base">
-                  You can set up individual calculations for any teachers / courses / groups / students.
+                  {t("finance.salaries.step2.description")}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-1.5">
-                <label className="text-sm text-gray-600">Calc setting</label>
-                <label className="text-sm text-gray-600">Calc value</label>
+                <label className="text-sm text-gray-600">{t("finance.salaries.calcSettingLabel")}</label>
+                <label className="text-sm text-gray-600">{t("finance.salaries.calcValueLabel")}</label>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-48 flex-shrink-0">
@@ -295,7 +297,7 @@ export const Salaries = () => {
                     value={calcSetting}
                     onChange={setCalcSetting}
                     options={CALC_SETTING_OPTIONS}
-                    placeholder="Select option"
+                    placeholder={t("finance.salaries.selectOptionPlaceholder")}
                   />
                 </div>
                 <input
@@ -313,7 +315,7 @@ export const Salaries = () => {
                   onClick={handleAddIndividual}
                   className="border border-teal-400 text-teal-500 rounded-full px-5 py-1.5 text-sm hover:bg-teal-50 transition-colors font-medium"
                 >
-                  Add
+                  {t("finance.salaries.addButton")}
                 </button>
               </div>
             </div>
@@ -324,16 +326,16 @@ export const Salaries = () => {
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
                     {[
-                      "Calc setting",
-                      "Salary type",
-                      "Amount",
-                      "Course",
-                      "Group",
-                      "Teacher",
-                      "Student",
-                      "Created by",
-                      "Updated at",
-                      "Actions",
+                      t("finance.salaries.table.calcSetting"),
+                      t("finance.salaries.table.salaryType"),
+                      t("finance.salaries.table.amount"),
+                      t("finance.salaries.table.course"),
+                      t("finance.salaries.table.group"),
+                      t("finance.salaries.table.teacher"),
+                      t("finance.salaries.table.student"),
+                      t("finance.salaries.table.createdBy"),
+                      t("finance.salaries.table.updatedAt"),
+                      t("finance.salaries.table.actions"),
                     ].map((col) => (
                       <th
                         key={col}
@@ -348,7 +350,7 @@ export const Salaries = () => {
                   {rows.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="text-center py-8 text-gray-400">
-                        No Data
+                        {t("finance.salaries.table.noData")}
                       </td>
                     </tr>
                   ) : (
@@ -368,7 +370,7 @@ export const Salaries = () => {
                             onClick={() => handleDelete(row.id)}
                             className="text-red-400 hover:text-red-600 text-xs border border-red-200 rounded px-2 py-1 hover:bg-red-50 transition-colors"
                           >
-                            Delete
+                            {t("finance.salaries.table.delete")}
                           </button>
                         </td>
                       </tr>
@@ -393,10 +395,10 @@ export const Salaries = () => {
           />
         </div>
         <button className="bg-blue-700 hover:bg-blue-800 text-white rounded-full px-6 py-2 text-sm font-medium transition-colors">
-          Calculate
+          {t("finance.salaries.calculate")}
         </button>
         <button className="bg-green-500 hover:bg-green-600 text-white rounded-full px-6 py-2 text-sm font-medium transition-colors">
-          Show in teacher's profile
+          {t("finance.salaries.showInTeacherProfile")}
         </button>
       </div>
     </div>

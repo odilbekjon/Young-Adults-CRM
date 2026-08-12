@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Checkbox,
@@ -71,6 +72,12 @@ const MOCK_DATA: StudentRecord[] = Array.from({ length: 97 }, (_, i) => ({
 
 const PAGE_SIZE = 10;
 
+// Maps the tab id (used for state/comparison) to its translation key.
+const TAB_LABEL_KEYS: Record<"new" | "old", string> = {
+  new: "settings.office.studentLeft.tabs.new",
+  old: "settings.office.studentLeft.tabs.old",
+};
+
 const selectSx = {
   height: 38,
   fontSize: "0.82rem",
@@ -95,6 +102,7 @@ const inputSx = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export const StudentLeft = () => {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<"new" | "old">("new");
   const [page, setPage] = useState(1);
 
@@ -154,10 +162,10 @@ export const StudentLeft = () => {
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <Typography variant="h5" sx={{ fontWeight: 700, color: "#1f2937" }}>
-          Students left the group
+          {t("settings.office.studentLeft.title")}
         </Typography>
         <Typography variant="body2" sx={{ color: "#6b7280" }}>
-          Quantity — {filtered.length}
+          {t("settings.office.studentLeft.quantity", { count: filtered.length })}
         </Typography>
       </div>
 
@@ -169,30 +177,26 @@ export const StudentLeft = () => {
           </svg>
         </div>
         <div>
-          <p className="text-green-700 font-semibold text-sm mb-0.5">Attention!</p>
+          <p className="text-green-700 font-semibold text-sm mb-0.5">{t("settings.office.studentLeft.attentionBanner.title")}</p>
           <p className="text-green-700 text-xs leading-relaxed">
-            The issues in the report about students who left the learning center have been fixed.
-            Additionally, new necessary columns and filters have been added to the table. Starting
-            from 18.02.2025, all students removed from the group will be recorded in the "New
-            Table," and they will no longer be added to the old table. To see data before
-            18.02.2025, go to the old table.
+            {t("settings.office.studentLeft.attentionBanner.message")}
           </p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-0 mb-5 border border-gray-200 rounded-md w-fit bg-white overflow-hidden">
-        {(["new", "old"] as const).map((t) => (
+        {(["new", "old"] as const).map((tabKey) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tabKey}
+            onClick={() => setTab(tabKey)}
             className={`px-5 py-1.5 text-sm font-medium capitalize transition-colors ${
-              tab === t
+              tab === tabKey
                 ? "bg-white text-gray-800 border-b-2 border-blue-400"
                 : "text-gray-500 hover:bg-gray-50"
             }`}
           >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {t(TAB_LABEL_KEYS[tabKey])}
           </button>
         ))}
       </div>
@@ -218,34 +222,34 @@ export const StudentLeft = () => {
         {/* Search */}
         <TextField
           size="small"
-          placeholder="Search by name or phone"
+          placeholder={t("settings.office.studentLeft.filters.searchByNameOrPhone")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           sx={{ ...inputSx, width: 200 }}
         />
         {/* Course */}
         <Select displayEmpty size="small" value={course} onChange={(e) => setCourse(e.target.value)} sx={{ ...selectSx, width: 150 }}>
-          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>Course</em></MenuItem>
+          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.course")}</em></MenuItem>
           {COURSES.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
         </Select>
         {/* Group */}
         <Select displayEmpty size="small" value={group} onChange={(e) => setGroup(e.target.value)} sx={{ ...selectSx, width: 150 }}>
-          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>Group</em></MenuItem>
+          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.group")}</em></MenuItem>
           {GROUPS.map((g) => <MenuItem key={g} value={g}>{g}</MenuItem>)}
         </Select>
         {/* Teachers */}
         <Select displayEmpty size="small" value={teacher} onChange={(e) => setTeacher(e.target.value)} sx={{ ...selectSx, width: 170 }}>
-          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>Teachers</em></MenuItem>
-          {TEACHERS.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.teachers")}</em></MenuItem>
+          {TEACHERS.map((tc) => <MenuItem key={tc} value={tc}>{tc}</MenuItem>)}
         </Select>
         {/* Staff */}
         <Select displayEmpty size="small" value={staff} onChange={(e) => setStaff(e.target.value)} sx={{ ...selectSx, width: 160 }}>
-          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>Staff</em></MenuItem>
+          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.staff")}</em></MenuItem>
           {STAFF_LIST.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
         </Select>
         {/* Reasons */}
         <Select displayEmpty size="small" value={reasonFilter} onChange={(e) => setReasonFilter(e.target.value)} sx={{ ...selectSx, width: 190 }}>
-          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>Reasons for archiving</em></MenuItem>
+          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.reasonsForArchiving")}</em></MenuItem>
           {REASONS.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
         </Select>
       </div>
@@ -253,7 +257,7 @@ export const StudentLeft = () => {
       {/* Filters Row 2 */}
       <div className="flex items-center gap-2 mb-5">
         <Select displayEmpty size="small" value={status} onChange={(e) => setStatus(e.target.value)} sx={{ ...selectSx, width: 140 }}>
-          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>Status</em></MenuItem>
+          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.status")}</em></MenuItem>
           {STATUSES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
         </Select>
         <Button
@@ -270,7 +274,7 @@ export const StudentLeft = () => {
             boxShadow: "none",
           }}
         >
-          Filter
+          {t("settings.office.studentLeft.filters.filter")}
         </Button>
         <button
           onClick={handleReset}
@@ -283,10 +287,10 @@ export const StudentLeft = () => {
       {/* Table toolbar */}
       <div className="flex justify-end gap-2 mb-3">
         <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-md bg-white text-gray-500 text-sm hover:bg-gray-50 transition-colors">
-          <MdTune size={15} /> Filters
+          <MdTune size={15} /> {t("settings.office.studentLeft.toolbar.filters")}
         </button>
         <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-md bg-white text-gray-500 text-sm hover:bg-gray-50 transition-colors">
-          <MdViewColumn size={15} /> Columns
+          <MdViewColumn size={15} /> {t("settings.office.studentLeft.toolbar.columns")}
         </button>
       </div>
 
@@ -298,7 +302,18 @@ export const StudentLeft = () => {
               <th className="px-3 py-3 w-8 text-left">
                 <Checkbox size="small" sx={{ color: "#d1d5db", "&.Mui-checked": { color: "#29b6f6" } }} />
               </th>
-              {["#", "Student", "Phone", "Course", "Group", "Teacher", "Status", "Reasons for removal", "Comment", "Staff"].map((h) => (
+              {[
+                t("settings.office.studentLeft.table.number"),
+                t("settings.office.studentLeft.table.student"),
+                t("settings.office.studentLeft.table.phone"),
+                t("settings.office.studentLeft.table.course"),
+                t("settings.office.studentLeft.table.group"),
+                t("settings.office.studentLeft.table.teacher"),
+                t("settings.office.studentLeft.table.status"),
+                t("settings.office.studentLeft.table.reasonsForRemoval"),
+                t("settings.office.studentLeft.table.comment"),
+                t("settings.office.studentLeft.table.staff"),
+              ].map((h) => (
                 <th key={h} className="text-left px-3 py-3 text-gray-600 font-semibold text-xs whitespace-nowrap">
                   {h}
                 </th>
@@ -308,7 +323,7 @@ export const StudentLeft = () => {
           <tbody>
             {pageData.length === 0 ? (
               <tr>
-                <td colSpan={11} className="text-center py-12 text-gray-400">No Data</td>
+                <td colSpan={11} className="text-center py-12 text-gray-400">{t("settings.office.studentLeft.noData")}</td>
               </tr>
             ) : (
               pageData.map((r, idx) => (

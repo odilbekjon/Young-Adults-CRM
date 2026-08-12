@@ -1,4 +1,7 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { ProtectedRoute } from "./routes/ProtectedRoute";
+import { PublicRoute } from "./routes/PublicRoute";
+import { NotFound } from "./pages/NotFound";
 import { Dashboard } from "./pages/Dashboard";
 import { Layout } from "./layouts/layout";
 import { Budget } from "./pages/Budget";
@@ -60,87 +63,95 @@ import { Tag } from "./pages/Settings/tags/pages/tag/tag";
 export const AppRouter = () => {
    return(
     <Routes>
-        <Route path="/" element={<LoginPage/>} />
+        {/* Public routes — redirect to /dashboard if already authenticated */}
+        <Route element={<PublicRoute />}>
+            <Route path="/login" element={<LoginPage/>} />
+        </Route>
         <Route path="/signup" element={<SignUp/>} />
-        <Route path="/dashboard" element={<Layout><Dashboard/></Layout>} />
-        <Route path="/leads" element={<Layout><Leads/></Layout>} />
-        <Route path="/teachers" element={<Layout><Teachers/></Layout>} />
-        <Route path="/teachers/:id" element={<Layout><TeacherProfile/></Layout>} />
-        <Route path="/groups" element={<Layout><Groups/></Layout>} />
-        <Route path="/groups/:id" element={<Layout><SingleGroup/></Layout>} />
-        <Route path="/students" element={<Layout><Students/></Layout>} />
-        <Route path="/students/:id" element={<Layout><StudentProfile/></Layout>} />
-        <Route path="/courses/:id" element={<Layout><SingleCourse/></Layout>} />
-        <Route path="/reminders" element={<Layout><Reminders/></Layout>} />
-        <Route path="/rating" element={<Layout><Rating/></Layout>} />
-        <Route path="/budget" element={<Layout><Budget/></Layout>} />
-        <Route path="/profile" element={<Layout><Profile/></Layout>} />
-        <Route path="/attendance-reports" element={<Layout><AttendanceReport/></Layout>} />
-        <Route path="/teacher-attendance-reports" element={<Layout><TeacherAttendanceReport/></Layout>} />
-        <Route path="/notifications" element={<Layout><Notifications/></Layout>} />
 
-        <Route path="/settings" element={<Layout><Settings/></Layout>} >
-            <Route path="sms" element={<SettingsSms/>}/>
-            <Route path="grade" element={<Grade/>}/>
-            <Route path="voip" element={<Voip/>}/>
+        {/* Protected routes — redirect to /login if not authenticated */}
+        <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Layout><Dashboard/></Layout>} />
+            <Route path="/leads" element={<Layout><Leads/></Layout>} />
+            <Route path="/teachers" element={<Layout><Teachers/></Layout>} />
+            <Route path="/teachers/:id" element={<Layout><TeacherProfile/></Layout>} />
+            <Route path="/groups" element={<Layout><Groups/></Layout>} />
+            <Route path="/groups/:id" element={<Layout><SingleGroup/></Layout>} />
+            <Route path="/students" element={<Layout><Students/></Layout>} />
+            <Route path="/students/:id" element={<Layout><StudentProfile/></Layout>} />
+            <Route path="/courses/:id" element={<Layout><SingleCourse/></Layout>} />
+            <Route path="/reminders" element={<Layout><Reminders/></Layout>} />
+            <Route path="/rating" element={<Layout><Rating/></Layout>} />
+            <Route path="/budget" element={<Layout><Budget/></Layout>} />
+            <Route path="/profile" element={<Layout><Profile/></Layout>} />
+            <Route path="/attendance-reports" element={<Layout><AttendanceReport/></Layout>} />
+            <Route path="/teacher-attendance-reports" element={<Layout><TeacherAttendanceReport/></Layout>} />
+            <Route path="/notifications" element={<Layout><Notifications/></Layout>} />
 
-            <Route path="ceo"             element={<CEO />} >
-                <Route path="general"      element={<General />} />
-                <Route path="roadmap"      element={<Roadmap />} />
-                <Route path="staff"        element={<Staff />} />
-                <Route path="billing"      element={<Billing />} />
-                <Route path="branches"      element={<Branches />} />
+            <Route path="/settings" element={<Layout><Settings/></Layout>} >
+                <Route path="sms" element={<SettingsSms/>}/>
+                <Route path="grade" element={<Grade/>}/>
+                <Route path="voip" element={<Voip/>}/>
+
+                <Route path="ceo"             element={<CEO />} >
+                    <Route path="general"      element={<General />} />
+                    <Route path="roadmap"      element={<Roadmap />} />
+                    <Route path="staff"        element={<Staff />} />
+                    <Route path="billing"      element={<Billing />} />
+                    <Route path="branches"      element={<Branches />} />
+                </Route>
+
+                <Route path="office"             element={<Office />} >
+                    <Route path="courses"      element={<Courses />} />
+                    <Route path="archive"      element={<Archive />} />
+                    <Route path="rooms"      element={<Rooms />} />
+                    <Route path="holidays"        element={<Holidays />} />
+                    <Route path="students-left-group"      element={<StudentLeft />} />
+                </Route>
+
+                <Route path="forms"             element={<Forms />} >
+                    <Route path="list"      element={<Lists />} />
+                    <Route path="create" element={<CreateForm />} />
+                    <Route path="edit/:id" element={<CreateForm />} />
+                </Route>
+
+                <Route path="blog"             element={<Blog />} >
+                    <Route path="whats-new"      element={<WhatsNew />} />
+                     <Route path="whats-new/add" element={<BlogAdd />} />
+                </Route>
+
+                <Route path="tags"             element={<Tags />} >
+                    <Route path="list"      element={<Tag />} />
+                </Route>
+
             </Route>
 
-            <Route path="office"             element={<Office />} >
-                <Route path="courses"      element={<Courses />} />
-                <Route path="archive"      element={<Archive />} />
-                <Route path="rooms"      element={<Rooms />} />
-                <Route path="holidays"        element={<Holidays />} />
-                <Route path="students-left-group"      element={<StudentLeft />} />
+            <Route path="/finance" element={<Layout><Finance/></Layout>}>
+                <Route path="all-payments"   element={<AllPayments />} />
+                <Route path="withdraw"       element={<Withdraw />} />
+                <Route path="total-expenses" element={<TotalExpenses />} />
+                <Route path="salaries"       element={<Salaries />} />
+                <Route path="debtors"        element={<Debtors />} />
             </Route>
 
-            <Route path="forms"             element={<Forms />} >
-                <Route path="list"      element={<Lists />} />
-                <Route path="create" element={<CreateForm />} />
-                <Route path="edit/:id" element={<CreateForm />} />
-            </Route>
+            <Route path="/reports" element={<Layout><Reports/></Layout>}>
+                <Route path="conversation"   element={<ConversionReports />} />
+                <Route path="attendance"     element={<AttendanceReports />} />
+                <Route path="leads"            element={<LeadsReports />} />
+                <Route path="students-left"    element={<StudentsLeftGroup />} />
 
-            <Route path="blog"             element={<Blog />} >
-                <Route path="whats-new"      element={<WhatsNew />} />
-                 <Route path="whats-new/add" element={<BlogAdd />} />
-            </Route>
+                <Route path="logs"             element={<Logs />} >
+                    <Route path="workly"           element={<Workly />} />
+                    <Route path="sms"              element={<Sms />} />
+                    <Route path="call"             element={<Call />} />
+                    <Route path="log"              element={<Log />} />
+                </Route>
 
-            <Route path="tags"             element={<Tags />} >
-                <Route path="list"      element={<Tag />} />
             </Route>
-
         </Route>
 
-        <Route path="/finance" element={<Layout><Finance/></Layout>}>
-            <Route path="all-payments"   element={<AllPayments />} />
-            <Route path="withdraw"       element={<Withdraw />} />
-            <Route path="total-expenses" element={<TotalExpenses />} />
-            <Route path="salaries"       element={<Salaries />} />
-            <Route path="debtors"        element={<Debtors />} />
-        </Route>
-
-        <Route path="/reports" element={<Layout><Reports/></Layout>}>
-            <Route path="conversation"   element={<ConversionReports />} />
-            <Route path="attendance"     element={<AttendanceReports />} />
-            <Route path="leads"            element={<LeadsReports />} />
-            <Route path="students-left"    element={<StudentsLeftGroup />} />
-
-            <Route path="logs"             element={<Logs />} >
-                <Route path="workly"           element={<Workly />} />
-                <Route path="sms"              element={<Sms />} />
-                <Route path="call"             element={<Call />} />
-                <Route path="log"              element={<Log />} />
-            </Route>
-
-        </Route>
-
-
+        <Route path="*" element={<NotFound />} />
     </Routes>
    )
 }

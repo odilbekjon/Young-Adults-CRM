@@ -34,7 +34,7 @@ import {
 } from "@mui/material";
 import { MdDelete, MdMail, MdEdit, MdPayment, MdAdd } from "react-icons/md";
 import { BsThreeDotsVertical, BsPersonPlus } from "react-icons/bs";
-import { TbAdjustmentsHorizontal, TbColumns3, TbCalendar } from "react-icons/tb";
+import { TbAdjustmentsHorizontal, TbColumns3 } from "react-icons/tb";
 import { HiChevronDown } from "react-icons/hi";
 import { IoClose, IoSearchOutline } from "react-icons/io5";
 import {
@@ -42,12 +42,12 @@ import {
   FiBookOpen, FiMapPin, FiCreditCard,
 } from "react-icons/fi";
 
-import { FlatStudent, buildFlatStudents, formatDate } from "../../constants/FlatStudents";
-import { TEACHERS_DATA } from "../../constants/Teachers";
+import { FlatStudent, mapApiStudentToFlat, formatDate } from "../../constants/FlatStudents";
 import { useNavigate } from "react-router-dom";
 
 import { AddStudent } from "../../components/AddStudent";
 import { AddPayment } from "../../components/AddPayment";
+import { useAllStudentsQuery } from "../../app/api/studentsApi";
 
 import { SendSmsModal } from "../../components/SendSmsModal";
 
@@ -57,34 +57,30 @@ type SortKey = keyof FlatStudent | "";
 
 interface Filters {
   search: string;
-  course: string;
-  status: "active" | "inactive" | "";
   teacher: string;
-  startDate: string;
-  endDate: string;
 }
 
 const ALL_COLUMNS = [
-  { key: "photo",    label: "Photo" },
-  { key: "name",     label: "Name" },
-  { key: "phone",    label: "Phone" },
-  { key: "groups",   label: "Groups" },
-  { key: "teachers", label: "Teachers" },
-  { key: "training", label: "Training dates" },
-  { key: "balance",  label: "Balance" },
-  { key: "comment",  label: "Comment" },
+  { key: "photo" },
+  { key: "name" },
+  { key: "phone" },
+  { key: "groups" },
+  { key: "teachers" },
+  { key: "training" },
+  { key: "balance" },
+  { key: "comment" },
 ];
 
 
 const CONTACT_ICONS = [
-  { icon: <FiPhone size={16} />,    label: "Phone" },
-  { icon: <FiKey size={16} />,      label: "Key" },
-  { icon: <FiUser size={16} />,     label: "Profile" },
-  { icon: <FiMail size={16} />,     label: "Email" },
-  { icon: <FiSend size={16} />,     label: "Telegram" },
-  { icon: <FiBookOpen size={16} />, label: "Education" },
-  { icon: <FiMapPin size={16} />,   label: "Location" },
-  { icon: <FiCreditCard size={16} />, label: "Card" },
+  { icon: <FiPhone size={16} />,    key: "phone" },
+  { icon: <FiKey size={16} />,      key: "key" },
+  { icon: <FiUser size={16} />,     key: "profile" },
+  { icon: <FiMail size={16} />,     key: "email" },
+  { icon: <FiSend size={16} />,     key: "telegram" },
+  { icon: <FiBookOpen size={16} />, key: "education" },
+  { icon: <FiMapPin size={16} />,   key: "location" },
+  { icon: <FiCreditCard size={16} />, key: "card" },
 ];
 
 /* ─── STYLES ─────────────────────────────────────────── */
@@ -194,6 +190,7 @@ const AddToGroupModal = ({
   groups: { id: string; name: string }[];
   selectedCount: number;
 }) => {
+  const { t } = useTranslation();
   const [groupId, setGroupId] = useState("");
 
   const handleSubmit = () => {
@@ -218,11 +215,11 @@ const AddToGroupModal = ({
       >
         <Box>
           <Typography fontWeight={600} fontSize={16} color="#111827">
-            Add student to group
+            {t("students.addToGroup.title")}
           </Typography>
           {selectedCount > 0 && (
             <Typography fontSize={12} color="#6b7280" mt={0.3}>
-              {selectedCount} student{selectedCount > 1 ? "s" : ""} selected
+              {t("students.addToGroup.studentsSelected", { count: selectedCount })}
             </Typography>
           )}
         </Box>
@@ -253,7 +250,7 @@ const AddToGroupModal = ({
           }}
         >
           <MenuItem value="" disabled sx={{ fontSize: 14, color: "#9ca3af" }}>
-            Select group
+            {t("students.addToGroup.selectGroup")}
           </MenuItem>
           {groups.map((g) => (
             <MenuItem key={g.id} value={g.id} sx={{ fontSize: 14 }}>
@@ -278,7 +275,7 @@ const AddToGroupModal = ({
               textTransform: "none",
             }}
           >
-            Add student to group
+            {t("students.addToGroup.submit")}
           </Button>
         </Box>
       </Box>
@@ -295,6 +292,7 @@ const EditStudentDrawer = ({
   onClose: () => void;
   onSave: (uid: string, data: { name: string; phone: string }) => void;
 }) => {
+  const { t } = useTranslation();
   const [name,   setName]   = useState("");
   const [phone,  setPhone]  = useState("");
   const [dob,    setDob]    = useState("");
@@ -310,13 +308,13 @@ const EditStudentDrawer = ({
         direction="row" justifyContent="space-between" alignItems="center"
         sx={{ px: 3, py: 2.5, borderBottom: "1px solid #eaecf0", bgcolor: "white" }}
       >
-        <Typography fontWeight={700} fontSize={17}>Edit Student</Typography>
+        <Typography fontWeight={700} fontSize={17}>{t("students.editDrawer.title")}</Typography>
         <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}><IoClose size={20} /></IconButton>
       </Stack>
 
       <Box sx={{ px: 3, py: 2.5, overflowY: "auto", flex: 1, bgcolor: "#f8f9fa" }}>
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Phone</Typography>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>{t("students.editDrawer.phone")}</Typography>
           <Stack direction="row" gap={1}>
             <Box sx={{ border: "1px solid #d0d5dd", borderRadius: "6px", px: 1.5, display: "flex", alignItems: "center", bgcolor: "white", fontSize: 13, color: "#374151", whiteSpace: "nowrap", minWidth: 60, justifyContent: "center" }}>
               +998
@@ -326,22 +324,25 @@ const EditStudentDrawer = ({
         </Box>
 
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Name</Typography>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>{t("students.editDrawer.name")}</Typography>
           <TextField fullWidth size="small" value={name} onChange={(e) => setName(e.target.value)} sx={inputSx} />
         </Box>
 
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Date of birth</Typography>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>{t("students.editDrawer.dob")}</Typography>
           <TextField fullWidth size="small" type="date" value={dob} onChange={(e) => setDob(e.target.value)} InputLabelProps={{ shrink: true }} sx={inputSx} />
         </Box>
 
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>Gender</Typography>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>{t("students.editDrawer.gender")}</Typography>
           <RadioGroup row value={gender} onChange={(e) => setGender(e.target.value)} sx={{ gap: 3 }}>
-            {["Male", "Female"].map((g) => (
-              <FormControlLabel key={g} value={g.toLowerCase()}
+            {[
+              { value: "male", label: t("students.editDrawer.male") },
+              { value: "female", label: t("students.editDrawer.female") },
+            ].map((g) => (
+              <FormControlLabel key={g.value} value={g.value}
                 control={<Radio size="small" sx={{ color: "#d0d5dd", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
-                label={<Typography fontSize={13} color="#374151">{g}</Typography>}
+                label={<Typography fontSize={13} color="#374151">{g.label}</Typography>}
                 sx={{ m: 0, gap: 0.5 }}
               />
             ))}
@@ -349,10 +350,10 @@ const EditStudentDrawer = ({
         </Box>
 
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={1}>Additional contacts</Typography>
+          <Typography fontSize={13} fontWeight={500} color="#344054" mb={1}>{t("students.editDrawer.additionalContacts")}</Typography>
           <Stack direction="row" gap={1} flexWrap="wrap">
             {CONTACT_ICONS.map((item, i) => (
-              <Tooltip key={i} title={item.label} arrow>
+              <Tooltip key={i} title={t(`students.contacts.${item.key}`)} arrow>
                 <IconButton size="small" sx={{ width: 40, height: 40, border: "1.5px solid #c5d4e3", borderRadius: "50%", color: "#5c7fa3", bgcolor: "white" }}>
                   {item.icon}
                 </IconButton>
@@ -362,8 +363,8 @@ const EditStudentDrawer = ({
         </Box>
 
         <Stack alignItems="flex-end" gap={0.5} mb={3}>
-          <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>+ Add to the group</Button>
-          <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>+ Set password</Button>
+          <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>{t("students.editDrawer.addToGroup")}</Button>
+          <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>{t("students.editDrawer.setPassword")}</Button>
         </Stack>
 
         <Button
@@ -371,7 +372,7 @@ const EditStudentDrawer = ({
           onClick={() => { if (student) onSave(student.uid, { name, phone }); onClose(); }}
           sx={{ borderRadius: "20px", py: 1.2, fontWeight: 600, fontSize: 14, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" }, boxShadow: "none", textTransform: "none" }}
         >
-          Submit
+          {t("students.editDrawer.submit")}
         </Button>
       </Box>
     </Drawer>
@@ -437,13 +438,20 @@ const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
 
 /* ─── MAIN COMPONENT ─────────────────────────────────── */
 export const Students = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const startDateRef = useRef<HTMLInputElement>(null);
-  const endDateRef   = useRef<HTMLInputElement>(null);
   const [sendSmsOpen, setSendSmsOpen] = useState(false);
 
-  const [students, setStudents] = useState<FlatStudent[]>(() => buildFlatStudents());
+  const [page, setPage] = useState(1);
+  const limit = 20;
+  const { data: studentsData, isLoading: studentsLoading } = useAllStudentsQuery({ page, limit });
+
+  const [students, setStudents] = useState<FlatStudent[]>([]);
+
+  useEffect(() => {
+    if (studentsData) setStudents(studentsData.data.data.map(mapApiStudentToFlat));
+  }, [studentsData]);
 
   const [selected,          setSelected]          = useState<string[]>([]);
   const [sortKey,           setSortKey]           = useState<SortKey>("");
@@ -459,32 +467,26 @@ export const Students = () => {
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
 
-  const [filters, setFilters] = useState<Filters>({
-    search: "", course: "", status: "", teacher: "", startDate: "", endDate: "",
-  });
+  const [filters, setFilters] = useState<Filters>({ search: "", teacher: "" });
 
   const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) =>
     setFilters((p) => ({ ...p, [key]: val }));
 
-  const clearAll = () =>
-    setFilters({ search: "", course: "", status: "", teacher: "", startDate: "", endDate: "" });
+  const clearAll = () => setFilters({ search: "", teacher: "" });
 
   const hasFilters = Object.values(filters).some(Boolean);
 
-  const COURSES = useMemo(
-    () => [...new Set(TEACHERS_DATA.flatMap((t) => t.groups.map((g) => g.course)))],
-    []
-  );
-  const TEACHERS_LIST = useMemo(
-    () => [...new Set(TEACHERS_DATA.map((t) => t.fullName))],
-    []
-  );
-  const ALL_GROUPS = useMemo(
-    () => TEACHERS_DATA.flatMap((t) =>
-      t.groups.map((g) => ({ id: String(g.id), name: g.name }))
-    ),
-    []
-  );
+  const TEACHERS_LIST = useMemo(() => {
+    const names = new Set<string>();
+    studentsData?.data.data.forEach((s) => s.teachers.forEach((tch) => names.add(tch.name)));
+    return Array.from(names);
+  }, [studentsData]);
+
+  const ALL_GROUPS = useMemo(() => {
+    const groups = new Map<string, string>();
+    studentsData?.data.data.forEach((s) => s.groups.forEach((g) => groups.set(g.id, g.name)));
+    return Array.from(groups, ([id, name]) => ({ id, name }));
+  }, [studentsData]);
 
   const filtered = useMemo(() => {
     return students
@@ -492,11 +494,7 @@ export const Students = () => {
         const search = filters.search.toLowerCase();
         return (
           (!search || s.name.toLowerCase().includes(search) || s.phone.includes(search)) &&
-          (!filters.course  || s.course  === filters.course) &&
-          (!filters.status  || (filters.status === "active" ? s.active : !s.active)) &&
-          (!filters.teacher || s.teacher === filters.teacher) &&
-          (!filters.startDate || (s.startDate && s.startDate >= filters.startDate)) &&
-          (!filters.endDate   || (s.endDate   && s.endDate   <= filters.endDate))
+          (!filters.teacher || s.teacher === filters.teacher)
         );
       })
       .sort((a, b) => {
@@ -538,6 +536,17 @@ export const Students = () => {
 
   const col = (key: string) => visibleCols.includes(key);
 
+  const columnLabels: Record<string, string> = {
+    photo: t("students.table.photo"),
+    name: t("students.table.name"),
+    phone: t("students.table.phone"),
+    groups: t("students.table.groups"),
+    teachers: t("students.table.teachers"),
+    training: t("students.table.trainingDates"),
+    balance: t("students.table.balance"),
+    comment: t("students.table.comment"),
+  };
+
   const badgeColors: Record<string, { bg: string; color: string }> = {
     blue:  { bg: "#dbeafe", color: "#1d4ed8" },
     green: { bg: "#dcfce7", color: "#15803d" },
@@ -551,8 +560,8 @@ export const Students = () => {
       {/* HEADER */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
         <Stack direction="row" alignItems="baseline" gap={1.5}>
-          <Typography variant="h5" fontWeight={700} fontSize={26} color="#111827">Students</Typography>
-          <Typography fontSize={14} color="#6b7280">Quantity — {filtered.length}</Typography>
+          <Typography variant="h5" fontWeight={700} fontSize={26} color="#111827">{t("students.header.title")}</Typography>
+          <Typography fontSize={14} color="#6b7280">{t("students.header.quantity", { count: studentsData?.data.meta.total ?? filtered.length })}</Typography>
         </Stack>
         <Button
           variant="contained"
@@ -563,7 +572,7 @@ export const Students = () => {
             textTransform: "uppercase", "&:hover": { bgcolor: "#1e3340" }, boxShadow: "none",
           }}
         >
-          Add New
+          {t("students.header.addNew")}
         </Button>
       </Stack>
 
@@ -582,7 +591,7 @@ export const Students = () => {
         >
           <IoSearchOutline size={15} color="#9ca3af" />
           <input
-            placeholder="Search by name or phone"
+            placeholder={t("students.filters.searchPlaceholder")}
             value={filters.search}
             onChange={(e) => setFilter("search", e.target.value)}
             style={{ border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", width: "100%" }}
@@ -599,90 +608,17 @@ export const Students = () => {
 
 
         <DropdownFilter
-          label="By Courses" value={filters.course}
-          options={COURSES.map((c) => ({ value: c, label: c }))}
-          onChange={(v) => setFilter("course", v)} onClear={() => setFilter("course", "")}
-        />
-        <DropdownFilter
-          label="Status" value={filters.status}
-          options={[{ value: "active", label: "🟢 Active" }, { value: "inactive", label: "🔴 Inactive" }]}
-          onChange={(v) => setFilter("status", v as "active" | "inactive")}
-          onClear={() => setFilter("status", "")}
-        />
-        <DropdownFilter
-          label="By Teacher" value={filters.teacher}
-          options={TEACHERS_LIST.map((t) => ({ value: t, label: t }))}
+          label={t("students.filters.byTeacher")} value={filters.teacher}
+          options={TEACHERS_LIST.map((tch) => ({ value: tch, label: tch }))}
           onChange={(v) => setFilter("teacher", v)} onClear={() => setFilter("teacher", "")}
         />
-        <DropdownFilter
-          label="Financial" value=""
-          options={[{ value: "paid", label: "Paid" }, { value: "debt", label: "In debt" }]}
-          onChange={() => {}} onClear={() => {}}
-        />
-        <DropdownFilter
-          label="By Tags" value=""
-          options={[{ value: "new", label: "New" }, { value: "vip", label: "VIP" }]}
-          onChange={() => {}} onClear={() => {}}
-        />
-
-        {/* Start date */}
-        <Button
-          variant="outlined" size="small"
-          startIcon={<TbCalendar size={13} />}
-          onClick={() => startDateRef.current?.showPicker()}
-          sx={{
-            borderRadius: "6px",
-            borderColor: filters.startDate ? "#5c7fa3" : "#d0d5dd",
-            color: filters.startDate ? "#5c7fa3" : "#667085",
-            fontSize: 13, fontWeight: 400, px: 1.5,
-            textTransform: "none", position: "relative",
-          }}
-        >
-          {filters.startDate ? (
-            <Stack direction="row" alignItems="center" gap={0.5}>
-              <span>{formatDate(filters.startDate)}</span>
-              <IoClose size={13} onClick={(e) => { e.stopPropagation(); setFilter("startDate", ""); }} />
-            </Stack>
-          ) : "Start date"}
-          <input
-            ref={startDateRef} type="date" value={filters.startDate}
-            onChange={(e) => setFilter("startDate", e.target.value)}
-            style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
-          />
-        </Button>
-
-        {/* End date */}
-        <Button
-          variant="outlined" size="small"
-          startIcon={<TbCalendar size={13} />}
-          onClick={() => endDateRef.current?.showPicker()}
-          sx={{
-            borderRadius: "6px",
-            borderColor: filters.endDate ? "#5c7fa3" : "#d0d5dd",
-            color: filters.endDate ? "#5c7fa3" : "#667085",
-            fontSize: 13, fontWeight: 400, px: 1.5,
-            textTransform: "none", position: "relative",
-          }}
-        >
-          {filters.endDate ? (
-            <Stack direction="row" alignItems="center" gap={0.5}>
-              <span>{formatDate(filters.endDate)}</span>
-              <IoClose size={13} onClick={(e) => { e.stopPropagation(); setFilter("endDate", ""); }} />
-            </Stack>
-          ) : "End date"}
-          <input
-            ref={endDateRef} type="date" value={filters.endDate}
-            onChange={(e) => setFilter("endDate", e.target.value)}
-            style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
-          />
-        </Button>
 
         {hasFilters && (
           <Button
             size="small" startIcon={<IoClose />} onClick={clearAll} variant="outlined"
             sx={{ borderRadius: "6px", borderColor: "#d0d5dd", color: "#667085", fontSize: 12, px: 1.5, textTransform: "none" }}
           >
-            Clear all
+            {t("students.filters.clearAll")}
           </Button>
         )}
       </Stack>
@@ -691,21 +627,21 @@ export const Students = () => {
       <Stack direction="row" justifyContent="flex-end" alignItems="center" mb={1.5} gap={1}>
         {selected.length > 0 && (
           <Typography fontSize={13} color="text.secondary" sx={{ mr: "auto" }}>
-            {selected.length} selected
+            {t("students.table.selectedCount", { count: selected.length })}
           </Typography>
         )}
         <Button
           size="small" startIcon={<TbAdjustmentsHorizontal size={14} />} variant="outlined"
           sx={{ borderRadius: "6px", borderColor: "#d0d5dd", color: "#667085", fontSize: 12, px: 1.5, textTransform: "none" }}
         >
-          Filters
+          {t("students.table.filters")}
         </Button>
         <Button
           size="small" startIcon={<TbColumns3 size={14} />} variant="outlined"
           onClick={(e) => setColumnsAnchor(e.currentTarget)}
           sx={{ borderRadius: "6px", borderColor: "#d0d5dd", color: "#667085", fontSize: 12, px: 1.5, textTransform: "none" }}
         >
-          Columns
+          {t("students.table.columns")}
         </Button>
         <Menu
           anchorEl={columnsAnchor} open={Boolean(columnsAnchor)}
@@ -719,7 +655,7 @@ export const Students = () => {
               sx={{ fontSize: 13, gap: 1 }}
             >
               <Checkbox size="small" checked={visibleCols.includes(c.key)} sx={{ p: 0 }} />
-              {c.label}
+              {columnLabels[c.key]}
             </MenuItem>
           ))}
         </Menu>
@@ -737,18 +673,18 @@ export const Students = () => {
                 <TableCell sx={{ width: 32, pl: 0 }}>
                   <Checkbox size="small" checked={allSelected} onChange={toggleAll} sx={{ p: 0 }} />
                 </TableCell>
-                {col("photo")    && <TableCell>Photo</TableCell>}
-                {col("name")     && <TableCell><TableSortLabel active={sortKey === "name"} direction={sortDir} onClick={() => handleSort("name")}>Name</TableSortLabel></TableCell>}
-                {col("phone")    && <TableCell>Phone</TableCell>}
-                {col("groups")   && <TableCell>Groups</TableCell>}
-                {col("teachers") && <TableCell>Teachers</TableCell>}
-                {col("training") && <TableCell>Training dates</TableCell>}
-                {col("balance")  && <TableCell>Balance</TableCell>}
-                {col("comment")  && <TableCell>Comment</TableCell>}
+                {col("photo")    && <TableCell>{t("students.table.photo")}</TableCell>}
+                {col("name")     && <TableCell><TableSortLabel active={sortKey === "name"} direction={sortDir} onClick={() => handleSort("name")}>{t("students.table.name")}</TableSortLabel></TableCell>}
+                {col("phone")    && <TableCell>{t("students.table.phone")}</TableCell>}
+                {col("groups")   && <TableCell>{t("students.table.groups")}</TableCell>}
+                {col("teachers") && <TableCell>{t("students.table.teachers")}</TableCell>}
+                {col("training") && <TableCell>{t("students.table.trainingDates")}</TableCell>}
+                {col("balance")  && <TableCell>{t("students.table.balance")}</TableCell>}
+                {col("comment")  && <TableCell>{t("students.table.comment")}</TableCell>}
                 <TableCell align="right">
                   <Stack direction="row" justifyContent="flex-end" gap={0.5}>
                     {/* Add to group */}
-                    <Tooltip title="Add to group">
+                    <Tooltip title={t("students.table.addToGroup")}>
                       <IconButton
                         size="small"
                         sx={{
@@ -759,17 +695,17 @@ export const Students = () => {
                       >
                         <BsPersonPlus size={15} />
                       </IconButton>
-                    </Tooltip>  
+                    </Tooltip>
 
                     {/* Mail */}
-                    <Tooltip title="Mail selected">
+                    <Tooltip title={t("students.table.mailSelected")}>
                       <IconButton size="small" sx={{ color: "#9ca3af" }} onClick={() => { if (selected.length > 0) setSendSmsOpen(true); }}>
                         <MdMail />
                       </IconButton>
                     </Tooltip>
 
                     {/* Delete selected */}
-                    <Tooltip title="Delete selected">
+                    <Tooltip title={t("students.table.deleteSelected")}>
                       <IconButton
                         size="small" sx={{ color: "#9ca3af" }}
                         onClick={() => {
@@ -863,15 +799,15 @@ export const Students = () => {
                         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
                       >
                         <MenuItem onClick={() => { setActionMenu(null); setEditDrawerOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "#374151" }}>
-                          <MdEdit size={16} color="#6b7280" /> Edit Student
+                          <MdEdit size={16} color="#6b7280" /> {t("students.actions.editStudent")}
                         </MenuItem>
                         <Divider sx={{ my: 0.5 }} />
                         <MenuItem onClick={() => { setActionMenu(null); setAddPaymentOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "#16a34a" }}>
-                          <MdPayment size={16} color="#16a34a" /> Add payment
+                          <MdPayment size={16} color="#16a34a" /> {t("students.actions.addPayment")}
                         </MenuItem>
                         <Divider sx={{ my: 0.5 }} />
                         <MenuItem onClick={() => { setActionMenu(null); setDeleteUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "#ef4444" }}>
-                          <MdDelete size={16} /> Remove
+                          <MdDelete size={16} /> {t("students.actions.remove")}
                         </MenuItem>
                       </Menu>
                     </TableCell>
@@ -879,10 +815,17 @@ export const Students = () => {
                 );
               })}
 
-              {filtered.length === 0 && (
+              {!studentsLoading && filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={12} align="center" sx={{ py: 6, color: "#9ca3af" }}>
-                    No students found
+                    {t("students.table.noStudentsFound")}
+                  </TableCell>
+                </TableRow>
+              )}
+              {studentsLoading && (
+                <TableRow>
+                  <TableCell colSpan={12} align="center" sx={{ py: 6, color: "#9ca3af" }}>
+                    {t("students.table.loading")}
                   </TableCell>
                 </TableRow>
               )}
@@ -893,15 +836,31 @@ export const Students = () => {
         {/* PAGINATION */}
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 3, py: 1.5, borderTop: "1px solid #f3f4f6" }}>
           <Typography fontSize={13} color="text.secondary">
-            1–{Math.min(filtered.length, 20)} of {filtered.length}
+            {studentsData
+              ? t("students.pagination.range", {
+                  from: studentsData.data.meta.total === 0 ? 0 : (studentsData.data.meta.page - 1) * studentsData.data.meta.limit + 1,
+                  to: Math.min(studentsData.data.meta.page * studentsData.data.meta.limit, studentsData.data.meta.total),
+                  total: studentsData.data.meta.total,
+                })
+              : t("students.pagination.range", { from: 0, to: 0, total: 0 })}
           </Typography>
           <Stack direction="row" gap={0.5}>
-            {["<", ">"].map((lbl) => (
-              <Button key={lbl} size="small" variant="outlined"
-                sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: "6px", fontSize: 13 }}>
-                {lbl}
-              </Button>
-            ))}
+            <Button
+              size="small" variant="outlined"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: "6px", fontSize: 13 }}
+            >
+              {"<"}
+            </Button>
+            <Button
+              size="small" variant="outlined"
+              disabled={!studentsData || page >= studentsData.data.meta.totalPages}
+              onClick={() => setPage((p) => (studentsData && p < studentsData.data.meta.totalPages ? p + 1 : p))}
+              sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: "6px", fontSize: 13 }}
+            >
+              {">"}
+            </Button>
           </Stack>
         </Stack>
       </Paper>
@@ -936,13 +895,13 @@ export const Students = () => {
 
       {/* Delete dialog */}
       <Dialog open={Boolean(deleteUid)} onClose={() => setDeleteUid(null)} PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ fontWeight: 700 }}>Delete Student</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>{t("students.deleteDialog.title")}</DialogTitle>
         <DialogContent>
-          <Typography fontSize={14} color="text.secondary">Are you sure you want to remove this student?</Typography>
+          <Typography fontSize={14} color="text.secondary">{t("students.deleteDialog.message")}</Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteUid(null)} sx={{ color: "#667085" }}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteConfirm} sx={{ borderRadius: 2 }}>Delete</Button>
+          <Button onClick={() => setDeleteUid(null)} sx={{ color: "#667085" }}>{t("students.deleteDialog.cancel")}</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteConfirm} sx={{ borderRadius: 2 }}>{t("students.deleteDialog.confirm")}</Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -34,15 +34,26 @@
     "setPassword": "+ Parol o'rnatish",
     "passwordPlaceholder": "Parol",
     "submit": "Yuborish",
+    "saving": "Saqlanmoqda...",
+    "removeField": "Olib tashlash",
+    "toast": {
+      "created": "O'quvchi muvaffaqiyatli qo'shildi"
+    },
+    "errors": {
+      "name": "Ism kiritilishi shart",
+      "password": "Parol kiritilishi shart",
+      "contact": "Telefon yoki email kiritilishi shart",
+      "save": "O'quvchini saqlashda xatolik yuz berdi"
+    },
     "additional": {
-      "phone": "Qo'shimcha telefon",
-      "key": "Kirish kaliti",
-      "contact": "Qo'shimcha kontakt",
+      "phone": "Ota-ona telefon raqami",
+      "key": "Pasport ma'lumotlari",
+      "contact": "Ota yoki onasining ismi",
       "email": "Email",
       "telegram": "Telegram username",
-      "education": "Ta'lim",
-      "location": "Manzil",
-      "card": "Karta raqami"
+      "education": "O'qiyotgan maktabi",
+      "location": "Yashash manzili",
+      "card": "Instagram username"
     }
   },
   "addPayment": {
@@ -177,6 +188,10 @@
     "loadError": "Dashboard ma'lumotlarini yuklab bo'lmadi."
   },
   "students": {
+    "toast": {
+      "updated": "O'quvchi muvaffaqiyatli yangilandi",
+      "deleted": "O'quvchi muvaffaqiyatli o'chirildi"
+    },
     "header": {
       "title": "O'quvchilar",
       "quantity": "Soni — {{count}}",
@@ -232,7 +247,9 @@
       "additionalContacts": "Qo'shimcha aloqalar",
       "addToGroup": "+ Guruhga qo'shish",
       "setPassword": "+ Parol o'rnatish",
-      "submit": "Yuborish"
+      "submit": "Yuborish",
+      "saving": "Saqlanmoqda...",
+      "error": "O'quvchini saqlashda xatolik yuz berdi"
     },
     "contacts": {
       "phone": "Telefon",
@@ -248,7 +265,8 @@
       "title": "O'quvchini o'chirish",
       "message": "Ushbu o'quvchini o'chirishni xohlaysizmi?",
       "cancel": "Bekor qilish",
-      "confirm": "O'chirish"
+      "confirm": "O'chirish",
+      "error": "O'quvchini o'chirishda xatolik yuz berdi"
     }
   },
   "teachers": {
@@ -390,14 +408,39 @@
       "lessonStartTime": "Dars boshlanish vaqti",
       "startDate": "Guruh boshlanish sanasi",
       "endDate": "Guruh tugash sanasi",
+      "weekOfStudy": "O'qish haftasi",
+      "trainingStart": "Dars boshlanish sanasi",
+      "trainingEnd": "Dars tugallanish sanasi",
+      "students": "Talabalar",
       "tags": "Teglar",
-      "status": "Holat"
+      "status": "Holat",
+      "errors": {
+        "name": "Guruh nomi kiritilishi shart",
+        "course": "Kurs tanlanishi shart",
+        "save": "Guruhni saqlab bo'lmadi"
+      }
+    },
+    "toast": {
+      "created": "Guruh muvaffaqiyatli qo'shildi",
+      "updated": "Guruh muvaffaqiyatli yangilandi",
+      "deleted": "Guruh muvaffaqiyatli o'chirildi"
+    },
+    "loadError": "Guruhlarni yuklab bo'lmadi.",
+    "weekdays": {
+      "monday": "Dush",
+      "tuesday": "Sesh",
+      "wednesday": "Chor",
+      "thursday": "Pay",
+      "friday": "Jum",
+      "saturday": "Shan",
+      "sunday": "Yak"
     },
     "deleteDialog": {
       "title": "Guruhni o'chirish",
       "body": "Ushbu guruhni o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
       "cancel": "Bekor qilish",
-      "confirm": "O'chirish"
+      "confirm": "O'chirish",
+      "error": "Guruhni o'chirib bo'lmadi. Agar guruhda talabalar/o'qituvchilar yoki davomat mavjud bo'lsa, o'chirish rad etiladi."
     }
   },
   "finance": {
@@ -782,7 +825,8 @@
           "jul": "Iyul", "aug": "Avg", "sep": "Sen", "oct": "Okt", "nov": "Noy", "dec": "Dek"
         },
         "was": "Keldi",
-        "notPresent": "Yo'q"
+        "notPresent": "Yo'q",
+        "saveError": "Davomatni saqlab bo'lmadi. Qaytadan urinib ko'ring."
       },
       "grade": {
         "tabLabel": "Baho",
@@ -872,7 +916,11 @@
       "noStudentsFound": "O'quvchilar topilmadi",
       "startDate": "Boshlanish sanasi",
       "submit": "O'quvchi qo'shish",
-      "cancel": "Bekor qilish"
+      "cancel": "Bekor qilish",
+      "toast": {
+        "success": "O'quvchi guruhga qo'shildi",
+        "error": "O'quvchini qo'shib bo'lmadi. Qaytadan urinib ko'ring."
+      }
     },
     "deleteDropdown": {
       "title": "Guruhni o'chirish",
@@ -912,7 +960,11 @@
       "title": "Ko'chirish",
       "selectGroup": "Guruhni tanlang",
       "move": "Ko'chirish",
-      "cancel": "Bekor qilish"
+      "cancel": "Bekor qilish",
+      "toast": {
+        "success": "O'quvchi yangi guruhga ko'chirildi",
+        "error": "O'quvchini ko'chirib bo'lmadi. Qaytadan urinib ko'ring."
+      }
     },
     "reminderDrawer": {
       "title": "Yangi eslatma qo'shish",
@@ -938,7 +990,12 @@
       "currentGroup": "Joriy guruh",
       "allGroups": "Barcha guruhlar",
       "yes": "Ha",
-      "cancel": "Bekor qilish"
+      "cancel": "Bekor qilish",
+      "toast": {
+        "removed": "O'quvchi guruhdan chiqarildi",
+        "deleted": "O'quvchi o'chirildi",
+        "error": "O'quvchini chiqarib bo'lmadi. Qaytadan urinib ko'ring."
+      }
     },
     "studentActionsMenu": {
       "moveToBranchModal": {
@@ -1082,6 +1139,11 @@
           "title": "Filialni o'chirish",
           "message": "\"{{name}}\" filialini o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
           "error": "Filialni o'chirib bo'lmadi. Qaytadan urinib ko'ring."
+        },
+        "toast": {
+          "created": "Filial muvaffaqiyatli qo'shildi",
+          "updated": "Filial muvaffaqiyatli yangilandi",
+          "deleted": "Filial muvaffaqiyatli o'chirildi"
         }
       },
       "roadmap": {
@@ -1391,6 +1453,11 @@
           "title": "Kursni o'chirish",
           "message": "\"{{name}}\" kursini o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
           "error": "Kursni o'chirib bo'lmadi. Qaytadan urinib ko'ring."
+        },
+        "toast": {
+          "created": "Kurs muvaffaqiyatli qo'shildi",
+          "updated": "Kurs muvaffaqiyatli yangilandi",
+          "deleted": "Kurs muvaffaqiyatli o'chirildi"
         }
       },
       "holidays": {
@@ -1433,6 +1500,11 @@
           "title": "Xonani o'chirish",
           "message": "\"{{name}}\" xonasini o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
           "error": "Xonani o'chirib bo'lmadi. Qaytadan urinib ko'ring."
+        },
+        "toast": {
+          "created": "Xona muvaffaqiyatli qo'shildi",
+          "updated": "Xona muvaffaqiyatli yangilandi",
+          "deleted": "Xona muvaffaqiyatli o'chirildi"
         }
       },
       "studentLeft": {

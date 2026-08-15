@@ -2,7 +2,7 @@
 // Branch filtering useBranch() orqali avtomatik ishlaydi
 
 import {
-  Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
+  Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
   Divider, IconButton, Menu, MenuItem, Paper, Stack, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
   TextField, Tooltip, Typography, Drawer,
@@ -19,17 +19,45 @@ import * as XLSX                         from "xlsx";
 import { useNavigate }                   from "react-router-dom";
 import { useTranslation }                from "react-i18next";
 
-import { TEACHERS_DATA, type Group }     from "../../constants/Teachers";
-import { useBranch }                     from "../../Context/BranchContext";
+import {
+  useAllGroupsQuery, useCreateGroupMutation, useUpdateGroupMutation, useDeleteGroupMutation,
+} from "../../app/api/groupsApi";
+import type { Group, GroupDay } from "../../app/api/groupsApi/types";
+import { useAllCoursesQuery } from "../../app/api/coursesApi";
+import { useAllRoomsQuery } from "../../app/api/roomsApi";
+import { useAllBranchesQuery } from "../../app/api/branchesApi";
+import { useAllStudentsQuery } from "../../app/api/studentsApi";
+import { useBranch } from "../../Context/BranchContext";
+import { useToast } from "../../Context/ToastContext";
 
 /* ─── types ─────────────────────────────────────────────── */
-type StatusType = "Active" | "Archive" | "Completed";
-type SortKey    = keyof Group | "";
-type SortDir    = "asc" | "desc";
-type GroupRow   = Group & { status: StatusType; tags: string[] };
+type SortKey = keyof GroupRow | "";
+type SortDir = "asc" | "desc";
+
+interface GroupRow {
+  id: string;
+  name: string;
+  courseId: string;
+  course: string;
+  roomId: string;
+  room: string;
+  teacherNames: string[];
+  teacher: string;
+  days: string;
+  dayList: GroupDay[];
+  lessonStartTime: string;
+  weekOfStudy: string;
+  startDate: string;
+  endDate: string;
+  studentCount: number;
+  studentIds: string[];
+  status: string;
+  tags: string[];
+  createdAt: string;
+}
 
 interface Filters {
-  status: StatusType | "";
+  status: string;
   teacher: string;
   course: string;
   days: string;
@@ -38,8 +66,20 @@ interface Filters {
   endDate: string;
 }
 
+interface FormState {
+  name: string;
+  courseId: string;
+  roomId: string;
+  days: GroupDay[];
+  weekOfStudy: string;
+  trainingStart: string;
+  trainingEnd: string;
+  studentIds: string[];
+}
+
 /* ─── static ─────────────────────────────────────────────── */
 const TAGS = ["New", "Popular", "VIP", "Trial"];
+const WEEKDAY_VALUES: GroupDay[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
 const ALL_COLUMNS = [
   { key: "course",       label: "Course" },
@@ -52,12 +92,9 @@ const ALL_COLUMNS = [
   { key: "studentCount", label: "Students" },
 ];
 
-const EMPTY_FORM: GroupRow = {
-  id: 0, name: "", course: "", teacher: "", teacherId: 0,
-  days: "", lessonStartTime: "", room: "", studentCount: 0,
-  roomCapacity: 20, status: "Active", tags: [],
-  startDate: "", endDate: "", badge: "", badgeColor: "blue",
-  schedule: "", students: [],
+const EMPTY_FORM: FormState = {
+  name: "", courseId: "", roomId: "", days: [],
+  weekOfStudy: "", trainingStart: "", trainingEnd: "", studentIds: [],
 };
 
 /* ─── shared input sx ────────────────────────────────────── */
@@ -73,50 +110,51 @@ const inputSx = {
 };
 
 /* ─── helpers ────────────────────────────────────────────── */
-const calcWeekOfStudy = (startDate: string) => {
-  if (!startDate) return { months: "—", weeks: "" };
-  const diffMs = Date.now() - new Date(startDate).getTime();
-  if (diffMs < 0) return { months: "0 months", weeks: "0 weeks" };
-  const totalDays = Math.floor(diffMs / 86_400_000);
-  return {
-    months: `${Math.floor(totalDays / 30)} months`,
-    weeks:  `${Math.floor((totalDays % 30) / 7)} weeks`,
-  };
-};
-
 const formatDate = (d: string) => {
   if (!d) return "—";
   const [y, m, day] = d.split("-");
+  if (!y || !m || !day) return d;
   return `${day}.${m}.${y}`;
-};
-
-const deriveStatus = (g: Group): StatusType => {
-  const today = new Date().toISOString().slice(0, 10);
-  if (g.endDate && g.endDate < today) return "Completed";
-  if (g.id % 4 === 0) return "Archive";
-  return "Active";
 };
 
 const deriveTags = (g: Group): string[] => {
   const tags: string[] = [];
-  if (g.badgeColor === "amber" || /new/i.test(g.badge)) tags.push("New");
-  if (g.badgeColor === "green" || g.studentCount >= 8)  tags.push("Popular");
-  if (g.studentCount >= 10)                              tags.push("VIP");
-  if (g.studentCount <= 4)                               tags.push("Trial");
+  const studentCount = g.students?.length ?? 0;
+  const isNew = g.createdAt && Date.now() - new Date(g.createdAt).getTime() < 30 * 24 * 60 * 60 * 1000;
+  if (isNew)                tags.push("New");
+  if (studentCount >= 8)    tags.push("Popular");
+  if (studentCount >= 10)   tags.push("VIP");
+  if (studentCount <= 4)    tags.push("Trial");
   return [...new Set(tags)];
 };
 
 const toGroupRow = (g: Group): GroupRow => ({
-  ...g,
-  status: deriveStatus(g),
-  tags:   deriveTags(g),
+  id: g.id,
+  name: g.name,
+  courseId: g.courseId,
+  course: g.course?.name ?? "—",
+  roomId: g.roomId ?? "",
+  room: g.room?.name ?? "—",
+  teacherNames: g.teachers?.map((t) => t.name) ?? [],
+  teacher: g.teachers?.map((t) => t.name).join(", ") || "—",
+  days: g.daysType === "EVEN" ? "Even days" : g.daysType === "ODD" ? "Odd days" : (g.daysType || "—"),
+  dayList: g.days ?? [],
+  lessonStartTime: g.time ?? "",
+  weekOfStudy: g.weekOfStudy ?? "",
+  startDate: g.trainingStart ?? "",
+  endDate: g.trainingEnd ?? "",
+  studentCount: g.students?.length ?? 0,
+  studentIds: g.students?.map((s) => s.id) ?? [],
+  status: g.status,
+  tags: deriveTags(g),
+  createdAt: g.createdAt,
 });
 
 const matchesFilters = (g: GroupRow, filters: Filters): boolean => {
-  if (filters.status  && g.status  !== filters.status)  return false;
-  if (filters.teacher && g.teacher !== filters.teacher) return false;
-  if (filters.course  && g.course  !== filters.course)  return false;
-  if (filters.days    && g.days    !== filters.days)     return false;
+  if (filters.status  && g.status !== filters.status) return false;
+  if (filters.teacher && !g.teacherNames.includes(filters.teacher)) return false;
+  if (filters.course  && g.course !== filters.course)  return false;
+  if (filters.days    && g.days   !== filters.days)     return false;
   if (filters.tags.length > 0 && !filters.tags.some((t) => g.tags.includes(t))) return false;
   if (filters.startDate && g.startDate && g.startDate < filters.startDate) return false;
   if (filters.endDate   && g.endDate   && g.endDate   > filters.endDate)   return false;
@@ -228,8 +266,35 @@ const DateFilter = ({ label, value, onChange, onClear }: DateFilterProps) => {
 export const Groups = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const toast = useToast();
 
-  const { groups: branchGroups, branchLabel } = useBranch();
+  const { branch: selectedBranch, branchLabel } = useBranch();
+
+  const { data: groupsData, isLoading: groupsLoading, isError: groupsError } = useAllGroupsQuery({ page: 1, limit: 100 });
+  const { data: coursesData } = useAllCoursesQuery();
+  const { data: roomsData } = useAllRoomsQuery();
+  const { data: branchesData } = useAllBranchesQuery();
+  const { data: studentsData } = useAllStudentsQuery({ page: 1, limit: 100 });
+
+  const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
+  const [updateGroup, { isLoading: isUpdating }] = useUpdateGroupMutation();
+  const [deleteGroup, { isLoading: isDeleting }] = useDeleteGroupMutation();
+
+  const WEEKDAY_LABELS: Record<GroupDay, string> = {
+    MONDAY:    t("groups.weekdays.monday"),
+    TUESDAY:   t("groups.weekdays.tuesday"),
+    WEDNESDAY: t("groups.weekdays.wednesday"),
+    THURSDAY:  t("groups.weekdays.thursday"),
+    FRIDAY:    t("groups.weekdays.friday"),
+    SATURDAY:  t("groups.weekdays.saturday"),
+    SUNDAY:    t("groups.weekdays.sunday"),
+  };
+
+  const STATUS_LABELS: Record<string, string> = {
+    ACTIVE:    t("groups.options.status.active"),
+    ARCHIVE:   t("groups.options.status.archive"),
+    COMPLETED: t("groups.options.status.completed"),
+  };
 
   const TAG_LABELS: Record<string, string> = {
     New:     t("groups.options.tags.new"),
@@ -249,20 +314,54 @@ export const Groups = () => {
     studentCount: t("groups.table.students"),
   };
 
-  const COURSES  = [...new Set(branchGroups.map((g) => g.course).filter(Boolean))];
-  const TEACHERS = [...new Set(branchGroups.map((g) => g.teacher).filter(Boolean))];
-  const ROOMS    = [...new Set(branchGroups.map((g) => g.room).filter(Boolean))];
-  const DAY_OPTIONS = useMemo(
-    () => [...new Set(branchGroups.map((g) => g.days).filter(Boolean))].map((d) => ({ value: d, label: d })),
-    [branchGroups]
+  // Group javobida course/room ichida faqat branchId keladi (kengaytirilgan
+  // branch obyekti yo'q), shu sabab filial nomini id orqali map qilamiz.
+  const branchNameById = useMemo(
+    () => Object.fromEntries((branchesData?.data ?? []).map((b) => [b.id, b.name])),
+    [branchesData]
   );
 
-  const [localGroups,       setLocalGroups]       = useState<GroupRow[]>([]);
+  const branchFilteredGroups = useMemo(
+    () => (groupsData?.data ?? []).filter((g) => {
+      if (selectedBranch === "all") return true;
+      const branchName = branchNameById[g.course?.branchId ?? ""] ?? (g.room ? branchNameById[g.room.branchId] : undefined);
+      return branchName === selectedBranch;
+    }),
+    [groupsData, selectedBranch, branchNameById]
+  );
+
+  const allGroups: GroupRow[] = useMemo(
+    () => branchFilteredGroups.map(toGroupRow),
+    [branchFilteredGroups]
+  );
+
+  const activeCourses = (coursesData?.data ?? [])
+    .filter((c) => c.status === "ACTIVE")
+    .filter((c) => selectedBranch === "all" || c.branch?.name === selectedBranch);
+  const activeRooms = (roomsData?.data ?? [])
+    .filter((r) => r.status === "ACTIVE")
+    .filter((r) => selectedBranch === "all" || r.branch?.name === selectedBranch);
+  const allStudents = studentsData?.data ?? [];
+
+  const COURSES  = [...new Set(allGroups.map((g) => g.course).filter(Boolean))];
+  const TEACHERS = [...new Set(allGroups.flatMap((g) => g.teacherNames))];
+  const DAY_OPTIONS = useMemo(
+    () => [...new Set(allGroups.map((g) => g.days).filter(Boolean))].map((d) => ({ value: d, label: d })),
+    [allGroups]
+  );
+  const STATUS_OPTIONS = useMemo(
+    () => [...new Set(allGroups.map((g) => g.status).filter(Boolean))].map((s) => ({ value: s, label: STATUS_LABELS[s] ?? s })),
+    [allGroups] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   const [open,              setOpen]              = useState(false);
-  const [editingId,         setEditingId]         = useState<number | null>(null);
-  const [form,              setForm]              = useState<GroupRow>(EMPTY_FORM);
-  const [deleteId,          setDeleteId]          = useState<number | null>(null);
-  const [actionMenuAnchor,  setActionMenuAnchor]  = useState<{ el: HTMLElement; id: number } | null>(null);
+  const [editingId,         setEditingId]         = useState<string | null>(null);
+  const [form,              setForm]              = useState<FormState>(EMPTY_FORM);
+  const [formErrors,        setFormErrors]        = useState<{ name?: string; course?: string }>({});
+  const [saveError,         setSaveError]         = useState<string | null>(null);
+  const [deleteId,          setDeleteId]          = useState<string | null>(null);
+  const [deleteError,       setDeleteError]       = useState<string | null>(null);
+  const [actionMenuAnchor,  setActionMenuAnchor]  = useState<{ el: HTMLElement; id: string } | null>(null);
   const [sortKey,           setSortKey]           = useState<SortKey>("");
   const [sortDir,           setSortDir]           = useState<SortDir>("asc");
   const [visibleCols,       setVisibleCols]       = useState<string[]>(ALL_COLUMNS.map((c) => c.key));
@@ -270,11 +369,6 @@ export const Groups = () => {
   const [filters,           setFilters]           = useState<Filters>({
     status: "", teacher: "", course: "", days: "", tags: [], startDate: "", endDate: "",
   });
-
-  const allGroups: GroupRow[] = useMemo(
-    () => [...branchGroups.map(toGroupRow), ...localGroups],
-    [branchGroups, localGroups]
-  );
 
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -291,9 +385,7 @@ export const Groups = () => {
     if (!sortKey) return list;
     return [...list].sort((a, b) => {
       if (sortKey === "studentCount") {
-        const an = Number(a.studentCount) || 0;
-        const bn = Number(b.studentCount) || 0;
-        return sortDir === "asc" ? an - bn : bn - an;
+        return sortDir === "asc" ? a.studentCount - b.studentCount : b.studentCount - a.studentCount;
       }
       const av = String(a[sortKey as keyof GroupRow] ?? "");
       const bv = String(b[sortKey as keyof GroupRow] ?? "");
@@ -316,8 +408,8 @@ export const Groups = () => {
       [t("groups.export.startDate")]: formatDate(g.startDate),
       [t("groups.export.endDate")]:   formatDate(g.endDate),
       [t("groups.export.room")]:      g.room,
-      [t("groups.export.students")]: g.studentCount,
-      [t("groups.export.status")]:   g.status,
+      [t("groups.export.students")]:  g.studentCount,
+      [t("groups.export.status")]:    STATUS_LABELS[g.status] ?? g.status,
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -327,47 +419,87 @@ export const Groups = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: name === "studentCount" ? Number(value) : value }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleTagToggle = (tag: string) =>
+  const toggleDay = (day: GroupDay) =>
     setForm((prev) => ({
       ...prev,
-      tags: prev.tags.includes(tag)
-        ? prev.tags.filter((t) => t !== tag)
-        : [...prev.tags, tag],
+      days: prev.days.includes(day) ? prev.days.filter((d) => d !== day) : [...prev.days, day],
     }));
 
-  const handleOpenAdd  = () => { setEditingId(null); setForm(EMPTY_FORM); setOpen(true); };
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setFormErrors({});
+    setSaveError(null);
+    setOpen(true);
+  };
+
   const handleOpenEdit = (group: GroupRow) => {
     setEditingId(group.id);
-    setForm({ ...EMPTY_FORM, ...group });
+    setForm({
+      name: group.name,
+      courseId: group.courseId,
+      roomId: group.roomId,
+      days: group.dayList,
+      weekOfStudy: group.weekOfStudy,
+      trainingStart: group.startDate,
+      trainingEnd: group.endDate,
+      studentIds: group.studentIds,
+    });
+    setFormErrors({});
+    setSaveError(null);
     setOpen(true);
     setActionMenuAnchor(null);
   };
 
-  const handleSave = () => {
-    const teacher  = TEACHERS_DATA.find((t) => t.fullName === form.teacher);
-    const newGroup: GroupRow = {
-      ...form,
-      teacherId: teacher?.id || 0,
-      schedule:  `${form.days} • ${form.lessonStartTime}`,
-    };
-    if (editingId !== null) {
-      setLocalGroups((prev) =>
-        prev.map((g) => g.id === editingId ? { ...newGroup, id: editingId } : g)
-      );
-    } else {
-      const maxId = allGroups.length ? Math.max(...allGroups.map((g) => g.id)) + 1 : 1;
-      setLocalGroups((prev) => [...prev, { ...newGroup, id: maxId }]);
-    }
-    setOpen(false);
+  const validate = () => {
+    const errs: { name?: string; course?: string } = {};
+    if (!form.name.trim()) errs.name = t("groups.form.errors.name");
+    if (!form.courseId)    errs.course = t("groups.form.errors.course");
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
-  const handleDeleteConfirm = () => {
-    if (deleteId !== null) {
-      setLocalGroups((prev) => prev.filter((g) => g.id !== deleteId));
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaveError(null);
+    const payload = {
+      name: form.name.trim(),
+      courseId: form.courseId,
+      roomId: form.roomId || undefined,
+      days: form.days.length ? form.days : undefined,
+      weekOfStudy: form.weekOfStudy.trim() || undefined,
+      trainingStart: form.trainingStart || undefined,
+      trainingEnd: form.trainingEnd || undefined,
+      studentIds: form.studentIds.length ? form.studentIds : undefined,
+    };
+    try {
+      if (editingId !== null) {
+        await updateGroup({ id: editingId, ...payload }).unwrap();
+        toast.success(t("groups.toast.updated"));
+      } else {
+        await createGroup(payload).unwrap();
+        toast.success(t("groups.toast.created"));
+      }
+      setOpen(false);
+    } catch {
+      setSaveError(t("groups.form.errors.save"));
+      toast.error(t("groups.form.errors.save"));
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteId) return;
+    setDeleteError(null);
+    try {
+      await deleteGroup(deleteId).unwrap();
       setDeleteId(null);
+      toast.success(t("groups.toast.deleted"));
+    } catch {
+      setDeleteError(t("groups.deleteDialog.error"));
+      toast.error(t("groups.deleteDialog.error"));
     }
   };
 
@@ -403,18 +535,14 @@ export const Groups = () => {
         <DropdownFilter
           label={t("groups.filters.status")}
           value={filters.status}
-          options={[
-            { value: "Active",    label: t("groups.options.status.active") },
-            { value: "Archive",   label: t("groups.options.status.archive") },
-            { value: "Completed", label: t("groups.options.status.completed") },
-          ]}
-          onChange={(v) => setFilter("status", v as StatusType)}
+          options={STATUS_OPTIONS}
+          onChange={(v) => setFilter("status", v)}
           onClear={() => setFilter("status", "")}
         />
         <DropdownFilter
           label={t("groups.filters.teacher")}
           value={filters.teacher}
-          options={TEACHERS.map((t) => ({ value: t, label: t }))}
+          options={TEACHERS.map((tc) => ({ value: tc, label: tc }))}
           onChange={(v) => setFilter("teacher", v)}
           onClear={() => setFilter("teacher", "")}
         />
@@ -434,7 +562,6 @@ export const Groups = () => {
               : [
                   { value: "Odd days",  label: t("groups.options.days.odd") },
                   { value: "Even days", label: t("groups.options.days.even") },
-                  { value: "Every day", label: t("groups.options.days.every") },
                 ]
           }
           onChange={(v) => setFilter("days", v)}
@@ -540,6 +667,19 @@ export const Groups = () => {
 
       {/* TABLE */}
       <Paper sx={{ borderRadius: 3, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
+        {groupsLoading && (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+            <CircularProgress size={28} />
+          </Box>
+        )}
+
+        {!groupsLoading && groupsError && (
+          <Box sx={{ py: 6, textAlign: "center" }}>
+            <Typography color="error" fontSize={14}>{t("groups.loadError")}</Typography>
+          </Box>
+        )}
+
+        {!groupsLoading && !groupsError && (
         <TableContainer>
           <Table>
             <TableHead>
@@ -574,96 +714,88 @@ export const Groups = () => {
             </TableHead>
 
             <TableBody>
-              {filteredGroups.map((g, i) => {
-                const { months, weeks } = calcWeekOfStudy(g.startDate);
-                return (
-                  <TableRow
-                    key={g.id}
-                    hover
-                    onClick={() => navigate(`/groups/${g.id}`)}
-                    sx={{
-                      cursor: "pointer",
-                      "& td": { borderBottom: "1px solid #f3f4f6", py: 1.8, fontSize: 13 },
-                      "&:last-child td": { borderBottom: "none" },
-                      "&:hover": { bgcolor: "#f9fafb" },
-                    }}
-                  >
-                    <TableCell sx={{ color: "#9ca3af", fontSize: 12 }}>{i + 1}.</TableCell>
-                    <TableCell sx={{ fontWeight: 500, color: "#111827" }}>{g.name}</TableCell>
-                    {col("course")       && <TableCell>{g.course}</TableCell>}
-                    {col("teacher")      && <TableCell>{g.teacher}</TableCell>}
-                    {col("days")         && (
-                      <TableCell>
-                        <Box>{g.days}</Box>
-                        <Box sx={{ color: "#9ca3af", fontSize: 12 }}>{g.lessonStartTime}</Box>
-                      </TableCell>
-                    )}
-                    {col("training")     && (
-                      <TableCell>
-                        <Box>{formatDate(g.startDate)} —</Box>
-                        <Box>{formatDate(g.endDate)}</Box>
-                      </TableCell>
-                    )}
-                    {col("week")         && (
-                      <TableCell>
-                        <Box>{months}</Box>
-                        <Box sx={{ color: "#9ca3af", fontSize: 12 }}>{weeks}</Box>
-                      </TableCell>
-                    )}
-                    {col("room")         && <TableCell>{g.room}</TableCell>}
-                    {col("tags")         && (
-                      <TableCell>
-                        <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                          {g.tags.map((tag) => (
-                            <Chip
-                              key={tag} label={TAG_LABELS[tag] ?? tag} size="small"
-                              sx={{ fontSize: 10, height: 20, bgcolor: "#f3f4f6", color: "#374151" }}
-                            />
-                          ))}
-                        </Stack>
-                      </TableCell>
-                    )}
-                    {col("studentCount") && <TableCell sx={{ fontWeight: 500 }}>{g.studentCount}</TableCell>}
-
-                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      <IconButton
-                        size="small"
-                        onClick={(e) =>
-                          setActionMenuAnchor(
-                            actionMenuAnchor?.id === g.id
-                              ? null
-                              : { el: e.currentTarget, id: g.id }
-                          )
-                        }
-                        sx={{ color: "#6b7280" }}
-                      >
-                        <BsThreeDotsVertical size={15} />
-                      </IconButton>
-                      <Menu
-                        anchorEl={actionMenuAnchor?.id === g.id ? actionMenuAnchor.el : null}
-                        open={actionMenuAnchor?.id === g.id}
-                        onClose={() => setActionMenuAnchor(null)}
-                        PaperProps={{
-                          sx: { borderRadius: 2, minWidth: 130, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" },
-                        }}
-                        transformOrigin={{ horizontal: "right", vertical: "top" }}
-                        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-                      >
-                        <MenuItem onClick={() => handleOpenEdit(g)} sx={{ fontSize: 13, gap: 1 }}>
-                          <MdEdit size={15} /> {t("groups.actions.edit")}
-                        </MenuItem>
-                        <Divider sx={{ my: 0.5 }} />
-                        <MenuItem
-                          onClick={() => { setDeleteId(g.id); setActionMenuAnchor(null); }}
-                          sx={{ fontSize: 13, gap: 1, color: "#ef4444" }}
-                        >
-                          <MdDelete size={15} /> {t("groups.actions.delete")}
-                        </MenuItem>
-                      </Menu>
+              {filteredGroups.map((g, i) => (
+                <TableRow
+                  key={g.id}
+                  hover
+                  onClick={() => navigate(`/groups/${g.id}`)}
+                  sx={{
+                    cursor: "pointer",
+                    "& td": { borderBottom: "1px solid #f3f4f6", py: 1.8, fontSize: 13 },
+                    "&:last-child td": { borderBottom: "none" },
+                    "&:hover": { bgcolor: "#f9fafb" },
+                  }}
+                >
+                  <TableCell sx={{ color: "#9ca3af", fontSize: 12 }}>{i + 1}.</TableCell>
+                  <TableCell sx={{ fontWeight: 500, color: "#111827" }}>{g.name}</TableCell>
+                  {col("course")       && <TableCell>{g.course}</TableCell>}
+                  {col("teacher")      && <TableCell>{g.teacher}</TableCell>}
+                  {col("days")         && (
+                    <TableCell>
+                      <Box>{g.days}</Box>
+                      <Box sx={{ color: "#9ca3af", fontSize: 12 }}>{g.lessonStartTime}</Box>
                     </TableCell>
-                  </TableRow>
-                );
-              })}
+                  )}
+                  {col("training")     && (
+                    <TableCell>
+                      <Box>{formatDate(g.startDate)} —</Box>
+                      <Box>{formatDate(g.endDate)}</Box>
+                    </TableCell>
+                  )}
+                  {col("week")         && <TableCell>{g.weekOfStudy || "—"}</TableCell>}
+                  {col("room")         && <TableCell>{g.room}</TableCell>}
+                  {col("tags")         && (
+                    <TableCell>
+                      <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                        {g.tags.map((tag) => (
+                          <Chip
+                            key={tag} label={TAG_LABELS[tag] ?? tag} size="small"
+                            sx={{ fontSize: 10, height: 20, bgcolor: "#f3f4f6", color: "#374151" }}
+                          />
+                        ))}
+                      </Stack>
+                    </TableCell>
+                  )}
+                  {col("studentCount") && <TableCell sx={{ fontWeight: 500 }}>{g.studentCount}</TableCell>}
+
+                  <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                    <IconButton
+                      size="small"
+                      onClick={(e) =>
+                        setActionMenuAnchor(
+                          actionMenuAnchor?.id === g.id
+                            ? null
+                            : { el: e.currentTarget, id: g.id }
+                        )
+                      }
+                      sx={{ color: "#6b7280" }}
+                    >
+                      <BsThreeDotsVertical size={15} />
+                    </IconButton>
+                    <Menu
+                      anchorEl={actionMenuAnchor?.id === g.id ? actionMenuAnchor.el : null}
+                      open={actionMenuAnchor?.id === g.id}
+                      onClose={() => setActionMenuAnchor(null)}
+                      PaperProps={{
+                        sx: { borderRadius: 2, minWidth: 130, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" },
+                      }}
+                      transformOrigin={{ horizontal: "right", vertical: "top" }}
+                      anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+                    >
+                      <MenuItem onClick={() => handleOpenEdit(g)} sx={{ fontSize: 13, gap: 1 }}>
+                        <MdEdit size={15} /> {t("groups.actions.edit")}
+                      </MenuItem>
+                      <Divider sx={{ my: 0.5 }} />
+                      <MenuItem
+                        onClick={() => { setDeleteId(g.id); setDeleteError(null); setActionMenuAnchor(null); }}
+                        sx={{ fontSize: 13, gap: 1, color: "#ef4444" }}
+                      >
+                        <MdDelete size={15} /> {t("groups.actions.delete")}
+                      </MenuItem>
+                    </Menu>
+                  </TableCell>
+                </TableRow>
+              ))}
               {filteredGroups.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={12} align="center" sx={{ py: 6, color: "#9ca3af" }}>
@@ -674,6 +806,7 @@ export const Groups = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        )}
       </Paper>
 
       {/* EXCEL */}
@@ -729,6 +862,8 @@ export const Groups = () => {
               onChange={handleChange}
               size="small"
               fullWidth
+              error={!!formErrors.name}
+              helperText={formErrors.name}
               sx={inputSx}
             />
           </Box>
@@ -740,56 +875,18 @@ export const Groups = () => {
             </Typography>
             <TextField
               select
-              name="course"
-              value={form.course}
+              name="courseId"
+              value={form.courseId}
               onChange={handleChange}
               size="small"
               fullWidth
+              error={!!formErrors.course}
+              helperText={formErrors.course}
               sx={inputSx}
             >
-              {COURSES.map((c) => (
-                <MenuItem key={c} value={c} sx={{ fontSize: 13 }}>{c}</MenuItem>
+              {activeCourses.map((c) => (
+                <MenuItem key={c.id} value={c.id} sx={{ fontSize: 13 }}>{c.name}</MenuItem>
               ))}
-            </TextField>
-          </Box>
-
-          {/* Select teacher */}
-          <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.teacher")}
-            </Typography>
-            <TextField
-              select
-              name="teacher"
-              value={form.teacher}
-              onChange={handleChange}
-              size="small"
-              fullWidth
-              sx={inputSx}
-            >
-              {TEACHERS.map((t) => (
-                <MenuItem key={t} value={t} sx={{ fontSize: 13 }}>{t}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
-
-          {/* Days */}
-          <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.days")}
-            </Typography>
-            <TextField
-              select
-              name="days"
-              value={form.days}
-              onChange={handleChange}
-              size="small"
-              fullWidth
-              sx={inputSx}
-            >
-              <MenuItem value="Odd days"  sx={{ fontSize: 13 }}>{t("groups.options.days.odd")}</MenuItem>
-              <MenuItem value="Even days" sx={{ fontSize: 13 }}>{t("groups.options.days.even")}</MenuItem>
-              <MenuItem value="Every day" sx={{ fontSize: 13 }}>{t("groups.options.days.every")}</MenuItem>
             </TextField>
           </Box>
 
@@ -800,92 +897,42 @@ export const Groups = () => {
             </Typography>
             <TextField
               select
-              name="room"
-              value={form.room}
+              name="roomId"
+              value={form.roomId}
               onChange={handleChange}
               size="small"
               fullWidth
               sx={inputSx}
             >
-              {ROOMS.map((r) => (
-                <MenuItem key={r} value={r} sx={{ fontSize: 13 }}>{r}</MenuItem>
+              <MenuItem value="" sx={{ fontSize: 13 }}>—</MenuItem>
+              {activeRooms.map((r) => (
+                <MenuItem key={r.id} value={r.id} sx={{ fontSize: 13 }}>{r.name}</MenuItem>
               ))}
             </TextField>
           </Box>
 
-          {/* Lesson start time */}
+          {/* Days */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.lessonStartTime")}
-            </Typography>
-            <TextField
-              type="time"
-              name="lessonStartTime"
-              value={form.lessonStartTime}
-              onChange={handleChange}
-              size="small"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              sx={inputSx}
-            />
-          </Box>
-
-          {/* Group start date */}
-          <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.startDate")}
-            </Typography>
-            <TextField
-              type="date"
-              name="startDate"
-              value={form.startDate}
-              onChange={handleChange}
-              size="small"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              sx={inputSx}
-            />
-          </Box>
-
-          {/* Group end date */}
-          <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.endDate")}
-            </Typography>
-            <TextField
-              type="date"
-              name="endDate"
-              value={form.endDate}
-              onChange={handleChange}
-              size="small"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              sx={inputSx}
-            />
-          </Box>
-
-          {/* Tags */}
-          <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.tags")}
+              {t("groups.form.days")}
             </Typography>
             <Stack direction="row" flexWrap="wrap" gap={1}>
-              {TAGS.map((tag) => (
+              {WEEKDAY_VALUES.map((day) => (
                 <Chip
-                  key={tag}
-                  label={TAG_LABELS[tag] ?? tag}
+                  key={day}
+                  label={WEEKDAY_LABELS[day]}
                   clickable
                   size="small"
-                  onClick={() => handleTagToggle(tag)}
+                  onClick={() => toggleDay(day)}
                   sx={{
                     fontSize: 12, height: 28, borderRadius: "6px",
-                    bgcolor:     form.tags.includes(tag) ? "#dbeafe" : "white",
-                    color:       form.tags.includes(tag) ? "#1d4ed8" : "#374151",
+                    bgcolor:     form.days.includes(day) ? "#dbeafe" : "white",
+                    color:       form.days.includes(day) ? "#1d4ed8" : "#374151",
                     border:      "1px solid",
-                    borderColor: form.tags.includes(tag) ? "#93c5fd" : "#d0d5dd",
+                    borderColor: form.days.includes(day) ? "#93c5fd" : "#d0d5dd",
                     "&:hover": {
-                      bgcolor:     form.tags.includes(tag) ? "#bfdbfe" : "#f9fafb",
-                      borderColor: form.tags.includes(tag) ? "#60a5fa" : "#a0aec0",
+                      bgcolor:     form.days.includes(day) ? "#bfdbfe" : "#f9fafb",
+                      borderColor: form.days.includes(day) ? "#60a5fa" : "#a0aec0",
                     },
                   }}
                 />
@@ -893,31 +940,93 @@ export const Groups = () => {
             </Stack>
           </Box>
 
-          {/* Status */}
-          <Box mb={3}>
+          {/* Week of study */}
+          <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.status")}
+              {t("groups.form.weekOfStudy")}
             </Typography>
             <TextField
-              select
-              name="status"
-              value={form.status}
+              name="weekOfStudy"
+              value={form.weekOfStudy}
               onChange={handleChange}
               size="small"
               fullWidth
+              placeholder="3 months 0 weeks"
+              sx={inputSx}
+            />
+          </Box>
+
+          {/* Training start date */}
+          <Box mb={2.5}>
+            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+              {t("groups.form.trainingStart")}
+            </Typography>
+            <TextField
+              type="date"
+              name="trainingStart"
+              value={form.trainingStart}
+              onChange={handleChange}
+              size="small"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              sx={inputSx}
+            />
+          </Box>
+
+          {/* Training end date */}
+          <Box mb={2.5}>
+            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+              {t("groups.form.trainingEnd")}
+            </Typography>
+            <TextField
+              type="date"
+              name="trainingEnd"
+              value={form.trainingEnd}
+              onChange={handleChange}
+              size="small"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              sx={inputSx}
+            />
+          </Box>
+
+          {/* Students */}
+          <Box mb={3}>
+            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+              {t("groups.form.students")}
+            </Typography>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              SelectProps={{
+                multiple: true,
+                value: form.studentIds,
+                onChange: (e) => setForm((p) => ({ ...p, studentIds: e.target.value as string[] })),
+                renderValue: (selected) =>
+                  (selected as string[])
+                    .map((id) => allStudents.find((s) => s.id === id)?.name ?? id)
+                    .join(", "),
+              }}
               sx={inputSx}
             >
-              <MenuItem value="Active"    sx={{ fontSize: 13 }}>{t("groups.options.status.active")}</MenuItem>
-              <MenuItem value="Archive"   sx={{ fontSize: 13 }}>{t("groups.options.status.archive")}</MenuItem>
-              <MenuItem value="Completed" sx={{ fontSize: 13 }}>{t("groups.options.status.completed")}</MenuItem>
+              {allStudents.map((s) => (
+                <MenuItem key={s.id} value={s.id} sx={{ fontSize: 13 }}>{s.name}</MenuItem>
+              ))}
             </TextField>
           </Box>
+
+          {saveError && (
+            <Typography fontSize={13} color="error" mb={2}>{saveError}</Typography>
+          )}
 
           {/* Submit */}
           <Button
             fullWidth
             variant="contained"
             onClick={handleSave}
+            disabled={isCreating || isUpdating}
+            startIcon={(isCreating || isUpdating) ? <CircularProgress size={16} color="inherit" /> : undefined}
             sx={{
               borderRadius: "20px", py: 1.2,
               fontWeight: 600, fontSize: 14,
@@ -943,12 +1052,17 @@ export const Groups = () => {
           <Typography fontSize={14} color="text.secondary">
             {t("groups.deleteDialog.body")}
           </Typography>
+          {deleteError && (
+            <Typography fontSize={13} color="error" mt={1.5}>{deleteError}</Typography>
+          )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteId(null)} sx={{ color: "#667085" }}>{t("groups.deleteDialog.cancel")}</Button>
+          <Button onClick={() => setDeleteId(null)} disabled={isDeleting} sx={{ color: "#667085" }}>{t("groups.deleteDialog.cancel")}</Button>
           <Button
             variant="contained"
             color="error"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : undefined}
             onClick={handleDeleteConfirm}
             sx={{ borderRadius: 2 }}
           >

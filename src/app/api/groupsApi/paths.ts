@@ -1,3 +1,3 @@
 export enum PATHS {
-  GROUPS = "/groups",
+  GROUPS = "groups",
 }

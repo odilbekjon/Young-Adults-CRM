@@ -13,6 +13,7 @@ import {
   Button,
   Avatar,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import {
   MdKeyboardDoubleArrowLeft,
@@ -22,12 +23,22 @@ import {
   MdClose,
   MdCheck,
 } from "react-icons/md";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Student } from "../../../types/group";
+import {
+  useGroupAttendanceDatesQuery,
+  useGroupAttendanceQuery,
+  useSaveAttendanceMutation,
+} from "../../../app/api/attendancesApi";
+import type { AttendanceStatus } from "../../../app/api/attendancesApi/types";
+import { useToast } from "../../../Context/ToastContext";
+
+type AttendanceStudent = Student & { realId: string };
 
 interface Props {
-  students: Student[];
+  groupId: string;
+  students: AttendanceStudent[];
 }
 
 const MONTH_KEYS = [
@@ -43,26 +54,72 @@ const ATT_VAL_LABEL_KEYS: Record<"Was" | "Not", string> = {
   Not: "notPresent",
 };
 
+const STATUS_TO_VAL: Record<AttendanceStatus, "Was" | "Not"> = {
+  PRESENT: "Was",
+  ABSENT: "Not",
+};
+const VAL_TO_STATUS: Record<"Was" | "Not", AttendanceStatus> = {
+  Was: "PRESENT",
+  Not: "ABSENT",
+};
+
 const getDaysInMonth = (year: number, month: number) =>
   new Date(year, month + 1, 0).getDate();
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 type AttVal = "Was" | "Not" | null;
 
-export const Attendance = ({ students }: Props) => {
+export const Attendance = ({ groupId, students }: Props) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
 
-  const [attendance, setAttendance] = useState<
-    Record<number, Record<number, AttVal>>
+  // Optimistic overrides layered on top of server data — cleared implicitly
+  // once a refetch (triggered by the "attendance" tag invalidation) brings
+  // the server value in sync; kept meanwhile so the UI reacts instantly.
+  const [overrides, setOverrides] = useState<
+    Record<string, Record<string, AttVal>>
   >({});
 
+  const monthStr = `${year}-${pad2(month + 1)}`;
+
+  const { data: lessonDates = [], isFetching: datesLoading } =
+    useGroupAttendanceDatesQuery({ groupId, month: monthStr }, { skip: !groupId });
+  const { data: records = [], isFetching: recordsLoading } =
+    useGroupAttendanceQuery({ groupId, month: monthStr }, { skip: !groupId });
+  const [saveAttendance] = useSaveAttendanceMutation();
+
   const totalDays = getDaysInMonth(year, month);
-  const lessonDays = Array.from({ length: totalDays }, (_, i) => i + 1);
   const today = now.getDate();
   const isCurrentMonth =
     year === now.getFullYear() && month === now.getMonth();
+
+  // If the backend hasn't returned any lesson dates for this month (e.g. no
+  // schedule set yet), fall back to showing every calendar day so the tab
+  // still stays usable instead of rendering an empty table.
+  const days = useMemo(() => {
+    if (lessonDates.length > 0) {
+      return [...lessonDates].sort().map((d) => Number(d.slice(-2)));
+    }
+    return Array.from({ length: totalDays }, (_, i) => i + 1);
+  }, [lessonDates, totalDays]);
+
+  const dateFor = (day: number) => `${year}-${pad2(month + 1)}-${pad2(day)}`;
+
+  const serverMap = useMemo(() => {
+    const map: Record<string, Record<string, AttVal>> = {};
+    records.forEach((r) => {
+      if (!r.status) return;
+      map[r.studentId] = {
+        ...(map[r.studentId] || {}),
+        [r.date]: STATUS_TO_VAL[r.status],
+      };
+    });
+    return map;
+  }, [records]);
 
   // Navigation
   const prevMonth = () => {
@@ -80,28 +137,52 @@ export const Attendance = ({ students }: Props) => {
     setYear(now.getFullYear());
   };
 
-  const handleSet = (studentId: number, day: number, val: AttVal) => {
-    setAttendance((prev) => ({
+  const handleSet = (studentId: string, day: number, val: "Was" | "Not") => {
+    const date = dateFor(day);
+    setOverrides((prev) => ({
       ...prev,
-      [studentId]: { ...(prev[studentId] || {}), [day]: val },
+      [studentId]: { ...(prev[studentId] || {}), [date]: val },
     }));
+
+    saveAttendance({
+      records: [
+        { studentId, groupId, date, status: VAL_TO_STATUS[val], reason: "" },
+      ],
+    })
+      .unwrap()
+      .catch(() => {
+        setOverrides((prev) => ({
+          ...prev,
+          [studentId]: {
+            ...(prev[studentId] || {}),
+            [date]: serverMap[studentId]?.[date] ?? null,
+          },
+        }));
+        toast.error(t("singleGroup.tabs.attendance.saveError"));
+      });
   };
 
-  // Remove (X) button on hover
+  // Remove (X) button on hover — clears the mark locally; the API contract
+  // doesn't expose a delete/clear endpoint, so a removed mark reappears
+  // after the next refetch if it was already saved on the backend.
   const handleRemove = (
     e: React.MouseEvent,
-    studentId: number,
+    studentId: string,
     day: number
   ) => {
     e.stopPropagation();
-    setAttendance((prev) => ({
+    setOverrides((prev) => ({
       ...prev,
-      [studentId]: { ...(prev[studentId] || {}), [day]: null },
+      [studentId]: { ...(prev[studentId] || {}), [dateFor(day)]: null },
     }));
   };
 
-  const getVal = (studentId: number, day: number): AttVal =>
-    attendance[studentId]?.[day] ?? null;
+  const getVal = (studentId: string, day: number): AttVal => {
+    const date = dateFor(day);
+    const override = overrides[studentId]?.[date];
+    if (override !== undefined) return override;
+    return serverMap[studentId]?.[date] ?? null;
+  };
 
   return (
     <Box>
@@ -114,9 +195,14 @@ export const Attendance = ({ students }: Props) => {
         flexWrap="wrap"
         gap={1}
       >
-        <Typography variant="h6" fontWeight={600}>
-          {t("singleGroup.tabs.attendance.title")}
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Typography variant="h6" fontWeight={600}>
+            {t("singleGroup.tabs.attendance.title")}
+          </Typography>
+          {(datesLoading || recordsLoading) && (
+            <CircularProgress size={16} thickness={5} />
+          )}
+        </Stack>
         <Stack direction="row" alignItems="center" spacing={0.5}>
           <Button variant="outlined" size="small" onClick={goToCurrent}>
             {t("singleGroup.tabs.attendance.current")}
@@ -173,7 +259,7 @@ export const Attendance = ({ students }: Props) => {
                 {t("singleGroup.tabs.attendance.name")}
               </TableCell>
 
-              {lessonDays.map((d) => {
+              {days.map((d) => {
                 const isToday = isCurrentMonth && d === today;
                 return (
                   <TableCell
@@ -225,8 +311,8 @@ export const Attendance = ({ students }: Props) => {
                   </Stack>
                 </TableCell>
 
-                {lessonDays.map((d) => {
-                  const val = getVal(student.id, d);
+                {days.map((d) => {
+                  const val = getVal(student.realId, d);
                   const isToday = isCurrentMonth && d === today;
                   const isPast =
                     year < now.getFullYear() ||
@@ -323,7 +409,7 @@ export const Attendance = ({ students }: Props) => {
                               size="small"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSet(student.id, d, "Was");
+                                handleSet(student.realId, d, "Was");
                               }}
                               sx={{
                                 width: 20,
@@ -344,7 +430,7 @@ export const Attendance = ({ students }: Props) => {
                               size="small"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSet(student.id, d, "Not");
+                                handleSet(student.realId, d, "Not");
                               }}
                               sx={{
                                 width: 20,
@@ -364,7 +450,7 @@ export const Attendance = ({ students }: Props) => {
                         {val && (
                           <Box
                             className="remove-btn"
-                            onClick={(e) => handleRemove(e, student.id, d)}
+                            onClick={(e) => handleRemove(e, student.realId, d)}
                             sx={{
                               position: "absolute",
                               top: -6,

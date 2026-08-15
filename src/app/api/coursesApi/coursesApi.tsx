@@ -8,12 +8,26 @@ import {
     DeleteCourseResponse,
 } from "./types";
 
+// Backend ba'zan ro'yxatni tekis massiv, ba'zan {data: [...], meta} ko'rinishida
+// qaytarishi mumkin — ikkalasini ham massivga normallashtiramiz.
+const normalizeList = <T,>(data: unknown): T[] => {
+    if (Array.isArray(data)) return data as T[];
+    if (data && typeof data === "object" && Array.isArray((data as { data?: unknown }).data)) {
+        return (data as { data: T[] }).data;
+    }
+    return [];
+};
+
 export const coursesApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         allCourses: builder.query<CoursesResponse, void>({
             query: () => ({
                 url: PATHS.COURSES,
                 method: "GET"
+            }),
+            transformResponse: (response: CoursesResponse) => ({
+                ...response,
+                data: normalizeList<CoursesResponse["data"][number]>(response.data),
             }),
             providesTags: ["course"],
         }),

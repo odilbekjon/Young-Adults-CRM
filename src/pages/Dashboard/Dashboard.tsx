@@ -23,7 +23,8 @@ import {
 } from "../../constants/DashboardData";
 import { STATS } from "../../constants/DashboardStats";
 
-const parseTimeToMinutes = (time: string) => {
+const parseTimeToMinutes = (time: string | null | undefined) => {
+  if (!time) return 0;
   const [h, m] = time.split(":").map(Number);
   return (h || 0) * 60 + (m || 0);
 };

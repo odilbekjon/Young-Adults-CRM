@@ -14,7 +14,7 @@ export interface ScheduleItem {
   groupName: string;
   courseName: string;
   roomName: string;
-  time: string;
+  time: string | null;
   days: string[];
   daysType: string;
   teachers: string;

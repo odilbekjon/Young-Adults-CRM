@@ -26,9 +26,11 @@ import {
   useDeleteBranchMutation,
 } from "../../../../../app/api/branchesApi/branchesApi";
 import type { Branch } from "../../../../../app/api/branchesApi/types";
+import { useToast } from "../../../../../Context/ToastContext";
 
 export const Branches = () => {
   const { t } = useTranslation();
+  const toast = useToast();
 
   const { data, isLoading, isError, refetch, isFetching } = useAllBranchesQuery();
   const [createBranch, { isLoading: isCreating }] = useCreateBranchMutation();
@@ -84,8 +86,10 @@ export const Branches = () => {
     try {
       await deleteBranch(deleteTarget.id).unwrap();
       setDeleteTarget(null);
+      toast.success(t("settings.ceo.branches.toast.deleted"));
     } catch {
       setDeleteError(t("settings.ceo.branches.deleteConfirm.error"));
+      toast.error(t("settings.ceo.branches.deleteConfirm.error"));
     }
   };
 
@@ -104,12 +108,15 @@ export const Branches = () => {
     try {
       if (editingId) {
         await updateBranch({ id: editingId, name, address }).unwrap();
+        toast.success(t("settings.ceo.branches.toast.updated"));
       } else {
         await createBranch({ name, address }).unwrap();
+        toast.success(t("settings.ceo.branches.toast.created"));
       }
       setModalOpen(false);
     } catch {
       setSaveError(t("settings.ceo.branches.form.errors.save"));
+      toast.error(t("settings.ceo.branches.form.errors.save"));
     }
   };
 

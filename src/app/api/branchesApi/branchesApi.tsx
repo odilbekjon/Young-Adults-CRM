@@ -8,12 +8,26 @@ import {
     DeleteBranchResponse,
 } from "./types";
 
+// Backend ba'zan ro'yxatni tekis massiv, ba'zan {data: [...], meta} ko'rinishida
+// qaytarishi mumkin — ikkalasini ham massivga normallashtiramiz.
+const normalizeList = <T,>(data: unknown): T[] => {
+    if (Array.isArray(data)) return data as T[];
+    if (data && typeof data === "object" && Array.isArray((data as { data?: unknown }).data)) {
+        return (data as { data: T[] }).data;
+    }
+    return [];
+};
+
 export const branchesApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         allBranches: builder.query<BranchesResponse, void>({
             query: () => ({
                 url: PATHS.BRANCHES,
                 method: "GET"
+            }),
+            transformResponse: (response: BranchesResponse) => ({
+                ...response,
+                data: normalizeList<BranchesResponse["data"][number]>(response.data),
             }),
             providesTags: ["branch"],
         }),

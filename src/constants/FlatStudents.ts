@@ -1,7 +1,7 @@
 // src/constants/FlatStudents.ts
 
 import { TEACHERS_DATA } from "./Teachers";
-import type { Student } from "../app/api/studentsApi/types";
+import type { Student, StudentDetail } from "../app/api/studentsApi/types";
 
 export interface FlatStudent {
   uid: string;
@@ -60,15 +60,21 @@ export const buildFlatStudents = (): FlatStudent[] => {
   return result;
 };
 
-export const mapApiStudentToFlat = (s: Student): FlatStudent => {
-  const group = s.groups[0];
-  const teacher = s.teachers[0];
+// Ro'yxat (allStudents) va bitta o'quvchi (studentById) endpointlari turli shakl
+// qaytaradi: ro'yxatda `groups`/`teachers`, bittada `status`/`groupsStart`/`branch` bor.
+export const mapApiStudentToFlat = (s: Student | StudentDetail): FlatStudent => {
+  const group = "groups" in s ? s.groups?.[0] : undefined;
+  const teacher = "teachers" in s ? s.teachers?.[0] : undefined;
+  const branchName = "branch" in s ? s.branch[0]?.name ?? "" : "";
+  const active = "status" in s ? s.status === "ACTIVE" : true;
+  const comment = "comments" in s ? s.comments : "comment" in s ? s.comment : null;
+  const groupsStart = "groupsStart" in s ? s.groupsStart : null;
   return {
     uid: s.id,
     id: 0,
     name: s.name,
     phone: s.phone,
-    active: true,
+    active,
     groupId: 0,
     groupName: group?.name ?? "—",
     groupSchedule: "",
@@ -77,13 +83,13 @@ export const mapApiStudentToFlat = (s: Student): FlatStudent => {
     course: group?.name ?? "—",
     teacher: teacher?.name ?? "—",
     teacherId: 0,
-    startDate: "",
+    startDate: groupsStart ?? "",
     endDate: "",
-    branch: "",
+    branch: branchName,
     room: "",
     price: 0,
     balance: s.balance,
-    comment: s.comments ?? undefined,
+    comment: comment ?? undefined,
   };
 };
 

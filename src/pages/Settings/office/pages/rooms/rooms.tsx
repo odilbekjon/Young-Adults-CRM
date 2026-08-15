@@ -34,6 +34,7 @@ import {
 import type { Room } from "../../../../../app/api/roomsApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi/branchesApi";
 import { useBranch } from "../../../../../Context/BranchContext";
+import { useToast } from "../../../../../Context/ToastContext";
 
 interface FormState {
   name: string;
@@ -45,6 +46,7 @@ const defaultForm: FormState = { name: "", capacity: "", branchId: "" };
 
 export const Rooms = () => {
   const { t } = useTranslation();
+  const toast = useToast();
 
   const { branch: selectedBranch } = useBranch();
 
@@ -101,8 +103,10 @@ export const Rooms = () => {
     try {
       await deleteRoom(deleteTarget.id).unwrap();
       setDeleteTarget(null);
+      toast.success(t("settings.office.rooms.toast.deleted"));
     } catch {
       setDeleteError(t("settings.office.rooms.deleteConfirm.error"));
+      toast.error(t("settings.office.rooms.deleteConfirm.error"));
     }
   };
 
@@ -126,12 +130,15 @@ export const Rooms = () => {
     try {
       if (editingRoom) {
         await updateRoom({ id: editingRoom.id, name: form.name, capacity, branchId: form.branchId }).unwrap();
+        toast.success(t("settings.office.rooms.toast.updated"));
       } else {
         await createRoom({ name: form.name, capacity, branchId: form.branchId }).unwrap();
+        toast.success(t("settings.office.rooms.toast.created"));
       }
       setDrawerOpen(false);
     } catch {
       setSaveError(t("settings.office.rooms.form.errors.save"));
+      toast.error(t("settings.office.rooms.form.errors.save"));
     }
   };
 

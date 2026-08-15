@@ -9,18 +9,21 @@ import { store } from './app/store';
 import { BranchProvider } from './Context/BranchContext';
 import { SidebarProvider } from './Context/SidebarContext';
 import { DataProvider } from './Context/DataContext';
+import { ToastProvider } from './Context/ToastContext';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-        <DataProvider>
-          <BranchProvider>
-            <SidebarProvider>
-              <App />
-            </SidebarProvider>
-          </BranchProvider>
-        </DataProvider>
+        <ToastProvider>
+          <DataProvider>
+            <BranchProvider>
+              <SidebarProvider>
+                <App />
+              </SidebarProvider>
+            </BranchProvider>
+          </DataProvider>
+        </ToastProvider>
       </BrowserRouter>
     </Provider>
   </StrictMode>

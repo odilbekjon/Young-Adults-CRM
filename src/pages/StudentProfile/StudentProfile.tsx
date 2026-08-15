@@ -1,10 +1,10 @@
 // src/pages/StudentProfile.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FiEdit2, FiMail, FiTrash2, FiFlag, FiPrinter,
   FiChevronDown, FiUsers, FiDollarSign, FiPhone,
   FiCalendar, FiGitBranch, FiPause, FiUser, FiX,
-  FiMessageSquare,
+  FiMessageSquare, FiArchive,
 } from "react-icons/fi";
 import { IoArrowBack } from "react-icons/io5";
 import {
@@ -17,7 +17,13 @@ import {
 import { FlatStudent, mapApiStudentToFlat, formatDate } from "../../constants/FlatStudents";
 import { TEACHERS_DATA } from "../../constants/Teachers";
 import { useNavigate, useParams } from "react-router-dom";
-import { useStudentByIdQuery } from "../../app/api/studentsApi";
+import {
+  useStudentByIdQuery,
+  useUpdateStudentMutation,
+  useDeleteStudentMutation,
+} from "../../app/api/studentsApi";
+import type { StudentGender } from "../../app/api/studentsApi/types";
+import { useToast } from "../../Context/ToastContext";
 
 /* ─── TYPES ─────────────────────────────────────────── */
 interface Payment {
@@ -117,15 +123,26 @@ const EditStudentDrawer = ({
   open,
   onClose,
   student,
+  onSave,
+  saving,
+  error,
 }: {
   open: boolean;
   onClose: () => void;
   student: FlatStudent;
+  onSave: (data: { name: string; phone: string; gender: StudentGender; birthdate: string }) => Promise<boolean>;
+  saving?: boolean;
+  error?: string | null;
 }) => {
   const [name, setName] = useState(student.name);
   const [phone, setPhone] = useState(student.phone);
+  const [dob, setDob] = useState("");
   const [gender, setGender] = useState("male");
   const [tags, setTags] = useState("");
+
+  useEffect(() => {
+    if (open) { setName(student.name); setPhone(student.phone); }
+  }, [open, student]);
 
   const additionalContactIcons = [
     { icon: <FiPhone size={16} />, label: "Phone" },
@@ -260,6 +277,8 @@ const EditStudentDrawer = ({
             fullWidth
             size="small"
             type="date"
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
             InputLabelProps={{ shrink: true }}
             sx={{
               "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 },
@@ -438,9 +457,21 @@ const EditStudentDrawer = ({
 
       {/* Footer */}
       <div style={{ padding: "16px 24px", borderTop: "1px solid #f3f4f6" }}>
+        {error && (
+          <div style={{ fontSize: 13, color: "#ef4444", marginBottom: 10 }}>{error}</div>
+        )}
         <Button
           variant="contained"
-          onClick={onClose}
+          disabled={saving}
+          onClick={async () => {
+            const ok = await onSave({
+              name,
+              phone,
+              gender: gender === "female" ? "FEMALE" : "MALE",
+              birthdate: dob,
+            });
+            if (ok) onClose();
+          }}
           sx={{
             background: "#1e3a5f",
             borderRadius: "8px",
@@ -452,7 +483,7 @@ const EditStudentDrawer = ({
             "&:hover": { background: "#1e40af" },
           }}
         >
-          Submit
+          {saving ? "Saving..." : "Submit"}
         </Button>
       </div>
     </Drawer>
@@ -1005,7 +1036,9 @@ const SideCard = ({
         <div style={{ fontSize: 17, fontWeight: 600, color: "#111827" }}>
           {student.name}
         </div>
-        <div style={{ fontSize: 12, color: "#9ca3af" }}>(id: {student.uid})</div>
+        <div style={{ fontSize: 12, color: "#9ca3af" }} title={student.uid}>
+          (id: {student.uid.length > 8 ? `${student.uid.slice(0, 8)}…` : student.uid})
+        </div>
       </div>
     </div>
 
@@ -1061,8 +1094,8 @@ const SideCard = ({
     <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "14px 0" }} />
 
     {/* Action buttons */}
-    <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-      <div style={{ display: "flex", gap: 4, flex: 1 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 4 }}>
         <Button
           size="small"
           variant="outlined"
@@ -1071,10 +1104,13 @@ const SideCard = ({
           sx={{
             flex: 1,
             textTransform: "none",
+            fontWeight: 600,
             fontSize: 12,
-            borderColor: "#8fc8d6",
-            color: "#2b7689",
+            whiteSpace: "nowrap",
+            borderColor: "#93c5fd",
+            color: "#2563eb",
             borderRadius: 999,
+            "&:hover": { borderColor: "#60a5fa", bgcolor: "#eff6ff" },
           }}
         >
           Add to group
@@ -1082,12 +1118,15 @@ const SideCard = ({
         <IconButton
           size="small"
           onClick={onOpenAddToGroupMenu}
-          sx={{ border: "1px solid #8fc8d6", color: "#2b7689", borderRadius: 999, width: 28, height: 28 }}
+          sx={{
+            border: "1px solid #93c5fd", color: "#2563eb", borderRadius: 999, width: 28, height: 28, flexShrink: 0,
+            "&:hover": { borderColor: "#60a5fa", bgcolor: "#eff6ff" },
+          }}
         >
           <FiChevronDown size={13} />
         </IconButton>
       </div>
-      <div style={{ display: "flex", gap: 4, flex: 1 }}>
+      <div style={{ display: "flex", gap: 4 }}>
         <Button
           size="small"
           variant="outlined"
@@ -1096,10 +1135,13 @@ const SideCard = ({
           sx={{
             flex: 1,
             textTransform: "none",
+            fontWeight: 600,
             fontSize: 12,
-            borderColor: "#8fc8d6",
-            color: "#2b7689",
+            whiteSpace: "nowrap",
+            borderColor: "#86efac",
+            color: "#16a34a",
             borderRadius: 999,
+            "&:hover": { borderColor: "#4ade80", bgcolor: "#f0fdf4" },
           }}
         >
           Add payment
@@ -1107,7 +1149,10 @@ const SideCard = ({
         <IconButton
           size="small"
           onClick={onOpenAddPaymentMenu}
-          sx={{ border: "1px solid #8fc8d6", color: "#2b7689", borderRadius: 999, width: 28, height: 28 }}
+          sx={{
+            border: "1px solid #86efac", color: "#16a34a", borderRadius: 999, width: 28, height: 28, flexShrink: 0,
+            "&:hover": { borderColor: "#4ade80", bgcolor: "#f0fdf4" },
+          }}
         >
           <FiChevronDown size={13} />
         </IconButton>
@@ -1236,7 +1281,7 @@ const GroupCard = ({ student }: { student: FlatStudent }) => {
                 height: 36,
               }}
             >
-              <FiUser size={15} />
+              <FiArchive size={15} />
             </IconButton>
           </Tooltip>
         </div>
@@ -1541,6 +1586,12 @@ export const StudentProfile = () => {
   const { data, isLoading } = useStudentByIdQuery(id ?? "", { skip: !id });
   const student = data ? mapApiStudentToFlat(data.data) : undefined;
 
+  const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
+  const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const toast = useToast();
+
   const [activeTab, setActiveTab] = useState(0);
   const [editOpen, setEditOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
@@ -1597,13 +1648,40 @@ export const StudentProfile = () => {
   const smsHistory = makeMockSms(student);
   const groupHistory = makeMockGroupHistory(student);
 
-  const handleDelete = (deleteMode: boolean) => {
-    if (deleteMode) {
-      console.log("delete permanently", student.uid);
-    } else {
-      console.log("archive/remove from group", student.uid);
+  const handleSaveStudent = async (data: { name: string; phone: string; gender: StudentGender; birthdate: string }): Promise<boolean> => {
+    setSaveError(null);
+    try {
+      await updateStudent({
+        id: student.uid,
+        name: data.name,
+        phone: data.phone,
+        gender: data.gender,
+        birthdate: data.birthdate || undefined,
+      }).unwrap();
+      toast.success("Student updated successfully");
+      return true;
+    } catch {
+      setSaveError("Failed to save the student");
+      toast.error("Failed to save the student");
+      return false;
     }
-    navigate(-1);
+  };
+
+  const handleDelete = async (deleteMode: boolean) => {
+    if (!deleteMode) {
+      // Guruhdan chiqarish uchun backend endpointi hozircha mavjud emas.
+      navigate(-1);
+      return;
+    }
+    setDeleteError(null);
+    try {
+      await deleteStudent(student.uid).unwrap();
+      toast.success("Student deleted successfully");
+      navigate(-1);
+    } catch {
+      setDeleteError("Failed to delete the student");
+      toast.error("Failed to delete the student");
+    }
   };
 
   return (
@@ -1624,9 +1702,15 @@ export const StudentProfile = () => {
         Back to Students
       </Button>
 
+      {(deleteError || isDeletingStudent) && (
+        <div style={{ maxWidth: 1200, marginBottom: 12, fontSize: 13, color: deleteError ? "#ef4444" : "#6b7280" }}>
+          {deleteError ?? "Deleting..."}
+        </div>
+      )}
+
       <div style={{ maxWidth: 1200, display: "flex", gap: 24, alignItems: "flex-start" }}>
         {/* Left sidebar */}
-        <div style={{ width: 280, flexShrink: 0 }}>
+        <div style={{ width: 320, flexShrink: 0 }}>
           <SideCard
             student={student}
             onEdit={() => setEditOpen(true)}
@@ -1706,6 +1790,9 @@ export const StudentProfile = () => {
         open={editOpen}
         onClose={() => setEditOpen(false)}
         student={student}
+        onSave={handleSaveStudent}
+        saving={isSavingStudent}
+        error={saveError}
       />
 
       <SendSmsDrawer

@@ -29,6 +29,7 @@ import {
 import type { Course } from "../../../../../app/api/coursesApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi/branchesApi";
 import { useBranch } from "../../../../../Context/BranchContext";
+import { useToast } from "../../../../../Context/ToastContext";
 import { CARD_COLORS } from "../../../../../constants/CardColors";
 
 export const BookIllustration = () => (
@@ -57,6 +58,7 @@ const defaultForm: FormState = { name: "", branchId: "", price: "" };
 export const Courses = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const toast = useToast();
   const { branch: selectedBranch } = useBranch();
 
   const { data, isLoading, isError, refetch, isFetching } = useAllCoursesQuery();
@@ -116,8 +118,10 @@ export const Courses = () => {
     try {
       await deleteCourse(deleteTarget.id).unwrap();
       setDeleteTarget(null);
+      toast.success(t("settings.office.courses.toast.deleted"));
     } catch {
       setDeleteError(t("settings.office.courses.deleteConfirm.error"));
+      toast.error(t("settings.office.courses.deleteConfirm.error"));
     }
   };
 
@@ -137,12 +141,15 @@ export const Courses = () => {
     try {
       if (editingCourse) {
         await updateCourse({ id: editingCourse.id, name: form.name, branchId: form.branchId, price }).unwrap();
+        toast.success(t("settings.office.courses.toast.updated"));
       } else {
         await createCourse({ name: form.name, branchId: form.branchId, price }).unwrap();
+        toast.success(t("settings.office.courses.toast.created"));
       }
       setDrawerOpen(false);
     } catch {
       setSaveError(t("settings.office.courses.form.errors.save"));
+      toast.error(t("settings.office.courses.form.errors.save"));
     }
   };
 

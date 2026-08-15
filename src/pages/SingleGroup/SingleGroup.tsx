@@ -2,25 +2,35 @@
 // src/pages/groups/SingleGroup.tsx
 
 import {
-  Box, Chip, Divider, IconButton, List, ListItem,
+  Box, Chip, CircularProgress, Divider, IconButton, List, ListItem,
   ListItemText, MenuItem, Paper, Select,
   Stack, Tab, Tabs, Typography, Button,
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
-import { useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { MdEdit, MdDelete, MdEmail, MdDownload } from "react-icons/md";
 import * as XLSX from "xlsx";
 import { GoPlus } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  ALL_GROUPS,
-  findGroupById,
   findTeacherById,
   formatDate,
+  type Group as LegacyGroup,
 } from "../../constants/Teachers";
+import {
+  useGroupByIdQuery,
+  useAllGroupsQuery,
+  useGroupHistoryQuery,
+  useAssignStudentsToGroupMutation,
+  useRemoveStudentFromGroupMutation,
+  useTransferStudentMutation,
+} from "../../app/api/groupsApi";
+import type { GroupDetail, GroupHistoryEntry } from "../../app/api/groupsApi/types";
+import { useAllStudentsQuery, useDeleteStudentMutation } from "../../app/api/studentsApi";
+import { useToast } from "../../Context/ToastContext";
 
-import { AddStudentDrawer } from "./AddStudentDrawer/AddStudentDrawer";
+import { AddStudentDrawer, type AddStudentOption } from "./AddStudentDrawer/AddStudentDrawer";
 
 import { Attendance } from "./tabs/Attendance";
 import { Grade } from "./tabs/Grade";
@@ -50,41 +60,130 @@ const TAB_KEYS = [
   "discountPrices", "exams", "history", "comments",
 ];
 
-const mockBalance = (id: number) => {
-  const n = id % 5;
-  if (n === 0) return -23077;
-  if (n === 1) return 150000;
-  if (n === 2) return 0;
-  return -45000;
-};
+// Real backend student refs kelmagan hususiyatlar (balance/archived/frozen
+// holati) uchun hozircha alohida endpoint yo'q — shu sabab neytral default
+// qiymatlar bilan to'ldiramiz (o'ylab topilgan raqamlar emas).
+type RealGroupStudent = GroupStudent & { realId: string };
 
-const enrichStudents = (list: GroupStudent[]): GroupStudent[] =>
-  list.map((s, i, arr) => ({
-    ...s,
-    balance: s.balance ?? mockBalance(s.id),
-    archived: s.archived ?? (arr.length > 2 && i >= arr.length - 2),
-    addedAt: s.addedAt,
-    activatedAt: s.activatedAt,
+const toLegacyGroup = (d: GroupDetail): LegacyGroup => ({
+  id: 0,
+  name: d.name,
+  badge: d.courseName,
+  badgeColor: "blue",
+  startDate: d.trainingStart ?? "",
+  endDate: d.trainingEnd ?? "",
+  schedule: `${d.daysType === "EVEN" ? "Even days" : d.daysType === "ODD" ? "Odd days" : d.daysType ?? "—"} · ${d.time ?? ""}`,
+  room: d.roomName ?? "—",
+  roomCapacity: d.roomCapacity ?? undefined,
+  studentCount: d.students?.length ?? 0,
+  students: [],
+  course: d.courseName,
+  teacher: d.teachers?.map((tch) => tch.name).join(", ") || "—",
+  teacherId: 0,
+  price: d.coursePrice?.d?.[0] ?? undefined,
+  days: d.daysType === "EVEN" ? "Even days" : d.daysType === "ODD" ? "Odd days" : (d.daysType || "—"),
+  lessonStartTime: d.time ?? "",
+  branch: undefined,
+});
+
+const toRealStudents = (d: GroupDetail): RealGroupStudent[] =>
+  (d.students ?? []).map((s, i) => ({
+    id: i + 1,
+    realId: s.id,
+    name: s.name,
+    phone: s.phone,
+    active: true,
+    archived: false,
+    balance: 0,
   }));
+
+// Backend has no dedicated "archived students" list for a group — the only
+// documented source is /groups/{id}/history (join/leave/teacher-change log),
+// so a student is treated as archived here if their most recent group-history
+// event looks like a removal/transfer-out and they're not currently an
+// active member (i.e. they haven't rejoined since).
+const isLeaveEvent = (type: string) =>
+  type.includes("REMOVE") || type.includes("LEFT") || type.includes("ARCHIV") ||
+  type.includes("TRANSFER_OUT") || type.includes("DELETE");
+
+const deriveArchivedFromHistory = (
+  entries: GroupHistoryEntry[],
+  activeStudentIds: Set<string>
+): RealGroupStudent[] => {
+  const latestLeaveByStudent = new Map<string, GroupHistoryEntry>();
+  entries.forEach((entry) => {
+    if (!entry.studentId || !isLeaveEvent(entry.type)) return;
+    const existing = latestLeaveByStudent.get(entry.studentId);
+    if (!existing || entry.createdAt > existing.createdAt) {
+      latestLeaveByStudent.set(entry.studentId, entry);
+    }
+  });
+
+  return Array.from(latestLeaveByStudent.values())
+    .filter((entry) => !activeStudentIds.has(entry.studentId as string))
+    .map((entry, i) => ({
+      id: -(i + 1),
+      realId: entry.studentId as string,
+      name: entry.studentName ?? "—",
+      phone: entry.studentPhone ?? "",
+      active: false,
+      archived: true,
+      balance: 0,
+    }));
+};
 
 export const SingleGroup = () => {
   const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const [tabIndex, setTabIndex] = useState(0);
   const [sortBy, setSortBy] = useState("az");
   const [showCoins, setShowCoins] = useState(false);
 
-  const group = findGroupById(Number(id));
+  const { data: groupDetailData, isLoading: groupLoading } = useGroupByIdQuery(id ?? "", { skip: !id });
+  const { data: historyData } = useGroupHistoryQuery(id ?? "", { skip: !id });
+  const { data: allGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
+  const { data: allStudentsData } = useAllStudentsQuery({ page: 1, limit: 100 });
+  const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
+  const [removeStudentFromGroup, { isLoading: isRemovingFromGroup }] = useRemoveStudentFromGroupMutation();
+  const [transferStudent, { isLoading: isTransferring }] = useTransferStudentMutation();
+  const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
+
+  const group = groupDetailData ? toLegacyGroup(groupDetailData.data) : undefined;
   const teacher = group ? findTeacherById(group.teacherId) : undefined;
-  const [students, setStudents] = useState<GroupStudent[]>(() =>
-    enrichStudents(group?.students ?? [])
-  );
+  const [students, setStudents] = useState<RealGroupStudent[]>([]);
+  useEffect(() => {
+    if (groupDetailData) setStudents(toRealStudents(groupDetailData.data));
+  }, [groupDetailData]);
   const [showArchived, setShowArchived] = useState(false);
+
+  const archivedStudents = useMemo(() => {
+    const activeIds = new Set(students.map((s) => s.realId));
+    return deriveArchivedFromHistory(historyData ?? [], activeIds);
+  }, [historyData, students]);
+  const combinedStudents = useMemo(
+    () => [...students, ...archivedStudents],
+    [students, archivedStudents]
+  );
+
+  const addStudentCandidates: AddStudentOption[] = useMemo(() => {
+    const existingIds = new Set(combinedStudents.map((s) => s.realId));
+    return (allStudentsData?.data ?? [])
+      .filter((s) => !existingIds.has(s.id))
+      .map((s) => ({ id: s.id, name: s.name, phone: s.phone ?? "" }));
+  }, [allStudentsData, combinedStudents]);
+
+  const otherGroups = useMemo(
+    () => (allGroupsData?.data ?? [])
+      .filter((g) => g.id !== id)
+      .map((g) => ({ id: g.id, name: g.name })),
+    [allGroupsData, id]
+  );
 
   // Student dot menu
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
-  const [selectedStudent, setSelectedStudent] = useState<GroupStudent | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<RealGroupStudent | null>(null);
 
   // Student hover card
   const [hoverStudent, setHoverStudent] = useState<ReturnType<typeof buildHoverData> | null>(null);
@@ -116,37 +215,45 @@ export const SingleGroup = () => {
   const [, setMoveToBranchOpen] = useState(false);
   const [removeScope, setRemoveScope] = useState<"current" | "all">("current");
 
+  if (groupLoading) {
+    return (
+      <Box p={4} sx={{ display: "flex", justifyContent: "center" }}><CircularProgress /></Box>
+    );
+  }
+
   if (!group) {
     return (
       <Box p={4}><Typography>{t("singleGroup.notFound")}</Typography></Box>
     );
   }
 
-  const visibleStudents = students.filter((s) => showArchived || !s.archived);
+  const visibleStudents = combinedStudents.filter((s) => showArchived || !s.archived);
 
   const sortedStudents = [...visibleStudents].sort((a, b) =>
     sortBy === "az" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
   );
 
-  const archivedCount = students.filter((s) => s.archived).length;
+  const archivedCount = archivedStudents.length;
 
-  const handleOpenMenu = (e: React.MouseEvent<HTMLElement>, student: GroupStudent) => {
+  const handleOpenMenu = (e: React.MouseEvent<HTMLElement>, student: RealGroupStudent) => {
     e.stopPropagation();
     setMenuAnchor(e.currentTarget);
     setSelectedStudent(student);
   };
   const handleCloseMenu = () => setMenuAnchor(null);
 
-  const handleGoToProfile = (studentId: number) => {
+  // uid — talabaning haqiqiy backend UUID'si (RealGroupStudent.realId /
+  // buildHoverData'dan uid maydoni orqali keladi), profilga shu bilan o'tamiz.
+  const handleGoToProfile = (uid: string) => {
     setHoverStudent(null);
     setHoverAnchorEl(null);
-    navigate(`/students/${group.id}-${studentId}`);
+    navigate(`/students/${uid}`);
   };
 
-  function buildHoverData(student: GroupStudent) {
+  function buildHoverData(student: RealGroupStudent) {
     return {
       id: student.id,
-      uid: `${group!.id}-${student.id}`,
+      uid: student.realId,
       name: student.name,
       phone: student.phone,
       active: student.active,
@@ -157,7 +264,7 @@ export const SingleGroup = () => {
     };
   }
 
-  const handleStudentMouseEnter = (e: React.MouseEvent<HTMLElement>, student: GroupStudent) => {
+  const handleStudentMouseEnter = (e: React.MouseEvent<HTMLElement>, student: RealGroupStudent) => {
     if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
     if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
     const target = e.currentTarget;
@@ -273,28 +380,44 @@ export const SingleGroup = () => {
     resetRemoveState();
   };
 
-  const handleRemoveStudent = () => {
-    if (removeDeleteMode) {
-      setStudents((prev) => prev.filter((s) => s.id !== selectedStudent?.id));
-    } else {
-      setStudents((prev) =>
-        prev.map((s) =>
-          s.id === selectedStudent?.id
-            ? { ...s, archived: true, active: false }
-            : s
-        )
-      );
+  const handleRemoveStudent = async () => {
+    if (!selectedStudent || !id) return;
+    try {
+      if (removeDeleteMode) {
+        await deleteStudent(selectedStudent.realId).unwrap();
+        toast.success(t("singleGroup.removeStudentDialog.toast.deleted"));
+      } else {
+        await removeStudentFromGroup({ id, studentId: selectedStudent.realId }).unwrap();
+        toast.success(t("singleGroup.removeStudentDialog.toast.removed"));
+      }
+      setRemoveOpen(false);
+      resetRemoveState();
+    } catch {
+      toast.error(t("singleGroup.removeStudentDialog.toast.error"));
     }
-    setRemoveOpen(false);
-    resetRemoveState();
   };
 
-  const handleMoveStudent = () => {
-    setStudents((prev) => prev.filter((s) => s.id !== selectedStudent?.id));
-    setMoveOpen(false);
+  const handleAddStudentSubmit = async (studentId: string) => {
+    if (!id) return;
+    try {
+      await assignStudentsToGroup({ id, studentIds: [studentId] }).unwrap();
+      toast.success(t("singleGroup.addStudentDrawer.toast.success"));
+      setAddStudentOpen(false);
+    } catch {
+      toast.error(t("singleGroup.addStudentDrawer.toast.error"));
+    }
   };
 
-  const otherGroups = ALL_GROUPS.filter((g) => g.id !== group.id);
+  const handleMoveStudent = async (newGroupId: string) => {
+    if (!selectedStudent || !id) return;
+    try {
+      await transferStudent({ id, studentId: selectedStudent.realId, newGroupId, reason: "" }).unwrap();
+      toast.success(t("singleGroup.moveStudentDialog.toast.success"));
+      setMoveOpen(false);
+    } catch {
+      toast.error(t("singleGroup.moveStudentDialog.toast.error"));
+    }
+  };
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f7f8fa" }}>
@@ -393,7 +516,7 @@ export const SingleGroup = () => {
                   }}
                   onMouseEnter={(e) => handleStudentMouseEnter(e, s)}
                   onMouseLeave={handleStudentMouseLeave}
-                  onClick={() => handleGoToProfile(s.id)}
+                  onClick={() => handleGoToProfile(s.realId)}
                   secondaryAction={
                     <IconButton
                       size="small"
@@ -532,16 +655,16 @@ export const SingleGroup = () => {
               ))}
             </Tabs>
             <Box sx={{ p: 3, maxHeight: "calc(100vh - 220px)", overflowY: "auto", overflowX: "visible" }}>
-              {tabIndex === 0 && <Attendance students={students} />}
-              {tabIndex === 1 && <Grade students={students} />}
+              {tabIndex === 0 && <Attendance groupId={id ?? ""} students={combinedStudents} />}
+              {tabIndex === 1 && <Grade students={combinedStudents} />}
               {tabIndex === 2 && <OnlineLessons />}
-              {tabIndex === 3 && <DiscountPrices students={students} />}
+              {tabIndex === 3 && <DiscountPrices students={combinedStudents} />}
               {tabIndex === 4 && <Exams />}
               {tabIndex === 5 && (
                 <History
                   groupId={group.id}
                   groupName={group.name}
-                  students={students}
+                  students={combinedStudents}
                 />
               )}
               {tabIndex === 6 && <Comments />}
@@ -557,7 +680,7 @@ export const SingleGroup = () => {
           anchorEl={hoverAnchorEl}
           onClose={() => { setHoverStudent(null); setHoverAnchorEl(null); }}
           onGoToProfile={() => {
-            if (hoverStudent) handleGoToProfile(hoverStudent.id);
+            if (hoverStudent) handleGoToProfile(hoverStudent.uid);
           }}
         />
       </div>
@@ -613,7 +736,9 @@ export const SingleGroup = () => {
       <AddStudentDrawer
         open={addStudentOpen}
         onClose={() => setAddStudentOpen(false)}
-        onAdd={(s) => setStudents((prev) => [...prev, s])}
+        students={addStudentCandidates}
+        onSubmit={handleAddStudentSubmit}
+        isSubmitting={isAssigning}
       />
 
       {/* ══ ADD NOTE MODAL (top) ══ */}
@@ -636,6 +761,7 @@ export const SingleGroup = () => {
         student={selectedStudent}
         groups={otherGroups}
         onMove={handleMoveStudent}
+        isSubmitting={isTransferring}
       />
 
       {/* ══ REMOVE CONFIRM ══ */}
@@ -653,6 +779,7 @@ export const SingleGroup = () => {
         onRecalculateChange={setRemoveRecalculate}
         scope={removeScope}
         onScopeChange={setRemoveScope}
+        loading={isRemovingFromGroup || isDeletingStudent}
       />
     </Box>
   );

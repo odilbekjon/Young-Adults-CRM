@@ -1,17 +1,12 @@
-import {useState} from "react";
-import { MdClose, MdSearch,  } from "react-icons/md";
+import { useEffect, useState } from "react";
+import { MdClose, MdSearch } from "react-icons/md";
 import { useTranslation } from "react-i18next";
-import { Student } from "../../../types";
 
-const MOCK_STUDENTS = [
-  { id: 101, name: "Aliyev Bobur", phone: "(90) 123-45-67" },
-  { id: 102, name: "Karimova Malika", phone: "(93) 234-56-78" },
-  { id: 103, name: "Toshmatov Jasur", phone: "(91) 345-67-89" },
-  { id: 104, name: "Yusupova Nilufar", phone: "(94) 456-78-90" },
-  { id: 105, name: "Rahimov Sherzod", phone: "(97) 567-89-01" },
-  { id: 106, name: "Mirzayeva Zulfiya", phone: "(99) 678-90-12" },
-  { id: 107, name: "Hasanov Eldor", phone: "(88) 789-01-23" },
-];
+export interface AddStudentOption {
+  id: string;
+  name: string;
+  phone: string;
+}
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -25,7 +20,7 @@ const inputStyle: React.CSSProperties = {
   background: "#fff",
   fontFamily: "inherit",
 };
-    
+
 const labelStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 500,
@@ -103,27 +98,31 @@ const RightDrawer = ({
 );
 
 export const AddStudentDrawer = ({
-  open, onClose, onAdd,
+  open, onClose, students, onSubmit, isSubmitting,
 }: {
-  open: boolean; onClose: () => void;
-  onAdd: (s: Student & { startDate?: string }) => void;
+  open: boolean;
+  onClose: () => void;
+  students: AddStudentOption[];
+  onSubmit: (studentId: string) => void;
+  isSubmitting?: boolean;
 }) => {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<(typeof MOCK_STUDENTS)[0] | null>(null);
-  const [startDate, setStartDate] = useState("");
+  const [selected, setSelected] = useState<AddStudentOption | null>(null);
+
+  useEffect(() => {
+    if (!open) { setQuery(""); setSelected(null); }
+  }, [open]);
 
   const filtered = query.length > 0
-    ? MOCK_STUDENTS.filter(
+    ? students.filter(
         (s) => s.name.toLowerCase().includes(query.toLowerCase()) || s.phone.includes(query)
       )
     : [];
 
   const handleAdd = () => {
-    if (!selected) return;
-    onAdd({ id: selected.id, name: selected.name, phone: selected.phone, active: true });
-    setQuery(""); setSelected(null); setStartDate("");
-    onClose();
+    if (!selected || isSubmitting) return;
+    onSubmit(selected.id);
   };
 
   return (
@@ -138,6 +137,7 @@ export const AddStudentDrawer = ({
               placeholder={t("singleGroup.addStudentDrawer.searchPlaceholder")}
               value={query}
               onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
+              disabled={isSubmitting}
             />
           </div>
           {filtered.length > 0 && !selected && (
@@ -171,15 +171,11 @@ export const AddStudentDrawer = ({
             </div>
           </div>
         )}
-        <div>
-          <label style={labelStyle}>{t("singleGroup.addStudentDrawer.startDate")}</label>
-          <input type="date" style={inputStyle} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-        </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <button style={{ ...submitBtn, opacity: selected ? 1 : 0.5 }} onClick={handleAdd} disabled={!selected}>
-            {t("singleGroup.addStudentDrawer.submit")}
+          <button style={{ ...submitBtn, opacity: selected && !isSubmitting ? 1 : 0.5 }} onClick={handleAdd} disabled={!selected || isSubmitting}>
+            {isSubmitting ? "…" : t("singleGroup.addStudentDrawer.submit")}
           </button>
-          <button style={cancelBtn} onClick={onClose}>{t("singleGroup.addStudentDrawer.cancel")}</button>
+          <button style={cancelBtn} onClick={onClose} disabled={isSubmitting}>{t("singleGroup.addStudentDrawer.cancel")}</button>
         </div>
       </div>
     </RightDrawer>

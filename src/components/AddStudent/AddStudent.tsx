@@ -5,9 +5,12 @@ import {
   BsTelegram, BsMortarboard, BsGeoAlt, BsCardText,
 } from "react-icons/bs";
 import { MdCalendarToday } from "react-icons/md";
+import { IoClose } from "react-icons/io5";
 import { RightDrawer } from "../common/RightDrawer";
 import { useData } from "../../Context/DataContext";
-import type { FlatStudent } from "../../constants/FlatStudents";
+import { useToast } from "../../Context/ToastContext";
+import { useCreateStudentMutation } from "../../app/api/studentsApi/studentsApi";
+import type { StudentGender } from "../../app/api/studentsApi/types";
 
 /* ─── shared styles ─── */
 const inputStyle: React.CSSProperties = {
@@ -31,8 +34,8 @@ const labelStyle: React.CSSProperties = {
   display: "block",
 };
 
-/* ─── additional contact fields config ─── */
-type AdditionalFieldId = "phone2" | "key" | "contact" | "email" | "telegram" | "education" | "location" | "card";
+/* ─── additional contact fields config (studentsApi maydonlariga mos) ─── */
+type AdditionalFieldId = "parentPhone" | "passport" | "parentName" | "email" | "telegram" | "schoolName" | "location" | "instagram";
 
 const ADDITIONAL_FIELDS: {
   id: AdditionalFieldId;
@@ -40,50 +43,58 @@ const ADDITIONAL_FIELDS: {
   labelKey: string;
   inputType: string;
 }[] = [
-  { id: "phone2", icon: <BsTelephone size={16} />, labelKey: "addStudent.additional.phone", inputType: "tel" },
-  { id: "key", icon: <BsKey size={16} />, labelKey: "addStudent.additional.key", inputType: "text" },
-  { id: "contact", icon: <BsPerson size={16} />, labelKey: "addStudent.additional.contact", inputType: "text" },
+  { id: "parentPhone", icon: <BsTelephone size={16} />, labelKey: "addStudent.additional.phone", inputType: "tel" },
+  { id: "passport", icon: <BsKey size={16} />, labelKey: "addStudent.additional.key", inputType: "text" },
+  { id: "parentName", icon: <BsPerson size={16} />, labelKey: "addStudent.additional.contact", inputType: "text" },
   { id: "email", icon: <BsEnvelope size={16} />, labelKey: "addStudent.additional.email", inputType: "email" },
   { id: "telegram", icon: <BsTelegram size={16} />, labelKey: "addStudent.additional.telegram", inputType: "text" },
-  { id: "education", icon: <BsMortarboard size={16} />, labelKey: "addStudent.additional.education", inputType: "text" },
+  { id: "schoolName", icon: <BsMortarboard size={16} />, labelKey: "addStudent.additional.education", inputType: "text" },
   { id: "location", icon: <BsGeoAlt size={16} />, labelKey: "addStudent.additional.location", inputType: "text" },
-  { id: "card", icon: <BsCardText size={16} />, labelKey: "addStudent.additional.card", inputType: "text" },
+  { id: "instagram", icon: <BsCardText size={16} />, labelKey: "addStudent.additional.card", inputType: "text" },
 ];
 
 interface AddStudentDrawerProps {
   open: boolean;
   onClose: () => void;
   /** ixtiyoriy: student muvaffaqiyatli qo'shilganda ishga tushadi (masalan, listni yangilash uchun) */
-  onSuccess?: (student: FlatStudent) => void;
+  onSuccess?: () => void;
 }
 
 export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) => {
   const { t } = useTranslation();
-  const { groups, addStudent } = useData();
+  const { groups } = useData();
+  const toast = useToast();
+  const [createStudent, { isLoading: isSaving }] = useCreateStudentMutation();
 
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
-  const [gender, setGender] = useState<"Male" | "Female" | "">("");
+  const [gender, setGender] = useState<StudentGender | "">("");
   const [comment, setComment] = useState("");
   const [showGroupField, setShowGroupField] = useState(false);
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [group, setGroup] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   // har bir additional field uchun ochiq/yopiqligi
   const [openFields, setOpenFields] = useState<Record<AdditionalFieldId, boolean>>({
-    phone2: false, key: false, contact: false, email: false,
-    telegram: false, education: false, location: false, card: false,
+    parentPhone: false, passport: false, parentName: false, email: false,
+    telegram: false, schoolName: false, location: false, instagram: false,
   });
   // har bir additional field uchun kiritilgan qiymat
   const [additionalValues, setAdditionalValues] = useState<Record<AdditionalFieldId, string>>({
-    phone2: "", key: "", contact: "", email: "",
-    telegram: "", education: "", location: "", card: "",
+    parentPhone: "", passport: "", parentName: "", email: "",
+    telegram: "", schoolName: "", location: "", instagram: "",
   });
 
   const toggleField = (id: AdditionalFieldId) => {
     setOpenFields((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const closeField = (id: AdditionalFieldId) => {
+    setOpenFields((prev) => ({ ...prev, [id]: false }));
+    setFieldValue(id, "");
   };
 
   const setFieldValue = (id: AdditionalFieldId, value: string) => {
@@ -92,46 +103,49 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
 
   const handleClose = () => {
     setPhone(""); setName(""); setDob(""); setGender("");
-    setComment(""); setGroup(""); setPassword("");
+    setComment(""); setGroup(""); setPassword(""); setError(null);
     setShowGroupField(false); setShowPasswordField(false);
     setOpenFields({
-      phone2: false, key: false, contact: false, email: false,
-      telegram: false, education: false, location: false, card: false,
+      parentPhone: false, passport: false, parentName: false, email: false,
+      telegram: false, schoolName: false, location: false, instagram: false,
     });
     setAdditionalValues({
-      phone2: "", key: "", contact: "", email: "",
-      telegram: "", education: "", location: "", card: "",
+      parentPhone: "", passport: "", parentName: "", email: "",
+      telegram: "", schoolName: "", location: "", instagram: "",
     });
     onClose();
   };
 
-  const handleSubmit = () => {
-    const firstGroup = groups[0];
-    if (!firstGroup) { handleClose(); return; }
-    const newStudent: FlatStudent = {
-      uid: `${firstGroup.id}-${Date.now()}`,
-      id: Date.now(),
-      name: name || "Yangi O'quvchi",
-      phone: `+998 ${phone}`,
-      active: true,
-      groupId: firstGroup.id,
-      groupName: firstGroup.name,
-      groupSchedule: firstGroup.schedule,
-      groupBadge: firstGroup.badge,
-      groupBadgeColor: firstGroup.badgeColor,
-      course: firstGroup.course,
-      teacher: firstGroup.teacher,
-      teacherId: firstGroup.teacherId,
-      startDate: firstGroup.startDate,
-      endDate: firstGroup.endDate,
-      branch: firstGroup.branch ?? "",
-      room: firstGroup.room,
-      price: firstGroup.price ?? 0,
-      balance: 0,
-    };
-    addStudent(newStudent);
-    onSuccess?.(newStudent);
-    handleClose();
+  const handleSubmit = async () => {
+    setError(null);
+    const fullPhone = phone ? `+998${phone.replace(/\D/g, "")}` : "";
+
+    if (!name.trim()) { setError(t("addStudent.errors.name")); return; }
+    if (!fullPhone && !additionalValues.email.trim()) { setError(t("addStudent.errors.contact")); return; }
+
+    try {
+      await createStudent({
+        name: name.trim(),
+        password: password.trim() || undefined,
+        phone: fullPhone || undefined,
+        email: additionalValues.email.trim() || undefined,
+        gender: gender || undefined,
+        birthdate: dob || undefined,
+        parentName: additionalValues.parentName.trim() || undefined,
+        parentPhone: additionalValues.parentPhone.trim() || undefined,
+        schoolName: additionalValues.schoolName.trim() || undefined,
+        location: additionalValues.location.trim() || undefined,
+        passport: additionalValues.passport.trim() || undefined,
+        telegram: additionalValues.telegram.trim() || undefined,
+        instagram: additionalValues.instagram.trim() || undefined,
+      }).unwrap();
+      toast.success(t("addStudent.toast.created"));
+      onSuccess?.();
+      handleClose();
+    } catch {
+      setError(t("addStudent.errors.save"));
+      toast.error(t("addStudent.errors.save"));
+    }
   };
 
   return (
@@ -184,7 +198,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
         <div>
           <label style={labelStyle}>{t("addStudent.gender")}</label>
           <div style={{ display: "flex", gap: 24 }}>
-            {(["Male", "Female"] as const).map((g) => (
+            {(["MALE", "FEMALE"] as const).map((g) => (
               <label key={g} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
                 <div
                   onClick={() => setGender(g)}
@@ -197,7 +211,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
                 >
                   {gender === g && <div style={{ width: 9, height: 9, borderRadius: "50%", background: "#185FA5" }} />}
                 </div>
-                {g === "Male" ? t("addStudent.male") : t("addStudent.female")}
+                {g === "MALE" ? t("addStudent.male") : t("addStudent.female")}
               </label>
             ))}
           </div>
@@ -243,13 +257,32 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
             {ADDITIONAL_FIELDS.filter((f) => openFields[f.id]).map((field) => (
               <div key={field.id}>
                 <label style={labelStyle}>{t(field.labelKey)}</label>
-                <input
-                  style={inputStyle}
-                  type={field.inputType}
-                  value={additionalValues[field.id]}
-                  onChange={(e) => setFieldValue(field.id, e.target.value)}
-                  placeholder={t(field.labelKey)}
-                />
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  border: "1px solid #e0e0e0", borderRadius: 8,
+                  padding: "0 6px 0 12px", background: "#fff",
+                }}>
+                  <span style={{ color: "#4a7aaa", display: "flex", flexShrink: 0 }}>{field.icon}</span>
+                  <input
+                    style={{ flex: 1, border: "none", outline: "none", fontSize: 13, padding: "10px 0", background: "transparent", fontFamily: "inherit" }}
+                    type={field.inputType}
+                    value={additionalValues[field.id]}
+                    onChange={(e) => setFieldValue(field.id, e.target.value)}
+                    placeholder={t(field.labelKey)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => closeField(field.id)}
+                    title={t("addStudent.removeField")}
+                    style={{
+                      width: 22, height: 22, borderRadius: "50%", border: "none",
+                      background: "transparent", color: "#9ca3af", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}
+                  >
+                    <IoClose size={15} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -296,17 +329,23 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
           )}
         </div>
 
+        {error && (
+          <div style={{ fontSize: 13, color: "#d93f4f" }}>{error}</div>
+        )}
+
         {/* Submit */}
         <div style={{ marginTop: 4 }}>
           <button
             onClick={handleSubmit}
+            disabled={isSaving}
             style={{
               background: "#4a7aaa", color: "#fff", border: "none",
               borderRadius: 20, padding: "11px 32px",
-              fontSize: 14, fontWeight: 600, cursor: "pointer",
+              fontSize: 14, fontWeight: 600, cursor: isSaving ? "default" : "pointer",
+              opacity: isSaving ? 0.7 : 1,
             }}
           >
-            {t("addStudent.submit")}
+            {isSaving ? t("addStudent.saving") : t("addStudent.submit")}
           </button>
         </div>
       </div>

@@ -29,6 +29,7 @@ interface RemoveStudentDialogProps {
   onRecalculateChange: (v: boolean) => void;
   scope: "current" | "all";
   onScopeChange: (v: "current" | "all") => void;
+  loading?: boolean;
 }
 
 export const RemoveStudentDialog = ({
@@ -38,6 +39,7 @@ export const RemoveStudentDialog = ({
   comment, onCommentChange,
   recalculate, onRecalculateChange,
   scope, onScopeChange,
+  loading,
 }: RemoveStudentDialogProps) => {
   const { t } = useTranslation();
   if (!open) return null;
@@ -122,16 +124,19 @@ export const RemoveStudentDialog = ({
               style={{
                 background: "#d93f4f", color: "#fff", border: "none",
                 borderRadius: 999, padding: "12px 34px", fontSize: 15,
-                fontWeight: 600, cursor: "pointer",
+                fontWeight: 600, cursor: loading ? "default" : "pointer",
                 boxShadow: "0 3px 8px rgba(217,63,79,0.35)",
+                opacity: loading ? 0.7 : 1,
               }}
               onClick={onConfirm}
+              disabled={loading}
             >
-              {t("singleGroup.removeStudentDialog.yes")}
+              {loading ? "…" : t("singleGroup.removeStudentDialog.yes")}
             </button>
             <button
-              style={{ background: "#fff", border: "none", color: "#8a8a8a", fontSize: 15, padding: "0 8px", cursor: "pointer" }}
+              style={{ background: "#fff", border: "none", color: "#8a8a8a", fontSize: 15, padding: "0 8px", cursor: loading ? "default" : "pointer" }}
               onClick={onClose}
+              disabled={loading}
             >
               {t("singleGroup.removeStudentDialog.cancel")}
             </button>

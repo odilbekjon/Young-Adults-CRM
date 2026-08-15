@@ -37,17 +37,16 @@ import { BsThreeDotsVertical, BsPersonPlus } from "react-icons/bs";
 import { TbAdjustmentsHorizontal, TbColumns3 } from "react-icons/tb";
 import { HiChevronDown } from "react-icons/hi";
 import { IoClose, IoSearchOutline } from "react-icons/io5";
-import {
-  FiPhone, FiKey, FiUser, FiMail, FiSend,
-  FiBookOpen, FiMapPin, FiCreditCard,
-} from "react-icons/fi";
+import { FiUser } from "react-icons/fi";
 
 import { FlatStudent, mapApiStudentToFlat, formatDate } from "../../constants/FlatStudents";
+import { ALL_COLUMNS, CONTACT_ICONS, BADGE_COLORS } from "../../constants/StudentsTable";
 import { useNavigate } from "react-router-dom";
 
 import { AddStudent } from "../../components/AddStudent";
 import { AddPayment } from "../../components/AddPayment";
-import { useAllStudentsQuery } from "../../app/api/studentsApi";
+import { useAllStudentsQuery, useUpdateStudentMutation, useDeleteStudentMutation } from "../../app/api/studentsApi";
+import { useToast } from "../../Context/ToastContext";
 
 import { SendSmsModal } from "../../components/SendSmsModal";
 
@@ -59,29 +58,6 @@ interface Filters {
   search: string;
   teacher: string;
 }
-
-const ALL_COLUMNS = [
-  { key: "photo" },
-  { key: "name" },
-  { key: "phone" },
-  { key: "groups" },
-  { key: "teachers" },
-  { key: "training" },
-  { key: "balance" },
-  { key: "comment" },
-];
-
-
-const CONTACT_ICONS = [
-  { icon: <FiPhone size={16} />,    key: "phone" },
-  { icon: <FiKey size={16} />,      key: "key" },
-  { icon: <FiUser size={16} />,     key: "profile" },
-  { icon: <FiMail size={16} />,     key: "email" },
-  { icon: <FiSend size={16} />,     key: "telegram" },
-  { icon: <FiBookOpen size={16} />, key: "education" },
-  { icon: <FiMapPin size={16} />,   key: "location" },
-  { icon: <FiCreditCard size={16} />, key: "card" },
-];
 
 /* ─── STYLES ─────────────────────────────────────────── */
 const inputSx = {
@@ -285,12 +261,14 @@ const AddToGroupModal = ({
 
 /* ─── EDIT STUDENT DRAWER ────────────────────────────── */
 const EditStudentDrawer = ({
-  open, student, onClose, onSave,
+  open, student, onClose, onSave, saving, error,
 }: {
   open: boolean;
   student: FlatStudent | null;
   onClose: () => void;
-  onSave: (uid: string, data: { name: string; phone: string }) => void;
+  onSave: (uid: string, data: { name: string; phone: string }) => Promise<boolean>;
+  saving?: boolean;
+  error?: string | null;
 }) => {
   const { t } = useTranslation();
   const [name,   setName]   = useState("");
@@ -367,12 +345,17 @@ const EditStudentDrawer = ({
           <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>{t("students.editDrawer.setPassword")}</Button>
         </Stack>
 
+        {error && (
+          <Typography fontSize={13} color="error" mb={1.5}>{error}</Typography>
+        )}
+
         <Button
           variant="contained" fullWidth
-          onClick={() => { if (student) onSave(student.uid, { name, phone }); onClose(); }}
+          disabled={saving}
+          onClick={async () => { if (!student) return; const ok = await onSave(student.uid, { name, phone }); if (ok) onClose(); }}
           sx={{ borderRadius: "20px", py: 1.2, fontWeight: 600, fontSize: 14, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" }, boxShadow: "none", textTransform: "none" }}
         >
-          {t("students.editDrawer.submit")}
+          {saving ? t("students.editDrawer.saving") : t("students.editDrawer.submit")}
         </Button>
       </Box>
     </Drawer>
@@ -440,17 +423,21 @@ const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
 export const Students = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [sendSmsOpen, setSendSmsOpen] = useState(false);
 
   const [page, setPage] = useState(1);
   const limit = 20;
   const { data: studentsData, isLoading: studentsLoading } = useAllStudentsQuery({ page, limit });
+  const [updateStudent, { isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
+  const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
 
   const [students, setStudents] = useState<FlatStudent[]>([]);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (studentsData) setStudents(studentsData.data.data.map(mapApiStudentToFlat));
+    if (studentsData) setStudents(studentsData.data.map(mapApiStudentToFlat));
   }, [studentsData]);
 
   const [selected,          setSelected]          = useState<string[]>([]);
@@ -478,15 +465,29 @@ export const Students = () => {
 
   const TEACHERS_LIST = useMemo(() => {
     const names = new Set<string>();
-    studentsData?.data.data.forEach((s) => s.teachers.forEach((tch) => names.add(tch.name)));
+    studentsData?.data.forEach((s) => (s.teachers ?? []).forEach((tch) => names.add(tch.name)));
     return Array.from(names);
   }, [studentsData]);
 
   const ALL_GROUPS = useMemo(() => {
     const groups = new Map<string, string>();
-    studentsData?.data.data.forEach((s) => s.groups.forEach((g) => groups.set(g.id, g.name)));
+    studentsData?.data.forEach((s) => (s.groups ?? []).forEach((g) => groups.set(g.id, g.name)));
     return Array.from(groups, ([id, name]) => ({ id, name }));
   }, [studentsData]);
+
+  // Backend hozircha sahifalash meta'sini qaytarmaydi; shu sababli joriy
+  // sahifa hajmidan taxminiy meta hosil qilamiz, chunki bu maydon kelib
+  // qolsa (studentsData.meta) to'g'ridan-to'g'ri ishlatiladi.
+  const pageMeta = useMemo(() => {
+    if (studentsData?.meta) return studentsData.meta;
+    const count = studentsData?.data.length ?? 0;
+    return {
+      total: count,
+      page,
+      limit,
+      totalPages: count < limit ? page : page + 1,
+    };
+  }, [studentsData, page, limit]);
 
   const filtered = useMemo(() => {
     return students
@@ -515,16 +516,44 @@ export const Students = () => {
   const toggleOne   = (uid: string) =>
     setSelected((p) => p.includes(uid) ? p.filter((x) => x !== uid) : [...p, uid]);
 
-  const handleDeleteConfirm = () => {
-    if (deleteUid) {
-      setStudents((prev) => prev.filter((s) => s.uid !== deleteUid));
+  const handleDeleteConfirm = async () => {
+    if (!deleteUid) return;
+    setActionError(null);
+    try {
+      await deleteStudent(deleteUid).unwrap();
       setSelected((p) => p.filter((x) => x !== deleteUid));
       setDeleteUid(null);
+      toast.success(t("students.toast.deleted"));
+    } catch {
+      setActionError(t("students.deleteDialog.error"));
+      toast.error(t("students.deleteDialog.error"));
     }
   };
 
-  const handleSaveEdit = (uid: string, data: { name: string; phone: string }) => {
-    setStudents((prev) => prev.map((s) => (s.uid === uid ? { ...s, ...data } : s)));
+  const handleBulkDelete = async () => {
+    if (selected.length === 0) return;
+    setActionError(null);
+    try {
+      await Promise.all(selected.map((uid) => deleteStudent(uid).unwrap()));
+      setSelected([]);
+      toast.success(t("students.toast.deleted"));
+    } catch {
+      setActionError(t("students.deleteDialog.error"));
+      toast.error(t("students.deleteDialog.error"));
+    }
+  };
+
+  const handleSaveEdit = async (uid: string, data: { name: string; phone: string }): Promise<boolean> => {
+    setActionError(null);
+    try {
+      await updateStudent({ id: uid, name: data.name, phone: data.phone }).unwrap();
+      toast.success(t("students.toast.updated"));
+      return true;
+    } catch {
+      setActionError(t("students.editDrawer.error"));
+      toast.error(t("students.editDrawer.error"));
+      return false;
+    }
   };
 
   const openActionMenu = (e: React.MouseEvent<HTMLButtonElement>, uid: string) => {
@@ -547,12 +576,6 @@ export const Students = () => {
     comment: t("students.table.comment"),
   };
 
-  const badgeColors: Record<string, { bg: string; color: string }> = {
-    blue:  { bg: "#dbeafe", color: "#1d4ed8" },
-    green: { bg: "#dcfce7", color: "#15803d" },
-    amber: { bg: "#fef3c7", color: "#92400e" },
-  };
-
   /* ── UI ─────────────────────────────────────────────── */
   return (
     <Box sx={{ p: 3, bgcolor: "#f8f9fa", minHeight: "100vh" }}>
@@ -561,7 +584,7 @@ export const Students = () => {
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
         <Stack direction="row" alignItems="baseline" gap={1.5}>
           <Typography variant="h5" fontWeight={700} fontSize={26} color="#111827">{t("students.header.title")}</Typography>
-          <Typography fontSize={14} color="#6b7280">{t("students.header.quantity", { count: studentsData?.data.meta.total ?? filtered.length })}</Typography>
+          <Typography fontSize={14} color="#6b7280">{t("students.header.quantity", { count: studentsData ? pageMeta.total : filtered.length })}</Typography>
         </Stack>
         <Button
           variant="contained"
@@ -708,10 +731,7 @@ export const Students = () => {
                     <Tooltip title={t("students.table.deleteSelected")}>
                       <IconButton
                         size="small" sx={{ color: "#9ca3af" }}
-                        onClick={() => {
-                          setStudents((prev) => prev.filter((s) => !selected.includes(s.uid)));
-                          setSelected([]);
-                        }}
+                        onClick={handleBulkDelete}
                       >
                         <MdDelete size={15} />
                       </IconButton>
@@ -723,7 +743,7 @@ export const Students = () => {
 
             <TableBody>
               {filtered.map((s, i) => {
-                const badge      = badgeColors[s.groupBadgeColor] ?? badgeColors.blue;
+                const badge      = BADGE_COLORS[s.groupBadgeColor] ?? BADGE_COLORS.blue;
                 const isSelected = selected.includes(s.uid);
                 return (
                   <TableRow
@@ -838,9 +858,9 @@ export const Students = () => {
           <Typography fontSize={13} color="text.secondary">
             {studentsData
               ? t("students.pagination.range", {
-                  from: studentsData.data.meta.total === 0 ? 0 : (studentsData.data.meta.page - 1) * studentsData.data.meta.limit + 1,
-                  to: Math.min(studentsData.data.meta.page * studentsData.data.meta.limit, studentsData.data.meta.total),
-                  total: studentsData.data.meta.total,
+                  from: pageMeta.total === 0 ? 0 : (pageMeta.page - 1) * pageMeta.limit + 1,
+                  to: Math.min(pageMeta.page * pageMeta.limit, pageMeta.total),
+                  total: pageMeta.total,
                 })
               : t("students.pagination.range", { from: 0, to: 0, total: 0 })}
           </Typography>
@@ -855,8 +875,8 @@ export const Students = () => {
             </Button>
             <Button
               size="small" variant="outlined"
-              disabled={!studentsData || page >= studentsData.data.meta.totalPages}
-              onClick={() => setPage((p) => (studentsData && p < studentsData.data.meta.totalPages ? p + 1 : p))}
+              disabled={!studentsData || page >= pageMeta.totalPages}
+              onClick={() => setPage((p) => (studentsData && p < pageMeta.totalPages ? p + 1 : p))}
               sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: "6px", fontSize: 13 }}
             >
               {">"}
@@ -875,6 +895,8 @@ export const Students = () => {
         student={activeStudent}
         onClose={() => setEditDrawerOpen(false)}
         onSave={handleSaveEdit}
+        saving={isUpdatingStudent}
+        error={actionError}
       />
       <AddToGroupModal
         open={addToGroupOpen}
@@ -898,10 +920,13 @@ export const Students = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>{t("students.deleteDialog.title")}</DialogTitle>
         <DialogContent>
           <Typography fontSize={14} color="text.secondary">{t("students.deleteDialog.message")}</Typography>
+          {actionError && (
+            <Typography fontSize={13} color="error" mt={1.5}>{actionError}</Typography>
+          )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteUid(null)} sx={{ color: "#667085" }}>{t("students.deleteDialog.cancel")}</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteConfirm} sx={{ borderRadius: 2 }}>{t("students.deleteDialog.confirm")}</Button>
+          <Button onClick={() => setDeleteUid(null)} disabled={isDeletingStudent} sx={{ color: "#667085" }}>{t("students.deleteDialog.cancel")}</Button>
+          <Button variant="contained" color="error" disabled={isDeletingStudent} onClick={handleDeleteConfirm} sx={{ borderRadius: 2 }}>{t("students.deleteDialog.confirm")}</Button>
         </DialogActions>
       </Dialog>
     </Box>

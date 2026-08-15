@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type Fetch
 import { logout } from "../../store/authSlice";
 
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl: import.meta.env.DEV ? '/api/v1/' : 'https://young-adults-dj7r.onrender.com/api/v1/',
+  baseUrl:'https://young-adults-dj7r.onrender.com/api/v1/',
   credentials: 'include',
   prepareHeaders: (headers) => {
     const token = useStorage.getTokens()?.accessToken;
@@ -32,6 +32,6 @@ export const baseApi = createApi({
   reducerPath: "baseApi",
   baseQuery: baseQueryWithReauth,
   endpoints: () => ({}),
-  tagTypes: ["user", "course", "branch", "room", "dashboard" ],
+  tagTypes: ["user", "course", "branch", "room", "dashboard", "student", "group", "attendance"],
 });
 export default baseApi;

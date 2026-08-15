@@ -34,15 +34,26 @@
     "setPassword": "+ Set password",
     "passwordPlaceholder": "Password",
     "submit": "Submit",
+    "saving": "Saving...",
+    "removeField": "Remove",
+    "toast": {
+        "created": "Student added successfully"
+    },
+    "errors": {
+        "name": "Name is required",
+        "password": "Password is required",
+        "contact": "Phone or email is required",
+        "save": "Failed to save the student"
+    },
     "additional": {
-        "phone": "Additional phone",
-        "key": "Access key",
-        "contact": "Additional contact",
+        "phone": "Parent's phone number",
+        "key": "Passport details",
+        "contact": "Parent's name",
         "email": "Email",
         "telegram": "Telegram username",
-        "education": "Education",
-        "location": "Address",
-        "card": "Card number"
+        "education": "School name",
+        "location": "Home address",
+        "card": "Instagram username"
     }
   },
   "addPayment": {
@@ -177,6 +188,10 @@
     "loadError": "Failed to load dashboard data."
   },
   "students": {
+    "toast": {
+      "updated": "Student updated successfully",
+      "deleted": "Student deleted successfully"
+    },
     "header": {
       "title": "Students",
       "quantity": "Quantity — {{count}}",
@@ -232,7 +247,9 @@
       "additionalContacts": "Additional contacts",
       "addToGroup": "+ Add to the group",
       "setPassword": "+ Set password",
-      "submit": "Submit"
+      "submit": "Submit",
+      "saving": "Saving...",
+      "error": "Failed to save the student"
     },
     "contacts": {
       "phone": "Phone",
@@ -248,7 +265,8 @@
       "title": "Delete Student",
       "message": "Are you sure you want to remove this student?",
       "cancel": "Cancel",
-      "confirm": "Delete"
+      "confirm": "Delete",
+      "error": "Failed to delete the student"
     }
   },
   "teachers": {
@@ -390,14 +408,39 @@
       "lessonStartTime": "Lesson start time",
       "startDate": "Group start date",
       "endDate": "Group end date",
+      "weekOfStudy": "Week of study",
+      "trainingStart": "Training start date",
+      "trainingEnd": "Training end date",
+      "students": "Students",
       "tags": "Tags",
-      "status": "Status"
+      "status": "Status",
+      "errors": {
+        "name": "Group name is required",
+        "course": "Course is required",
+        "save": "Failed to save the group"
+      }
+    },
+    "toast": {
+      "created": "Group created successfully",
+      "updated": "Group updated successfully",
+      "deleted": "Group deleted successfully"
+    },
+    "loadError": "Failed to load groups.",
+    "weekdays": {
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat",
+      "sunday": "Sun"
     },
     "deleteDialog": {
       "title": "Delete Group",
       "body": "Are you sure you want to delete this group? This action cannot be undone.",
       "cancel": "Cancel",
-      "confirm": "Delete"
+      "confirm": "Delete",
+      "error": "Failed to delete the group. If it has students, teachers, or attendance records, deletion is not allowed."
     }
   },
   "finance": {
@@ -782,7 +825,8 @@
           "jul": "Jul", "aug": "Aug", "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Dec"
         },
         "was": "Was",
-        "notPresent": "Not"
+        "notPresent": "Not",
+        "saveError": "Failed to save attendance. Please try again."
       },
       "grade": {
         "tabLabel": "Grade",
@@ -872,7 +916,11 @@
       "noStudentsFound": "No students found",
       "startDate": "Start date",
       "submit": "Add Student",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "toast": {
+        "success": "Student added to the group",
+        "error": "Failed to add student. Please try again."
+      }
     },
     "deleteDropdown": {
       "title": "Delete Group",
@@ -912,7 +960,11 @@
       "title": "Move",
       "selectGroup": "Select group",
       "move": "Move",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "toast": {
+        "success": "Student moved to the new group",
+        "error": "Failed to move student. Please try again."
+      }
     },
     "reminderDrawer": {
       "title": "Add new note",
@@ -938,7 +990,12 @@
       "currentGroup": "Current group",
       "allGroups": "All groups",
       "yes": "Yes",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "toast": {
+        "removed": "Student removed from the group",
+        "deleted": "Student deleted",
+        "error": "Failed to remove student. Please try again."
+      }
     },
     "studentActionsMenu": {
       "moveToBranchModal": {
@@ -1082,6 +1139,11 @@
           "title": "Delete branch",
           "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
           "error": "Failed to delete the branch. Please try again."
+        },
+        "toast": {
+          "created": "Branch added successfully",
+          "updated": "Branch updated successfully",
+          "deleted": "Branch deleted successfully"
         }
       },
       "roadmap": {
@@ -1391,6 +1453,11 @@
           "title": "Delete course",
           "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
           "error": "Failed to delete the course. Please try again."
+        },
+        "toast": {
+          "created": "Course added successfully",
+          "updated": "Course updated successfully",
+          "deleted": "Course deleted successfully"
         }
       },
       "holidays": {
@@ -1433,6 +1500,11 @@
           "title": "Delete room",
           "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
           "error": "Failed to delete the room. Please try again."
+        },
+        "toast": {
+          "created": "Room added successfully",
+          "updated": "Room updated successfully",
+          "deleted": "Room deleted successfully"
         }
       },
       "studentLeft": {

@@ -5,16 +5,11 @@ import { baseApi } from "../baseApi";
 export const authApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         login: builder.mutation<LoginResponse, LoginRequest>({
-            query: ({ identifier, password }) => {
-                const formData = new FormData();
-                formData.append('identifier', identifier);
-                formData.append('password', password);
-                return {
-                    url: PATHS.LOGIN,
-                    method: 'POST',
-                    body: formData,
-                }
-            }
+            query: ({ identifier, password }) => ({
+                url: PATHS.LOGIN,
+                method: 'POST',
+                body: { identifier, password },
+            }),
         }),
         getMe: builder.query<MeResponse, void>({
             query: () => ({

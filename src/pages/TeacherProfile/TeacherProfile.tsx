@@ -2,22 +2,22 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { IconButton, Button } from "@mui/material";
+import { useTranslation } from "react-i18next";
+import { IconButton, Button, CircularProgress } from "@mui/material";
 import { IoArrowBack } from "react-icons/io5";
 import { MdEdit, MdClose } from "react-icons/md";
 import { BsFlag } from "react-icons/bs";
-import {
-  TEACHERS_DATA,
-  Group,
-  formatDate,
-} from "../../constants/Teachers";
-import { buildFlatStudents, FlatStudent } from "../../constants/FlatStudents";
+import { useTeacherByIdQuery, useTeacherForEditQuery, useUpdateTeacherMutation, useTeacherHistoryQuery } from "../../app/api/teachersApi";
+import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
+import { useAllBranchesQuery } from "../../app/api/branchesApi";
+import { useAllGroupsQuery } from "../../app/api/groupsApi";
+import { useToast } from "../../Context/ToastContext";
 
-const BADGE_STYLES = {
-  blue:  { bg: "#E6F1FB", color: "#185FA5", border: "#B5D4F4" },
-  green: { bg: "#E1F5EE", color: "#0F6E56", border: "#9FE1CB" },
-  amber: { bg: "#FAEEDA", color: "#BA7517", border: "#FAC775" },
-};
+const BADGE_COLORS = [
+  { bg: "#E6F1FB", color: "#185FA5", border: "#B5D4F4" },
+  { bg: "#E1F5EE", color: "#0F6E56", border: "#9FE1CB" },
+  { bg: "#FAEEDA", color: "#BA7517", border: "#FAC775" },
+];
 
 const AVATAR_COLORS = [
   { bg: "#E6F1FB", text: "#185FA5" },
@@ -27,38 +27,74 @@ const AVATAR_COLORS = [
   { bg: "#EAF3DE", text: "#3B6D11" },
 ];
 
-const BRANCHES = [
-  "BePro Tashkent",
-  "Young Adults Termiz",
-  "New Uzbekistan",
-  "YA IELTS Campus",
-  "YA Grammar Campus",
-];
-
-function getAvatarColor(id: number) {
-  return AVATAR_COLORS[id % AVATAR_COLORS.length];
+function hashIndex(id: string, mod: number) {
+  let sum = 0;
+  for (let i = 0; i < id.length; i++) sum += id.charCodeAt(i);
+  return sum % mod;
+}
+function getAvatarColor(id: string) {
+  return AVATAR_COLORS[hashIndex(id, AVATAR_COLORS.length)];
 }
 function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+}
+function formatDate(d: string | null) {
+  if (!d) return "—";
+  const [y, m, day] = d.split("-");
+  if (!y || !m || !day) return d;
+  return `${day}.${m}.${y}`;
+}
+
+/* ── group shape derived from real groupsApi data for this teacher ── */
+interface ProfileGroupStudent {
+  id: string;
+  name: string;
+  phone: string;
+}
+interface ProfileGroup {
+  id: string;
+  name: string;
+  courseName: string;
+  startDate: string | null;
+  endDate: string | null;
+  schedule: string;
+  room: string;
+  students: ProfileGroupStudent[];
 }
 
 type TabType = "profile" | "history" | "salary";
 
 /* ── Edit Drawer ── */
 const EditDrawer = ({
-  teacher, open, onClose,
+  teacher, open, onClose, branches, onSave, isSaving,
 }: {
-  teacher: (typeof TEACHERS_DATA)[number];
+  teacher: Teacher;
   open: boolean;
   onClose: () => void;
+  branches: { id: string; name: string }[];
+  onSave: (data: { name: string; phone: string; gender: TeacherGender | undefined; birthdate: string; branchIds: string[]; photo?: File }) => void;
+  isSaving: boolean;
 }) => {
   const [phone, setPhone] = useState(teacher.phone ?? "");
-  const [name, setName] = useState(teacher.fullName ?? "");
-  const [gender, setGender] = useState(teacher.gender ?? "Male");
-  const [dob, setDob] = useState(teacher.dob ?? "");
+  const [name, setName] = useState(teacher.name ?? "");
+  const [gender, setGender] = useState<TeacherGender | "">(teacher.gender ?? "");
+  const [dob, setDob] = useState(teacher.birthdate ?? "");
   const [selectedBranches, setSelectedBranches] = useState<string[]>(
-    teacher.branch ? [teacher.branch] : []
+    teacher.branches?.map((b) => b.id) ?? []
   );
+  const [photo, setPhoto] = useState<File | undefined>(undefined);
+
+  useEffect(() => {
+    if (open) {
+      setPhone(teacher.phone ?? "");
+      setName(teacher.name ?? "");
+      setGender(teacher.gender ?? "");
+      setDob(teacher.birthdate ?? "");
+      setSelectedBranches(teacher.branches?.map((b) => b.id) ?? []);
+      setPhoto(undefined);
+    }
+  }, [open, teacher]);
+
   const toggleBranch = (b: string) =>
     setSelectedBranches((prev) => prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]);
 
@@ -94,10 +130,10 @@ const EditDrawer = ({
           <div>
             <label style={labelStyle}>Branches</label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 12px" }}>
-              {BRANCHES.map((b) => (
-                <label key={b} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#1a1a1a", cursor: "pointer" }}>
-                  <input type="checkbox" checked={selectedBranches.includes(b)} onChange={() => toggleBranch(b)} style={{ accentColor: "#185FA5", width: 15, height: 15 }} />
-                  {b}
+              {branches.map((b) => (
+                <label key={b.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#1a1a1a", cursor: "pointer" }}>
+                  <input type="checkbox" checked={selectedBranches.includes(b.id)} onChange={() => toggleBranch(b.id)} style={{ accentColor: "#185FA5", width: 15, height: 15 }} />
+                  {b.name}
                 </label>
               ))}
             </div>
@@ -109,10 +145,10 @@ const EditDrawer = ({
           <div>
             <label style={labelStyle}>Gender</label>
             <div style={{ display: "flex", gap: 20 }}>
-              {["Male", "Female"].map((g) => (
+              {(["MALE", "FEMALE"] as const).map((g) => (
                 <label key={g} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
                   <input type="radio" name="gender" checked={gender === g} onChange={() => setGender(g)} style={{ accentColor: "#185FA5" }} />
-                  {g}
+                  {g === "MALE" ? "Male" : "Female"}
                 </label>
               ))}
             </div>
@@ -120,16 +156,19 @@ const EditDrawer = ({
           <div>
             <label style={labelStyle}>Photo</label>
             <div style={{ display: "flex", border: "1px solid #e0e0e0", borderRadius: 8, overflow: "hidden" }}>
-              <div style={{ flex: 1, padding: "10px 12px", fontSize: 13, color: "#aaa" }}>No file chosen</div>
+              <div style={{ flex: 1, padding: "10px 12px", fontSize: 13, color: photo ? "#1a1a1a" : "#aaa" }}>{photo ? photo.name : "No file chosen"}</div>
               <label style={{ padding: "10px 18px", background: "#f5f5f5", borderLeft: "1px solid #e0e0e0", fontSize: 13, color: "#1a1a1a", cursor: "pointer", userSelect: "none" }}>
-                Browse<input type="file" style={{ display: "none" }} />
+                Browse<input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => setPhoto(e.target.files?.[0])} />
               </label>
             </div>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <span style={{ fontSize: 12, color: "#185FA5", cursor: "pointer" }}>+ Set password</span>
-          </div>
-          <button onClick={onClose} style={{ background: "#1a3a5c", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>Submit</button>
+          <button
+            onClick={() => onSave({ name, phone, gender: gender || undefined, birthdate: dob, branchIds: selectedBranches, photo })}
+            disabled={isSaving}
+            style={{ background: "#1a3a5c", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start", opacity: isSaving ? 0.7 : 1 }}
+          >
+            {isSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Submit"}
+          </button>
         </div>
       </div>
     </>
@@ -178,12 +217,12 @@ const FlagDropdown = ({ open, onClose, anchorRef }: { open: boolean; onClose: ()
 };
 
 /* ── GroupCard ── */
-const GroupCard = ({ group, isSelected, onSelect }: { group: Group; isSelected: boolean; onSelect: () => void }) => {
-  const badgeStyle = BADGE_STYLES[group.badgeColor];
+const GroupCard = ({ group, index, isSelected, onSelect }: { group: ProfileGroup; index: number; isSelected: boolean; onSelect: () => void }) => {
+  const badgeStyle = BADGE_COLORS[index % BADGE_COLORS.length];
   return (
     <div onClick={onSelect} style={{ border: isSelected ? "1.5px solid #185FA5" : "1px solid #e8e8e8", borderRadius: 10, padding: "11px 14px", cursor: "pointer", background: isSelected ? "#f7fbff" : "#fff", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 10 }}>
       <div style={{ flexShrink: 0, width: 110 }}>
-        <span style={{ display: "inline-block", fontSize: 10, fontWeight: 500, padding: "2px 7px", borderRadius: 5, background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border}`, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{group.badge}</span>
+        <span style={{ display: "inline-block", fontSize: 10, fontWeight: 500, padding: "2px 7px", borderRadius: 5, background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border}`, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{group.courseName}</span>
         <div style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{group.name}</div>
       </div>
       <div style={{ flex: 1, textAlign: "center", fontSize: 11, color: "#888", lineHeight: 1.6 }}>
@@ -199,49 +238,26 @@ const GroupCard = ({ group, isSelected, onSelect }: { group: Group; isSelected: 
 
 /* ── StudentTooltip ── */
 const StudentTooltip = ({
-  flatStudent, visible, position,
+  student, visible, position,
 }: {
-  flatStudent: FlatStudent | undefined;
+  student: ProfileGroupStudent | undefined;
   visible: boolean;
   position: { top: number; left: number };
 }) => {
-  if (!visible || !flatStudent) return null;
-  const balance = flatStudent.balance ?? 0;
+  if (!visible || !student) return null;
 
   return (
     <div style={{ position: "fixed", top: position.top, left: position.left, zIndex: 2000, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", padding: "16px", width: 240, pointerEvents: "none", animation: "tooltipFadeIn 0.15s ease" }}>
       <style>{`@keyframes tooltipFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{flatStudent.name}</div>
-        <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>(id: {flatStudent.uid})</div>
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 11, color: flatStudent.active ? "#0F6E56" : "#888", fontWeight: 500 }}>
-          {flatStudent.active ? "Active (Learns)" : "Inactive"}
-        </span>
-        {balance < 0 && (
-          <span style={{ background: "#ef4444", color: "#fff", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>Debtor</span>
-        )}
+        <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{student.name}</div>
       </div>
 
       <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "10px 0" }} />
 
       <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>Phone</div>
-      <div style={{ fontSize: 13, color: "#1a1a1a", fontWeight: 500, marginBottom: 10 }}>{flatStudent.phone}</div>
-
-      <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>Balance</div>
-      <div style={{ marginBottom: 10 }}>
-        <span style={{ display: "inline-block", background: balance < 0 ? "#ef4444" : "#16a34a", color: "#fff", borderRadius: 8, padding: "4px 12px", fontSize: 13, fontWeight: 700 }}>
-          {balance > 0 ? "+" : ""}{balance.toLocaleString("ru-RU")} UZS
-        </span>
-      </div>
-
-      <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "10px 0" }} />
-
-      <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>Group</div>
-      <div style={{ fontSize: 13, color: "#1a1a1a", marginBottom: 10 }}>{flatStudent.groupName}</div>
+      <div style={{ fontSize: 13, color: "#1a1a1a", fontWeight: 500, marginBottom: 10 }}>{student.phone}</div>
 
       <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 10, textAlign: "right" }}>
         <span style={{ fontSize: 12, color: "#185FA5", fontWeight: 500 }}>Go to profile →</span>
@@ -252,22 +268,16 @@ const StudentTooltip = ({
 
 /* ── StudentRow ── */
 const StudentRow = ({
-  student, groupId, isLast, onNavigate, allFlatStudents,
+  student, isLast, onNavigate,
 }: {
-  student: Group["students"][number];
-  groupId: number;
+  student: ProfileGroupStudent;
   isLast: boolean;
-  onNavigate: (uid: string) => void;
-  allFlatStudents: FlatStudent[];
+  onNavigate: (id: string) => void;
 }) => {
   const [hovered, setHovered] = useState(false);
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
   const rowRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // uid = `${groupId}-${student.id}` — buildFlatStudents() bilan to'liq mos
-  const uid = `${groupId}-${student.id}`;
-  const flatStudent = allFlatStudents.find((s) => s.uid === uid);
 
   const handleMouseEnter = () => {
     if (rowRef.current) {
@@ -290,7 +300,7 @@ const StudentRow = ({
     <>
       <div
         ref={rowRef}
-        onClick={() => onNavigate(uid)}
+        onClick={() => onNavigate(student.id)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px", borderBottom: !isLast ? "1px solid #f5f5f5" : "none", cursor: "pointer", background: hovered ? "#f7fbff" : "transparent", transition: "background 0.12s" }}
@@ -298,29 +308,25 @@ const StudentRow = ({
         <span style={{ fontSize: 12, color: hovered ? "#185FA5" : "#1a1a1a", fontWeight: hovered ? 500 : 400, transition: "color 0.12s" }}>{student.name}</span>
         <span style={{ fontSize: 11, color: "#888" }}>{student.phone}</span>
       </div>
-      <StudentTooltip flatStudent={flatStudent} visible={hovered} position={tooltipPos} />
+      <StudentTooltip student={student} visible={hovered} position={tooltipPos} />
     </>
   );
 };
 
 /* ── StudentsList ── */
 const StudentsList = ({
-  group, onGoToGroup, onNavigateToStudent, allFlatStudents,
+  group, onGoToGroup, onNavigateToStudent,
 }: {
-  group: Group;
+  group: ProfileGroup;
   onGoToGroup: () => void;
-  onNavigateToStudent: (uid: string) => void;
-  allFlatStudents: FlatStudent[];
+  onNavigateToStudent: (id: string) => void;
 }) => {
-  const badgeStyle = BADGE_STYLES[group.badgeColor];
   return (
     <div style={{ border: "1px solid #e8e8e8", borderRadius: 12, overflow: "hidden", background: "#fff", display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #f0f0f0", background: "#fafafa" }}>
-        <span style={{ display: "inline-block", fontSize: 10, fontWeight: 500, padding: "2px 8px", borderRadius: 6, background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border}`, marginBottom: 6 }}>{group.badge}</span>
         <div style={{ fontSize: 15, fontWeight: 500, color: "#1a1a1a" }}>{group.name}</div>
         <div style={{ fontSize: 12, color: "#888", marginTop: 3 }}>
           Room: <strong style={{ color: "#1a1a1a" }}>{group.room}</strong>
-          &nbsp;&nbsp; Start: <strong style={{ color: "#1a1a1a" }}>{group.schedule.split("• ")[1]}</strong>
         </div>
       </div>
       <div style={{ overflowY: "auto", maxHeight: 360 }}>
@@ -328,10 +334,8 @@ const StudentsList = ({
           <StudentRow
             key={s.id}
             student={s}
-            groupId={group.id}
             isLast={idx === group.students.length - 1}
             onNavigate={onNavigateToStudent}
-            allFlatStudents={allFlatStudents}
           />
         ))}
       </div>
@@ -346,26 +350,20 @@ const StudentsList = ({
 /* ══════════════════════════════════════════
    HistoryTab
 ══════════════════════════════════════════ */
-interface HistoryEntry {
-  id: number;
-  action: string;
-  date: string;
-  time: string;
-  actorName: string;
-  actorPhone: string;
-}
+const HistoryTab = ({ teacherId }: { teacherId: string }) => {
+  const { t } = useTranslation();
+  const { data: entries, isLoading, isError } = useTeacherHistoryQuery(teacherId, { skip: !teacherId });
 
-const makeHistoryEntries = (teacherName: string, teacherPhone: string): HistoryEntry[] => [
-  { id: 1, action: "Remove attendance", date: "01.06.2026", time: "09:18:02", actorName: teacherName, actorPhone: teacherPhone },
-  { id: 2, action: "Remove attendance", date: "29.05.2026", time: "09:14:53", actorName: teacherName, actorPhone: teacherPhone },
-  { id: 3, action: "Remove attendance", date: "25.05.2026", time: "14:10:33", actorName: teacherName, actorPhone: teacherPhone },
-  { id: 4, action: "Remove attendance", date: "20.05.2026", time: "16:15:34", actorName: teacherName, actorPhone: teacherPhone },
-  { id: 5, action: "Add payment",       date: "15.05.2026", time: "11:42:10", actorName: teacherName, actorPhone: teacherPhone },
-  { id: 6, action: "Edit student",      date: "10.05.2026", time: "08:30:55", actorName: teacherName, actorPhone: teacherPhone },
-];
+  if (isLoading) {
+    return <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><CircularProgress size={26} /></div>;
+  }
+  if (isError) {
+    return <div style={{ textAlign: "center", padding: 40, color: "#e53935", fontSize: 14 }}>{t("teacherProfile.history.loadError")}</div>;
+  }
+  if (!entries || entries.length === 0) {
+    return <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: 14 }}>{t("teacherProfile.history.emptyState")}</div>;
+  }
 
-const HistoryTab = ({ teacher }: { teacher: (typeof TEACHERS_DATA)[number] }) => {
-  const entries = makeHistoryEntries(teacher.fullName, teacher.phone);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 860 }}>
       {entries.map((entry) => (
@@ -381,30 +379,22 @@ const HistoryTab = ({ teacher }: { teacher: (typeof TEACHERS_DATA)[number] }) =>
             alignItems: "flex-start",
           }}
         >
-          {/* Left */}
           <div>
-            <div style={{ fontSize: 17, fontWeight: 500, color: "#1a1a1a", marginBottom: 12 }}>
-              {entry.action}
+            <div style={{ fontSize: 17, fontWeight: 500, color: "#1a1a1a", marginBottom: entry.detail ? 8 : 0 }}>
+              {t(`teacherProfile.history.types.${entry.type}`, { defaultValue: entry.type.toLowerCase().split("_").filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") || "—" })}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {/* person icon */}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#185FA5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-              </svg>
-              <span style={{ fontSize: 13, color: "#185FA5", fontWeight: 500 }}>{entry.actorName}</span>
-              <span style={{ fontSize: 13, color: "#aaa" }}>•</span>
-              <span style={{ fontSize: 13, color: "#185FA5" }}>{entry.actorPhone}</span>
-            </div>
+            {entry.detail && (
+              <div style={{ fontSize: 13, color: "#555" }}>{entry.detail}</div>
+            )}
           </div>
 
-          {/* Right */}
           <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 24 }}>
-            <div style={{ fontSize: 13, color: "#888" }}>
-              {entry.date} {entry.time}
-            </div>
-            <div style={{ fontSize: 13, color: "#888", marginTop: 2 }}>
-              {entry.actorName}
-            </div>
+            {entry.createdAt && (
+              <div style={{ fontSize: 13, color: "#888" }}>{new Date(entry.createdAt).toLocaleString()}</div>
+            )}
+            {entry.actor && (
+              <div style={{ fontSize: 13, color: "#888", marginTop: 2 }}>{entry.actor}</div>
+            )}
           </div>
         </div>
       ))}
@@ -413,31 +403,13 @@ const HistoryTab = ({ teacher }: { teacher: (typeof TEACHERS_DATA)[number] }) =>
 };
 
 /* ══════════════════════════════════════════
-   SalaryTab
+   SalaryTab — no backend endpoint yet, kept as
+   the pre-existing "coming soon" placeholder.
 ══════════════════════════════════════════ */
-interface SalaryRow {
-  no: number;
-  groupName: string;
-  course: string;
-  student: string;
-  lessons: number;
-  present: number;
-  absent: number;
-  notMarked: number;
-  settingAmount: string;
-  estimatedAmount: string;
-  calcSetting: string;
-  salaryType: string;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const SalaryTab = ({ teacher: _teacher }: { teacher: (typeof TEACHERS_DATA)[number] }) => {
+const SalaryTab = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("—");
-
-  // Mock: no data for salary (matches screenshot "No Data")
-  const rows: SalaryRow[] = [];
-  const total = rows.reduce((s, r) => s + Number(r.estimatedAmount.replace(/\D/g, "") || 0), 0);
-
+  const rows: never[] = [];
+  const total = 0;
   const months = ["—", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"];
 
   const thStyle: React.CSSProperties = {
@@ -452,21 +424,11 @@ const SalaryTab = ({ teacher: _teacher }: { teacher: (typeof TEACHERS_DATA)[numb
 
   return (
     <div>
-      {/* Month selector */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
         <select
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-          style={{
-            border: "1px solid #e0e0e0",
-            borderRadius: 6,
-            padding: "5px 10px",
-            fontSize: 13,
-            color: "#1a1a1a",
-            outline: "none",
-            background: "#fff",
-            cursor: "pointer",
-          }}
+          style={{ border: "1px solid #e0e0e0", borderRadius: 6, padding: "5px 10px", fontSize: 13, color: "#1a1a1a", outline: "none", background: "#fff", cursor: "pointer" }}
         >
           {months.map((m) => (
             <option key={m} value={m}>{m}</option>
@@ -475,55 +437,26 @@ const SalaryTab = ({ teacher: _teacher }: { teacher: (typeof TEACHERS_DATA)[numb
         <span style={{ fontSize: 13, color: "#888" }}>—</span>
       </div>
 
-      {/* Total */}
       <div style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
         Total: <span style={{ color: "#1a1a1a", fontWeight: 500 }}>{total.toLocaleString("ru-RU")}</span>
       </div>
 
-      {/* Table */}
       <div style={{ border: "1px solid #e8e8e8", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "#fff" }}>
-              {[
-                "No",
-                "Group / Course",
-                "Student",
-                "Lessons / Present / Absent / Not Marked",
-                "Setting amount",
-                "Estimated amount",
-                "Calc setting",
-                "Salary type",
-              ].map((h) => (
+              {["No", "Group / Course", "Student", "Lessons / Present / Absent / Not Marked", "Setting amount", "Estimated amount", "Calc setting", "Salary type"].map((h) => (
                 <th key={h} style={thStyle}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {rows.length === 0 && (
               <tr>
                 <td colSpan={8} style={{ textAlign: "center", padding: "32px 0", fontSize: 14, color: "#aaa" }}>
                   No Data
                 </td>
               </tr>
-            ) : (
-              rows.map((row) => (
-                <tr key={row.no} style={{ borderBottom: "1px solid #f5f5f5" }}>
-                  <td style={{ padding: "10px 14px", fontSize: 13, color: "#888" }}>{row.no}</td>
-                  <td style={{ padding: "10px 14px", fontSize: 13, color: "#1a1a1a" }}>
-                    <div style={{ fontWeight: 500 }}>{row.groupName}</div>
-                    <div style={{ fontSize: 11, color: "#888" }}>{row.course}</div>
-                  </td>
-                  <td style={{ padding: "10px 14px", fontSize: 13, color: "#1a1a1a" }}>{row.student}</td>
-                  <td style={{ padding: "10px 14px", fontSize: 13, color: "#1a1a1a" }}>
-                    {row.lessons} / {row.present} / {row.absent} / {row.notMarked}
-                  </td>
-                  <td style={{ padding: "10px 14px", fontSize: 13, color: "#1a1a1a" }}>{row.settingAmount}</td>
-                  <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>{row.estimatedAmount}</td>
-                  <td style={{ padding: "10px 14px", fontSize: 13, color: "#1a1a1a" }}>{row.calcSetting}</td>
-                  <td style={{ padding: "10px 14px", fontSize: 13, color: "#1a1a1a" }}>{row.salaryType}</td>
-                </tr>
-              ))
             )}
           </tbody>
         </table>
@@ -538,16 +471,67 @@ const SalaryTab = ({ teacher: _teacher }: { teacher: (typeof TEACHERS_DATA)[numb
 export const TeacherProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<TabType>("profile");
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [flagOpen, setFlagOpen] = useState(false);
   const flagAnchorRef = useRef<HTMLDivElement>(null);
 
-  // buildFlatStudents bir marta — barcha StudentRow lar uchun
-  const allFlatStudents = useMemo(() => buildFlatStudents(), []);
+  const { data: teacherData, isLoading: teacherLoading } = useTeacherByIdQuery(id ?? "", { skip: !id });
+  // Tahrirlash formasi ochilganda maxsus /for-edit endpointidan yangi
+  // ma'lumot olamiz (profil ko'rish endpointidan farqli, tahrirlashga
+  // moslangan snapshot bo'lishi mumkin).
+  const { data: teacherForEditData } = useTeacherForEditQuery(id ?? "", { skip: !id || !editOpen });
+  const { data: branchesData } = useAllBranchesQuery();
+  const { data: allGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
+  const [updateTeacher, { isLoading: isSaving }] = useUpdateTeacherMutation();
 
-  const teacher = TEACHERS_DATA.find((t) => t.id === Number(id));
+  const teacher = teacherData?.data;
+  const branches = branchesData?.data ?? [];
+
+  // Backend `GET /teachers/{id}` javobida guruhlar ro'yxati yo'q — bu
+  // ro'yxat mavjud groupsApi ma'lumotidan (guruhning teachers[] massivi
+  // orqali) hisoblanadi, yangi endpoint o'ylab topilmadi.
+  const teacherGroups: ProfileGroup[] = useMemo(() => {
+    if (!teacher) return [];
+    return (allGroupsData?.data ?? [])
+      .filter((g) => g.teachers.some((tch) => tch.id === teacher.id))
+      .map((g) => ({
+        id: g.id,
+        name: g.name,
+        courseName: g.course?.name ?? "—",
+        startDate: g.trainingStart,
+        endDate: g.trainingEnd,
+        schedule: `${g.daysType === "EVEN" ? "Even days" : g.daysType === "ODD" ? "Odd days" : g.daysType ?? "—"} • ${g.time ?? ""}`,
+        room: g.room?.name ?? "—",
+        students: g.students.map((s) => ({ id: s.id, name: s.name, phone: s.phone })),
+      }));
+  }, [allGroupsData, teacher]);
+
+  const handleSaveTeacher = async (data: { name: string; phone: string; gender: TeacherGender | undefined; birthdate: string; branchIds: string[]; photo?: File }) => {
+    if (!id) return;
+    try {
+      await updateTeacher({
+        id,
+        name: data.name,
+        phone: data.phone || undefined,
+        gender: data.gender,
+        birthdate: data.birthdate || undefined,
+        branchIds: data.branchIds,
+        photo: data.photo,
+      }).unwrap();
+      toast.success(t("teacherProfile.toast.updated"));
+      setEditOpen(false);
+    } catch {
+      toast.error(t("teacherProfile.toast.error"));
+    }
+  };
+
+  if (teacherLoading) {
+    return <div style={{ padding: 40, textAlign: "center" }}><CircularProgress /></div>;
+  }
 
   if (!teacher) {
     return (
@@ -559,8 +543,8 @@ export const TeacherProfile = () => {
   }
 
   const avatarColor = getAvatarColor(teacher.id);
-  const activeGroupId = selectedGroupId ?? (teacher.groups[0]?.id ?? null);
-  const activeGroup = teacher.groups.find((g) => g.id === activeGroupId);
+  const activeGroupId = selectedGroupId ?? (teacherGroups[0]?.id ?? null);
+  const activeGroup = teacherGroups.find((g) => g.id === activeGroupId);
 
   const tabs: { key: TabType; label: string }[] = [
     { key: "profile", label: "PROFILE" },
@@ -582,7 +566,7 @@ export const TeacherProfile = () => {
     <div style={{ padding: "10px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4, padding: "16px 0 0" }}>
         <IconButton size="small" onClick={() => navigate(-1)}><IoArrowBack size={18} /></IconButton>
-        <span style={{ fontSize: 22, fontWeight: 500 }}>{teacher.fullName}</span>
+        <span style={{ fontSize: 22, fontWeight: 500 }}>{teacher.name}</span>
       </div>
 
       <div style={{ display: "flex", borderBottom: "1px solid #eee", marginBottom: 24 }}>
@@ -603,32 +587,41 @@ export const TeacherProfile = () => {
               {iconBtn(<BsFlag size={13} />, () => setFlagOpen((p) => !p), flagAnchorRef)}
               {iconBtn(<MdEdit size={13} />, () => setEditOpen(true))}
             </div>
-            <div style={{ display: "flex", }}>
-              <div style={{ width: 64, height: 64, borderRadius: "50%", background: avatarColor.bg, color: avatarColor.text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 500, marginBottom: 10 }}>
-                {getInitials(teacher.fullName)}
-              </div>
-              <div style={{ marginLeft: 12, marginTop: 10, fontSize: 15, fontWeight: 500, color: "#1a1a1a" }}>{teacher.fullName}</div>
+            <div style={{ display: "flex" }}>
+              {teacher.photo ? (
+                <img src={teacher.photo} alt={teacher.name} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", marginBottom: 10 }} />
+              ) : (
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: avatarColor.bg, color: avatarColor.text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 500, marginBottom: 10 }}>
+                  {getInitials(teacher.name)}
+                </div>
+              )}
+              <div style={{ marginLeft: 12, marginTop: 10, fontSize: 15, fontWeight: 500, color: "#1a1a1a" }}>{teacher.name}</div>
             </div>
-               <div style={{ fontSize: 12, color: "#888", marginBottom: 6,}}>(id: {teacher.uid})</div>
-            <div style={{ fontSize: 13, marginBottom: 4 }}>Phone: <span style={{ color: "#185FA5", fontWeight: 500 }}>{teacher.phone}</span></div>
-            {teacher.telegram && <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{teacher.telegram}</div>}
+            {teacher.phone && <div style={{ fontSize: 13, marginBottom: 4 }}>Phone: <span style={{ color: "#185FA5", fontWeight: 500 }}>{teacher.phone}</span></div>}
+            {teacher.email && <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{teacher.email}</div>}
+            {teacher.specialization && <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{teacher.specialization}</div>}
             <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "12px 0" }} />
-            <div style={{ fontSize: 11, color: "#aaa", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.4px" }}>Roles</div>
-            <span style={{ display: "inline-block", fontSize: 12, padding: "4px 12px", borderRadius: 14, background: "#E6F1FB", color: "#185FA5", border: "1px solid #B5D4F4" }}>{teacher.role}</span>
+            <div style={{ fontSize: 11, color: "#aaa", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.4px" }}>Status</div>
+            <span style={{ display: "inline-block", fontSize: 12, padding: "4px 12px", borderRadius: 14, background: "#E6F1FB", color: "#185FA5", border: "1px solid #B5D4F4" }}>{teacher.status}</span>
             <div style={{ fontSize: 11, color: "#aaa", marginTop: 12, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.4px" }}>Branches</div>
-            <span style={{ display: "inline-block", fontSize: 12, padding: "4px 12px", borderRadius: 14, background: "#E1F5EE", color: "#0F6E56", border: "1px solid #9FE1CB" }}>{teacher.branch}</span>
-           
+            {(teacher.branches ?? []).length === 0 ? (
+              <span style={{ fontSize: 12, color: "#aaa" }}>—</span>
+            ) : (
+              (teacher.branches ?? []).map((b) => (
+                <span key={b.id} style={{ display: "inline-block", fontSize: 12, padding: "4px 12px", borderRadius: 14, background: "#E1F5EE", color: "#0F6E56", border: "1px solid #9FE1CB", marginRight: 6, marginBottom: 6 }}>{b.name}</span>
+              ))
+            )}
           </div>
 
           {/* Middle */}
           <div>
             <div style={{ fontSize: 15, fontWeight: 500, color: "#1a1a1a", marginBottom: 12 }}>Groups</div>
-            {teacher.groups.length === 0 ? (
+            {teacherGroups.length === 0 ? (
               <div style={{ color: "#aaa", fontSize: 13, padding: "24px 0", textAlign: "center" }}>No groups assigned</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 440, overflowY: "auto", paddingRight: 2 }}>
-                {teacher.groups.map((group) => (
-                  <GroupCard key={group.id} group={group} isSelected={group.id === activeGroupId} onSelect={() => setSelectedGroupId(group.id === activeGroupId ? null : group.id)} />
+                {teacherGroups.map((group, i) => (
+                  <GroupCard key={group.id} group={group} index={i} isSelected={group.id === activeGroupId} onSelect={() => setSelectedGroupId(group.id === activeGroupId ? null : group.id)} />
                 ))}
               </div>
             )}
@@ -639,17 +632,16 @@ export const TeacherProfile = () => {
             <StudentsList
               group={activeGroup}
               onGoToGroup={() => navigate(`/groups/${activeGroup.id}`)}
-              onNavigateToStudent={(uid) => navigate(`/students/${uid}`)}
-              allFlatStudents={allFlatStudents}
+              onNavigateToStudent={(studentId) => navigate(`/students/${studentId}`)}
             />
           )}
         </div>
       )}
 
-      {activeTab === "history" && <HistoryTab teacher={teacher} />}
-      {activeTab === "salary" && <SalaryTab teacher={teacher} />}
+      {activeTab === "history" && <HistoryTab teacherId={teacher.id} />}
+      {activeTab === "salary" && <SalaryTab />}
 
-      <EditDrawer teacher={teacher} open={editOpen} onClose={() => setEditOpen(false)} />
+      <EditDrawer teacher={teacherForEditData?.data ?? teacher} open={editOpen} onClose={() => setEditOpen(false)} branches={branches} onSave={handleSaveTeacher} isSaving={isSaving} />
       <FlagDropdown open={flagOpen} onClose={() => setFlagOpen(false)} anchorRef={flagAnchorRef} />
     </div>
   );

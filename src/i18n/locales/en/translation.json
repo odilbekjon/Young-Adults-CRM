@@ -183,6 +183,7 @@
     "teacherPerformance": {
       "title": "Teacher performance",
       "activeGroups": "Active groups",
+      "activityScore": "Activity score",
       "emptyState": "No data"
     },
     "loadError": "Failed to load dashboard data."
@@ -285,12 +286,14 @@
     },
     "table": {
       "groupsCount": "groups",
-      "noData": "No data available"
+      "noData": "No data available",
+      "inactive": "Inactive"
     },
     "menu": {
       "edit": "Edit",
       "sms": "SMS",
-      "delete": "Delete"
+      "delete": "Delete",
+      "toggleStatus": "Toggle status"
     },
     "sms": {
       "recipientLabel": "teacher"
@@ -302,14 +305,20 @@
     "form": {
       "phone": "Phone",
       "phonePlaceholder": "XX XXX XX XX",
+      "email": "Email",
+      "emailPlaceholder": "email@example.com",
       "name": "Name",
       "namePlaceholder": "Full name",
-      "branch": "Branch",
+      "branch": "Branches",
       "branchPlaceholder": "Branch name",
       "dob": "Date of birth",
       "gender": "Gender",
       "genderMale": "Male",
       "genderFemale": "Female",
+      "specialization": "Specialization",
+      "specializationPlaceholder": "e.g. IELTS",
+      "experience": "Experience (years)",
+      "salary": "Salary",
       "photo": "Photo",
       "photoPreviewAlt": "preview",
       "noFileChosen": "No file chosen",
@@ -327,9 +336,122 @@
     },
     "validation": {
       "phoneRequired": "Phone is required",
+      "phoneOrEmailRequired": "Phone or email is required",
       "nameRequired": "Name is required",
       "dobRequired": "Date of birth is required",
       "genderRequired": "Gender is required"
+    },
+    "toast": {
+      "created": "Teacher added",
+      "updated": "Teacher updated",
+      "deleted": "Teacher deleted",
+      "statusToggled": "Teacher status updated",
+      "error": "Failed to complete the action. Please try again."
+    }
+  },
+  "teacherProfile": {
+    "history": {
+      "loadError": "Failed to load history. Please try again.",
+      "emptyState": "History is empty"
+    },
+    "toast": {
+      "updated": "Teacher updated",
+      "error": "Failed to save. Please try again."
+    }
+  },
+  "leadsPage": {
+    "board": {
+      "loadError": "Failed to load the kanban board. Please try again.",
+      "emptyState": "No columns yet",
+      "noSections": "No sections"
+    },
+    "columns": {
+      "title": "Manage Columns",
+      "newColumnPlaceholder": "Column name",
+      "addColumn": "Add column",
+      "add": "Add",
+      "save": "Save",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "close": "Close",
+      "confirmDelete": "Are you sure you want to delete this column?",
+      "createdAt": "Created",
+      "loadError": "Failed to load columns. Please try again.",
+      "emptyState": "No columns yet",
+      "toast": {
+        "created": "Column added",
+        "updated": "Column updated",
+        "deleted": "Column deleted",
+        "error": "Failed to complete the action. Please try again."
+      }
+    },
+    "sections": {
+      "addSection": "Add section",
+      "newSectionPlaceholder": "Section name",
+      "add": "Add",
+      "save": "Save",
+      "edit": "Rename",
+      "delete": "Delete",
+      "confirmDeleteShort": "Confirm delete",
+      "createGroup": "Create group",
+      "cancel": "Cancel",
+      "toast": {
+        "created": "Section added",
+        "updated": "Section updated",
+        "deleted": "Section deleted",
+        "groupCreated": "Group created",
+        "error": "Failed to complete the action. Please try again."
+      }
+    },
+    "sources": {
+      "title": "Manage Lead Sources",
+      "newSourcePlaceholder": "Source name",
+      "add": "Add",
+      "save": "Save",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "close": "Close",
+      "confirmDelete": "Are you sure you want to delete this source?",
+      "loadError": "Failed to load sources. Please try again.",
+      "emptyState": "No sources yet",
+      "toast": {
+        "created": "Source added",
+        "updated": "Source updated",
+        "deleted": "Source deleted",
+        "error": "Failed to complete the action. Please try again."
+      }
+    },
+    "leadForm": {
+      "addTitle": "New Lead",
+      "editTitle": "Edit Lead",
+      "addLead": "Add lead",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "source": "Source",
+      "noSource": "None",
+      "comment": "Comment",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "toast": {
+        "created": "Lead added",
+        "updated": "Lead updated",
+        "deleted": "Lead deleted",
+        "error": "Failed to complete the action. Please try again."
+      }
+    },
+    "addToTrial": {
+      "menuLabel": "Add to trial",
+      "title": "Add to trial",
+      "selectGroup": "Select group",
+      "submit": "Add",
+      "toast": {
+        "success": "Lead added to trial",
+        "error": "Failed to complete the action. Please try again."
+      }
     }
   },
   "groups": {
@@ -788,6 +910,11 @@
       "deleteGroup": "Delete group",
       "sendSms": "Send SMS",
       "addStudent": "Add student",
+      "toggleStatus": "Toggle group status",
+      "toast": {
+        "statusToggled": "Group status updated",
+        "statusToggleError": "Failed to change group status. Please try again."
+      },
       "rooms": "Rooms",
       "roomCapacity": "Room capacity",
       "trainingDates": "Training dates",
@@ -864,14 +991,27 @@
         "tabLabel": "History",
         "title": "History",
         "groupName": "Group Name",
-        "group": "Group"
+        "group": "Group",
+        "loadError": "Failed to load history. Please try again.",
+        "emptyState": "History is empty",
+        "types": {
+          "STUDENT_ADDED": "Student added",
+          "STUDENT_REMOVED": "Student removed",
+          "STUDENT_TRANSFERRED": "Student transferred",
+          "TEACHER_ASSIGNED": "Teacher assigned",
+          "TEACHER_REMOVED": "Teacher removed",
+          "STATUS_CHANGED": "Status changed",
+          "GROUP_UPDATED": "Group updated",
+          "GROUP_CREATED": "Group created"
+        }
       },
       "comments": {
         "tabLabel": "Comments",
         "title": "Comments",
         "writeComment": "Write a comment...",
         "send": "Send",
-        "noCommentsYet": "No comments yet"
+        "noCommentsYet": "No comments yet",
+        "loadError": "Failed to load comments. Please try again."
       }
     },
     "calendar": {
@@ -926,16 +1066,31 @@
       "title": "Delete Group",
       "confirmMessage": "will be permanently deleted. Are you sure?",
       "cancel": "Cancel",
-      "delete": "Delete"
+      "delete": "Delete",
+      "toast": {
+        "success": "Group deleted",
+        "error": "Failed to delete group. Please try again."
+      }
     },
     "editGroupDrawer": {
       "title": "Edit Group",
       "groupName": "Group name",
       "selectCourse": "Select course",
       "selectTeacher": "Select teacher",
+      "teachers": "Teachers",
+      "noTeachers": "No teacher assigned",
       "days": "Days",
       "selectDays": "Select days",
       "selectRoom": "Select room",
+      "weekdays": {
+        "MONDAY": "Monday",
+        "TUESDAY": "Tuesday",
+        "WEDNESDAY": "Wednesday",
+        "THURSDAY": "Thursday",
+        "FRIDAY": "Friday",
+        "SATURDAY": "Saturday",
+        "SUNDAY": "Sunday"
+      },
       "daysOptions": {
         "oddDays": "Odd days",
         "evenDays": "Even days",
@@ -946,7 +1101,12 @@
       "groupStartDate": "Group start date",
       "groupEndDate": "Group end date",
       "save": "Save",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "toast": {
+        "success": "Group updated",
+        "error": "Failed to update group. Please try again.",
+        "teacherRemoved": "Teacher removed from group"
+      }
     },
     "freezeModal": {
       "title": "Indicate the reason",
@@ -1534,13 +1694,17 @@
           "branch": { "yaIelts": "YA IELTS Campus", "branch1": "Branch 1", "branch2": "Branch 2" },
           "section": { "section1": "Section 1", "section2": "Section 2" },
           "source": { "source1": "Source 1", "source2": "Source 2" }
-        }
+        },
+        "toast": { "nameRequired": "Enter a form name", "created": "Form created", "updated": "Form updated", "error": "Failed to complete the action. Please try again." }
       },
       "lists": {
         "title": "Forms",
         "actions": { "addNew": "Add new" },
         "table": { "id": "id", "name": "Name", "type": "type", "actions": "Actions" },
-        "tooltips": { "info": "Info", "edit": "Edit", "delete": "Delete", "copyLink": "Copy link" }
+        "tooltips": { "info": "Info", "edit": "Edit", "delete": "Delete", "copyLink": "Copy link" },
+        "loadError": "Failed to load forms. Please try again.",
+        "emptyState": "No forms yet",
+        "toast": { "deleted": "Form deleted", "error": "Failed to delete form. Please try again." }
       }
     },
     "blog": {

@@ -1,19 +1,32 @@
 // CreateForm.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box, Button,  FormControl, FormControlLabel,
   MenuItem, Radio, Select, TextField, Typography,
-  Paper, IconButton,
+  Paper, IconButton, CircularProgress,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { FiPlus } from "react-icons/fi";
+import { FiPlus, FiChevronUp, FiChevronDown } from "react-icons/fi";
 import { MdClose } from "react-icons/md";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  useLeadFormForEditQuery,
+  useLeadFormFieldsQuery,
+  useCreateLeadFormMutation,
+  useUpdateLeadFormMutation,
+  useCreateLeadFormFieldMutation,
+  useUpdateLeadFormFieldMutation,
+  useDeleteLeadFormFieldMutation,
+  useReorderLeadFormFieldsMutation,
+} from "../../../../../app/api/leadFormsApi";
+import type { LeadFormFieldType } from "../../../../../app/api/leadFormsApi/types";
+import { useAllBranchesQuery } from "../../../../../app/api/branchesApi";
+import { useToast } from "../../../../../Context/ToastContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type BlockType = "One of the list" | "Short answer" | "Long answer";
 interface Answer { id: number; label: string; }
-interface Block { id: number; type: BlockType; question: string; answers: Answer[]; isRequired: boolean; }
+interface Block { id: number; fieldId?: string; type: BlockType; question: string; answers: Answer[]; isRequired: boolean; }
 
 const BLOCK_TYPES: BlockType[] = ["One of the list", "Short answer", "Long answer"];
 const BLOCK_TYPE_LABEL_KEYS: Record<BlockType, string> = {
@@ -37,6 +50,21 @@ const defaultBlock = (t: TFn): Block => ({
   isRequired: true,
 });
 
+// Backend's field-type enum isn't documented in the Swagger screenshots (only
+// endpoint list shown, no body schema) — this is our best-effort mapping from
+// the pre-existing local editor's 3 field kinds. Single place to adjust if the
+// real accepted values differ.
+const blockTypeToApi = (type: BlockType): LeadFormFieldType => {
+  if (type === "One of the list") return "SINGLE_CHOICE";
+  if (type === "Long answer") return "LONG_TEXT";
+  return "SHORT_TEXT";
+};
+const apiTypeToBlockType = (type: LeadFormFieldType): BlockType => {
+  if (type === "SINGLE_CHOICE") return "One of the list";
+  if (type === "LONG_TEXT") return "Long answer";
+  return "Short answer";
+};
+
 // ─── Shared field card ────────────────────────────────────────────────────────
 const FixedFieldCard = ({ index, label }: { index: number; label: string }) => (
   <Paper
@@ -54,14 +82,23 @@ const FixedFieldCard = ({ index, label }: { index: number; label: string }) => (
   </Paper>
 );
 
-// ─── Lead Form Editor ─────────────────────────────────────────────────────────
-function LeadFormEditor() {
+// ─── Lead Form Editor (controlled — real lead-forms API, state owned by CreateForm) ──
+interface LeadFormEditorProps {
+  formName: string; setFormName: (v: string) => void;
+  branch: string; setBranch: (v: string) => void;
+  section: string; setSection: (v: string) => void;
+  leadSource: string; setLeadSource: (v: string) => void;
+  blocks: Block[]; setBlocks: React.Dispatch<React.SetStateAction<Block[]>>;
+  onMoveBlock: (index: number, direction: -1 | 1) => void;
+}
+
+function LeadFormEditor({
+  formName, setFormName, branch, setBranch, section, setSection,
+  leadSource, setLeadSource, blocks, setBlocks, onMoveBlock,
+}: LeadFormEditorProps) {
   const { t } = useTranslation();
-  const [formName, setFormName] = useState("");
-  const [branch, setBranch] = useState("");
-  const [section, setSection] = useState("");
-  const [leadSource, setLeadSource] = useState("");
-  const [blocks, setBlocks] = useState<Block[]>([]);
+  const { data: branchesData } = useAllBranchesQuery();
+  const branches = branchesData?.data ?? [];
 
   const addBlock = () => setBlocks((prev) => [...prev, { ...defaultBlock(t), id: Date.now() }]);
   const removeBlock = (id: number) => setBlocks((prev) => prev.filter((b) => b.id !== id));
@@ -174,9 +211,10 @@ function LeadFormEditor() {
 
         {/* Selects */}
         <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-          <Select value={branch} onChange={(e) => setBranch(e.target.value)} displayEmpty renderValue={(v) => v || <span style={{ color: "#aaa" }}>{t("settings.forms.createForm.placeholders.selectBranch")}</span>} sx={selectSx}>
-            <MenuItem value="ya_ielts">{t("settings.forms.createForm.options.branch.yaIelts")}</MenuItem>
-            <MenuItem value="branch2">{t("settings.forms.createForm.options.branch.branch2")}</MenuItem>
+          <Select value={branch} onChange={(e) => setBranch(e.target.value)} displayEmpty renderValue={(v) => v ? (branches.find((b) => b.id === v)?.name ?? v) : <span style={{ color: "#aaa" }}>{t("settings.forms.createForm.placeholders.selectBranch")}</span>} sx={selectSx}>
+            {branches.map((b) => (
+              <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>
+            ))}
           </Select>
         </FormControl>
         <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
@@ -219,6 +257,12 @@ function LeadFormEditor() {
                 </Select>
               </FormControl>
               <Box sx={{ flex: 1 }} />
+              <IconButton size="small" onClick={() => onMoveBlock(idx, -1)} disabled={idx === 0} sx={{ color: "#aaa" }}>
+                <FiChevronUp size={15} />
+              </IconButton>
+              <IconButton size="small" onClick={() => onMoveBlock(idx, 1)} disabled={idx === blocks.length - 1} sx={{ color: "#aaa" }}>
+                <FiChevronDown size={15} />
+              </IconButton>
               <IconButton size="small" onClick={() => removeBlock(block.id)} sx={{ color: "#aaa" }}>
                 <MdClose size={15} />
               </IconButton>
@@ -293,7 +337,7 @@ function LeadFormEditor() {
   );
 }
 
-// ─── Simple Form Editor ───────────────────────────────────────────────────────
+// ─── Simple Form Editor (no backend endpoint provided for this variant — stays local/mock) ──
 function SimpleFormEditor() {
   const { t } = useTranslation();
   const [formName, setFormName] = useState("");
@@ -403,11 +447,126 @@ function SimpleFormEditor() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export const CreateForm = () => {
   const { t } = useTranslation();
+  const toast = useToast();
+  const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
 
   // ✅ Edit rejimida Lead form tab (1) avtomatik tanlanadi
   const [tab, setTab] = useState<number>(isEdit ? 1 : 0);
+
+  // Lead Form (real API) state — bu yerda saqlanadi, chunki Save/Update
+  // tugmasi umumiy va real sinxronizatsiyani shu yerdan ishga tushiradi.
+  const [formName, setFormName] = useState("");
+  const [branch, setBranch] = useState("");
+  const [section, setSection] = useState("");
+  const [leadSource, setLeadSource] = useState("");
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [originalFieldIds, setOriginalFieldIds] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { data: formForEditData, isLoading: formLoading } = useLeadFormForEditQuery(id ?? "", { skip: !id });
+  const { data: fieldsData, isLoading: fieldsLoading } = useLeadFormFieldsQuery(id ?? "", { skip: !id });
+
+  const [createLeadForm] = useCreateLeadFormMutation();
+  const [updateLeadForm] = useUpdateLeadFormMutation();
+  const [createLeadFormField] = useCreateLeadFormFieldMutation();
+  const [updateLeadFormField] = useUpdateLeadFormFieldMutation();
+  const [deleteLeadFormField] = useDeleteLeadFormFieldMutation();
+  const [reorderLeadFormFields] = useReorderLeadFormFieldsMutation();
+
+  useEffect(() => {
+    if (formForEditData) {
+      setFormName(formForEditData.data.name);
+      setBranch(formForEditData.data.branchId ?? "");
+      setSection(formForEditData.data.sectionId ?? "");
+      setLeadSource(formForEditData.data.leadSourceId ?? "");
+    }
+  }, [formForEditData]);
+
+  useEffect(() => {
+    if (fieldsData) {
+      setBlocks(
+        fieldsData.data.map((f, i) => ({
+          id: Date.now() + i,
+          fieldId: f.id,
+          type: apiTypeToBlockType(f.type),
+          question: f.question,
+          answers: f.options.map((o, oi) => ({ id: Date.now() + i * 100 + oi, label: o.label })),
+          isRequired: f.required,
+        }))
+      );
+      setOriginalFieldIds(fieldsData.data.map((f) => f.id));
+    }
+  }, [fieldsData]);
+
+  const moveBlock = (index: number, direction: -1 | 1) => {
+    setBlocks((prev) => {
+      const next = [...prev];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    // "Simple form" varianti uchun backend endpointi berilmagan — mavjudligicha
+    // local/mock holicha qoladi, faqat "Lead form" tab'i real API bilan ishlaydi.
+    if (tab !== 1) return;
+    if (!formName.trim()) {
+      toast.error(t("settings.forms.createForm.toast.nameRequired"));
+      return;
+    }
+    setIsSaving(true);
+    try {
+      let formId = id;
+      const payload = {
+        name: formName,
+        branchId: branch || undefined,
+      };
+      if (formId) {
+        await updateLeadForm({ id: formId, ...payload }).unwrap();
+      } else {
+        const res = await createLeadForm(payload).unwrap();
+        formId = res.data.id;
+      }
+
+      const currentFieldIds = new Set(blocks.filter((b) => b.fieldId).map((b) => b.fieldId as string));
+      for (const existingId of originalFieldIds) {
+        if (!currentFieldIds.has(existingId)) {
+          await deleteLeadFormField({ formId, fieldId: existingId }).unwrap();
+        }
+      }
+
+      const orderedIds: string[] = [];
+      for (const block of blocks) {
+        const fieldPayload = {
+          type: blockTypeToApi(block.type),
+          question: block.question,
+          required: block.isRequired,
+          options: block.type === "One of the list" ? block.answers.map((a) => a.label) : undefined,
+        };
+        if (block.fieldId) {
+          await updateLeadFormField({ formId, fieldId: block.fieldId, ...fieldPayload }).unwrap();
+          orderedIds.push(block.fieldId);
+        } else {
+          const res = await createLeadFormField({ formId, ...fieldPayload }).unwrap();
+          orderedIds.push(res.data.id);
+        }
+      }
+      if (orderedIds.length > 1) {
+        await reorderLeadFormFields({ formId, fieldIds: orderedIds }).unwrap();
+      }
+
+      toast.success(isEdit ? t("settings.forms.createForm.toast.updated") : t("settings.forms.createForm.toast.created"));
+      navigate("/settings/forms/list");
+    } catch {
+      toast.error(t("settings.forms.createForm.toast.error"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const tabSx = {
     cursor: "pointer",
@@ -421,6 +580,8 @@ export const CreateForm = () => {
     userSelect: "none" as const,
     transition: "all 0.15s",
   };
+
+  const isLoadingExisting = isEdit && (formLoading || fieldsLoading);
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f0f2f5", p: 3, fontFamily: "'DM Sans', sans-serif" }}>
@@ -462,14 +623,29 @@ export const CreateForm = () => {
         {/* Save / Update */}
         <Button
           variant="contained"
+          onClick={handleSave}
+          disabled={tab === 1 && (isSaving || isLoadingExisting)}
           sx={{ backgroundColor: TEAL_DARK, borderRadius: "50px", textTransform: "none", fontWeight: 600, px: 4, py: 1.2, boxShadow: "none", whiteSpace: "nowrap", fontSize: "0.9rem", "&:hover": { backgroundColor: TEAL, boxShadow: "none" } }}
         >
-          {isEdit ? t("settings.forms.createForm.actions.update") : t("settings.forms.createForm.actions.save")}
+          {isSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : (isEdit ? t("settings.forms.createForm.actions.update") : t("settings.forms.createForm.actions.save"))}
         </Button>
       </Box>
 
       {/* Content */}
-      {tab === 0 ? <SimpleFormEditor /> : <LeadFormEditor />}
+      {tab === 0 ? (
+        <SimpleFormEditor />
+      ) : isLoadingExisting ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}><CircularProgress /></Box>
+      ) : (
+        <LeadFormEditor
+          formName={formName} setFormName={setFormName}
+          branch={branch} setBranch={setBranch}
+          section={section} setSection={setSection}
+          leadSource={leadSource} setLeadSource={setLeadSource}
+          blocks={blocks} setBlocks={setBlocks}
+          onMoveBlock={moveBlock}
+        />
+      )}
     </Box>
   );
 };

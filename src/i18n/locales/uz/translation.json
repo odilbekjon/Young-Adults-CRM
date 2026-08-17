@@ -183,6 +183,7 @@
     "teacherPerformance": {
       "title": "O'qituvchilar reytingi",
       "activeGroups": "Faol guruhlar",
+      "activityScore": "Faollik balli",
       "emptyState": "Ma'lumot yo'q"
     },
     "loadError": "Dashboard ma'lumotlarini yuklab bo'lmadi."
@@ -285,12 +286,14 @@
     },
     "table": {
       "groupsCount": "guruh",
-      "noData": "Ma'lumot yo'q"
+      "noData": "Ma'lumot yo'q",
+      "inactive": "Faol emas"
     },
     "menu": {
       "edit": "Tahrirlash",
       "sms": "SMS",
-      "delete": "O'chirish"
+      "delete": "O'chirish",
+      "toggleStatus": "Holatini almashtirish"
     },
     "sms": {
       "recipientLabel": "o'qituvchi"
@@ -302,14 +305,20 @@
     "form": {
       "phone": "Telefon",
       "phonePlaceholder": "XX XXX XX XX",
+      "email": "Email",
+      "emailPlaceholder": "email@misol.com",
       "name": "Ism",
       "namePlaceholder": "To'liq ism",
-      "branch": "Filial",
+      "branch": "Filiallar",
       "branchPlaceholder": "Filial nomi",
       "dob": "Tug'ilgan sana",
       "gender": "Jinsi",
       "genderMale": "Erkak",
       "genderFemale": "Ayol",
+      "specialization": "Ixtisosligi",
+      "specializationPlaceholder": "Masalan, IELTS",
+      "experience": "Tajriba (yil)",
+      "salary": "Oylik maosh",
       "photo": "Rasm",
       "photoPreviewAlt": "ko'rinish",
       "noFileChosen": "Fayl tanlanmagan",
@@ -327,9 +336,122 @@
     },
     "validation": {
       "phoneRequired": "Telefon kiritilishi shart",
+      "phoneOrEmailRequired": "Telefon yoki email kiritilishi shart",
       "nameRequired": "Ism kiritilishi shart",
       "dobRequired": "Tug'ilgan sana kiritilishi shart",
       "genderRequired": "Jinsi kiritilishi shart"
+    },
+    "toast": {
+      "created": "O'qituvchi qo'shildi",
+      "updated": "O'qituvchi ma'lumotlari yangilandi",
+      "deleted": "O'qituvchi o'chirildi",
+      "statusToggled": "O'qituvchi holati o'zgartirildi",
+      "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."
+    }
+  },
+  "teacherProfile": {
+    "history": {
+      "loadError": "Tarixni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+      "emptyState": "Tarix bo'sh"
+    },
+    "toast": {
+      "updated": "O'qituvchi ma'lumotlari yangilandi",
+      "error": "Ma'lumotlarni saqlab bo'lmadi. Qaytadan urinib ko'ring."
+    }
+  },
+  "leadsPage": {
+    "board": {
+      "loadError": "Kanban doskasini yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+      "emptyState": "Hozircha ustunlar mavjud emas",
+      "noSections": "Bo'limlar yo'q"
+    },
+    "columns": {
+      "title": "Ustunlarni boshqarish",
+      "newColumnPlaceholder": "Ustun nomi",
+      "addColumn": "Ustun qo'shish",
+      "add": "Qo'shish",
+      "save": "Saqlash",
+      "edit": "Tahrirlash",
+      "delete": "O'chirish",
+      "cancel": "Bekor qilish",
+      "close": "Yopish",
+      "confirmDelete": "Ushbu ustunni o'chirishni tasdiqlaysizmi?",
+      "createdAt": "Yaratilgan",
+      "loadError": "Ustunlarni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+      "emptyState": "Hozircha ustunlar yo'q",
+      "toast": {
+        "created": "Ustun qo'shildi",
+        "updated": "Ustun yangilandi",
+        "deleted": "Ustun o'chirildi",
+        "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."
+      }
+    },
+    "sections": {
+      "addSection": "Bo'lim qo'shish",
+      "newSectionPlaceholder": "Bo'lim nomi",
+      "add": "Qo'shish",
+      "save": "Saqlash",
+      "edit": "Nomini o'zgartirish",
+      "delete": "O'chirish",
+      "confirmDeleteShort": "O'chirishni tasdiqlash",
+      "createGroup": "Guruh yaratish",
+      "cancel": "Bekor qilish",
+      "toast": {
+        "created": "Bo'lim qo'shildi",
+        "updated": "Bo'lim yangilandi",
+        "deleted": "Bo'lim o'chirildi",
+        "groupCreated": "Guruh yaratildi",
+        "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."
+      }
+    },
+    "sources": {
+      "title": "Lid manbalarini boshqarish",
+      "newSourcePlaceholder": "Manba nomi",
+      "add": "Qo'shish",
+      "save": "Saqlash",
+      "delete": "O'chirish",
+      "cancel": "Bekor qilish",
+      "close": "Yopish",
+      "confirmDelete": "Ushbu manbani o'chirishni tasdiqlaysizmi?",
+      "loadError": "Manbalarni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+      "emptyState": "Hozircha manbalar yo'q",
+      "toast": {
+        "created": "Manba qo'shildi",
+        "updated": "Manba yangilandi",
+        "deleted": "Manba o'chirildi",
+        "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."
+      }
+    },
+    "leadForm": {
+      "addTitle": "Yangi lid",
+      "editTitle": "Lidni tahrirlash",
+      "addLead": "Lid qo'shish",
+      "name": "Ism",
+      "phone": "Telefon",
+      "email": "Email",
+      "source": "Manba",
+      "noSource": "Tanlanmagan",
+      "comment": "Izoh",
+      "save": "Saqlash",
+      "cancel": "Bekor qilish",
+      "edit": "Tahrirlash",
+      "delete": "O'chirish",
+      "toast": {
+        "created": "Lid qo'shildi",
+        "updated": "Lid yangilandi",
+        "deleted": "Lid o'chirildi",
+        "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."
+      }
+    },
+    "addToTrial": {
+      "menuLabel": "Sinov darsiga biriktirish",
+      "title": "Sinov darsiga biriktirish",
+      "selectGroup": "Guruhni tanlang",
+      "submit": "Biriktirish",
+      "toast": {
+        "success": "Lid sinov darsiga biriktirildi",
+        "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."
+      }
     }
   },
   "groups": {
@@ -788,6 +910,11 @@
       "deleteGroup": "Guruhni o'chirish",
       "sendSms": "SMS yuborish",
       "addStudent": "O'quvchi qo'shish",
+      "toggleStatus": "Guruh holatini almashtirish",
+      "toast": {
+        "statusToggled": "Guruh holati o'zgartirildi",
+        "statusToggleError": "Guruh holatini o'zgartirib bo'lmadi. Qaytadan urinib ko'ring."
+      },
       "rooms": "Xonalar",
       "roomCapacity": "Xona sig'imi",
       "trainingDates": "Dars sanalari",
@@ -864,14 +991,27 @@
         "tabLabel": "Tarix",
         "title": "Tarix",
         "groupName": "Guruh nomi",
-        "group": "Guruh"
+        "group": "Guruh",
+        "loadError": "Tarixni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+        "emptyState": "Tarix bo'sh",
+        "types": {
+          "STUDENT_ADDED": "O'quvchi qo'shildi",
+          "STUDENT_REMOVED": "O'quvchi chiqarildi",
+          "STUDENT_TRANSFERRED": "O'quvchi ko'chirildi",
+          "TEACHER_ASSIGNED": "O'qituvchi biriktirildi",
+          "TEACHER_REMOVED": "O'qituvchi olib tashlandi",
+          "STATUS_CHANGED": "Holat o'zgardi",
+          "GROUP_UPDATED": "Guruh yangilandi",
+          "GROUP_CREATED": "Guruh yaratildi"
+        }
       },
       "comments": {
         "tabLabel": "Izohlar",
         "title": "Izohlar",
         "writeComment": "Izoh yozing...",
         "send": "Yuborish",
-        "noCommentsYet": "Hozircha izohlar yo'q"
+        "noCommentsYet": "Hozircha izohlar yo'q",
+        "loadError": "Izohlarni yuklab bo'lmadi. Qaytadan urinib ko'ring."
       }
     },
     "calendar": {
@@ -926,16 +1066,31 @@
       "title": "Guruhni o'chirish",
       "confirmMessage": "guruhini o'chirishni tasdiqlaysizmi?",
       "cancel": "Bekor qilish",
-      "delete": "O'chirish"
+      "delete": "O'chirish",
+      "toast": {
+        "success": "Guruh o'chirildi",
+        "error": "Guruhni o'chirib bo'lmadi. Qaytadan urinib ko'ring."
+      }
     },
     "editGroupDrawer": {
       "title": "Guruhni tahrirlash",
       "groupName": "Guruh nomi",
       "selectCourse": "Kursni tanlang",
       "selectTeacher": "O'qituvchini tanlang",
+      "teachers": "O'qituvchilar",
+      "noTeachers": "O'qituvchi biriktirilmagan",
       "days": "Kunlar",
       "selectDays": "Kunlarni tanlang",
       "selectRoom": "Xonani tanlang",
+      "weekdays": {
+        "MONDAY": "Dushanba",
+        "TUESDAY": "Seshanba",
+        "WEDNESDAY": "Chorshanba",
+        "THURSDAY": "Payshanba",
+        "FRIDAY": "Juma",
+        "SATURDAY": "Shanba",
+        "SUNDAY": "Yakshanba"
+      },
       "daysOptions": {
         "oddDays": "Toq kunlar",
         "evenDays": "Juft kunlar",
@@ -946,7 +1101,12 @@
       "groupStartDate": "Guruh boshlanish sanasi",
       "groupEndDate": "Guruh tugash sanasi",
       "save": "Saqlash",
-      "cancel": "Bekor qilish"
+      "cancel": "Bekor qilish",
+      "toast": {
+        "success": "Guruh yangilandi",
+        "error": "Guruhni yangilab bo'lmadi. Qaytadan urinib ko'ring.",
+        "teacherRemoved": "O'qituvchi guruhdan olib tashlandi"
+      }
     },
     "freezeModal": {
       "title": "Sababni ko'rsating",
@@ -1534,13 +1694,17 @@
           "branch": { "yaIelts": "YA IELTS Campus", "branch1": "1-filial", "branch2": "2-filial" },
           "section": { "section1": "1-bo'lim", "section2": "2-bo'lim" },
           "source": { "source1": "1-manba", "source2": "2-manba" }
-        }
+        },
+        "toast": { "nameRequired": "Shakl nomini kiriting", "created": "Shakl yaratildi", "updated": "Shakl yangilandi", "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring." }
       },
       "lists": {
         "title": "Formalar",
         "actions": { "addNew": "Qo'shish" },
         "table": { "id": "id", "name": "Nomi", "type": "turi", "actions": "Amallar" },
-        "tooltips": { "info": "Ma'lumot", "edit": "Tahrirlash", "delete": "O'chirish", "copyLink": "Havolani nusxalash" }
+        "tooltips": { "info": "Ma'lumot", "edit": "Tahrirlash", "delete": "O'chirish", "copyLink": "Havolani nusxalash" },
+        "loadError": "Formalarni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+        "emptyState": "Hozircha formalar yo'q",
+        "toast": { "deleted": "Forma o'chirildi", "error": "Formani o'chirib bo'lmadi. Qaytadan urinib ko'ring." }
       }
     },
     "blog": {

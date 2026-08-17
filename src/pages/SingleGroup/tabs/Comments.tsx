@@ -1,31 +1,47 @@
-import { Box, Typography, TextField, Button, Stack, Paper } from "@mui/material";
-import { useState } from "react";
+import { Box, CircularProgress, Paper, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
-export const Comments = () => {
+import { useGroupCommentsQuery } from "../../../app/api/groupsApi";
+
+interface Props {
+  groupId: string;
+}
+
+export const Comments = ({ groupId }: Props) => {
   const { t } = useTranslation();
-  const [comment, setComment] = useState("");
-  const [comments, setComments] = useState<string[]>([]);
+  const { data: comments, isLoading, isError } = useGroupCommentsQuery(groupId, { skip: !groupId });
+
   return (
     <Box>
-      <Typography variant="h6" fontWeight={600} mb={2}>{t("singleGroup.tabs.comments.title")}</Typography>
-      <Stack spacing={1} mb={2}>
-        <TextField
-          multiline rows={3} placeholder={t("singleGroup.tabs.comments.writeComment")}
-          value={comment} onChange={(e) => setComment(e.target.value)}
-        />
-        <Button
-          variant="contained" sx={{ alignSelf: "flex-end" }}
-          onClick={() => { if (comment.trim()) { setComments((p) => [...p, comment]); setComment(""); } }}
-        >
-          {t("singleGroup.tabs.comments.send")}
-        </Button>
-      </Stack>
-      {comments.length === 0
-        ? <Paper sx={{ p: 3, textAlign: "center", color: "#999", borderRadius: 2 }}>{t("singleGroup.tabs.comments.noCommentsYet")}</Paper>
-        : comments.map((c, i) => (
-          <Paper key={i} sx={{ p: 2, mb: 1, borderRadius: 2 }}>{c}</Paper>
+      <Typography variant="h6" fontWeight={600} mb={2}>
+        {t("singleGroup.tabs.comments.title")}
+      </Typography>
+
+      {isLoading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+          <CircularProgress size={26} />
+        </Box>
+      ) : isError ? (
+        <Typography sx={{ color: "#e53935", fontSize: 13, textAlign: "center", py: 4 }}>
+          {t("singleGroup.tabs.comments.loadError")}
+        </Typography>
+      ) : !comments || comments.length === 0 ? (
+        <Paper sx={{ p: 3, textAlign: "center", color: "#999", borderRadius: 2 }}>
+          {t("singleGroup.tabs.comments.noCommentsYet")}
+        </Paper>
+      ) : (
+        comments.map((c) => (
+          <Paper key={c.id} sx={{ p: 2, mb: 1, borderRadius: 2 }}>
+            <Typography fontSize={13}>{c.text}</Typography>
+            {(c.author || c.createdAt) && (
+              <Typography fontSize={11} color="text.secondary" mt={0.5}>
+                {[c.author, c.createdAt ? new Date(c.createdAt).toLocaleString() : null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </Typography>
+            )}
+          </Paper>
         ))
-      }
+      )}
     </Box>
   );
 };

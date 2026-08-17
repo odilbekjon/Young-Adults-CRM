@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Box,
   Button,
@@ -11,47 +10,41 @@ import {
   TableHead,
   TableRow,
   Typography,
-//   Chip,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { FiEdit2 } from "react-icons/fi";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { HiOutlineLink } from "react-icons/hi";
-import { BsInfoCircle } from "react-icons/bs";
 import { MdAdd } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
-
-interface FormItem {
-  id: number;
-  name: string;
-  type?: string;
-  hasInfo?: boolean;
-}
-
-const initialForms: FormItem[] = [
-  { id: 4932, name: "Tarix kursiga yozilish!", type: "lead" },
-  { id: 4926, name: "Sun'iy Intelekt Kursiga Yozilish!", type: "lead" },
-  { id: 4921, name: "Seminar Koreyada o'qishga ketish", hasInfo: true },
-  { id: 4887, name: "General Leads", hasInfo: true },
-  { id: 4871, name: "Ona Tili", type: "lead" },
-];
+import { useAllLeadFormsQuery, useDeleteLeadFormMutation } from "../../../../../app/api/leadFormsApi";
+import { useToast } from "../../../../../Context/ToastContext";
 
 export const Lists = () => {
   const { t } = useTranslation();
-  const [forms, setForms] = useState<FormItem[]>(initialForms);
   const navigate = useNavigate();
+  const toast = useToast();
 
-  const handleDelete = (id: number) => {
-    setForms((prev) => prev.filter((f) => f.id !== id));
+  const { data: formsData, isLoading, isError } = useAllLeadFormsQuery();
+  const [deleteLeadForm, { isLoading: isDeleting }] = useDeleteLeadFormMutation();
+
+  const forms = formsData?.data ?? [];
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteLeadForm(id).unwrap();
+      toast.success(t("settings.forms.lists.toast.deleted"));
+    } catch {
+      toast.error(t("settings.forms.lists.toast.error"));
+    }
   };
 
   return (
     <Box
       sx={{
-        
         backgroundColor: "#f0f2f5",
-      
         p: 3,
         fontFamily: "'DM Sans', sans-serif",
       }}
@@ -115,179 +108,130 @@ export const Lists = () => {
         {/* Divider */}
         <Box sx={{ borderBottom: "1px solid #e8eaed", mb: 1 }} />
 
-        {/* Table */}
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell
-                  sx={{
-                    fontWeight: 700,
-                    color: "#1a1a2e",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: "0.875rem",
-                    border: "none",
-                    pb: 1,
-                    width: 90,
-                  }}
-                >
-                  {t("settings.forms.lists.table.id")}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontWeight: 700,
-                    color: "#1a1a2e",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: "0.875rem",
-                    border: "none",
-                    pb: 1,
-                  }}
-                >
-                  {t("settings.forms.lists.table.name")}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontWeight: 700,
-                    color: "#1a1a2e",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: "0.875rem",
-                    border: "none",
-                    pb: 1,
-                    width: 100,
-                  }}
-                >
-                  {t("settings.forms.lists.table.type")}
-                </TableCell>
-                <TableCell
-                  align="right"
-                  sx={{
-                    fontWeight: 700,
-                    color: "#1a1a2e",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: "0.875rem",
-                    border: "none",
-                    pb: 1,
-                    width: 150,
-                  }}
-                >
-                  {t("settings.forms.lists.table.actions")}
-                </TableCell>
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {forms.map((form, index) => (
-                <TableRow
-                  key={form.id}
-                  sx={{
-                    backgroundColor: index % 2 === 0 ? "#ffffff" : "#f7f8fa",
-                    "&:last-child td": { border: "none" },
-                    "& td": {
-                      border: "none",
-                      py: 1.8,
-                    },
-                    borderRadius: 2,
-                  }}
-                >
+        {isLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress /></Box>
+        ) : isError ? (
+          <Typography sx={{ color: "#e53935", fontSize: 14, textAlign: "center", py: 4 }}>
+            {t("settings.forms.lists.loadError")}
+          </Typography>
+        ) : forms.length === 0 ? (
+          <Typography sx={{ color: "#9ca3af", fontSize: 14, textAlign: "center", py: 4 }}>
+            {t("settings.forms.lists.emptyState")}
+          </Typography>
+        ) : (
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
                   <TableCell
                     sx={{
-                      color: "#555",
-                      fontFamily: "'DM Sans', sans-serif",
-                      fontSize: "0.9rem",
-                    }}
-                  >
-                    {form.id}
-                  </TableCell>
-
-                  <TableCell
-                    sx={{
+                      fontWeight: 700,
                       color: "#1a1a2e",
                       fontFamily: "'DM Sans', sans-serif",
-                      fontSize: "0.9rem",
-                      fontWeight: 400,
+                      fontSize: "0.875rem",
+                      border: "none",
+                      pb: 1,
                     }}
                   >
-                    {form.name}
+                    {t("settings.forms.lists.table.name")}
                   </TableCell>
-
                   <TableCell
+                    align="right"
                     sx={{
+                      fontWeight: 700,
+                      color: "#1a1a2e",
                       fontFamily: "'DM Sans', sans-serif",
-                      fontSize: "0.85rem",
-                      color: "#555",
+                      fontSize: "0.875rem",
+                      border: "none",
+                      pb: 1,
+                      width: 150,
                     }}
                   >
-                    {form.type || ""}
+                    {t("settings.forms.lists.table.actions")}
                   </TableCell>
+                </TableRow>
+              </TableHead>
 
-                  <TableCell align="right">
-                    <Box
+              <TableBody>
+                {forms.map((form, index) => (
+                  <TableRow
+                    key={form.id}
+                    sx={{
+                      backgroundColor: index % 2 === 0 ? "#ffffff" : "#f7f8fa",
+                      "&:last-child td": { border: "none" },
+                      "& td": {
+                        border: "none",
+                        py: 1.8,
+                      },
+                      borderRadius: 2,
+                    }}
+                  >
+                    <TableCell
                       sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "flex-end",
-                        gap: 0.5,
+                        color: "#1a1a2e",
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontSize: "0.9rem",
+                        fontWeight: 400,
                       }}
                     >
-                      {form.hasInfo && (
-                        <Tooltip title={t("settings.forms.lists.tooltips.info")}>
+                      {form.name}
+                    </TableCell>
+
+                    <TableCell align="right">
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "flex-end",
+                          gap: 0.5,
+                        }}
+                      >
+                        <Tooltip title={t("settings.forms.lists.tooltips.edit")}>
                           <IconButton
+                            onClick={() => navigate(`/settings/forms/edit/${form.id}`)}
                             size="small"
                             sx={{
-                              color: "#2196f3",
+                              color: "#64b5f6",
                               "&:hover": { backgroundColor: "#e3f2fd" },
                             }}
                           >
-                            <BsInfoCircle size={18} />
+                            <FiEdit2 size={17} />
                           </IconButton>
                         </Tooltip>
-                      )}
 
-                      <Tooltip title={t("settings.forms.lists.tooltips.edit")}>
-                        <IconButton
-                        onClick={() => navigate(`/settings/forms/edit/${form.id}` )}
+                        <Tooltip title={t("settings.forms.lists.tooltips.delete")}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDelete(form.id)}
+                            disabled={isDeleting}
+                            sx={{
+                              color: "#ef5350",
+                              "&:hover": { backgroundColor: "#ffebee" },
+                            }}
+                          >
+                            <RiDeleteBin6Line size={18} />
+                          </IconButton>
+                        </Tooltip>
 
-                          size="small"
-                          sx={{
-                            color: "#64b5f6",
-                            "&:hover": { backgroundColor: "#e3f2fd" },
-                          }}
-                        >
-                          <FiEdit2 size={17} />
-                        </IconButton>
-                      </Tooltip>
-
-                      <Tooltip title={t("settings.forms.lists.tooltips.delete")}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(form.id)}
-                          sx={{
-                            color: "#ef5350",
-                            "&:hover": { backgroundColor: "#ffebee" },
-                          }}
-                        >
-                          <RiDeleteBin6Line size={18} />
-                        </IconButton>
-                      </Tooltip>
-
-                      <Tooltip title={t("settings.forms.lists.tooltips.copyLink")}>
-                        <IconButton
-                          size="small"
-                          sx={{
-                            color: "#ffb300",
-                            "&:hover": { backgroundColor: "#fff8e1" },
-                          }}
-                        >
-                          <HiOutlineLink size={19} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                        <Tooltip title={t("settings.forms.lists.tooltips.copyLink")}>
+                          <IconButton
+                            size="small"
+                            sx={{
+                              color: "#ffb300",
+                              "&:hover": { backgroundColor: "#fff8e1" },
+                            }}
+                          >
+                            <HiOutlineLink size={19} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </Paper>
     </Box>
   );

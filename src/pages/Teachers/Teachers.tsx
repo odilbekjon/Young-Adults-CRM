@@ -27,27 +27,41 @@ import {
   FormControl,
   InputAdornment,
   Collapse,
+  Chip,
+  CircularProgress,
 } from "@mui/material";
 import { IoSearchOutline } from "react-icons/io5";
 import { GoPlus } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdDownload, MdCalendarToday, MdClose } from "react-icons/md";
-import { useState, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { type Teacher } from "../../constants/Teachers";
 import { useBranch } from "../../Context/BranchContext";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
 import { useTranslation } from "react-i18next";
+import { useToast } from "../../Context/ToastContext";
+import {
+  useAllTeachersQuery,
+  useCreateTeacherMutation,
+  useUpdateTeacherMutation,
+  useDeleteTeacherMutation,
+  useToggleTeacherStatusMutation,
+} from "../../app/api/teachersApi";
+import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
+import { useAllBranchesQuery } from "../../app/api/branchesApi";
+import { useAllGroupsQuery } from "../../app/api/groupsApi";
 
 const EMPTY_FORM = {
-  fullName: "",
-  telegram: "",
+  name: "",
   phone: "",
+  email: "",
   password: "",
-  percent: "",
+  specialization: "",
+  experience: "",
+  salary: "",
   dob: "",
-  gender: "",
-  branch: "",
+  gender: "" as "" | TeacherGender,
+  branchIds: [] as string[],
   photo: null as File | null,
 };
 
@@ -66,31 +80,52 @@ const inputSx = {
 export const Teachers = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { teachers: branchTeachers, branchLabel } = useBranch();
+  const toast = useToast();
+  const { branchLabel } = useBranch();
+
+  const { data: teachersData, isLoading: teachersLoading } = useAllTeachersQuery({ page: 1, limit: 100 });
+  const { data: branchesData } = useAllBranchesQuery();
+  const { data: allGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
+  const [createTeacher, { isLoading: isCreating }] = useCreateTeacherMutation();
+  const [updateTeacher, { isLoading: isUpdating }] = useUpdateTeacherMutation();
+  const [deleteTeacher, { isLoading: isDeleting }] = useDeleteTeacherMutation();
+  const [toggleTeacherStatus] = useToggleTeacherStatusMutation();
+
+  const teachers: Teacher[] = teachersData?.data ?? [];
+  const branches = branchesData?.data ?? [];
+
+  // Real teacher endpointi guruhlar sonini qaytarmaydi — bu son mavjud
+  // groupsApi ma'lumotidan (har bir guruhning teachers[] massivi) hisoblanadi,
+  // yangi endpoint o'ylab topilmadi.
+  const groupCountByTeacherId = useMemo(() => {
+    const map = new Map<string, number>();
+    (allGroupsData?.data ?? []).forEach((g) => {
+      g.teachers.forEach((tch) => map.set(tch.id, (map.get(tch.id) ?? 0) + 1));
+    });
+    return map;
+  }, [allGroupsData]);
 
   const [searchValue, setSearchValue]             = useState("");
   const [open, setOpen]                           = useState(false);
   const [isEdit, setIsEdit]                       = useState(false);
   const [anchorEl, setAnchorEl]                   = useState<null | HTMLElement>(null);
-  const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(null);
-  const [localTeachers, setLocalTeachers]         = useState<Teacher[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const [form, setForm]                           = useState(EMPTY_FORM);
   const [deleteOpen, setDeleteOpen]               = useState(false);
   const [smsOpen, setSmsOpen]                     = useState(false);
   const [showPassword, setShowPassword]           = useState(false);
   const [photoPreview, setPhotoPreview]           = useState<string | null>(null);
   const fileInputRef                              = useRef<HTMLInputElement>(null);
-  const [, setErrors]                       = useState<Record<string, string>>({});
+  const [errors, setErrors]                       = useState<Record<string, string>>({});
 
-  const openMenu    = Boolean(anchorEl);
-  const allTeachers = [...branchTeachers, ...localTeachers];
+  const openMenu = Boolean(anchorEl);
 
-  const filteredTeachers = allTeachers.filter((teacher) =>
-    teacher.fullName.toLowerCase().includes(searchValue.toLowerCase())
+  const filteredTeachers = teachers.filter((teacher) =>
+    teacher.name.toLowerCase().includes(searchValue.toLowerCase())
   );
 
   /* ── menu ── */
-  const handleMenuOpen  = (e: React.MouseEvent<HTMLElement>, id: number) => { e.stopPropagation(); setAnchorEl(e.currentTarget); setSelectedTeacherId(id); };
+  const handleMenuOpen  = (e: React.MouseEvent<HTMLElement>, id: string) => { e.stopPropagation(); setAnchorEl(e.currentTarget); setSelectedTeacherId(id); };
   const handleCloseMenu = () => setAnchorEl(null);
 
   /* ── open drawer ── */
@@ -105,12 +140,22 @@ export const Teachers = () => {
   };
 
   const openEditDrawer = () => {
-    const teacher = allTeachers.find((teacher) => teacher.id === selectedTeacherId);
+    const teacher = teachers.find((tch) => tch.id === selectedTeacherId);
     if (teacher) {
       setIsEdit(true);
-      setForm({ fullName: teacher.fullName, telegram: teacher.telegram || "", phone: teacher.phone,
-        password: "", percent: teacher.percent || "", dob: teacher.dob || "",
-        gender: teacher.gender || "", branch: teacher.branch || "", photo: null });
+      setForm({
+        name: teacher.name,
+        phone: teacher.phone ?? "",
+        email: teacher.email ?? "",
+        password: "",
+        specialization: teacher.specialization ?? "",
+        experience: teacher.experience != null ? String(teacher.experience) : "",
+        salary: teacher.salary != null ? String(teacher.salary) : "",
+        dob: teacher.birthdate ?? "",
+        gender: teacher.gender ?? "",
+        branchIds: teacher.branches?.map((b) => b.id) ?? [],
+        photo: null,
+      });
       setPhotoPreview(null);
       setShowPassword(false);
       setOpen(true);
@@ -130,44 +175,81 @@ export const Teachers = () => {
     if (file) { setForm((prev) => ({ ...prev, photo: file })); setPhotoPreview(URL.createObjectURL(file)); }
   };
 
+  const toggleBranch = (id: string) => {
+    setForm((prev) => ({
+      ...prev,
+      branchIds: prev.branchIds.includes(id)
+        ? prev.branchIds.filter((b) => b !== id)
+        : [...prev.branchIds, id],
+    }));
+  };
+
   /* ── validate ── */
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.phone.trim())    e.phone    = t("teachers.validation.phoneRequired");
-    if (!form.fullName.trim()) e.fullName = t("teachers.validation.nameRequired");
-    if (!form.dob)             e.dob      = t("teachers.validation.dobRequired");
-    if (!form.gender)          e.gender   = t("teachers.validation.genderRequired");
+    if (!form.name.trim())                   e.name  = t("teachers.validation.nameRequired");
+    if (!form.phone.trim() && !form.email.trim()) e.phone = t("teachers.validation.phoneOrEmailRequired");
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   /* ── submit ── */
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
-    if (isEdit && selectedTeacherId) {
-      setLocalTeachers((prev) =>
-        prev.map((teacher) => teacher.id === selectedTeacherId
-          ? { ...teacher, fullName: form.fullName, phone: form.phone, telegram: form.telegram,
-              percent: form.percent, dob: form.dob, gender: form.gender, branch: form.branch }
-          : teacher)
-      );
-    } else {
-      setLocalTeachers((prev) => [...prev, {
-        id: Date.now(), fullName: form.fullName, phone: form.phone, telegram: form.telegram,
-        uid: String(Date.now()).slice(-7), role: "Teacher", branch: form.branch,
-        percent: form.percent, dob: form.dob, gender: form.gender, groups: [],
-      }]);
+    const payload = {
+      name: form.name,
+      phone: form.phone || undefined,
+      email: form.email || undefined,
+      password: form.password || undefined,
+      specialization: form.specialization || undefined,
+      experience: form.experience ? Number(form.experience) : undefined,
+      salary: form.salary ? Number(form.salary) : undefined,
+      birthdate: form.dob || undefined,
+      gender: form.gender || undefined,
+      branchIds: form.branchIds,
+      photo: form.photo ?? undefined,
+    };
+    try {
+      if (isEdit && selectedTeacherId) {
+        await updateTeacher({ id: selectedTeacherId, ...payload }).unwrap();
+        toast.success(t("teachers.toast.updated"));
+      } else {
+        await createTeacher(payload).unwrap();
+        toast.success(t("teachers.toast.created"));
+      }
+      setErrors({});
+      setForm(EMPTY_FORM);
+      setOpen(false);
+      setSelectedTeacherId(null);
+    } catch {
+      toast.error(t("teachers.toast.error"));
     }
-    setErrors({});
-    setForm(EMPTY_FORM);
-    setOpen(false);
-    setSelectedTeacherId(null);
   };
 
   /* ── delete ── */
   const handleDelete     = () => { setDeleteOpen(true); handleCloseMenu(); };
-  const handleConfirmDel = () => { setLocalTeachers((prev) => prev.filter((teacher) => teacher.id !== selectedTeacherId)); setDeleteOpen(false); setSelectedTeacherId(null); };
+  const handleConfirmDel = async () => {
+    if (!selectedTeacherId) return;
+    try {
+      await deleteTeacher(selectedTeacherId).unwrap();
+      toast.success(t("teachers.toast.deleted"));
+      setDeleteOpen(false);
+      setSelectedTeacherId(null);
+    } catch {
+      toast.error(t("teachers.toast.error"));
+    }
+  };
   const handleSmsOpen    = () => { setSmsOpen(true); handleCloseMenu(); };
+  const handleToggleStatus = async () => {
+    if (!selectedTeacherId) return;
+    try {
+      await toggleTeacherStatus(selectedTeacherId).unwrap();
+      toast.success(t("teachers.toast.statusToggled"));
+    } catch {
+      toast.error(t("teachers.toast.error"));
+    }
+    handleCloseMenu();
+  };
 
   /* ════════════════════════════════════════════════════════ */
   return (
@@ -211,39 +293,49 @@ export const Teachers = () => {
       </Stack>
 
       {/* Table */}
-      <TableContainer sx={{ borderRadius: "10px", border: "1px solid #e0e0e0" }}>
-        <Table sx={{ bgcolor: "#fff" }}>
-          <TableBody sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", padding: "12px" }}>
-            {filteredTeachers.map((teacher) => (
-              <TableRow key={teacher.id} onClick={() => navigate(`/teachers/${teacher.id}`)}
-                sx={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-                  border: "1px solid #e8e8e8", borderRadius: "10px", cursor: "pointer",
-                  "&:hover": { bgcolor: "#f9f9f9" }, "& td": { border: 0 } }}>
-                <TableCell sx={{ fontWeight: 500, fontSize: 14, flex: 1, py: 1.8 }}>{teacher.fullName}</TableCell>
-                <TableCell sx={{ color: "#185FA5", fontSize: 14, mr: 12 }}>{teacher.phone}</TableCell>
-                <TableCell sx={{ fontSize: 14, color: "#888", minWidth: 90, textAlign: "center", py: 1.8 }}>{teacher.groups.length} {t("teachers.table.groupsCount")}</TableCell>
-                <TableCell align="center" sx={{ py: 1.8 }} onClick={(e) => e.stopPropagation()}>
-                  <IconButton size="small" onClick={(e) => handleMenuOpen(e, teacher.id)}>
-                    <BsThreeDotsVertical size={16} />
-                  </IconButton>
-                  <Menu anchorEl={anchorEl} open={openMenu && selectedTeacherId === teacher.id} onClose={handleCloseMenu}
-                    anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-                    transformOrigin={{ vertical: "top", horizontal: "center" }}>
-                    <MenuItem onClick={openEditDrawer}>✏️ {t("teachers.menu.edit")}</MenuItem>
-                    <MenuItem onClick={handleSmsOpen}>📱 {t("teachers.menu.sms")}</MenuItem>
-                    <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>🗑 {t("teachers.menu.delete")}</MenuItem>
-                  </Menu>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredTeachers.length === 0 && (
-              <TableRow sx={{ "& td": { border: 0 } }}>
-                <TableCell colSpan={4} align="center" sx={{ color: "#aaa", py: 4 }}>{t("teachers.table.noData")}</TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {teachersLoading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress /></Box>
+      ) : (
+        <TableContainer sx={{ borderRadius: "10px", border: "1px solid #e0e0e0" }}>
+          <Table sx={{ bgcolor: "#fff" }}>
+            <TableBody sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", padding: "12px" }}>
+              {filteredTeachers.map((teacher) => (
+                <TableRow key={teacher.id} onClick={() => navigate(`/teachers/${teacher.id}`)}
+                  sx={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+                    border: "1px solid #e8e8e8", borderRadius: "10px", cursor: "pointer",
+                    "&:hover": { bgcolor: "#f9f9f9" }, "& td": { border: 0 } }}>
+                  <TableCell sx={{ fontWeight: 500, fontSize: 14, flex: 1, py: 1.8, display: "flex", alignItems: "center", gap: 1 }}>
+                    {teacher.name}
+                    {teacher.status === "INACTIVE" && (
+                      <Chip label={t("teachers.table.inactive")} size="small" sx={{ height: 18, fontSize: 10 }} />
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ color: "#185FA5", fontSize: 14, mr: 12 }}>{teacher.phone || teacher.email || "—"}</TableCell>
+                  <TableCell sx={{ fontSize: 14, color: "#888", minWidth: 90, textAlign: "center", py: 1.8 }}>{groupCountByTeacherId.get(teacher.id) ?? 0} {t("teachers.table.groupsCount")}</TableCell>
+                  <TableCell align="center" sx={{ py: 1.8 }} onClick={(e) => e.stopPropagation()}>
+                    <IconButton size="small" onClick={(e) => handleMenuOpen(e, teacher.id)}>
+                      <BsThreeDotsVertical size={16} />
+                    </IconButton>
+                    <Menu anchorEl={anchorEl} open={openMenu && selectedTeacherId === teacher.id} onClose={handleCloseMenu}
+                      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+                      transformOrigin={{ vertical: "top", horizontal: "center" }}>
+                      <MenuItem onClick={openEditDrawer}>✏️ {t("teachers.menu.edit")}</MenuItem>
+                      <MenuItem onClick={handleSmsOpen}>📱 {t("teachers.menu.sms")}</MenuItem>
+                      <MenuItem onClick={handleToggleStatus}>🔁 {t("teachers.menu.toggleStatus")}</MenuItem>
+                      <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>🗑 {t("teachers.menu.delete")}</MenuItem>
+                    </Menu>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredTeachers.length === 0 && (
+                <TableRow sx={{ "& td": { border: 0 } }}>
+                  <TableCell colSpan={4} align="center" sx={{ color: "#aaa", py: 4 }}>{t("teachers.table.noData")}</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       <SendSmsModal
         open={smsOpen}
@@ -279,6 +371,7 @@ export const Teachers = () => {
               <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.phone")}</Typography>
               <TextField name="phone" value={form.phone} onChange={handleChange}
                 fullWidth size="small" placeholder={t("teachers.form.phonePlaceholder")}
+                error={Boolean(errors.phone)} helperText={errors.phone}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -294,21 +387,38 @@ export const Teachers = () => {
               />
             </Box>
 
+            {/* Email */}
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.email")}</Typography>
+              <TextField name="email" value={form.email} onChange={handleChange}
+                fullWidth size="small" placeholder={t("teachers.form.emailPlaceholder")} sx={inputSx} />
+            </Box>
+
             {/* Name */}
             <Box>
               <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.name")}</Typography>
-              <TextField name="fullName" value={form.fullName} onChange={handleChange}
-                fullWidth size="small" placeholder={t("teachers.form.namePlaceholder")} sx={inputSx} />
+              <TextField name="name" value={form.name} onChange={handleChange}
+                fullWidth size="small" placeholder={t("teachers.form.namePlaceholder")}
+                error={Boolean(errors.name)} helperText={errors.name}
+                sx={inputSx} />
             </Box>
 
-            {/* Branch — faqat Edit rejimida */}
-            {isEdit && (
-              <Box>
-                <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.branch")}</Typography>
-                <TextField name="branch" value={form.branch} onChange={handleChange}
-                  fullWidth size="small" placeholder={t("teachers.form.branchPlaceholder")} sx={inputSx} />
-              </Box>
-            )}
+            {/* Branches */}
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.branch")}</Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1}>
+                {branches.map((b) => (
+                  <Chip
+                    key={b.id}
+                    label={b.name}
+                    size="small"
+                    color={form.branchIds.includes(b.id) ? "primary" : "default"}
+                    onClick={() => toggleBranch(b.id)}
+                    sx={{ cursor: "pointer" }}
+                  />
+                ))}
+              </Stack>
+            </Box>
 
             {/* Date of birth */}
             <Box>
@@ -336,14 +446,35 @@ export const Teachers = () => {
               <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.gender")}</Typography>
               <FormControl>
                 <RadioGroup row name="gender" value={form.gender} onChange={handleChange}>
-                  <FormControlLabel value="Male"
+                  <FormControlLabel value="MALE"
                     control={<Radio size="small" sx={{ color: "#9ca3af", "&.Mui-checked": { color: "#5b8def" } }} />}
                     label={<Typography fontSize={14}>{t("teachers.form.genderMale")}</Typography>} />
-                  <FormControlLabel value="Female"
+                  <FormControlLabel value="FEMALE"
                     control={<Radio size="small" sx={{ color: "#9ca3af", "&.Mui-checked": { color: "#5b8def" } }} />}
                     label={<Typography fontSize={14}>{t("teachers.form.genderFemale")}</Typography>} />
                 </RadioGroup>
               </FormControl>
+            </Box>
+
+            {/* Specialization */}
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.specialization")}</Typography>
+              <TextField name="specialization" value={form.specialization} onChange={handleChange}
+                fullWidth size="small" placeholder={t("teachers.form.specializationPlaceholder")} sx={inputSx} />
+            </Box>
+
+            {/* Experience */}
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.experience")}</Typography>
+              <TextField name="experience" type="number" value={form.experience} onChange={handleChange}
+                fullWidth size="small" sx={inputSx} />
+            </Box>
+
+            {/* Salary */}
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.salary")}</Typography>
+              <TextField name="salary" type="number" value={form.salary} onChange={handleChange}
+                fullWidth size="small" sx={inputSx} />
             </Box>
 
             {/* Photo */}
@@ -387,14 +518,14 @@ export const Teachers = () => {
 
         {/* footer */}
         <Box sx={{ px: 3, py: 2.5, borderTop: "1px solid #f0f0f0" }}>
-          <Button fullWidth variant="contained" onClick={handleSubmit}
+          <Button fullWidth variant="contained" onClick={handleSubmit} disabled={isCreating || isUpdating}
             sx={{
               borderRadius: "24px", py: 1.3, fontSize: 15, fontWeight: 600,
               textTransform: "none", bgcolor: "#4f7ec4",
               boxShadow: "0 4px 12px rgba(79,126,196,0.35)",
               "&:hover": { bgcolor: "#3b6ab0" },
             }}>
-            {t("teachers.form.submit")}
+            {(isCreating || isUpdating) ? <CircularProgress size={18} sx={{ color: "#fff" }} /> : t("teachers.form.submit")}
           </Button>
         </Box>
       </Drawer>
@@ -408,8 +539,10 @@ export const Teachers = () => {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 2, pb: 2 }}>
-          <Button onClick={() => setDeleteOpen(false)} sx={{ textTransform: "none", color: "#667085" }}>{t("teachers.deleteDialog.cancel")}</Button>
-          <Button variant="contained" color="error" onClick={handleConfirmDel} sx={{ borderRadius: 2, textTransform: "none" }}>{t("teachers.deleteDialog.confirm")}</Button>
+          <Button onClick={() => setDeleteOpen(false)} disabled={isDeleting} sx={{ textTransform: "none", color: "#667085" }}>{t("teachers.deleteDialog.cancel")}</Button>
+          <Button variant="contained" color="error" onClick={handleConfirmDel} disabled={isDeleting} sx={{ borderRadius: 2, textTransform: "none" }}>
+            {isDeleting ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : t("teachers.deleteDialog.confirm")}
+          </Button>
         </DialogActions>
       </Dialog>
     </div>

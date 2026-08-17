@@ -15,6 +15,14 @@ import {
     TransferStudentRequest,
     TransferStudentResponse,
     GroupHistoryEntry,
+    GroupComment,
+    AssignTeachersRequest,
+    AssignTeachersResponse,
+    RemoveTeacherFromGroupRequest,
+    RemoveTeacherFromGroupResponse,
+    UpdateGroupStatusRequest,
+    UpdateGroupStatusResponse,
+    ToggleGroupStatusResponse,
 } from "./types";
 
 // Backend ba'zan ro'yxatni tekis massiv, ba'zan {data: [...], meta} ko'rinishida
@@ -67,6 +75,27 @@ const normalizeHistory = (raw: unknown): GroupHistoryEntry[] => {
     }));
 };
 
+// Backend's exact envelope for GET /groups/{id}/comments isn't documented
+// beyond a 200 status, so we accept a bare array or a few likely wrappers
+// and normalize field names defensively (same approach as normalizeHistory).
+const normalizeComments = (raw: unknown): GroupComment[] => {
+    const container = (raw ?? {}) as Record<string, unknown>;
+    const list: unknown[] = Array.isArray(raw)
+        ? raw
+        : Array.isArray(container.comments)
+        ? container.comments
+        : Array.isArray(container.data)
+        ? container.data
+        : [];
+
+    return (list as Record<string, unknown>[]).map((r, i) => ({
+        id: String(r.id ?? r._id ?? i),
+        text: String(r.text ?? r.message ?? r.comment ?? r.content ?? ""),
+        author: asString(r.author ?? r.createdBy ?? r.user ?? r.modifiedBy),
+        createdAt: String(r.createdAt ?? r.timestamp ?? r.date ?? ""),
+    }));
+};
+
 const appendGroupFormData = (formData: FormData, data: Partial<CreateGroupRequest>) => {
     const { days, teacherIds, studentIds, ...rest } = data;
     (Object.keys(rest) as (keyof typeof rest)[]).forEach((key) => {
@@ -116,7 +145,7 @@ export const groupsApi = baseApi.injectEndpoints({
                 appendGroupFormData(formData, data);
                 return {
                     url: `${PATHS.GROUPS}/${id}`,
-                    method: "PUT",
+                    method: "PATCH",
                     body: formData,
                 };
             },
@@ -134,11 +163,15 @@ export const groupsApi = baseApi.injectEndpoints({
                 url: `${PATHS.GROUPS}/${id}/history`,
                 method: "GET",
             }),
-            transformResponse: (response: { data: unknown }) => {
-                // TEMP DEBUG — remove once the real response shape is confirmed.
-                if (import.meta.env.DEV) console.log("[groupsApi] history raw response:", response);
-                return normalizeHistory(response?.data);
-            },
+            transformResponse: (response: { data: unknown }) => normalizeHistory(response?.data),
+            providesTags: ["group"],
+        }),
+        groupComments: builder.query<GroupComment[], string>({
+            query: (id) => ({
+                url: `${PATHS.GROUPS}/${id}/comments`,
+                method: "GET",
+            }),
+            transformResponse: (response: { data: unknown }) => normalizeComments(response?.data),
             providesTags: ["group"],
         }),
         assignStudentsToGroup: builder.mutation<AssignStudentsResponse, AssignStudentsRequest>({
@@ -164,6 +197,36 @@ export const groupsApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ["group"],
         }),
+        assignTeachersToGroup: builder.mutation<AssignTeachersResponse, AssignTeachersRequest>({
+            query: ({ id, teacherIds }) => ({
+                url: `${PATHS.GROUPS}/${id}/teachers/assign`,
+                method: "POST",
+                body: { teacherIds },
+            }),
+            invalidatesTags: ["group"],
+        }),
+        removeTeacherFromGroup: builder.mutation<RemoveTeacherFromGroupResponse, RemoveTeacherFromGroupRequest>({
+            query: ({ id, teacherId }) => ({
+                url: `${PATHS.GROUPS}/${id}/teachers/${teacherId}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["group"],
+        }),
+        updateGroupStatus: builder.mutation<UpdateGroupStatusResponse, UpdateGroupStatusRequest>({
+            query: ({ id, status }) => ({
+                url: `${PATHS.GROUPS}/${id}/status`,
+                method: "PATCH",
+                body: { status },
+            }),
+            invalidatesTags: ["group"],
+        }),
+        toggleGroupStatus: builder.mutation<ToggleGroupStatusResponse, string>({
+            query: (id) => ({
+                url: `${PATHS.GROUPS}/${id}/toggle-status`,
+                method: "PATCH",
+            }),
+            invalidatesTags: ["group"],
+        }),
     })
 })
 
@@ -174,7 +237,12 @@ export const {
     useUpdateGroupMutation,
     useDeleteGroupMutation,
     useGroupHistoryQuery,
+    useGroupCommentsQuery,
     useAssignStudentsToGroupMutation,
     useRemoveStudentFromGroupMutation,
     useTransferStudentMutation,
+    useAssignTeachersToGroupMutation,
+    useRemoveTeacherFromGroupMutation,
+    useUpdateGroupStatusMutation,
+    useToggleGroupStatusMutation,
 } = groupsApi;

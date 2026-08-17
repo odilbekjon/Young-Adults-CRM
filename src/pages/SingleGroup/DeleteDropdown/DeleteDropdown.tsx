@@ -1,15 +1,17 @@
 // src/pages/groups/DeleteDropdown.tsx
 import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
+import { CircularProgress } from "@mui/material";
 import { TopDropdown } from "../../../components/TopDropdown";
 import { cancelBtn, submitBtn } from "../styles";
 
 export const DeleteDropdown = ({
-  open, onClose, anchorRef, groupName, onConfirm,
+  open, onClose, anchorRef, groupName, onConfirm, loading,
 }: {
   open: boolean; onClose: () => void;
   anchorRef: React.RefObject<HTMLElement>;
   groupName: string; onConfirm: () => void;
+  loading?: boolean;
 }) => {
   const { t } = useTranslation();
   return (
@@ -22,8 +24,14 @@ export const DeleteDropdown = ({
         <b>{groupName}</b> {t("singleGroup.deleteDropdown.confirmMessage")}
       </p>
       <div style={{ display: "flex", gap: 8 }}>
-        <button style={cancelBtn} onClick={onClose}>{t("singleGroup.deleteDropdown.cancel")}</button>
-        <button style={{ ...submitBtn, background: "#c0392b" }} onClick={onConfirm}>{t("singleGroup.deleteDropdown.delete")}</button>
+        <button style={cancelBtn} onClick={onClose} disabled={loading}>{t("singleGroup.deleteDropdown.cancel")}</button>
+        <button
+          style={{ ...submitBtn, background: "#c0392b", opacity: loading ? 0.7 : 1 }}
+          onClick={onConfirm}
+          disabled={loading}
+        >
+          {loading ? <CircularProgress size={14} sx={{ color: "#fff" }} /> : t("singleGroup.deleteDropdown.delete")}
+        </button>
       </div>
     </TopDropdown>
   );

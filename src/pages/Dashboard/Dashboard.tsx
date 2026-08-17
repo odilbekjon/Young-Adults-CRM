@@ -110,9 +110,9 @@ export const Dashboard = () => {
 
   const { data: statsData } = useDashboardStatsQuery();
   const { data: scheduleData, isLoading: scheduleLoading, isError: scheduleError } = useDashboardScheduleQuery();
-  const { data: attendanceData, isLoading: attendanceLoading } = useDashboardAttendanceStatsQuery();
-  const { data: activitiesData, isLoading: activitiesLoading } = useDashboardRecentActivitiesQuery();
-  const { data: teacherPerfData, isLoading: teacherPerfLoading } = useDashboardTeacherPerformanceQuery();
+  const { data: attendanceData, isLoading: attendanceLoading, isError: attendanceError } = useDashboardAttendanceStatsQuery();
+  const { data: activitiesData, isLoading: activitiesLoading, isError: activitiesError } = useDashboardRecentActivitiesQuery();
+  const { data: teacherPerfData, isLoading: teacherPerfLoading, isError: teacherPerfError } = useDashboardTeacherPerformanceQuery();
 
   const liveStatValues: Record<string, number | undefined> = {
     students: statsData?.data.activeStudentsCount,
@@ -270,6 +270,8 @@ export const Dashboard = () => {
           </Typography>
           {attendanceLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
+          ) : attendanceError ? (
+            <Typography sx={{ color: "#e53935", fontSize: 12 }}>{t("dashboard.loadError")}</Typography>
           ) : (
             <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
               <Typography sx={{ fontSize: 32, fontWeight: 700, color: "#f97316" }}>
@@ -294,6 +296,8 @@ export const Dashboard = () => {
           </Typography>
           {activitiesLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
+          ) : activitiesError ? (
+            <Typography sx={{ color: "#e53935", fontSize: 12 }}>{t("dashboard.loadError")}</Typography>
           ) : activities.length === 0 ? (
             <Typography sx={{ fontSize: 12, color: "#9ca3af" }}>{t("dashboard.recentActivities.emptyState")}</Typography>
           ) : (
@@ -315,18 +319,25 @@ export const Dashboard = () => {
           </Typography>
           {teacherPerfLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
+          ) : teacherPerfError ? (
+            <Typography sx={{ color: "#e53935", fontSize: 12 }}>{t("dashboard.loadError")}</Typography>
           ) : teacherPerf.length === 0 ? (
             <Typography sx={{ fontSize: 12, color: "#9ca3af" }}>{t("dashboard.teacherPerformance.emptyState")}</Typography>
           ) : (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {teacherPerf.map((tp) => (
-                <Box key={tp.id} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Box key={tp.id} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
                   <Typography sx={{ fontSize: 12.5, color: "#374151" }}>{tp.name}</Typography>
-                  <Chip
-                    label={`${t("dashboard.teacherPerformance.activeGroups")}: ${tp.activeGroups}`}
-                    size="small"
-                    sx={{ fontSize: 10.5, height: 20, bgcolor: "#fff7ed", color: "#f97316" }}
-                  />
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <Typography sx={{ fontSize: 10.5, color: "#9ca3af" }}>
+                      {t("dashboard.teacherPerformance.activityScore")}: {tp.activityScore}
+                    </Typography>
+                    <Chip
+                      label={`${t("dashboard.teacherPerformance.activeGroups")}: ${tp.activeGroups}`}
+                      size="small"
+                      sx={{ fontSize: 10.5, height: 20, bgcolor: "#fff7ed", color: "#f97316" }}
+                    />
+                  </Box>
                 </Box>
               ))}
             </Box>

@@ -28,6 +28,7 @@ import {
   FiTag,
   FiFileText,
   FiXCircle,
+  FiShare2,
 } from "react-icons/fi";
 import { MdOutlineDateRange } from "react-icons/md";
 import { useState} from "react";
@@ -113,6 +114,7 @@ const MORE_MENU_ITEMS = [
   { key: "export", label: "Export leads", icon: <FiDownload size={15} /> },
   { key: "divider" },
   { key: "columns", label: "Column settings", icon: <FiColumns size={15} /> },
+  { key: "sources", label: "Lead sources", icon: <FiShare2 size={15} /> },
   { key: "tags", label: "Tags", icon: <FiTag size={15} /> },
   { key: "forms", label: "Forms", icon: <FiFileText size={15} /> },
   { key: "divider2" },
@@ -436,7 +438,12 @@ const DateRangePicker = ({ anchorEl, onClose, startDate, endDate, onApply }: Dat
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export const FromWhere = () => {
+interface FromWhereProps {
+  onOpenColumnSettings?: () => void;
+  onOpenSourceSettings?: () => void;
+}
+
+export const FromWhere = ({ onOpenColumnSettings, onOpenSourceSettings }: FromWhereProps = {}) => {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<FilterState>(
     Object.fromEntries(FILTERS.map((f) => [f.key, ""]))
@@ -594,7 +601,11 @@ export const FromWhere = () => {
               return (
                 <MenuItem
                   key={item.key}
-                  onClick={() => setMoreAnchor(null)}
+                  onClick={() => {
+                    setMoreAnchor(null);
+                    if (item.key === "columns") onOpenColumnSettings?.();
+                    if (item.key === "sources") onOpenSourceSettings?.();
+                  }}
                   sx={{
                     fontSize: 13,
                     px: 2,

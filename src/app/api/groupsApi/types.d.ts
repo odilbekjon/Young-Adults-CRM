@@ -128,6 +128,7 @@ export interface CreateGroupRequest {
   courseId: string;
   roomId?: string;
   days?: GroupDay[];
+  time?: string;
   weekOfStudy?: string;
   trainingStart?: string;
   trainingEnd?: string;
@@ -190,4 +191,51 @@ export interface GroupHistoryEntry {
   detail: string;
   createdAt: string;
   actor: string | null;
+}
+
+// Backend's exact envelope for /groups/{id}/comments isn't documented beyond
+// a 200 status, so this is our normalized shape (see normalizeComments in
+// groupsApi.tsx) rather than a literal mirror of the raw response.
+export interface GroupComment {
+  id: string;
+  text: string;
+  author: string | null;
+  createdAt: string;
+}
+
+export interface AssignTeachersRequest {
+  id: string;
+  teacherIds: string[];
+}
+
+export interface AssignTeachersResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface RemoveTeacherFromGroupRequest {
+  id: string;
+  teacherId: string;
+}
+
+export interface RemoveTeacherFromGroupResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface UpdateGroupStatusRequest {
+  id: string;
+  status: string;
+}
+
+export interface UpdateGroupStatusResponse {
+  success: boolean;
+  message?: string;
+  data?: Group;
+}
+
+export interface ToggleGroupStatusResponse {
+  success: boolean;
+  message?: string;
+  data?: Group;
 }

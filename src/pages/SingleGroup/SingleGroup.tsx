@@ -9,7 +9,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { MdEdit, MdDelete, MdEmail, MdDownload } from "react-icons/md";
+import { MdEdit, MdDelete, MdEmail, MdDownload, MdSwapHoriz } from "react-icons/md";
 import * as XLSX from "xlsx";
 import { GoPlus } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -25,9 +25,15 @@ import {
   useAssignStudentsToGroupMutation,
   useRemoveStudentFromGroupMutation,
   useTransferStudentMutation,
+  useUpdateGroupMutation,
+  useDeleteGroupMutation,
+  useRemoveTeacherFromGroupMutation,
+  useToggleGroupStatusMutation,
 } from "../../app/api/groupsApi";
-import type { GroupDetail, GroupHistoryEntry } from "../../app/api/groupsApi/types";
+import type { GroupDetail, GroupHistoryEntry, UpdateGroupRequest } from "../../app/api/groupsApi/types";
 import { useAllStudentsQuery, useDeleteStudentMutation } from "../../app/api/studentsApi";
+import { useAllCoursesQuery } from "../../app/api/coursesApi";
+import { useAllRoomsQuery } from "../../app/api/roomsApi";
 import { useToast } from "../../Context/ToastContext";
 
 import { AddStudentDrawer, type AddStudentOption } from "./AddStudentDrawer/AddStudentDrawer";
@@ -145,10 +151,16 @@ export const SingleGroup = () => {
   const { data: historyData } = useGroupHistoryQuery(id ?? "", { skip: !id });
   const { data: allGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
   const { data: allStudentsData } = useAllStudentsQuery({ page: 1, limit: 100 });
+  const { data: allCoursesData } = useAllCoursesQuery();
+  const { data: allRoomsData } = useAllRoomsQuery();
   const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
   const [removeStudentFromGroup, { isLoading: isRemovingFromGroup }] = useRemoveStudentFromGroupMutation();
   const [transferStudent, { isLoading: isTransferring }] = useTransferStudentMutation();
   const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
+  const [updateGroup, { isLoading: isSavingGroup }] = useUpdateGroupMutation();
+  const [deleteGroup, { isLoading: isDeletingGroup }] = useDeleteGroupMutation();
+  const [removeTeacherFromGroup, { isLoading: isRemovingTeacher }] = useRemoveTeacherFromGroupMutation();
+  const [toggleGroupStatus] = useToggleGroupStatusMutation();
 
   const group = groupDetailData ? toLegacyGroup(groupDetailData.data) : undefined;
   const teacher = group ? findTeacherById(group.teacherId) : undefined;
@@ -179,6 +191,15 @@ export const SingleGroup = () => {
       .filter((g) => g.id !== id)
       .map((g) => ({ id: g.id, name: g.name })),
     [allGroupsData, id]
+  );
+
+  const courseOptions = useMemo(
+    () => (allCoursesData?.data ?? []).map((c) => ({ id: c.id, name: c.name })),
+    [allCoursesData]
+  );
+  const roomOptions = useMemo(
+    () => (allRoomsData?.data ?? []).map((r) => ({ id: r.id, name: r.name })),
+    [allRoomsData]
   );
 
   // Student dot menu
@@ -221,7 +242,7 @@ export const SingleGroup = () => {
     );
   }
 
-  if (!group) {
+  if (!group || !groupDetailData) {
     return (
       <Box p={4}><Typography>{t("singleGroup.notFound")}</Typography></Box>
     );
@@ -419,6 +440,49 @@ export const SingleGroup = () => {
     }
   };
 
+  const handleSaveGroup = async (data: Omit<UpdateGroupRequest, "id">) => {
+    if (!id) return;
+    try {
+      await updateGroup({ id, ...data }).unwrap();
+      toast.success(t("singleGroup.editGroupDrawer.toast.success"));
+      setEditOpen(false);
+    } catch {
+      toast.error(t("singleGroup.editGroupDrawer.toast.error"));
+    }
+  };
+
+  const handleRemoveTeacher = async (teacherId: string) => {
+    if (!id) return;
+    try {
+      await removeTeacherFromGroup({ id, teacherId }).unwrap();
+      toast.success(t("singleGroup.editGroupDrawer.toast.teacherRemoved"));
+    } catch {
+      toast.error(t("singleGroup.editGroupDrawer.toast.error"));
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!id) return;
+    try {
+      await deleteGroup(id).unwrap();
+      toast.success(t("singleGroup.deleteDropdown.toast.success"));
+      setDeleteOpen(false);
+      navigate(-1);
+    } catch {
+      toast.error(t("singleGroup.deleteDropdown.toast.error"));
+    }
+  };
+
+  const handleToggleGroupStatus = async () => {
+    if (!id) return;
+    try {
+      await toggleGroupStatus(id).unwrap();
+      toast.success(t("singleGroup.leftPanel.toast.statusToggled"));
+    } catch {
+      toast.error(t("singleGroup.leftPanel.toast.statusToggleError"));
+    }
+  };
+
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f7f8fa" }}>
       {/* PAGE TITLE */}
@@ -467,6 +531,9 @@ export const SingleGroup = () => {
               </ActionIconBtn>
               <ActionIconBtn label={t("singleGroup.leftPanel.addStudent")} onClick={() => setAddStudentOpen(true)}>
                 <GoPlus size={16} />
+              </ActionIconBtn>
+              <ActionIconBtn label={t("singleGroup.leftPanel.toggleStatus")} onClick={handleToggleGroupStatus}>
+                <MdSwapHoriz size={16} color="#6b7280" />
               </ActionIconBtn>
             </Stack>
           </Stack>
@@ -662,12 +729,11 @@ export const SingleGroup = () => {
               {tabIndex === 4 && <Exams />}
               {tabIndex === 5 && (
                 <History
-                  groupId={group.id}
+                  groupId={id ?? ""}
                   groupName={group.name}
-                  students={combinedStudents}
                 />
               )}
-              {tabIndex === 6 && <Comments />}
+              {tabIndex === 6 && <Comments groupId={id ?? ""} />}
             </Box>
           </Paper>
         </Box>
@@ -718,7 +784,17 @@ export const SingleGroup = () => {
       />
 
       {/* ══ EDIT GROUP DRAWER ══ */}
-      <EditGroupDrawer group={group} open={editOpen} onClose={() => setEditOpen(false)} />
+      <EditGroupDrawer
+        group={groupDetailData.data}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        courses={courseOptions}
+        rooms={roomOptions}
+        onSave={handleSaveGroup}
+        isSaving={isSavingGroup}
+        onRemoveTeacher={handleRemoveTeacher}
+        isRemovingTeacher={isRemovingTeacher}
+      />
 
       {/* ══ DELETE DROPDOWN ══ */}
       <DeleteDropdown
@@ -726,7 +802,8 @@ export const SingleGroup = () => {
         onClose={() => setDeleteOpen(false)}
         anchorRef={deleteAnchorRef as any}
         groupName={group.name}
-        onConfirm={() => { setDeleteOpen(false); navigate(-1); }}
+        onConfirm={handleDeleteGroup}
+        loading={isDeletingGroup}
       />
 
       {/* ══ SMS DRAWER ══ */}

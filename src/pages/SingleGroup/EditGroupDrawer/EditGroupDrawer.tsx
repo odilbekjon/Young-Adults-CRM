@@ -1,33 +1,14 @@
 // src/pages/groups/EditGroupDrawer.tsx
-import { CSSProperties } from "react";
+import { CSSProperties, useEffect, useState } from "react";
 import { HiChevronDown } from "react-icons/hi";
+import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
+import { Box, Chip, CircularProgress, Stack } from "@mui/material";
 import { RightDrawer } from "../../../components/RightDrawer";
 import { inputStyle, labelStyle, submitBtn, cancelBtn } from "../styles";
-import { TEACHERS_DATA } from "../../../constants/Teachers";
-import { defaultCourses } from "../../../constants/CoursesData";
+import type { GroupDay, GroupDetail, GroupPersonRef, UpdateGroupRequest } from "../../../app/api/groupsApi/types";
 
-const TEACHERS_LIST = [...new Set(TEACHERS_DATA.map((t) => t.fullName))];
-
-const COURSES = defaultCourses.map((c) => c.name);
-
-const ROOMS = [
-  ...new Set(TEACHERS_DATA.flatMap((t) => t.groups.map((g) => g.room))),
-];
-
-// NOTE: values kept as-is (used as lookup/match keys against group.days);
-// only the displayed label is translated via DAYS_OPTION_LABEL_KEYS.
-const DAYS_OPTIONS = [
-  "Odd days",
-  "Even days",
-  "Every day",
-];
-
-const DAYS_OPTION_LABEL_KEYS: Record<string, string> = {
-  "Odd days": "oddDays",
-  "Even days": "evenDays",
-  "Every day": "everyDay",
-};
+const ALL_DAYS: GroupDay[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
 /* ─── Select uslubi (inputStyle asosida, chevron bilan) ─── */
 const selectWrapperStyle: CSSProperties = {
@@ -55,29 +36,29 @@ const chevronStyle: CSSProperties = {
 
 const SelectField = ({
   label,
-  defaultValue,
+  value,
+  onChange,
   options,
   placeholder,
-  getLabel,
 }: {
   label: string;
-  defaultValue?: string;
-  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
   placeholder?: string;
-  getLabel?: (opt: string) => string;
 }) => (
   <div>
     <label style={labelStyle}>{label}</label>
     <div style={selectWrapperStyle}>
-      <select style={selectStyle} defaultValue={defaultValue || ""}>
+      <select style={selectStyle} value={value} onChange={(e) => onChange(e.target.value)}>
         {placeholder && (
           <option value="" disabled>
             {placeholder}
           </option>
         )}
         {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {getLabel ? getLabel(opt) : opt}
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
           </option>
         ))}
       </select>
@@ -86,82 +67,179 @@ const SelectField = ({
   </div>
 );
 
+interface EditGroupFormState {
+  name: string;
+  courseId: string;
+  roomId: string;
+  days: GroupDay[];
+  time: string;
+  trainingStart: string;
+  trainingEnd: string;
+}
+
+const toFormState = (group: GroupDetail): EditGroupFormState => ({
+  name: group.name ?? "",
+  courseId: group.courseId ?? "",
+  roomId: group.roomId ?? "",
+  days: group.days ?? [],
+  time: group.time ?? "",
+  trainingStart: group.trainingStart ?? "",
+  trainingEnd: group.trainingEnd ?? "",
+});
+
 export const EditGroupDrawer = ({
-  group, open, onClose,
+  group,
+  open,
+  onClose,
+  courses,
+  rooms,
+  onSave,
+  isSaving,
+  onRemoveTeacher,
+  isRemovingTeacher,
 }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  group: any;
+  group: GroupDetail;
   open: boolean;
   onClose: () => void;
+  courses: { id: string; name: string }[];
+  rooms: { id: string; name: string }[];
+  onSave: (data: Omit<UpdateGroupRequest, "id">) => void;
+  isSaving: boolean;
+  onRemoveTeacher: (teacherId: string) => void;
+  isRemovingTeacher: boolean;
 }) => {
   const { t } = useTranslation();
+  const [form, setForm] = useState<EditGroupFormState>(() => toFormState(group));
+
+  // Har safar drawer ochilganda formani real guruh ma'lumotlari bilan qayta boshlaymiz.
+  useEffect(() => {
+    if (open) setForm(toFormState(group));
+  }, [open, group]);
+
+  const toggleDay = (day: GroupDay) => {
+    setForm((f) => ({
+      ...f,
+      days: f.days.includes(day) ? f.days.filter((d) => d !== day) : [...f.days, day],
+    }));
+  };
+
+  const handleSubmit = () => {
+    onSave({
+      name: form.name,
+      courseId: form.courseId || undefined,
+      roomId: form.roomId || undefined,
+      days: form.days,
+      time: form.time || undefined,
+      trainingStart: form.trainingStart || undefined,
+      trainingEnd: form.trainingEnd || undefined,
+    });
+  };
+
+  const teachers: GroupPersonRef[] = group.teachers ?? [];
+
   return (
     <RightDrawer open={open} onClose={onClose} title={t("singleGroup.editGroupDrawer.title")}>
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <div>
           <label style={labelStyle}>{t("singleGroup.editGroupDrawer.groupName")}</label>
-          <input style={inputStyle} defaultValue={group.name} type="text" />
+          <input
+            style={inputStyle}
+            type="text"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
         </div>
 
         <SelectField
           label={t("singleGroup.editGroupDrawer.selectCourse")}
-          defaultValue={group.course}
-          options={COURSES}
+          value={form.courseId}
+          onChange={(v) => setForm((f) => ({ ...f, courseId: v }))}
+          options={courses.map((c) => ({ value: c.id, label: c.name }))}
           placeholder={t("singleGroup.editGroupDrawer.selectCourse")}
         />
 
-        <SelectField
-          label={t("singleGroup.editGroupDrawer.selectTeacher")}
-          defaultValue={group.teacher}
-          options={TEACHERS_LIST}
-          placeholder={t("singleGroup.editGroupDrawer.selectTeacher")}
-        />
+        <div>
+          <label style={labelStyle}>{t("singleGroup.editGroupDrawer.teachers")}</label>
+          <Stack direction="row" flexWrap="wrap" gap={1}>
+            {teachers.length === 0 ? (
+              <Box sx={{ fontSize: 13, color: "#9ca3af" }}>
+                {t("singleGroup.editGroupDrawer.noTeachers")}
+              </Box>
+            ) : (
+              teachers.map((tch) => (
+                <Chip
+                  key={tch.id}
+                  label={tch.name}
+                  size="small"
+                  disabled={isRemovingTeacher}
+                  onDelete={() => onRemoveTeacher(tch.id)}
+                  deleteIcon={<MdClose />}
+                />
+              ))
+            )}
+          </Stack>
+        </div>
 
-        <SelectField
-          label={t("singleGroup.editGroupDrawer.days")}
-          defaultValue={group.days}
-          options={DAYS_OPTIONS}
-          placeholder={t("singleGroup.editGroupDrawer.selectDays")}
-          getLabel={(opt) => t(`singleGroup.editGroupDrawer.daysOptions.${DAYS_OPTION_LABEL_KEYS[opt]}`)}
-        />
+        <div>
+          <label style={labelStyle}>{t("singleGroup.editGroupDrawer.days")}</label>
+          <Stack direction="row" flexWrap="wrap" gap={1}>
+            {ALL_DAYS.map((day) => (
+              <Chip
+                key={day}
+                label={t(`singleGroup.editGroupDrawer.weekdays.${day}`)}
+                size="small"
+                color={form.days.includes(day) ? "primary" : "default"}
+                onClick={() => toggleDay(day)}
+                sx={{ cursor: "pointer" }}
+              />
+            ))}
+          </Stack>
+        </div>
 
         <SelectField
           label={t("singleGroup.editGroupDrawer.selectRoom")}
-          defaultValue={group.room}
-          options={ROOMS}
+          value={form.roomId}
+          onChange={(v) => setForm((f) => ({ ...f, roomId: v }))}
+          options={rooms.map((r) => ({ value: r.id, label: r.name }))}
           placeholder={t("singleGroup.editGroupDrawer.selectRoom")}
         />
-
-        <div>
-          <label style={labelStyle}>{t("singleGroup.editGroupDrawer.priceUzs")}</label>
-          <input
-            style={inputStyle}
-            defaultValue={group.price || ""}
-            type="number"
-          />
-        </div>
 
         <div>
           <label style={labelStyle}>{t("singleGroup.editGroupDrawer.lessonStartTime")}</label>
           <input
             style={inputStyle}
             type="time"
-            defaultValue={group.lessonStartTime}
+            value={form.time}
+            onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
           />
         </div>
 
         <div>
           <label style={labelStyle}>{t("singleGroup.editGroupDrawer.groupStartDate")}</label>
-          <input style={inputStyle} type="date" defaultValue={group.startDate} />
+          <input
+            style={inputStyle}
+            type="date"
+            value={form.trainingStart}
+            onChange={(e) => setForm((f) => ({ ...f, trainingStart: e.target.value }))}
+          />
         </div>
         <div>
           <label style={labelStyle}>{t("singleGroup.editGroupDrawer.groupEndDate")}</label>
-          <input style={inputStyle} type="date" defaultValue={group.endDate} />
+          <input
+            style={inputStyle}
+            type="date"
+            value={form.trainingEnd}
+            onChange={(e) => setForm((f) => ({ ...f, trainingEnd: e.target.value }))}
+          />
         </div>
 
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-          <button style={submitBtn} onClick={onClose}>{t("singleGroup.editGroupDrawer.save")}</button>
-          <button style={cancelBtn} onClick={onClose}>{t("singleGroup.editGroupDrawer.cancel")}</button>
+          <button style={{ ...submitBtn, opacity: isSaving ? 0.7 : 1 }} onClick={handleSubmit} disabled={isSaving}>
+            {isSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : t("singleGroup.editGroupDrawer.save")}
+          </button>
+          <button style={cancelBtn} onClick={onClose} disabled={isSaving}>
+            {t("singleGroup.editGroupDrawer.cancel")}
+          </button>
         </div>
       </div>
     </RightDrawer>

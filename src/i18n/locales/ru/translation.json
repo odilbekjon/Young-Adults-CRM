@@ -183,6 +183,7 @@
     "teacherPerformance": {
       "title": "Эффективность преподавателей",
       "activeGroups": "Активные группы",
+      "activityScore": "Балл активности",
       "emptyState": "Нет данных"
     },
     "loadError": "Не удалось загрузить данные дашборда."
@@ -289,12 +290,14 @@
     },
     "table": {
       "groupsCount": "групп",
-      "noData": "Нет данных"
+      "noData": "Нет данных",
+      "inactive": "Неактивен"
     },
     "menu": {
       "edit": "Редактировать",
       "sms": "SMS",
-      "delete": "Удалить"
+      "delete": "Удалить",
+      "toggleStatus": "Изменить статус"
     },
     "sms": {
       "recipientLabel": "учитель"
@@ -306,14 +309,20 @@
     "form": {
       "phone": "Телефон",
       "phonePlaceholder": "XX XXX XX XX",
+      "email": "Email",
+      "emailPlaceholder": "email@example.com",
       "name": "Имя",
       "namePlaceholder": "Полное имя",
-      "branch": "Филиал",
+      "branch": "Филиалы",
       "branchPlaceholder": "Название филиала",
       "dob": "Дата рождения",
       "gender": "Пол",
       "genderMale": "Мужской",
       "genderFemale": "Женский",
+      "specialization": "Специализация",
+      "specializationPlaceholder": "Например, IELTS",
+      "experience": "Опыт (лет)",
+      "salary": "Зарплата",
       "photo": "Фото",
       "photoPreviewAlt": "превью",
       "noFileChosen": "Файл не выбран",
@@ -331,9 +340,122 @@
     },
     "validation": {
       "phoneRequired": "Телефон обязателен",
+      "phoneOrEmailRequired": "Телефон или email обязателен",
       "nameRequired": "Имя обязательно",
       "dobRequired": "Дата рождения обязательна",
       "genderRequired": "Пол обязателен"
+    },
+    "toast": {
+      "created": "Учитель добавлен",
+      "updated": "Данные учителя обновлены",
+      "deleted": "Учитель удалён",
+      "statusToggled": "Статус учителя изменён",
+      "error": "Не удалось выполнить действие. Попробуйте снова."
+    }
+  },
+  "teacherProfile": {
+    "history": {
+      "loadError": "Не удалось загрузить историю. Попробуйте снова.",
+      "emptyState": "История пуста"
+    },
+    "toast": {
+      "updated": "Данные учителя обновлены",
+      "error": "Не удалось сохранить. Попробуйте снова."
+    }
+  },
+  "leadsPage": {
+    "board": {
+      "loadError": "Не удалось загрузить канбан-доску. Попробуйте снова.",
+      "emptyState": "Пока нет колонок",
+      "noSections": "Нет разделов"
+    },
+    "columns": {
+      "title": "Управление колонками",
+      "newColumnPlaceholder": "Название колонки",
+      "addColumn": "Добавить колонку",
+      "add": "Добавить",
+      "save": "Сохранить",
+      "edit": "Редактировать",
+      "delete": "Удалить",
+      "cancel": "Отмена",
+      "close": "Закрыть",
+      "confirmDelete": "Вы уверены, что хотите удалить эту колонку?",
+      "createdAt": "Создано",
+      "loadError": "Не удалось загрузить колонки. Попробуйте снова.",
+      "emptyState": "Пока нет колонок",
+      "toast": {
+        "created": "Колонка добавлена",
+        "updated": "Колонка обновлена",
+        "deleted": "Колонка удалена",
+        "error": "Не удалось выполнить действие. Попробуйте снова."
+      }
+    },
+    "sections": {
+      "addSection": "Добавить раздел",
+      "newSectionPlaceholder": "Название раздела",
+      "add": "Добавить",
+      "save": "Сохранить",
+      "edit": "Переименовать",
+      "delete": "Удалить",
+      "confirmDeleteShort": "Подтвердить удаление",
+      "createGroup": "Создать группу",
+      "cancel": "Отмена",
+      "toast": {
+        "created": "Раздел добавлен",
+        "updated": "Раздел обновлён",
+        "deleted": "Раздел удалён",
+        "groupCreated": "Группа создана",
+        "error": "Не удалось выполнить действие. Попробуйте снова."
+      }
+    },
+    "sources": {
+      "title": "Управление источниками лидов",
+      "newSourcePlaceholder": "Название источника",
+      "add": "Добавить",
+      "save": "Сохранить",
+      "delete": "Удалить",
+      "cancel": "Отмена",
+      "close": "Закрыть",
+      "confirmDelete": "Вы уверены, что хотите удалить этот источник?",
+      "loadError": "Не удалось загрузить источники. Попробуйте снова.",
+      "emptyState": "Пока нет источников",
+      "toast": {
+        "created": "Источник добавлен",
+        "updated": "Источник обновлён",
+        "deleted": "Источник удалён",
+        "error": "Не удалось выполнить действие. Попробуйте снова."
+      }
+    },
+    "leadForm": {
+      "addTitle": "Новый лид",
+      "editTitle": "Редактировать лид",
+      "addLead": "Добавить лида",
+      "name": "Имя",
+      "phone": "Телефон",
+      "email": "Email",
+      "source": "Источник",
+      "noSource": "Не выбран",
+      "comment": "Комментарий",
+      "save": "Сохранить",
+      "cancel": "Отмена",
+      "edit": "Редактировать",
+      "delete": "Удалить",
+      "toast": {
+        "created": "Лид добавлен",
+        "updated": "Лид обновлён",
+        "deleted": "Лид удалён",
+        "error": "Не удалось выполнить действие. Попробуйте снова."
+      }
+    },
+    "addToTrial": {
+      "menuLabel": "Добавить на пробный урок",
+      "title": "Добавить на пробный урок",
+      "selectGroup": "Выберите группу",
+      "submit": "Добавить",
+      "toast": {
+        "success": "Лид добавлен на пробный урок",
+        "error": "Не удалось выполнить действие. Попробуйте снова."
+      }
     }
   },
   "groups": {
@@ -792,6 +914,11 @@
       "deleteGroup": "Удалить группу",
       "sendSms": "Отправить SMS",
       "addStudent": "Добавить студента",
+      "toggleStatus": "Изменить статус группы",
+      "toast": {
+        "statusToggled": "Статус группы изменён",
+        "statusToggleError": "Не удалось изменить статус группы. Попробуйте снова."
+      },
       "rooms": "Кабинеты",
       "roomCapacity": "Вместимость кабинета",
       "trainingDates": "Даты занятий",
@@ -868,14 +995,27 @@
         "tabLabel": "История",
         "title": "История",
         "groupName": "Название группы",
-        "group": "Группа"
+        "group": "Группа",
+        "loadError": "Не удалось загрузить историю. Попробуйте снова.",
+        "emptyState": "История пуста",
+        "types": {
+          "STUDENT_ADDED": "Студент добавлен",
+          "STUDENT_REMOVED": "Студент удалён",
+          "STUDENT_TRANSFERRED": "Студент переведён",
+          "TEACHER_ASSIGNED": "Учитель назначен",
+          "TEACHER_REMOVED": "Учитель удалён",
+          "STATUS_CHANGED": "Статус изменён",
+          "GROUP_UPDATED": "Группа обновлена",
+          "GROUP_CREATED": "Группа создана"
+        }
       },
       "comments": {
         "tabLabel": "Комментарии",
         "title": "Комментарии",
         "writeComment": "Написать комментарий...",
         "send": "Отправить",
-        "noCommentsYet": "Комментариев пока нет"
+        "noCommentsYet": "Комментариев пока нет",
+        "loadError": "Не удалось загрузить комментарии. Попробуйте снова."
       }
     },
     "calendar": {
@@ -930,16 +1070,31 @@
       "title": "Удалить группу",
       "confirmMessage": "будет удалена безвозвратно. Вы уверены?",
       "cancel": "Отмена",
-      "delete": "Удалить"
+      "delete": "Удалить",
+      "toast": {
+        "success": "Группа удалена",
+        "error": "Не удалось удалить группу. Попробуйте снова."
+      }
     },
     "editGroupDrawer": {
       "title": "Редактировать группу",
       "groupName": "Название группы",
       "selectCourse": "Выберите курс",
       "selectTeacher": "Выберите учителя",
+      "teachers": "Учителя",
+      "noTeachers": "Учитель не назначен",
       "days": "Дни",
       "selectDays": "Выберите дни",
       "selectRoom": "Выберите кабинет",
+      "weekdays": {
+        "MONDAY": "Понедельник",
+        "TUESDAY": "Вторник",
+        "WEDNESDAY": "Среда",
+        "THURSDAY": "Четверг",
+        "FRIDAY": "Пятница",
+        "SATURDAY": "Суббота",
+        "SUNDAY": "Воскресенье"
+      },
       "daysOptions": {
         "oddDays": "Нечётные дни",
         "evenDays": "Чётные дни",
@@ -950,7 +1105,12 @@
       "groupStartDate": "Дата начала группы",
       "groupEndDate": "Дата окончания группы",
       "save": "Сохранить",
-      "cancel": "Отмена"
+      "cancel": "Отмена",
+      "toast": {
+        "success": "Группа обновлена",
+        "error": "Не удалось обновить группу. Попробуйте снова.",
+        "teacherRemoved": "Учитель удалён из группы"
+      }
     },
     "freezeModal": {
       "title": "Укажите причину",
@@ -1538,13 +1698,17 @@
           "branch": { "yaIelts": "YA IELTS Campus", "branch1": "Филиал 1", "branch2": "Филиал 2" },
           "section": { "section1": "Раздел 1", "section2": "Раздел 2" },
           "source": { "source1": "Источник 1", "source2": "Источник 2" }
-        }
+        },
+        "toast": { "nameRequired": "Введите название формы", "created": "Форма создана", "updated": "Форма обновлена", "error": "Не удалось выполнить действие. Попробуйте снова." }
       },
       "lists": {
         "title": "Формы",
         "actions": { "addNew": "Добавить" },
         "table": { "id": "id", "name": "Название", "type": "тип", "actions": "Действия" },
-        "tooltips": { "info": "Инфо", "edit": "Редактировать", "delete": "Удалить", "copyLink": "Скопировать ссылку" }
+        "tooltips": { "info": "Инфо", "edit": "Редактировать", "delete": "Удалить", "copyLink": "Скопировать ссылку" },
+        "loadError": "Не удалось загрузить формы. Попробуйте снова.",
+        "emptyState": "Пока нет форм",
+        "toast": { "deleted": "Форма удалена", "error": "Не удалось удалить форму. Попробуйте снова." }
       }
     },
     "blog": {

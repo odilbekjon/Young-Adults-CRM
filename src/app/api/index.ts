@@ -12,3 +12,4 @@ export * from "./leadFormsApi";
 export * from "./leadsApi";
 export * from "./leadSectionsApi";
 export * from "./leadSourcesApi";
+export * from "./financeApi";

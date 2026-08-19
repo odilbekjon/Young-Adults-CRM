@@ -7,10 +7,10 @@ import {
 import { MdCalendarToday } from "react-icons/md";
 import { IoClose } from "react-icons/io5";
 import { RightDrawer } from "../common/RightDrawer";
-import { useData } from "../../Context/DataContext";
 import { useToast } from "../../Context/ToastContext";
 import { useCreateStudentMutation } from "../../app/api/studentsApi/studentsApi";
 import type { StudentGender } from "../../app/api/studentsApi/types";
+import { useAllGroupsQuery, useAssignStudentsToGroupMutation } from "../../app/api/groupsApi/groupsApi";
 
 /* ─── shared styles ─── */
 const inputStyle: React.CSSProperties = {
@@ -62,9 +62,14 @@ interface AddStudentDrawerProps {
 
 export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) => {
   const { t } = useTranslation();
-  const { groups } = useData();
   const toast = useToast();
   const [createStudent, { isLoading: isSaving }] = useCreateStudentMutation();
+  const { data: groupsData, isFetching: isGroupsLoading, isError: isGroupsError } = useAllGroupsQuery(
+    { page: 1, limit: 100 },
+    { skip: !open }
+  );
+  const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
+  const groups = groupsData?.data ?? [];
 
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
@@ -124,7 +129,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
     if (!fullPhone && !additionalValues.email.trim()) { setError(t("addStudent.errors.contact")); return; }
 
     try {
-      await createStudent({
+      const created = await createStudent({
         name: name.trim(),
         password: password.trim() || undefined,
         phone: fullPhone || undefined,
@@ -139,7 +144,18 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
         telegram: additionalValues.telegram.trim() || undefined,
         instagram: additionalValues.instagram.trim() || undefined,
       }).unwrap();
-      toast.success(t("addStudent.toast.created"));
+
+      if (showGroupField && group) {
+        try {
+          await assignStudentsToGroup({ id: group, studentIds: [created.data.id] }).unwrap();
+          toast.success(t("addStudent.toast.created"));
+        } catch {
+          toast.error(t("addStudent.toast.groupAssignFailed"));
+        }
+      } else {
+        toast.success(t("addStudent.toast.created"));
+      }
+
       onSuccess?.();
       handleClose();
     } catch {
@@ -297,16 +313,35 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
             {t("addStudent.addToGroup")}
           </span>
           {showGroupField && (
-            <select
-              style={{ ...inputStyle, marginTop: 8, appearance: "none" }}
-              value={group}
-              onChange={(e) => setGroup(e.target.value)}
-            >
-              <option value="">{t("addStudent.selectGroup")}</option>
-              {groups.map((g) => (
-                <option key={g.id} value={String(g.id)}>{g.name} — {g.schedule}</option>
-              ))}
-            </select>
+            <>
+              <select
+                style={{ ...inputStyle, marginTop: 8, appearance: "none" }}
+                value={group}
+                onChange={(e) => setGroup(e.target.value)}
+                disabled={isGroupsLoading}
+              >
+                <option value="">
+                  {isGroupsLoading
+                    ? t("addStudent.groupLoading")
+                    : t("addStudent.selectGroup")}
+                </option>
+                {!isGroupsLoading && groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}{g.time ? ` — ${g.time}` : ""}
+                  </option>
+                ))}
+              </select>
+              {isGroupsError && (
+                <div style={{ fontSize: 12, color: "#d93f4f", marginTop: 6 }}>
+                  {t("addStudent.groupError")}
+                </div>
+              )}
+              {!isGroupsLoading && !isGroupsError && groups.length === 0 && (
+                <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 6 }}>
+                  {t("addStudent.noGroups")}
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -337,15 +372,15 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
         <div style={{ marginTop: 4 }}>
           <button
             onClick={handleSubmit}
-            disabled={isSaving}
+            disabled={isSaving || isAssigning}
             style={{
               background: "#4a7aaa", color: "#fff", border: "none",
               borderRadius: 20, padding: "11px 32px",
-              fontSize: 14, fontWeight: 600, cursor: isSaving ? "default" : "pointer",
-              opacity: isSaving ? 0.7 : 1,
+              fontSize: 14, fontWeight: 600, cursor: isSaving || isAssigning ? "default" : "pointer",
+              opacity: isSaving || isAssigning ? 0.7 : 1,
             }}
           >
-            {isSaving ? t("addStudent.saving") : t("addStudent.submit")}
+            {isSaving || isAssigning ? t("addStudent.saving") : t("addStudent.submit")}
           </button>
         </div>
       </div>

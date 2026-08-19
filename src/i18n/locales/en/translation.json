@@ -31,13 +31,17 @@
     "additionalContacts": "Additional contacts",
     "addToGroup": "+ Add to the group",
     "selectGroup": "Select group...",
+    "groupLoading": "Loading groups...",
+    "groupError": "Failed to load groups",
+    "noGroups": "No groups found",
     "setPassword": "+ Set password",
     "passwordPlaceholder": "Password",
     "submit": "Submit",
     "saving": "Saving...",
     "removeField": "Remove",
     "toast": {
-        "created": "Student added successfully"
+        "created": "Student added successfully",
+        "groupAssignFailed": "Student added, but failed to assign them to the group"
     },
     "errors": {
         "name": "Name is required",
@@ -60,7 +64,16 @@
     "title": "Add payment",
     "student": "Student",
     "selectStudent": "Select student",
+    "studentLoading": "Loading students...",
+    "studentError": "Failed to load students",
     "balance": "Balance",
+    "branch": "Branch",
+    "selectBranch": "Select branch",
+    "branchLoading": "Loading branches...",
+    "branchError": "Failed to load branches",
+    "group": "Group",
+    "selectGroup": "Select group (optional)",
+    "noGroupsForStudent": "This student is not assigned to any group",
     "methodPay": "Method pay",
     "methods": {
       "cash": "Cash",
@@ -71,10 +84,28 @@
       "humo": "Humo",
       "payme": "Payme"
     },
+    "paymentMethodId": "Payment method ID (backend)",
+    "paymentMethodIdPlaceholder": "Enter PaymentMethod ID",
+    "paymentMethodIdHelper": "This ID comes from the backend's payment methods list",
     "amount": "Amount",
     "date": "Date",
     "comment": "Comment",
-    "submit": "Submit"
+    "receipt": "Receipt photo",
+    "receiptPlaceholder": "Choose a file",
+    "advanced": "+ Advanced (transaction ID)",
+    "transactionId": "Transaction ID",
+    "submit": "Submit",
+    "saving": "Saving...",
+    "errors": {
+      "student": "Select a student",
+      "branch": "Select a branch",
+      "amount": "Enter a valid amount",
+      "paymentMethodId": "Payment method ID is required",
+      "save": "Failed to save the payment"
+    },
+    "toast": {
+      "created": "Payment added successfully"
+    }
   },
   "login": {
     "companyName": "Young Adults LLC",

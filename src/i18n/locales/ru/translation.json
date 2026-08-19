@@ -31,13 +31,17 @@
     "additionalContacts": "Дополнительные контакты",
     "addToGroup": "+ Добавить в группу",
     "selectGroup": "Выберите группу...",
+    "groupLoading": "Загрузка групп...",
+    "groupError": "Не удалось загрузить группы",
+    "noGroups": "Группы не найдены",
     "setPassword": "+ Установить пароль",
     "passwordPlaceholder": "Пароль",
     "submit": "Отправить",
     "saving": "Сохранение...",
     "removeField": "Убрать",
     "toast": {
-      "created": "Студент успешно добавлен"
+      "created": "Студент успешно добавлен",
+      "groupAssignFailed": "Студент добавлен, но не удалось прикрепить его к группе"
     },
     "errors": {
       "name": "Введите имя",
@@ -60,7 +64,16 @@
     "title": "Добавить платёж",
     "student": "Студент",
     "selectStudent": "Выберите студента",
+    "studentLoading": "Загрузка студентов...",
+    "studentError": "Не удалось загрузить студентов",
     "balance": "Баланс",
+    "branch": "Филиал",
+    "selectBranch": "Выберите филиал",
+    "branchLoading": "Загрузка филиалов...",
+    "branchError": "Не удалось загрузить филиалы",
+    "group": "Группа",
+    "selectGroup": "Выберите группу (необязательно)",
+    "noGroupsForStudent": "Этот студент не прикреплён ни к одной группе",
     "methodPay": "Способ оплаты",
     "methods": {
       "cash": "Наличные",
@@ -71,10 +84,28 @@
       "humo": "Humo",
       "payme": "Payme"
     },
+    "paymentMethodId": "ID способа оплаты (backend)",
+    "paymentMethodIdPlaceholder": "Введите PaymentMethod ID",
+    "paymentMethodIdHelper": "Этот ID берётся из списка способов оплаты на backend",
     "amount": "Сумма",
     "date": "Дата",
     "comment": "Комментарий",
-    "submit": "Отправить"
+    "receipt": "Фото чека",
+    "receiptPlaceholder": "Выберите файл",
+    "advanced": "+ Дополнительно (ID транзакции)",
+    "transactionId": "ID транзакции",
+    "submit": "Отправить",
+    "saving": "Сохранение...",
+    "errors": {
+      "student": "Выберите студента",
+      "branch": "Выберите филиал",
+      "amount": "Введите корректную сумму",
+      "paymentMethodId": "Укажите ID способа оплаты",
+      "save": "Не удалось сохранить платёж"
+    },
+    "toast": {
+      "created": "Платёж успешно добавлен"
+    }
   },
   "login": {
     "companyName": "Young Adults LLC",

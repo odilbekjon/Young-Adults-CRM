@@ -31,13 +31,17 @@
     "additionalContacts": "Qo'shimcha aloqalar",
     "addToGroup": "+ Guruhga qo'shish",
     "selectGroup": "Guruhni tanlang...",
+    "groupLoading": "Guruhlar yuklanmoqda...",
+    "groupError": "Guruhlarni yuklab bo'lmadi",
+    "noGroups": "Guruhlar topilmadi",
     "setPassword": "+ Parol o'rnatish",
     "passwordPlaceholder": "Parol",
     "submit": "Yuborish",
     "saving": "Saqlanmoqda...",
     "removeField": "Olib tashlash",
     "toast": {
-      "created": "O'quvchi muvaffaqiyatli qo'shildi"
+      "created": "O'quvchi muvaffaqiyatli qo'shildi",
+      "groupAssignFailed": "O'quvchi qo'shildi, lekin guruhga biriktirishda xatolik yuz berdi"
     },
     "errors": {
       "name": "Ism kiritilishi shart",
@@ -60,7 +64,16 @@
     "title": "To'lov qo'shish",
     "student": "O'quvchi",
     "selectStudent": "O'quvchini tanlang",
+    "studentLoading": "O'quvchilar yuklanmoqda...",
+    "studentError": "O'quvchilarni yuklab bo'lmadi",
     "balance": "Balans",
+    "branch": "Filial",
+    "selectBranch": "Filialni tanlang",
+    "branchLoading": "Filiallar yuklanmoqda...",
+    "branchError": "Filiallarni yuklab bo'lmadi",
+    "group": "Guruh",
+    "selectGroup": "Guruhni tanlang (ixtiyoriy)",
+    "noGroupsForStudent": "Bu o'quvchi hech qanday guruhga biriktirilmagan",
     "methodPay": "To'lov usuli",
     "methods": {
       "cash": "Naqd",
@@ -71,10 +84,28 @@
       "humo": "Humo",
       "payme": "Payme"
     },
+    "paymentMethodId": "To'lov usuli ID (backend)",
+    "paymentMethodIdPlaceholder": "PaymentMethod ID kiriting",
+    "paymentMethodIdHelper": "Bu ID backenddagi to'lov usullari ro'yxatidan olinadi",
     "amount": "Summa",
     "date": "Sana",
     "comment": "Izoh",
-    "submit": "Yuborish"
+    "receipt": "Chek rasmi",
+    "receiptPlaceholder": "Fayl tanlang",
+    "advanced": "+ Qo'shimcha (tranzaksiya ID)",
+    "transactionId": "Tranzaksiya ID",
+    "submit": "Yuborish",
+    "saving": "Saqlanmoqda...",
+    "errors": {
+      "student": "O'quvchini tanlang",
+      "branch": "Filialni tanlang",
+      "amount": "To'g'ri summa kiriting",
+      "paymentMethodId": "To'lov usuli ID kiritilishi shart",
+      "save": "To'lovni saqlashda xatolik yuz berdi"
+    },
+    "toast": {
+      "created": "To'lov muvaffaqiyatli qo'shildi"
+    }
   },
   "login": {
     "companyName": "Young Adults LLC",

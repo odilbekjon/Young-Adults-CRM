@@ -57,7 +57,7 @@ export const LeadCard = ({ lead, index, onEdit }: Props) => {
         </IconButton>
       </Box>
       {lead.createdAt && (
-        <Box sx={{ backgroundColor: "#f9f9f9", borderTop: "0.5px solid", borderColor: "divider", px: 1.5, py: 0.5 }}>
+        <Box sx={{ backgroundColor: "action.hover", borderTop: "0.5px solid", borderColor: "divider", px: 1.5, py: 0.5 }}>
           <Typography sx={{ fontSize: 11, color: "text.disabled" }}>{new Date(lead.createdAt).toLocaleDateString()}</Typography>
         </Box>
       )}

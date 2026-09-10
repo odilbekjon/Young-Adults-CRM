@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
   BsTelephone, BsKey, BsPerson, BsEnvelope,
@@ -11,6 +12,7 @@ import { useToast } from "../../Context/ToastContext";
 import { useCreateStudentMutation } from "../../app/api/studentsApi/studentsApi";
 import type { StudentGender } from "../../app/api/studentsApi/types";
 import { useAllGroupsQuery, useAssignStudentsToGroupMutation } from "../../app/api/groupsApi/groupsApi";
+import type { RootState } from "../../app/store";
 
 /* ─── shared styles ─── */
 const inputStyle: React.CSSProperties = {
@@ -63,6 +65,7 @@ interface AddStudentDrawerProps {
 export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) => {
   const { t } = useTranslation();
   const toast = useToast();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const [createStudent, { isLoading: isSaving }] = useCreateStudentMutation();
   const { data: groupsData, isFetching: isGroupsLoading, isError: isGroupsError } = useAllGroupsQuery(
     { page: 1, limit: 100 },
@@ -127,6 +130,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
 
     if (!name.trim()) { setError(t("addStudent.errors.name")); return; }
     if (!fullPhone && !additionalValues.email.trim()) { setError(t("addStudent.errors.contact")); return; }
+    if (!selectedBranchId) { setError(t("addStudent.errors.branch")); return; }
 
     try {
       const created = await createStudent({
@@ -143,6 +147,9 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
         passport: additionalValues.passport.trim() || undefined,
         telegram: additionalValues.telegram.trim() || undefined,
         instagram: additionalValues.instagram.trim() || undefined,
+        // Without this, the backend enrolled the new student in every branch
+        // instead of just the one currently active in the header.
+        branchIds: [selectedBranchId],
       }).unwrap();
 
       if (showGroupField && group) {

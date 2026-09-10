@@ -1,341 +1,178 @@
-import { useState, useRef, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { BsCashStack } from "react-icons/bs";
-import { FiFilter, FiCalendar, FiChevronDown, FiMail } from "react-icons/fi";
-import { IoTimeOutline } from "react-icons/io5";
-import { IoMdFlag } from "react-icons/io";
+import { FiCalendar, FiMail, FiAlertCircle, FiDownload, FiFileText } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
-import { buildFlatStudents } from "../../../../constants/FlatStudents";
+import { CircularProgress, IconButton, Tooltip } from "@mui/material";
 
 // Reuse the SAME SMS drawer/modal used on the Students page
 import { SendSmsModal } from "../../../../components/SendSmsModal";
+import { DebtorReceiptModal } from "../../../../components/DebtorReceiptModal";
+import { useDebtorsQuery, useDebtorsTotalQuery, useLazyDebtorsExcelQuery } from "../../../../app/api/financeApi";
+import { useToast } from "../../../../Context/ToastContext";
+import type { RootState } from "../../../../app/store";
 
-// ---------- Types ----------
-interface DebtorRow {
-  uid: string;
-  id: number;
-  name: string;
-  phone: string;
-  active: boolean;
-  groupId: number;
-  groupName: string;
-  groupBadge: string;
-  groupBadgeColor: "blue" | "green" | "amber";
-  groupSchedule: string;
-  teacher: string;
-  branch: string;
-  balance: number;
-  totalOnPeriod: number;
-  comment: string;
-  task: string;
-  status: string;
-}
-
-// ---------- Build data from FlatStudents ----------
-const MOCK_BALANCES = [
-  -369231, -207692, -180000, -250000, -312000,
-  -195000, -320000, -148000, -265000, -290000,
-];
-
-const ALL_FLAT = buildFlatStudents();
-
-const DEBTORS_DATA: DebtorRow[] = ALL_FLAT.map((s, i) => ({
-  uid: s.uid,
-  id: s.id,
-  name: s.name,
-  phone: s.phone,
-  active: s.active,
-  groupId: s.groupId,
-  groupName: s.groupName,
-  groupBadge: s.groupBadge,
-  groupBadgeColor: s.groupBadgeColor,
-  groupSchedule: s.groupSchedule,
-  teacher: s.teacher,
-  branch: s.branch,
-  balance: MOCK_BALANCES[i % MOCK_BALANCES.length],
-  totalOnPeriod: MOCK_BALANCES[i % MOCK_BALANCES.length],
-  comment: "",
-  task: "",
-  status: s.active ? "Active (Not archived)" : "Archived",
-}));
-
-// ---------- Constants ----------
-const STATUSES = ["Active (Not archived)", "Archived", "All"];
 const PAGE_SIZE_OPTIONS = [20, 25, 50];
-const GROUP_OPTIONS = [...new Set(ALL_FLAT.map((s) => s.groupName))] as string[];
 
-// ---------- Helpers ----------
 const formatUZS = (n: number) => n.toLocaleString("uz-UZ") + " UZS";
 
-// ---------- Small components ----------
-const SelectBox = ({
-  value, onChange, options, placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-  placeholder?: string;
-}) => {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-left hover:border-gray-400 transition-colors min-w-[140px]"
-      >
-        <span className={value ? "text-gray-800" : "text-gray-400"}>
-          {value || placeholder || t("finance.debtors.filters.selectPlaceholder")}
-        </span>
-        <FiChevronDown size={13} className="text-gray-400 ml-2 flex-shrink-0" />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-full py-1">
-          {options.map((opt) => (
-            <button
-              key={opt}
-              type="button"
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
-              onClick={() => { onChange(opt); setOpen(false); }}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+interface AppliedFilters {
+  search: string;
+  startDate: string;
+  endDate: string;
+  page: number;
+  limit: number;
+}
 
-const SearchByDropdown = ({
-  value, onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) => {
-  const { t } = useTranslation();
-  const opts = ["Name", "Phone", "Group"];
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  return (
-    <div className="relative flex-shrink-0" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1 border border-gray-300 rounded-l px-3 py-1.5 text-sm bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors border-r-0"
-      >
-        {t("finance.debtors.filters.searchBy")} {value} <FiChevronDown size={12} />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 min-w-[120px]">
-          {opts.map((opt) => (
-            <button
-              key={opt}
-              type="button"
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              onClick={() => { onChange(opt); setOpen(false); }}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ---------- Badge color helper ----------
-const badgeCls = (color: "blue" | "green" | "amber") => {
-  if (color === "blue") return "bg-blue-100 text-blue-700";
-  if (color === "green") return "bg-green-100 text-green-700";
-  return "bg-amber-100 text-amber-700";
-};
-
-// ---------- Main Component ----------
 export const Debtors = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const toast = useToast();
+  const branchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
-  const [searchBy, setSearchBy] = useState("Name");
-  const [searchText, setSearchText] = useState("");
-  const [status, setStatus] = useState("Active (Not archived)");
-  const [group, setGroup] = useState("");
-  const [debtFrom, setDebtFrom] = useState("");
-  const [debtTo, setDebtTo] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [task, setTask] = useState("");
-  const [activeFilters, setActiveFilters] = useState({
-    searchBy: "Name",
-    searchText: "",
-    status: "Active (Not archived)",
-    group: "",
-    debtFrom: "",
-    debtTo: "",
+  // Draft inputs — only committed to the request on "Filter" click
+  const [draftSearch, setDraftSearch] = useState("");
+  const [draftStartDate, setDraftStartDate] = useState("");
+  const [draftEndDate, setDraftEndDate] = useState("");
+
+  const [applied, setApplied] = useState<AppliedFilters>({
+    search: "", startDate: "", endDate: "", page: 1, limit: 20,
   });
+
   const [selected, setSelected] = useState<string[]>([]); // uid based
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-
-  // SMS drawer state — reuses the same modal as the Students page
   const [sendSmsOpen, setSendSmsOpen] = useState(false);
+  const [receiptStudentId, setReceiptStudentId] = useState<string | null>(null);
 
-  // ---------- Filter ----------
-  const filtered = DEBTORS_DATA.filter((d) => {
-    if (activeFilters.searchText) {
-      const val = activeFilters.searchText.toLowerCase();
-      if (activeFilters.searchBy === "Name" && !d.name.toLowerCase().includes(val)) return false;
-      if (activeFilters.searchBy === "Phone" && !d.phone.includes(val)) return false;
-      if (activeFilters.searchBy === "Group" && !d.groupName.toLowerCase().includes(val)) return false;
+  const queryArgs = useMemo(
+    () => ({
+      search: applied.search || undefined,
+      startDate: applied.startDate || undefined,
+      endDate: applied.endDate || undefined,
+      branchId: branchId ?? undefined,
+      page: applied.page,
+      limit: applied.limit,
+    }),
+    [applied, branchId]
+  );
+
+  const { data, isLoading, isFetching, isError, refetch } = useDebtorsQuery(queryArgs);
+  // Full-dataset total for the current filters (GET /finance/debtors/total) —
+  // distinct from the page-visible sum, which only covers the current page
+  // under server-side pagination.
+  const { data: totalData, isFetching: isTotalFetching } = useDebtorsTotalQuery(queryArgs);
+  const [fetchDebtorsExcel, { isFetching: isExporting }] = useLazyDebtorsExcelQuery();
+
+  const rows = data?.rows ?? [];
+  const meta = data?.meta;
+  const total = meta?.total ?? 0;
+  const totalPages = Math.max(1, meta?.totalPages ?? 1);
+  const filteredTotalDebt = totalData?.total ?? 0;
+
+  const handleExportExcel = async () => {
+    try {
+      const blob = await fetchDebtorsExcel(queryArgs).unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `debtors-${applied.page}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("finance.debtors.exportError"));
     }
-    if (activeFilters.group && d.groupName !== activeFilters.group) return false;
-    if (activeFilters.status !== "All" && d.status !== activeFilters.status) return false;
-    if (activeFilters.debtFrom && d.balance > Number(activeFilters.debtFrom)) return false;
-    if (activeFilters.debtTo && d.balance < Number(activeFilters.debtTo)) return false;
-    return true;
-  });
+  };
 
-  const totalPages = Math.ceil(filtered.length / pageSize);
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
-  const totalBalance = filtered.reduce((a, d) => a + d.balance, 0);
-  const totalPeriod = filtered.reduce((a, d) => a + d.totalOnPeriod, 0);
+  const applyFilters = () => {
+    setApplied((prev) => ({ ...prev, search: draftSearch, startDate: draftStartDate, endDate: draftEndDate, page: 1 }));
+  };
 
-  const allChecked = paginated.length > 0 && paginated.every((d) => selected.includes(d.uid));
+  const changePageSize = (limit: number) => setApplied((prev) => ({ ...prev, limit, page: 1 }));
+  const goToPage = (page: number) => setApplied((prev) => ({ ...prev, page }));
+
+  const allChecked = rows.length > 0 && rows.every((d) => selected.includes(d.id));
   const toggleAll = () => {
-    if (allChecked) setSelected((s) => s.filter((uid) => !paginated.find((d) => d.uid === uid)));
-    else setSelected((s) => [...new Set([...s, ...paginated.map((d) => d.uid)])]);
+    if (allChecked) setSelected((s) => s.filter((id) => !rows.find((d) => d.id === id)));
+    else setSelected((s) => [...new Set([...s, ...rows.map((d) => d.id)])]);
   };
-  const toggleOne = (uid: string) =>
-    setSelected((s) => s.includes(uid) ? s.filter((x) => x !== uid) : [...s, uid]);
+  const toggleOne = (id: string) =>
+    setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
 
-  const handleFilter = () => {
-    setActiveFilters({ searchBy, searchText, status, group, debtFrom, debtTo });
-    setPage(1);
+  const goToStudent = (studentId: string | null) => {
+    if (studentId) navigate(`/students/${studentId}`);
   };
-
-  const goToStudent = (uid: string) => navigate(`/students/${uid}`);
 
   const inputCls =
-    "border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400 w-full";
+    "border border-gray-300 dark:border-gray-700 rounded px-3 py-1.5 text-sm bg-white dark:bg-[var(--color-surface)] text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-400 w-full";
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 font-sans">
+    <div className="min-h-screen bg-gray-100 dark:bg-[var(--color-bg-page)] p-6 font-sans">
       {/* Title */}
-      <div className="flex items-center gap-3 mb-4">
-        <h1 className="text-2xl font-semibold text-gray-800">{t("finance.debtors.title")}</h1>
-        <span className="text-sm text-gray-500">{t("finance.debtors.quantity", { count: filtered.length })}</span>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">{t("finance.debtors.title")}</h1>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{isLoading ? "…" : t("finance.debtors.quantity", { count: total })}</span>
+        </div>
+        <Tooltip title={t("finance.debtors.exportExcel")} placement="top" arrow>
+          <span>
+            <IconButton size="small" onClick={handleExportExcel} disabled={isExporting}>
+              {isExporting ? <CircularProgress size={16} /> : <FiDownload />}
+            </IconButton>
+          </span>
+        </Tooltip>
       </div>
 
-      {/* Summary cards */}
-      <div className="bg-white border border-gray-200 rounded-lg px-6 py-4 flex items-center justify-between mb-3 shadow-sm">
+      {/* Summary card — real full-dataset total for the current filters
+          (GET /finance/debtors/total), not just the current page's sum */}
+      <div className="bg-white dark:bg-[var(--color-surface)] border border-gray-200 dark:border-gray-700 rounded-lg px-6 py-4 flex items-center justify-between mb-5 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-1 h-7 bg-blue-500 rounded-full mr-1" />
-          <span className="text-gray-700 font-medium">{t("finance.debtors.summary.total")} {formatUZS(totalBalance)}</span>
+          <span className="text-gray-700 dark:text-gray-200 font-medium">
+            {t("finance.debtors.summary.total")} {isTotalFetching ? "…" : formatUZS(filteredTotalDebt)}
+          </span>
         </div>
         <BsCashStack className="text-blue-400 text-2xl" />
       </div>
-      <div className="bg-white border border-gray-200 rounded-lg px-6 py-4 flex items-center justify-between mb-5 shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-1 h-7 bg-blue-500 rounded-full mr-1" />
-          <span className="text-gray-700 font-medium">{t("finance.debtors.summary.totalOnPeriod")} {formatUZS(totalPeriod)}</span>
-        </div>
-        <BsCashStack className="text-blue-400 text-2xl" />
-      </div>
 
-      {/* Filter panel */}
-      <div className="bg-white border border-gray-200 rounded-lg px-5 py-4 mb-4 shadow-sm">
-        {/* Row 1 */}
-        <div className="grid grid-cols-5 gap-3 mb-3">
-          <div className="col-span-1">
-            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.search")}</label>
-            <div className="flex">
-              <SearchByDropdown value={searchBy} onChange={setSearchBy} />
-              <input
-                type="text"
-                className="flex-1 border border-gray-300 rounded-r px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.status")}</label>
-            <SelectBox value={status} onChange={setStatus} options={STATUSES} placeholder="Active (Not archived)" />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.group")}</label>
-            <SelectBox value={group} onChange={setGroup} options={GROUP_OPTIONS} placeholder={t("finance.debtors.filters.selectPlaceholder")} />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.debtAmountFrom")}</label>
-            <SelectBox
-              value={debtFrom}
-              onChange={setDebtFrom}
-              options={["-100000", "-200000", "-300000", "-400000"]}
-              placeholder={t("finance.debtors.filters.selectPlaceholder")}
+      {/* Filter panel — only fields GET /finance/debtors actually accepts */}
+      <div className="bg-white dark:bg-[var(--color-surface)] border border-gray-200 dark:border-gray-700 rounded-lg px-5 py-4 mb-4 shadow-sm">
+        <div className="flex items-end gap-3 flex-wrap">
+          <div className="flex-1 min-w-[180px]">
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t("finance.debtors.filters.search")}</label>
+            <input
+              type="text"
+              className={inputCls}
+              value={draftSearch}
+              onChange={(e) => setDraftSearch(e.target.value)}
+              placeholder={t("finance.debtors.filters.searchPlaceholder")}
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.debtAmountTo")}</label>
-            <SelectBox
-              value={debtTo}
-              onChange={setDebtTo}
-              options={["-100000", "-200000", "-300000", "-400000"]}
-              placeholder={t("finance.debtors.filters.selectPlaceholder")}
-            />
-          </div>
-        </div>
-
-        {/* Row 2 */}
-        <div className="flex items-end gap-3">
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.dateFrom")}</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t("finance.debtors.filters.dateFrom")}</label>
             <div className="relative">
-              <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
+              <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={13} />
               <input
-                type="text"
+                type="date"
                 className={inputCls + " pl-7 w-44"}
-                placeholder={t("finance.debtors.filters.noDateSelected")}
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                value={draftStartDate}
+                onChange={(e) => setDraftStartDate(e.target.value)}
               />
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.dateTo")}</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t("finance.debtors.filters.dateTo")}</label>
             <div className="relative">
-              <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
+              <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={13} />
               <input
-                type="text"
+                type="date"
                 className={inputCls + " pl-7 w-44"}
-                placeholder={t("finance.debtors.filters.noDateSelected")}
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
+                value={draftEndDate}
+                onChange={(e) => setDraftEndDate(e.target.value)}
               />
             </div>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">{t("finance.debtors.filters.task")}</label>
-            <SelectBox value={task} onChange={setTask} options={["Task 1", "Task 2", "Task 3"]} placeholder={t("finance.debtors.filters.selectPlaceholder")} />
           </div>
           <button
-            onClick={handleFilter}
+            onClick={applyFilters}
             className="bg-blue-700 hover:bg-blue-800 text-white rounded-full px-6 py-1.5 text-sm font-medium transition-colors"
           >
             {t("finance.debtors.filters.filter")}
@@ -346,37 +183,32 @@ export const Debtors = () => {
       {/* Table toolbar */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">{t("finance.debtors.table.rowsPerPage")}</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{t("finance.debtors.table.rowsPerPage")}</span>
           <select
-            className="border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:outline-none"
-            value={pageSize}
-            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+            className="border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-sm bg-white dark:bg-[var(--color-surface)] text-gray-800 dark:text-gray-200 focus:outline-none"
+            value={applied.limit}
+            onChange={(e) => changePageSize(Number(e.target.value))}
           >
             {PAGE_SIZE_OPTIONS.map((n) => <option key={n}>{n}</option>)}
           </select>
         </div>
-        <button className="flex items-center gap-2 border border-gray-300 rounded px-3 py-1.5 text-sm text-gray-600 bg-white hover:bg-gray-50 transition-colors">
-          <FiFilter size={13} /> {t("finance.debtors.table.filtersButton")}
-        </button>
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-x-auto">
+      <div className="bg-white dark:bg-[var(--color-surface)] border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50">
+            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[var(--color-surface-alt)]">
               <th className="px-4 py-3 w-8">
                 <input type="checkbox" checked={allChecked} onChange={toggleAll} className="rounded accent-blue-600" />
               </th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium w-8">#</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.name")}</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.phone")}</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.balance")}</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.totalOnPeriod")}</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.group")}</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.comment")}</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.task")}</th>
-              <th className="px-3 py-3 text-left text-gray-500 font-medium">{t("finance.debtors.table.status")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 dark:text-gray-400 font-medium w-8">#</th>
+              <th className="px-3 py-3 text-left text-gray-500 dark:text-gray-400 font-medium">{t("finance.debtors.table.name")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 dark:text-gray-400 font-medium">{t("finance.debtors.table.phone")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 dark:text-gray-400 font-medium">{t("finance.debtors.table.balance")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 dark:text-gray-400 font-medium">{t("finance.debtors.table.group")}</th>
+              <th className="px-3 py-3 text-left text-gray-500 dark:text-gray-400 font-medium">{t("finance.debtors.table.status")}</th>
+              <th className="px-3 py-3 w-8" />
               <th className="px-3 py-3 w-8">
                 <button
                   type="button"
@@ -385,56 +217,64 @@ export const Debtors = () => {
                   className="inline-flex items-center justify-center disabled:opacity-40"
                   disabled={selected.length === 0}
                 >
-                  <FiMail size={15} className={selected.length > 0 ? "text-yellow-500" : "text-gray-300"} />
+                  <FiMail size={15} className={selected.length > 0 ? "text-yellow-500" : "text-gray-300 dark:text-gray-600"} />
                 </button>
               </th>
             </tr>
           </thead>
           <tbody>
-            {paginated.length === 0 ? (
+            {isLoading ? (
               <tr>
-                <td colSpan={11} className="text-center py-10 text-gray-400">{t("finance.debtors.table.noData")}</td>
+                <td colSpan={9} className="text-center py-10">
+                  <CircularProgress size={22} />
+                </td>
+              </tr>
+            ) : isError ? (
+              <tr>
+                <td colSpan={9} className="text-center py-10">
+                  <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
+                    <FiAlertCircle size={20} className="text-red-400" />
+                    <span className="text-sm">{t("finance.debtors.table.loadError")}</span>
+                    <button onClick={() => refetch()} className="px-4 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                      {t("finance.debtors.table.retry")}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="text-center py-10 text-gray-400 dark:text-gray-500">{t("finance.debtors.table.noData")}</td>
               </tr>
             ) : (
-              paginated.map((d, i) => (
+              rows.map((d, i) => (
                 <tr
-                  key={d.uid}
-                  onClick={() => goToStudent(d.uid)}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                  key={d.id}
+                  onClick={() => goToStudent(d.studentId)}
+                  className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                  style={{ opacity: isFetching ? 0.6 : 1 }}
                 >
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
-                      checked={selected.includes(d.uid)}
-                      onChange={() => toggleOne(d.uid)}
+                      checked={selected.includes(d.id)}
+                      onChange={() => toggleOne(d.id)}
                       className="rounded accent-blue-600"
                     />
                   </td>
-                  <td className="px-3 py-3 text-gray-500 text-xs">{(page - 1) * pageSize + i + 1}.</td>
-                  <td className="px-3 py-3 font-medium text-gray-800 whitespace-nowrap">{d.name}</td>
-                  <td className="px-3 py-3 text-gray-600 whitespace-nowrap">{d.phone}</td>
-                  <td className="px-3 py-3 text-gray-700 whitespace-nowrap">{formatUZS(d.balance)}</td>
-                  <td className="px-3 py-3 text-gray-700 whitespace-nowrap">{formatUZS(d.totalOnPeriod)}</td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-xs px-2 py-0.5 rounded font-medium whitespace-nowrap ${badgeCls(d.groupBadgeColor)}`}>
-                        {d.groupBadge}
-                      </span>
-                      <span className="text-gray-600 text-xs whitespace-nowrap">
-                        {d.groupName} ({d.teacher} · {d.groupSchedule})
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs">
-                      {d.name.charAt(0)}
-                    </div>
-                  </td>
-                  <td className="px-3 py-3">
-                    <IoTimeOutline size={18} className="text-orange-400" />
-                  </td>
-                  <td className="px-3 py-3">
-                    <IoMdFlag size={18} className={d.active ? "text-green-500" : "text-gray-400"} />
+                  <td className="px-3 py-3 text-gray-500 dark:text-gray-400 text-xs">{(applied.page - 1) * applied.limit + i + 1}.</td>
+                  <td className="px-3 py-3 font-medium text-gray-800 dark:text-gray-100 whitespace-nowrap">{d.name || "—"}</td>
+                  <td className="px-3 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{d.phone || "—"}</td>
+                  <td className="px-3 py-3 text-gray-700 dark:text-gray-200 whitespace-nowrap">{formatUZS(d.balance)}</td>
+                  <td className="px-3 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{d.groupName || "—"}</td>
+                  <td className="px-3 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{d.status || "—"}</td>
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    {d.studentId && (
+                      <Tooltip title={t("finance.debtors.table.receipt")} placement="top" arrow>
+                        <IconButton size="small" onClick={() => setReceiptStudentId(d.studentId)}>
+                          <FiFileText size={14} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                   </td>
                   <td className="px-3 py-3" />
                 </tr>
@@ -445,35 +285,37 @@ export const Debtors = () => {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {!isLoading && !isError && total > 0 && (
         <div className="flex items-center justify-between mt-4">
-          <span className="text-sm text-gray-500">
-            {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} {t("finance.debtors.pagination.of")} {filtered.length}
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {(applied.page - 1) * applied.limit + 1}–{Math.min(applied.page * applied.limit, total)} {t("finance.debtors.pagination.of")} {total}
           </span>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage(1)} disabled={page === 1}
-              className="px-2 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">«</button>
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              className="px-3 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">‹</button>
+            <button onClick={() => goToPage(1)} disabled={applied.page === 1}
+              className="px-2 py-1 rounded text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">«</button>
+            <button onClick={() => goToPage(Math.max(1, applied.page - 1))} disabled={applied.page === 1}
+              className="px-3 py-1 rounded text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">‹</button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
               let p: number;
               if (totalPages <= 5) p = idx + 1;
-              else if (page <= 3) p = idx + 1;
-              else if (page >= totalPages - 2) p = totalPages - 4 + idx;
-              else p = page - 2 + idx;
+              else if (applied.page <= 3) p = idx + 1;
+              else if (applied.page >= totalPages - 2) p = totalPages - 4 + idx;
+              else p = applied.page - 2 + idx;
               return (
-                <button key={p} onClick={() => setPage(p)}
+                <button key={p} onClick={() => goToPage(p)}
                   className={`px-3 py-1 rounded text-sm border transition-colors ${
-                    page === p ? "bg-blue-700 border-blue-700 text-white" : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                    applied.page === p
+                      ? "bg-blue-700 border-blue-700 text-white"
+                      : "border-gray-300 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                   }`}>
                   {p}
                 </button>
               );
             })}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="px-3 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">›</button>
-            <button onClick={() => setPage(totalPages)} disabled={page === totalPages}
-              className="px-2 py-1 rounded text-sm border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">»</button>
+            <button onClick={() => goToPage(Math.min(totalPages, applied.page + 1))} disabled={applied.page === totalPages}
+              className="px-3 py-1 rounded text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">›</button>
+            <button onClick={() => goToPage(totalPages)} disabled={applied.page === totalPages}
+              className="px-2 py-1 rounded text-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">»</button>
           </div>
         </div>
       )}
@@ -483,6 +325,12 @@ export const Debtors = () => {
         open={sendSmsOpen}
         onClose={() => setSendSmsOpen(false)}
         selectedCount={selected.length}
+      />
+
+      <DebtorReceiptModal
+        open={!!receiptStudentId}
+        onClose={() => setReceiptStudentId(null)}
+        studentId={receiptStudentId}
       />
     </div>
   );

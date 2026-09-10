@@ -8,6 +8,8 @@ import {
     UpdateStudentRequest,
     StudentResponse,
     DeleteStudentResponse,
+    TransferStudentBranchRequest,
+    TransferStudentBranchResponse,
 } from "./types";
 
 const appendStudentFormData = (formData: FormData, data: Partial<CreateStudentRequest>) => {
@@ -22,10 +24,27 @@ const appendStudentFormData = (formData: FormData, data: Partial<CreateStudentRe
 export const studentsApi = baseApi.injectEndpoints({
     endpoints: (builder) =>  ({
         allStudents: builder.query<studentsResponse, studentsRequest>({
-            query: ({ page = 1, limit = 10 }) => ({
-                url: `${PATHS.STUDENTS}?page=${page}&limit=${limit}`,
-                method: "GET"
-            }),
+            query: ({ page = 1, limit = 10, search, branchId }) => {
+                const params = new URLSearchParams();
+                params.set("page", String(page));
+                params.set("limit", String(limit));
+                // teachersApi/leadsApi/financeApi'da ishlatilgan bir xil "search"
+                // convention — students endpointi buni qo'llab-quvvatlamasa ham,
+                // natija Header qidiruvida client-side filter bilan qo'shimcha
+                // tekshiriladi (Header.tsx'dagi StudentSearchBar).
+                if (search) params.set("search", search);
+                // x-branch-id header hamma so'rovga avtomatik qo'shiladi, lekin
+                // teachersApi kabi bu yerda ham branchId'ni query param sifatida
+                // aniq yuboramiz — faqat header'ga suyanish filialga tegishli
+                // studentlarning ko'pchiligini yo'qotib qo'yayotgani aniqlangan
+                // (guruh a'zoligi orqali filialga bog'langan studentlar GET
+                // /students javobida chiqmayapti edi).
+                if (branchId) params.set("branchId", branchId);
+                return {
+                    url: `${PATHS.STUDENTS}?${params.toString()}`,
+                    method: "GET"
+                };
+            },
             providesTags: ["student"],
         }),
         studentById: builder.query<studentByIdResponse, string>({
@@ -66,13 +85,23 @@ export const studentsApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ["student"],
         }),
+        transferStudentBranch: builder.mutation<TransferStudentBranchResponse, TransferStudentBranchRequest>({
+            query: ({ id, newBranchId, reason }) => ({
+                url: `${PATHS.STUDENTS}/${id}/transfer-branch`,
+                method: "POST",
+                body: reason ? { newBranchId, reason } : { newBranchId },
+            }),
+            invalidatesTags: ["student"],
+        }),
     })
 })
 
 export const {
     useAllStudentsQuery,
     useStudentByIdQuery,
+    useLazyStudentByIdQuery,
     useCreateStudentMutation,
     useUpdateStudentMutation,
     useDeleteStudentMutation,
+    useTransferStudentBranchMutation,
 } = studentsApi;

@@ -1,112 +1,49 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  MenuItem, Select, FormControl, TextField, IconButton,
+  MenuItem, Select, FormControl, TextField, IconButton, CircularProgress,
 } from "@mui/material";
-import { FiCalendar, FiX, FiEdit2 } from "react-icons/fi";
-import { TEACHERS_DATA } from "../../constants/Teachers";
+import { FiCalendar, FiX, FiAlertCircle } from "react-icons/fi";
+import { useAllGroupsQuery } from "../../app/api/groupsApi";
+import { useAllTeachersQuery } from "../../app/api/teachersApi";
+import { useAttendanceReportQuery } from "../../app/api/attendancesApi";
+import type {
+  AttendanceReportGroupStatus,
+  AttendanceReportAttendanceStatus,
+} from "../../app/api/attendancesApi/types";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-type AttendanceStatus = "Attended" | "Not attended" | "Excused";
-type StudentStatus = "Active" | "Inactive" | "Frozen (paused)";
+const STATUSES: AttendanceReportGroupStatus[] = ["ACTIVE", "INACTIVE", "PROBATION", "FROZEN", "DELETED"];
+const ATTENDANCES: AttendanceReportAttendanceStatus[] = ["PRESENT", "ABSENT", "EXCUSED", "UNMARKED"];
 
-interface AttendanceRow {
-  uid: string;
-  name: string;
-  phone: string;
-  status: StudentStatus;
-  group: string;
-  teacher: string;
-  lessonTime: string;
-  days: string;
-  course: string;
-  attendance: AttendanceStatus;
-  lastComment: string;
+const STATUS_LABELS: Record<AttendanceReportGroupStatus, string> = {
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+  PROBATION: "Probation",
+  FROZEN: "Frozen",
+  DELETED: "Deleted",
+};
+
+const ATTENDANCE_LABELS: Record<AttendanceReportAttendanceStatus, string> = {
+  PRESENT: "Present",
+  ABSENT: "Absent",
+  EXCUSED: "Excused",
+  UNMARKED: "Unmarked",
+};
+
+function attendanceColor(a: AttendanceReportAttendanceStatus | null) {
+  if (a === "PRESENT") return "#22c55e";
+  if (a === "ABSENT") return "#ef4444";
+  if (a === "EXCUSED") return "#3b82f6";
+  return "var(--color-text-muted)";
 }
 
-// ─── Ma'lumotlarni TEACHERS_DATA dan generatsiya qilish ───────────────────────
-const ATTEND_OPTS: AttendanceStatus[] = ["Attended", "Not attended", "Excused"];
-
-function seedRand(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 1664525 + 1013904223) & 0xffffffff;
-    return (s >>> 0) / 0xffffffff;
-  };
+function statusColor(s: AttendanceReportGroupStatus | null) {
+  if (s === "ACTIVE") return "#22c55e";
+  if (s === "INACTIVE") return "#ef4444";
+  if (s === "PROBATION") return "#f59e0b";
+  if (s === "DELETED") return "#991b1b";
+  return "var(--color-text-secondary)";
 }
-
-function buildRows(): AttendanceRow[] {
-  const rows: AttendanceRow[] = [];
-  let uid = 1;
-
-  TEACHERS_DATA.forEach((teacher) => {
-    teacher.groups.forEach((group) => {
-      group.students.forEach((student) => {
-        const rand = seedRand(uid * 31 + group.id);
-        const r1 = rand();
-        const r2 = rand();
-
-        const status: StudentStatus = student.active
-          ? "Active"
-          : r1 > 0.5
-          ? "Inactive"
-          : "Frozen (paused)";
-
-        const attendance = ATTEND_OPTS[Math.floor(r2 * 3)];
-
-        rows.push({
-          uid: `${teacher.id}-${group.id}-${student.id}`,
-          name: student.name,
-          phone: student.phone,
-          status,
-          group: group.name,
-          teacher: teacher.fullName,
-          lessonTime: group.lessonStartTime,
-          days: group.days,
-          course: group.course,
-          attendance,
-          lastComment: "",
-        });
-        uid++;
-      });
-    });
-  });
-
-  return rows;
-}
-
-const ALL_DATA = buildRows();
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-const STATUSES: StudentStatus[] = ["Active", "Inactive", "Frozen (paused)"];
-const ATTENDANCES: AttendanceStatus[] = ["Attended", "Not attended", "Excused"];
-
-function attendanceColor(a: AttendanceStatus) {
-  if (a === "Attended") return "#22c55e";
-  if (a === "Not attended") return "#f59e0b";
-  return "#3b82f6";
-}
-
-function statusColor(s: StudentStatus) {
-  if (s === "Active") return "#22c55e";
-  if (s === "Inactive") return "#ef4444";
-  return "#6b7280";
-}
-
-type SortKey = "name" | "group";
-type SortDir = "asc" | "desc";
-
-function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
-  return (
-    <span className="inline-flex flex-col ml-1 leading-none text-[9px]">
-      <span style={{ color: active && dir === "asc" ? "#3b82f6" : "#ccc" }}>▲</span>
-      <span style={{ color: active && dir === "desc" ? "#3b82f6" : "#ccc" }}>▼</span>
-    </span>
-  );
-}
-
-// ─── Pagination ───────────────────────────────────────────────────────────────
-const PER_PAGE = 10;
 
 function getPaginationRange(current: number, total: number): (number | "…")[] {
   const range: (number | "…")[] = [];
@@ -120,187 +57,243 @@ function getPaginationRange(current: number, total: number): (number | "…")[] 
   return range;
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+interface AppliedFilters {
+  date: string;
+  name: string;
+  phone: string;
+  status: AttendanceReportGroupStatus | "";
+  groupId: string;
+  teacherId: string;
+  attendanceStatus: AttendanceReportAttendanceStatus | "";
+  page: number;
+}
+
+const LIMIT = 10;
+
 export const AttendanceReport = () => {
   const today = new Date().toISOString().slice(0, 10);
 
-  const [date, setDate] = useState(today);
-  const [filterName, setFilterName] = useState("");
-  const [filterPhone, setFilterPhone] = useState("");
-  const [filterStatus, setFilterStatus] = useState<StudentStatus | "">("");
-  const [filterGroup, setFilterGroup] = useState("");
-  const [filterTeacher, setFilterTeacher] = useState("");
-  const [filterAttend, setFilterAttend] = useState<AttendanceStatus | "">("");
-  const [applied, setApplied] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [page, setPage] = useState(1);
+  // Draft inputs (secondary filters only apply on "Filter" click)
+  const [draftName, setDraftName] = useState("");
+  const [draftPhone, setDraftPhone] = useState("");
+  const [draftStatus, setDraftStatus] = useState<AttendanceReportGroupStatus | "">("");
+  const [draftGroupId, setDraftGroupId] = useState("");
+  const [draftTeacherId, setDraftTeacherId] = useState("");
+  const [draftAttendance, setDraftAttendance] = useState<AttendanceReportAttendanceStatus | "">("");
 
-  const groups = [...new Set(ALL_DATA.map((d) => d.group))];
-  const teachers = [...new Set(ALL_DATA.map((d) => d.teacher))];
+  // Committed filters that actually drive the request
+  const [applied, setApplied] = useState<AppliedFilters>({
+    date: today,
+    name: "",
+    phone: "",
+    status: "",
+    groupId: "",
+    teacherId: "",
+    attendanceStatus: "",
+    page: 1,
+  });
 
-  const filtered = useMemo(() => {
-    let data = [...ALL_DATA];
-    if (applied) {
-      if (filterName) data = data.filter((d) => d.name.toLowerCase().includes(filterName.toLowerCase()));
-      if (filterPhone) data = data.filter((d) => d.phone.includes(filterPhone));
-      if (filterStatus) data = data.filter((d) => d.status === filterStatus);
-      if (filterGroup) data = data.filter((d) => d.group === filterGroup);
-      if (filterTeacher) data = data.filter((d) => d.teacher === filterTeacher);
-      if (filterAttend) data = data.filter((d) => d.attendance === filterAttend);
-    }
-    data.sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
-      return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-    });
-    return data;
-  }, [applied, filterName, filterPhone, filterStatus, filterGroup, filterTeacher, filterAttend, sortKey, sortDir]);
+  const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
+  const { data: teachersData } = useAllTeachersQuery({ page: 1, limit: 100 });
+  const groups = groupsData?.data ?? [];
+  const teachers = teachersData?.data ?? [];
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const safePage = Math.min(page, totalPages);
-  const pageSlice = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
-  const paginationRange = getPaginationRange(safePage, totalPages);
+  const queryArgs = useMemo(
+    () => ({
+      date: applied.date || undefined,
+      name: applied.name || undefined,
+      phone: applied.phone || undefined,
+      status: applied.status || undefined,
+      groupId: applied.groupId || undefined,
+      teacherId: applied.teacherId || undefined,
+      attendanceStatus: applied.attendanceStatus || undefined,
+      page: applied.page,
+      limit: LIMIT,
+    }),
+    [applied]
+  );
 
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("asc"); }
+  const { data, isLoading, isFetching, isError, refetch } = useAttendanceReportQuery(queryArgs);
+
+  const rows = data?.rows ?? [];
+  const meta = data?.meta;
+  const totalPages = Math.max(1, meta?.totalPages ?? 1);
+  const total = meta?.total ?? 0;
+  const paginationRange = getPaginationRange(applied.page, totalPages);
+
+  function handleDateChange(next: string) {
+    setApplied((prev) => ({ ...prev, date: next, page: 1 }));
   }
 
   function applyFilters() {
-    setApplied(true);
-    setPage(1);
+    setApplied((prev) => ({
+      ...prev,
+      name: draftName,
+      phone: draftPhone,
+      status: draftStatus,
+      groupId: draftGroupId,
+      teacherId: draftTeacherId,
+      attendanceStatus: draftAttendance,
+      page: 1,
+    }));
   }
 
   function clearFilters() {
-    setFilterName(""); setFilterPhone(""); setFilterStatus("");
-    setFilterGroup(""); setFilterTeacher(""); setFilterAttend("");
-    setApplied(false);
-    setPage(1);
+    setDraftName(""); setDraftPhone(""); setDraftStatus("");
+    setDraftGroupId(""); setDraftTeacherId(""); setDraftAttendance("");
+    setApplied((prev) => ({
+      ...prev,
+      name: "", phone: "", status: "", groupId: "", teacherId: "", attendanceStatus: "",
+      page: 1,
+    }));
+  }
+
+  function goToPage(p: number) {
+    setApplied((prev) => ({ ...prev, page: p }));
   }
 
   const inputSx = {
     "& .MuiInputBase-input": { fontSize: 13, py: "7px" },
-    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e5e7eb" },
-    "& .MuiInputBase-root": { backgroundColor: "#fff" },
+    "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--color-border)" },
+    "& .MuiInputBase-root": { backgroundColor: "var(--color-surface)" },
   };
 
   const selectSx = {
     fontSize: 13,
-    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e5e7eb" },
-    backgroundColor: "#fff",
+    "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--color-border)" },
+    backgroundColor: "var(--color-surface)",
   };
 
   return (
     <div className="p-5 max-w-[1400px] mx-auto">
       {/* Header */}
       <div className="flex items-baseline gap-3 mb-5">
-        <h1 className="text-2xl font-semibold text-gray-800">Attendance reports</h1>
-        <span className="text-gray-400 text-sm">Quantity — {filtered.length}</span>
+        <h1 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Attendance reports</h1>
+        <span className="text-gray-400 dark:text-gray-500 text-sm">
+          {isLoading ? "…" : `Quantity — ${total}`}
+        </span>
       </div>
 
       {/* Filter bar */}
       <div className="flex flex-wrap gap-2 items-center mb-5">
-        {/* Date */}
         <div className="relative">
-          <FiCalendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 z-10" size={14} />
+          <FiCalendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 z-10" size={14} />
           <TextField
             type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+            value={applied.date}
+            onChange={(e) => handleDateChange(e.target.value)}
             size="small"
-            sx={{ ...inputSx, "& .MuiInputBase-root": { pl: "2rem", backgroundColor: "#fff", minWidth: 150 } }}
+            sx={{ ...inputSx, "& .MuiInputBase-root": { pl: "2rem", backgroundColor: "var(--color-surface)", minWidth: 150 } }}
           />
         </div>
 
-        <TextField placeholder="Name" value={filterName} onChange={(e) => setFilterName(e.target.value)} size="small" sx={{ ...inputSx, minWidth: 130 }} />
-        <TextField placeholder="Phone" value={filterPhone} onChange={(e) => setFilterPhone(e.target.value)} size="small" sx={{ ...inputSx, minWidth: 120 }} />
+        <TextField placeholder="Name" value={draftName} onChange={(e) => setDraftName(e.target.value)} size="small" sx={{ ...inputSx, minWidth: 130 }} />
+        <TextField placeholder="Phone" value={draftPhone} onChange={(e) => setDraftPhone(e.target.value)} size="small" sx={{ ...inputSx, minWidth: 120 }} />
 
         <FormControl size="small" sx={{ minWidth: 140 }}>
-          <Select displayEmpty value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as StudentStatus | "")} sx={selectSx}>
-            <MenuItem value="" sx={{ fontSize: 13, color: "#9ca3af" }}>Status</MenuItem>
-            {STATUSES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: 13 }}>{s}</MenuItem>)}
-          </Select>
-        </FormControl>
-
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <Select displayEmpty value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} sx={selectSx}>
-            <MenuItem value="" sx={{ fontSize: 13, color: "#9ca3af" }}>Group</MenuItem>
-            {groups.map((g) => <MenuItem key={g} value={g} sx={{ fontSize: 13 }}>{g}</MenuItem>)}
+          <Select displayEmpty value={draftStatus} onChange={(e) => setDraftStatus(e.target.value as AttendanceReportGroupStatus | "")} sx={selectSx}>
+            <MenuItem value="" sx={{ fontSize: 13, color: "var(--color-text-muted)" }}>Status</MenuItem>
+            {STATUSES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: 13 }}>{STATUS_LABELS[s]}</MenuItem>)}
           </Select>
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: 160 }}>
-          <Select displayEmpty value={filterTeacher} onChange={(e) => setFilterTeacher(e.target.value)} sx={selectSx}>
-            <MenuItem value="" sx={{ fontSize: 13, color: "#9ca3af" }}>Teacher</MenuItem>
-            {teachers.map((t) => <MenuItem key={t} value={t} sx={{ fontSize: 13 }}>{t}</MenuItem>)}
+          <Select displayEmpty value={draftGroupId} onChange={(e) => setDraftGroupId(e.target.value)} sx={selectSx}>
+            <MenuItem value="" sx={{ fontSize: 13, color: "var(--color-text-muted)" }}>Group</MenuItem>
+            {groups.map((g) => <MenuItem key={g.id} value={g.id} sx={{ fontSize: 13 }}>{g.name}</MenuItem>)}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <Select displayEmpty value={draftTeacherId} onChange={(e) => setDraftTeacherId(e.target.value)} sx={selectSx}>
+            <MenuItem value="" sx={{ fontSize: 13, color: "var(--color-text-muted)" }}>Teacher</MenuItem>
+            {teachers.map((t) => <MenuItem key={t.id} value={t.id} sx={{ fontSize: 13 }}>{t.name}</MenuItem>)}
           </Select>
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: 150 }}>
-          <Select displayEmpty value={filterAttend} onChange={(e) => setFilterAttend(e.target.value as AttendanceStatus | "")} sx={selectSx}>
-            <MenuItem value="" sx={{ fontSize: 13, color: "#9ca3af" }}>Attendance</MenuItem>
-            {ATTENDANCES.map((a) => <MenuItem key={a} value={a} sx={{ fontSize: 13 }}>{a}</MenuItem>)}
+          <Select displayEmpty value={draftAttendance} onChange={(e) => setDraftAttendance(e.target.value as AttendanceReportAttendanceStatus | "")} sx={selectSx}>
+            <MenuItem value="" sx={{ fontSize: 13, color: "var(--color-text-muted)" }}>Attendance</MenuItem>
+            {ATTENDANCES.map((a) => <MenuItem key={a} value={a} sx={{ fontSize: 13 }}>{ATTENDANCE_LABELS[a]}</MenuItem>)}
           </Select>
         </FormControl>
 
         <button onClick={applyFilters} className="px-5 py-[7px] bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors">
           Filter
         </button>
-        <IconButton size="small" onClick={clearFilters} sx={{ color: "#9ca3af" }}>
+        <IconButton size="small" onClick={clearFilters} sx={{ color: "var(--color-text-muted)" }}>
           <FiX size={18} />
         </IconButton>
       </div>
 
       {/* Table */}
-      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-        <Table size="small">
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, overflowX: "auto" }}>
+        <Table size="small" sx={{ minWidth: 900 }}>
           <TableHead>
-            <TableRow sx={{ backgroundColor: "#fafafa" }}>
+            <TableRow sx={{ backgroundColor: "var(--color-surface-alt)" }}>
               <TableCell sx={thSx}>№</TableCell>
-              <TableCell sx={{ ...thSx, cursor: "pointer" }} onClick={() => toggleSort("name")}>
-                Name <SortIcon active={sortKey === "name"} dir={sortDir} />
-              </TableCell>
+              <TableCell sx={thSx}>Name</TableCell>
               <TableCell sx={thSx}>Phone</TableCell>
               <TableCell sx={thSx}>Status</TableCell>
-              <TableCell sx={{ ...thSx, cursor: "pointer" }} onClick={() => toggleSort("group")}>
-                Group <SortIcon active={sortKey === "group"} dir={sortDir} />
-              </TableCell>
+              <TableCell sx={thSx}>Group</TableCell>
               <TableCell sx={thSx}>Teacher</TableCell>
-              <TableCell sx={thSx}>Lesson time</TableCell>
+              <TableCell sx={thSx}>Date</TableCell>
               <TableCell sx={thSx}>Attendance</TableCell>
-              <TableCell sx={thSx}>Last comment</TableCell>
-              <TableCell sx={thSx}>Actions</TableCell>
+              <TableCell sx={thSx}>Comment</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {pageSlice.length === 0 ? (
+            {isLoading ? (
               <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 6, color: "#9ca3af", fontSize: 14 }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                  <CircularProgress size={24} />
+                </TableCell>
+              </TableRow>
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                  <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
+                    <FiAlertCircle size={22} className="text-red-400" />
+                    <span className="text-sm">Failed to load attendance report.</span>
+                    <button
+                      onClick={() => refetch()}
+                      className="mt-1 px-4 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} align="center" sx={{ py: 6, color: "var(--color-text-muted)", fontSize: 14 }}>
                   No Data
                 </TableCell>
               </TableRow>
             ) : (
-              pageSlice.map((row, i) => (
-                <TableRow key={row.uid} hover sx={{ "&:last-child td": { borderBottom: 0 } }}>
-                  <TableCell sx={{ color: "#9ca3af", fontSize: 13, width: 48 }}>{(safePage - 1) * PER_PAGE + i + 1}</TableCell>
-                  <TableCell sx={{ fontSize: 14, minWidth: 180 }}>{row.name}</TableCell>
-                  <TableCell sx={{ fontSize: 13, color: "#3b82f6", whiteSpace: "nowrap" }}>{row.phone}</TableCell>
+              rows.map((row, i) => (
+                <TableRow key={row.id} hover sx={{ "&:last-child td": { borderBottom: 0 }, opacity: isFetching ? 0.6 : 1 }}>
+                  <TableCell sx={{ color: "var(--color-text-muted)", fontSize: 13, width: 48 }}>{(applied.page - 1) * LIMIT + i + 1}</TableCell>
+                  <TableCell sx={{ fontSize: 14, minWidth: 180 }}>{row.studentName || "—"}</TableCell>
+                  <TableCell sx={{ fontSize: 13, color: "var(--color-primary)", whiteSpace: "nowrap" }}>{row.phone || "—"}</TableCell>
                   <TableCell sx={{ fontSize: 13, whiteSpace: "nowrap" }}>
-                    <span style={{ color: statusColor(row.status) }} className="font-medium">{row.status}</span>
+                    {row.status ? (
+                      <span style={{ color: statusColor(row.status) }} className="font-medium">{STATUS_LABELS[row.status]}</span>
+                    ) : "—"}
                   </TableCell>
-                  <TableCell sx={{ fontSize: 13 }}>{row.group}</TableCell>
-                  <TableCell sx={{ fontSize: 13 }}>{row.teacher}</TableCell>
-                  <TableCell sx={{ fontSize: 13, whiteSpace: "nowrap" }}>{row.lessonTime}</TableCell>
+                  <TableCell sx={{ fontSize: 13 }}>{row.groupName || "—"}</TableCell>
+                  <TableCell sx={{ fontSize: 13 }}>{row.teacherName || "—"}</TableCell>
+                  <TableCell sx={{ fontSize: 13, whiteSpace: "nowrap" }}>{row.date || "—"}</TableCell>
                   <TableCell sx={{ fontSize: 13, whiteSpace: "nowrap" }}>
-                    <span style={{ color: attendanceColor(row.attendance) }} className="font-medium">{row.attendance}</span>
+                    {row.attendanceStatus ? (
+                      <span style={{ color: attendanceColor(row.attendanceStatus) }} className="font-medium">
+                        {ATTENDANCE_LABELS[row.attendanceStatus]}
+                      </span>
+                    ) : (
+                      <span style={{ color: attendanceColor(null) }} className="font-medium">{ATTENDANCE_LABELS.UNMARKED}</span>
+                    )}
                   </TableCell>
-                  <TableCell sx={{ fontSize: 13, color: "#6b7280" }}>{row.lastComment || ""}</TableCell>
-                  <TableCell sx={{ fontSize: 13 }}>
-                    <IconButton size="small" sx={{ color: "#3b82f6" }}>
-                      <FiEdit2 size={15} />
-                    </IconButton>
-                  </TableCell>
+                  <TableCell sx={{ fontSize: 13, color: "var(--color-text-secondary)" }}>{row.comment || ""}</TableCell>
                 </TableRow>
               ))
             )}
@@ -309,46 +302,46 @@ export const AttendanceReport = () => {
       </TableContainer>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
-        <span className="text-sm text-gray-400">
-          {filtered.length > 0
-            ? `${(safePage - 1) * PER_PAGE + 1}–${Math.min(safePage * PER_PAGE, filtered.length)} / ${filtered.length}`
-            : ""}
-        </span>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={safePage === 1}
-            className="px-3 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            ‹
-          </button>
-          {paginationRange.map((p, idx) =>
-            p === "…" ? (
-              <span key={`ellipsis-${idx}`} className="px-2 text-sm text-gray-400">…</span>
-            ) : (
-              <button
-                key={p}
-                onClick={() => setPage(p)}
-                className={`px-3 py-1 text-sm border rounded transition-colors ${
-                  p === safePage
-                    ? "bg-blue-500 text-white border-blue-500"
-                    : "border-gray-200 hover:bg-gray-50"
-                }`}
-              >
-                {p}
-              </button>
-            )
-          )}
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={safePage === totalPages}
-            className="px-3 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            ›
-          </button>
+      {!isLoading && !isError && total > 0 && (
+        <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
+          <span className="text-sm text-gray-400 dark:text-gray-500">
+            {`${(applied.page - 1) * LIMIT + 1}–${Math.min(applied.page * LIMIT, total)} / ${total}`}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => goToPage(Math.max(1, applied.page - 1))}
+              disabled={applied.page === 1}
+              className="px-3 py-1 text-sm border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ‹
+            </button>
+            {paginationRange.map((p, idx) =>
+              p === "…" ? (
+                <span key={`ellipsis-${idx}`} className="px-2 text-sm text-gray-400 dark:text-gray-500">…</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => goToPage(p)}
+                  className={`px-3 py-1 text-sm border rounded transition-colors ${
+                    p === applied.page
+                      ? "bg-blue-500 text-white border-blue-500"
+                      : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            )}
+            <button
+              onClick={() => goToPage(Math.min(totalPages, applied.page + 1))}
+              disabled={applied.page === totalPages}
+              className="px-3 py-1 text-sm border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ›
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -356,7 +349,7 @@ export const AttendanceReport = () => {
 const thSx = {
   fontWeight: 600,
   fontSize: 13,
-  color: "#6b7280",
+  color: "var(--color-text-secondary)",
   whiteSpace: "nowrap" as const,
   userSelect: "none" as const,
 };

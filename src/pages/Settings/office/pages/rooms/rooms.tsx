@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -35,6 +36,7 @@ import type { Room } from "../../../../../app/api/roomsApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi/branchesApi";
 import { useBranch } from "../../../../../Context/BranchContext";
 import { useToast } from "../../../../../Context/ToastContext";
+import type { RootState } from "../../../../../app/store";
 
 interface FormState {
   name: string;
@@ -49,6 +51,7 @@ export const Rooms = () => {
   const toast = useToast();
 
   const { branch: selectedBranch } = useBranch();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const { data, isLoading, isError, refetch, isFetching } = useAllRoomsQuery();
   const { data: branchesData } = useAllBranchesQuery();
@@ -72,7 +75,9 @@ export const Rooms = () => {
 
   const openAddDrawer = () => {
     setEditingRoom(null);
-    setForm(defaultForm);
+    // Pre-fill with whichever branch is active in the header, same as every
+    // other create form — still editable, just no longer defaulting to blank.
+    setForm({ ...defaultForm, branchId: selectedBranchId ?? "" });
     setErrors({});
     setSaveError(null);
     setDrawerOpen(true);

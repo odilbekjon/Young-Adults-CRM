@@ -1,32 +1,27 @@
-import { useState, useRef, useEffect } from "react";
-import { FiCalendar, FiChevronDown, FiSettings } from "react-icons/fi";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { FiChevronDown, FiDownload } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
+import { CircularProgress } from "@mui/material";
+
+import {
+  useReportConversionQuery,
+  useLazyReportConversionExcelQuery,
+} from "../../../../app/api/reportsApi";
+import { useAllLeadSourcesQuery } from "../../../../app/api/leadSourcesApi";
+import { useToast } from "../../../../Context/ToastContext";
 
 type FunnelStage = "Incoming" | "Waiting" | "Set" | "Attended" | "Paid";
 
-interface Lead {
-  id: number;
-  fullName: string;
-  phone: string;
-  status: FunnelStage;
-  staffName: string;
-}
-
-const MOCK_LEADS: Lead[] = [
-  { id: 1, fullName: "Aliyev Jasur", phone: "90 123 45 67", status: "Incoming", staffName: "Odilbek Safarov" },
-  { id: 2, fullName: "Karimova Nilufar", phone: "91 234 56 78", status: "Waiting", staffName: "Sherzod Tursunov" },
-  { id: 3, fullName: "Toshmatov Sardor", phone: "93 345 67 89", status: "Set", staffName: "Odilbek Safarov" },
-  { id: 4, fullName: "Rahimova Dilnoza", phone: "94 456 78 90", status: "Attended", staffName: "Aziz Rahimov" },
-  { id: 5, fullName: "Yusupov Bobur", phone: "95 567 89 01", status: "Paid", staffName: "Sherzod Tursunov" },
-  { id: 6, fullName: "Ergasheva Mohira", phone: "97 678 90 12", status: "Incoming", staffName: "Odilbek Safarov" },
-  { id: 7, fullName: "Nazarov Ulugbek", phone: "88 789 01 23", status: "Waiting", staffName: "Aziz Rahimov" },
-];
-
 const STAGES: FunnelStage[] = ["Incoming", "Waiting", "Set", "Attended", "Paid"];
+
+interface Option {
+  value: string;
+  label: string;
+}
 
 const SelectBox = ({
   value, onChange, options, placeholder,
-}: { value: string; onChange: (v: string) => void; options: string[]; placeholder?: string }) => {
+}: { value: string; onChange: (v: string) => void; options: Option[]; placeholder?: string }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -34,20 +29,26 @@ const SelectBox = ({
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+  const selectedLabel = options.find((o) => o.value === value)?.label ?? "";
   return (
     <div className="relative" ref={ref}>
       <button type="button" onClick={() => setOpen((o) => !o)}
         className="flex min-w-[160px] items-center justify-between gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-600 transition-colors hover:border-slate-400">
-        <span className={value ? "text-slate-700" : "text-slate-400"}>{value || placeholder}</span>
+        <span className={selectedLabel ? "text-slate-700" : "text-slate-400"}>{selectedLabel || placeholder}</span>
         <FiChevronDown size={14} className="flex-shrink-0 text-slate-400" />
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 min-w-full rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+        <div className="absolute left-0 top-full mt-1 z-50 min-w-full rounded-xl border border-slate-200 bg-white py-1 shadow-lg max-h-64 overflow-y-auto">
+          <button type="button"
+            className="w-full whitespace-nowrap px-3 py-2 text-left text-[15px] text-slate-400 transition-colors hover:bg-slate-50"
+            onClick={() => { onChange(""); setOpen(false); }}>
+            {placeholder}
+          </button>
           {options.map((opt) => (
-            <button key={opt} type="button"
+            <button key={opt.value} type="button"
               className="w-full whitespace-nowrap px-3 py-2 text-left text-[15px] text-slate-700 transition-colors hover:bg-slate-50"
-              onClick={() => { onChange(opt); setOpen(false); }}>
-              {opt}
+              onClick={() => { onChange(opt.value); setOpen(false); }}>
+              {opt.label}
             </button>
           ))}
         </div>
@@ -118,50 +119,111 @@ const FunnelChart = ({ counts }: { counts: number[] }) => {
 
 export const ConversionReports = () => {
   const { t } = useTranslation();
-  const [dateFrom, setDateFrom] = useState("01.05.2026");
-  const [dateTo, setDateTo] = useState("13.05.2026");
+  const toast = useToast();
+
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [leadSource, setLeadSource] = useState("");
+  // Swagger's /reports/conversion takes a `userId`, but this project has no
+  // users/employees endpoint to populate a picker from, so staff filtering is
+  // applied to the returned rows by name instead of as a query parameter.
   const [byStaff, setByStaff] = useState("");
-  const [leadType, setLeadType] = useState(t("reports.conversion.filters.allLeadsOption"));
   const [activeStage, setActiveStage] = useState<FunnelStage | null>("Incoming");
 
-  const counts = STAGES.map((s) => MOCK_LEADS.filter((l) => {
-    const idx = STAGES.indexOf(l.status);
-    const sIdx = STAGES.indexOf(s);
-    return idx >= sIdx;
-  }).length);
+  const queryArgs = useMemo(
+    () => ({
+      startDate: dateFrom || undefined,
+      endDate: dateTo || undefined,
+      sourceId: leadSource || undefined,
+    }),
+    [dateFrom, dateTo, leadSource]
+  );
 
-  const tableData = activeStage
-    ? MOCK_LEADS.filter((l) => l.status === activeStage)
-    : [];
+  const { data, isLoading, isFetching, isError } = useReportConversionQuery(queryArgs);
+  const [fetchExcel, { isFetching: isExporting }] = useLazyReportConversionExcelQuery();
+  const { data: leadSourcesData } = useAllLeadSourcesQuery();
+
+  const sourceOptions: Option[] = useMemo(
+    () => (leadSourcesData?.data ?? []).map((s) => ({ value: s.id, label: s.name })),
+    [leadSourcesData]
+  );
+
+  const leads = useMemo(() => data?.leads ?? [], [data]);
+
+  // Staff options come from the rows the report actually returned.
+  const staffOptions: Option[] = useMemo(() => {
+    const names = [...new Set(leads.map((l) => l.staffName).filter(Boolean))];
+    return names.map((n) => ({ value: n, label: n }));
+  }, [leads]);
+
+  const visibleLeads = useMemo(
+    () => (byStaff ? leads.filter((l) => l.staffName === byStaff) : leads),
+    [leads, byStaff]
+  );
+
+  // Prefer the backend's own funnel totals; fall back to counting the returned
+  // rows per stage rather than inventing numbers.
+  const counts = useMemo(
+    () =>
+      STAGES.map((stage) => {
+        const fromBackend = data?.stageCounts?.[stage.toLowerCase()];
+        if (typeof fromBackend === "number") return fromBackend;
+        return visibleLeads.filter((l) => l.status.trim().toLowerCase() === stage.toLowerCase()).length;
+      }),
+    [data, visibleLeads]
+  );
+
+  const tableData = useMemo(
+    () =>
+      activeStage
+        ? visibleLeads.filter((l) => l.status.trim().toLowerCase() === activeStage.toLowerCase())
+        : [],
+    [visibleLeads, activeStage]
+  );
+
+  const handleExportExcel = async () => {
+    try {
+      const blob = await fetchExcel(queryArgs).unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "conversion-report.xlsx";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("reports.common.exportError"));
+    }
+  };
+
+  const busy = isLoading || isFetching;
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-8 font-sans">
-      <div className="mb-5">
-        <h1 className="text-3xl font-semibold text-slate-900">{t("reports.conversion.title")}</h1>
-        <p className="mt-2 text-[15px] text-slate-600">{t("reports.conversion.subtitle")}</p>
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold text-slate-900">{t("reports.conversion.title")}</h1>
+          <p className="mt-2 text-[15px] text-slate-600">{t("reports.conversion.subtitle")}</p>
+        </div>
+        <button
+          onClick={handleExportExcel}
+          disabled={isExporting}
+          title={t("reports.common.exportExcel")}
+          className="flex flex-shrink-0 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-60"
+        >
+          {isExporting ? <CircularProgress size={15} /> : <FiDownload size={16} />}
+          {t("reports.common.exportExcel")}
+        </button>
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <div className="relative">
-          <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-          <input type="text" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-            className="w-40 rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-[15px] text-slate-700 outline-none focus:border-blue-400" />
-        </div>
-        <div className="relative">
-          <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-          <input type="text" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-            className="w-40 rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-[15px] text-slate-700 outline-none focus:border-blue-400" />
-        </div>
+        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+          className="w-40 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-[15px] text-slate-700 outline-none focus:border-blue-400" />
+        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+          className="w-40 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-[15px] text-slate-700 outline-none focus:border-blue-400" />
         <SelectBox value={leadSource} onChange={setLeadSource}
-          options={["Website", "Social Media", "Referral", "Direct"]} placeholder={t("reports.conversion.filters.leadsSources")} />
+          options={sourceOptions} placeholder={t("reports.conversion.filters.leadsSources")} />
         <SelectBox value={byStaff} onChange={setByStaff}
-          options={["Odilbek Safarov", "Sherzod Tursunov", "Aziz Rahimov"]} placeholder={t("reports.conversion.filters.byStaff")} />
-        <SelectBox value={leadType} onChange={setLeadType}
-          options={[t("reports.conversion.filters.allLeadsOption"), t("reports.conversion.filters.newLeadsOption"), t("reports.conversion.filters.returningLeadsOption")]} placeholder={t("reports.conversion.filters.allLeadsOption")} />
-        <button className="rounded-xl border border-slate-300 bg-white p-2.5 text-slate-500 transition-colors hover:bg-slate-50">
-          <FiSettings size={16} />
-        </button>
+          options={staffOptions} placeholder={t("reports.conversion.filters.byStaff")} />
       </div>
 
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
@@ -204,7 +266,11 @@ export const ConversionReports = () => {
                 </tr>
               </thead>
               <tbody>
-                {tableData.length === 0 ? (
+                {busy ? (
+                  <tr><td colSpan={4} className="py-10 text-center"><CircularProgress size={26} /></td></tr>
+                ) : isError ? (
+                  <tr><td colSpan={4} className="py-10 text-center text-[15px] text-red-500">{t("reports.common.loadError")}</td></tr>
+                ) : tableData.length === 0 ? (
                   <tr>
                     <td colSpan={4}>
                       <div className="mx-4 my-3 rounded-xl bg-slate-50 px-4 py-5 text-center text-[15px] text-slate-500">

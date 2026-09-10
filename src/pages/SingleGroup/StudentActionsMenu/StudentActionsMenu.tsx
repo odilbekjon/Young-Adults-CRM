@@ -15,7 +15,11 @@ import {
 import { HiBuildingLibrary } from "react-icons/hi2";
 import { FiX } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
-import { BRANCH_OPTIONS, type BranchId } from "../../../Context/BranchContext";
+
+export interface BranchOption {
+  id: string;
+  name: string;
+}
 
 interface StudentActionsMenuProps {
   anchorEl: HTMLElement | null;
@@ -31,7 +35,9 @@ interface StudentActionsMenuProps {
   onMoveGroup: () => void;
   onRemove: () => void;
   onReminders: () => void;
-  onMoveToBranch: (branch: BranchId) => void;
+  branches: BranchOption[];
+  isMovingBranch?: boolean;
+  onMoveToBranch: (branchId: string) => Promise<boolean> | boolean;
 }
 
 const itemSx = {
@@ -46,30 +52,39 @@ const itemSx = {
 const iconColor = "#374151";
 
 /* ══════════════════════════════════════════
-   Move to Branch Modal — options come from
-   the same BRANCH_OPTIONS used in the Header
+   Move to Branch Modal — branch options come
+   from the real backend (GET /branches), not
+   a hardcoded list.
 ══════════════════════════════════════════ */
 const MoveToBranchModal = ({
   open,
   onClose,
   onSubmit,
+  branches,
+  isSubmitting,
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (branch: BranchId) => void;
+  onSubmit: (branchId: string) => Promise<boolean> | boolean;
+  branches: BranchOption[];
+  isSubmitting?: boolean;
 }) => {
   const { t } = useTranslation();
-  const [branch, setBranch] = useState<BranchId | "">("");
+  const [branch, setBranch] = useState("");
 
   const handleClose = () => {
+    if (isSubmitting) return;
     setBranch("");
     onClose();
   };
 
-  const handleSubmit = () => {
-    if (!branch) return;
-    onSubmit(branch);
-    setBranch("");
+  const handleSubmit = async () => {
+    if (!branch || isSubmitting) return;
+    const success = await onSubmit(branch);
+    if (success) {
+      setBranch("");
+      onClose();
+    }
   };
 
   return (
@@ -79,7 +94,7 @@ const MoveToBranchModal = ({
           <span style={{ fontSize: 16, fontWeight: 600, color: "#2e2e2e" }}>
             {t("singleGroup.studentActionsMenu.moveToBranchModal.title")}
           </span>
-          <IconButton size="small" onClick={handleClose}>
+          <IconButton size="small" onClick={handleClose} disabled={isSubmitting}>
             <FiX size={20} />
           </IconButton>
         </div>
@@ -87,7 +102,8 @@ const MoveToBranchModal = ({
       <DialogContent sx={{ p: 4 }}>
         <select
           value={branch}
-          onChange={(e) => setBranch(e.target.value as BranchId)}
+          onChange={(e) => setBranch(e.target.value)}
+          disabled={isSubmitting}
           style={{
             width: "100%",
             border: "1px solid #e5e7eb",
@@ -100,16 +116,16 @@ const MoveToBranchModal = ({
           }}
         >
           <option value="">{t("singleGroup.studentActionsMenu.moveToBranchModal.selectBranch")}</option>
-          {BRANCH_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
+          {branches.map((opt) => (
+            <option key={opt.id} value={opt.id}>
+              {opt.name}
             </option>
           ))}
         </select>
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={!branch}
+          disabled={!branch || isSubmitting}
           sx={{
             textTransform: "none",
             borderRadius: 999,
@@ -120,7 +136,9 @@ const MoveToBranchModal = ({
             "&:hover": { bgcolor: "#55b3c7" },
           }}
         >
-          {t("singleGroup.studentActionsMenu.moveToBranchModal.submit")}
+          {isSubmitting
+            ? t("singleGroup.studentActionsMenu.moveToBranchModal.moving")
+            : t("singleGroup.studentActionsMenu.moveToBranchModal.submit")}
         </Button>
       </DialogContent>
     </Dialog>
@@ -141,6 +159,8 @@ export const StudentActionsMenu = ({
   onMoveGroup,
   onRemove,
   onReminders,
+  branches,
+  isMovingBranch,
   onMoveToBranch,
 }: StudentActionsMenuProps) => {
   const { t } = useTranslation();
@@ -149,11 +169,6 @@ export const StudentActionsMenu = ({
   const handleOpenBranchModal = () => {
     onClose();
     setBranchModalOpen(true);
-  };
-
-  const handleSubmitBranch = (branch: BranchId) => {
-    onMoveToBranch(branch);
-    setBranchModalOpen(false);
   };
 
   return (
@@ -227,7 +242,9 @@ export const StudentActionsMenu = ({
       <MoveToBranchModal
         open={branchModalOpen}
         onClose={() => setBranchModalOpen(false)}
-        onSubmit={handleSubmitBranch}
+        onSubmit={onMoveToBranch}
+        branches={branches}
+        isSubmitting={isMovingBranch}
       />
     </>
   );

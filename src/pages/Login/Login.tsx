@@ -45,8 +45,9 @@ const LoginPage = () => {
     try {
       const res = await login({ identifier: email.trim(), password }).unwrap();
       // No manual navigate() here: PublicRoute reacts to the auth state
-      // change and redirects to the originally-requested page (or /dashboard).
-      dispatch(loginSuccess(res.data.token));
+      // change and redirects to the originally-requested page (or
+      // /dashboard for staff, /portal for a STUDENT-role user).
+      dispatch(loginSuccess(res.data.token, res.data.refreshToken, res.data.user?.role));
     } catch (err: unknown) {
       const fetchError = err as FetchBaseQueryError;
       if (fetchError?.status === "FETCH_ERROR" || fetchError?.status === "TIMEOUT_ERROR") {

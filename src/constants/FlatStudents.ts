@@ -24,6 +24,13 @@ export interface FlatStudent {
   price: number;
   balance: number;
   comment?: string;
+  photo?: string | null;
+  gender?: "MALE" | "FEMALE" | null;
+  birthdate?: string | null;
+  parentPhone?: string | null;
+  address?: string | null;
+  createdAt?: string | null;
+  groupsCount?: number;
 }
 
 export const buildFlatStudents = (): FlatStudent[] => {
@@ -90,6 +97,13 @@ export const mapApiStudentToFlat = (s: Student | StudentDetail): FlatStudent => 
     price: 0,
     balance: s.balance,
     comment: comment ?? undefined,
+    photo: "photo" in s ? s.photo : undefined,
+    gender: s.gender ?? undefined,
+    birthdate: s.birthdate ?? undefined,
+    parentPhone: s.parentPhone ?? undefined,
+    address: s.location ?? undefined,
+    createdAt: s.createdAt ?? undefined,
+    groupsCount: "groups" in s ? s.groups?.length ?? 0 : undefined,
   };
 };
 
@@ -97,4 +111,12 @@ export const formatDate = (d: string): string => {
   if (!d) return "—";
   const [y, m, day] = d.split("-");
   return `${day}.${m}.${y}`;
+};
+
+// "Added at" kabi uzun formatdagi sanalar uchun (masalan "August 11, 2026").
+export const formatLongDate = (d?: string | null, locale = "en-GB"): string => {
+  if (!d) return "";
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" });
 };

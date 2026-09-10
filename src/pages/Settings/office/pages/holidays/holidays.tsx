@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
-  Checkbox,
+  CircularProgress,
   Dialog,
+  DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
-  FormControlLabel,
   IconButton,
   Tab,
   Tabs,
@@ -14,17 +15,27 @@ import {
   Typography,
 } from "@mui/material";
 import { MdAdd, MdClose, MdCalendarToday, MdEdit, MdDelete } from "react-icons/md";
+import {
+  useAllHolidaysQuery,
+  useLazyHolidayForEditQuery,
+  useCreateHolidayMutation,
+  useUpdateHolidayMutation,
+  useDeleteHolidayMutation,
+} from "../../../../../app/api/holidaysApi";
+import type { Holiday } from "../../../../../app/api/holidaysApi/types";
+import { useToast } from "../../../../../Context/ToastContext";
+import { extractApiError } from "../../../../../utils";
 
-interface Holiday {
-  id: number;
-  name: string;
-  date: string;
-  createdAt: string;
-  affectsPayment: boolean;
-}
+// Swagger's write contract is YYYY-MM-DD, but reads can come back as a full
+// ISO timestamp — both are trimmed to the date part so <input type="date">
+// and the upcoming/past comparison work off the same shape.
+const toDateInput = (value?: string | null) => (value ? String(value).slice(0, 10) : "");
 
-const formatDate = (dateStr: string) => {
-  const d = new Date(dateStr);
+const formatDate = (dateStr?: string | null) => {
+  const iso = toDateInput(dateStr);
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 };
 
@@ -32,39 +43,93 @@ const today = new Date().toISOString().split("T")[0];
 
 export const Holidays = () => {
   const { t } = useTranslation();
+  const toast = useToast();
+
   const [tab, setTab] = useState(0);
   const [open, setOpen] = useState(false);
-  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
-  const [affectsPayment, setAffectsPayment] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Holiday | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const upcoming = holidays.filter((h) => h.date >= today);
-  const past = holidays.filter((h) => h.date < today);
+  const { data, isLoading, isError } = useAllHolidaysQuery();
+  const [fetchHolidayForEdit, { isFetching: isLoadingForEdit }] = useLazyHolidayForEditQuery();
+  const [createHoliday, { isLoading: isCreating }] = useCreateHolidayMutation();
+  const [updateHoliday, { isLoading: isUpdating }] = useUpdateHolidayMutation();
+  const [deleteHoliday, { isLoading: isDeleting }] = useDeleteHolidayMutation();
+
+  const holidays = data?.data ?? [];
+  const upcoming = holidays.filter((h) => toDateInput(h.date) >= today);
+  const past = holidays.filter((h) => toDateInput(h.date) < today);
   const displayed = tab === 0 ? upcoming : past;
 
+  const isSaving = isCreating || isUpdating;
+
   const handleOpen = () => {
+    setEditingId(null);
     setName("");
     setDate("");
-    setAffectsPayment(false);
+    setSaveError(null);
     setOpen(true);
   };
 
-  const handleSubmit = () => {
-    if (!name.trim() || !date) return;
-    const newHoliday: Holiday = {
-      id: Date.now(),
-      name,
-      date,
-      createdAt: new Date().toISOString().split("T")[0],
-      affectsPayment,
-    };
-    setHolidays((prev) => [...prev, newHoliday]);
-    setOpen(false);
+  // GET /holidays/{id}/for-edit — the drawer opens immediately with the row's
+  // known values, then refreshes from the dedicated edit endpoint.
+  const handleEdit = async (holiday: Holiday) => {
+    setEditingId(holiday.id);
+    setName(holiday.name);
+    setDate(toDateInput(holiday.date));
+    setSaveError(null);
+    setOpen(true);
+    try {
+      const detail = await fetchHolidayForEdit(holiday.id).unwrap();
+      if (detail?.data) {
+        setName(detail.data.name ?? "");
+        setDate(toDateInput(detail.data.date));
+      }
+    } catch {
+      // The row already provided usable values — keep the form open and let
+      // the user save rather than blocking the edit on this refresh.
+    }
   };
 
-  const handleDelete = (id: number) => {
-    setHolidays((prev) => prev.filter((h) => h.id !== id));
+  const handleSubmit = async () => {
+    if (!name.trim() || !date) return;
+    setSaveError(null);
+    try {
+      if (editingId) {
+        await updateHoliday({ id: editingId, name: name.trim(), date }).unwrap();
+        toast.success(t("settings.office.holidays.toast.updated"));
+      } else {
+        await createHoliday({ name: name.trim(), date }).unwrap();
+        toast.success(t("settings.office.holidays.toast.created"));
+      }
+      setOpen(false);
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.office.holidays.form.errors.save");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setSaveError(message);
+      toast.error(message);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteError(null);
+    try {
+      await deleteHoliday(deleteTarget.id).unwrap();
+      setDeleteTarget(null);
+      toast.success(t("settings.office.holidays.toast.deleted"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.office.holidays.deleteConfirm.error");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setDeleteError(message);
+      toast.error(message);
+    }
   };
 
   return (
@@ -140,7 +205,19 @@ export const Holidays = () => {
               </tr>
             </thead>
             <tbody>
-              {displayed.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-10">
+                    <CircularProgress size={26} />
+                  </td>
+                </tr>
+              ) : isError ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-10 text-red-500">
+                    {t("settings.office.holidays.loadError")}
+                  </td>
+                </tr>
+              ) : displayed.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-10 text-gray-400">
                     {t("settings.office.holidays.noData")}
@@ -167,13 +244,19 @@ export const Holidays = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1">
-                        <IconButton size="small" sx={{ color: "#29b6f6" }}>
+                        <IconButton
+                          size="small"
+                          sx={{ color: "#29b6f6" }}
+                          onClick={() => handleEdit(h)}
+                          aria-label={t("settings.office.holidays.edit")}
+                        >
                           <MdEdit size={16} />
                         </IconButton>
                         <IconButton
                           size="small"
                           sx={{ color: "#ef5350" }}
-                          onClick={() => handleDelete(h.id)}
+                          onClick={() => { setDeleteError(null); setDeleteTarget(h); }}
+                          aria-label={t("settings.office.holidays.delete")}
                         >
                           <MdDelete size={16} />
                         </IconButton>
@@ -221,7 +304,9 @@ export const Holidays = () => {
           }}
         >
           <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937", fontSize: "1.1rem" }}>
-            {t("settings.office.holidays.addHoliday")}
+            {editingId
+              ? t("settings.office.holidays.editHoliday")
+              : t("settings.office.holidays.addHoliday")}
           </Typography>
           <IconButton onClick={() => setOpen(false)} size="small" sx={{ color: "#9ca3af" }}>
             <MdClose size={20} />
@@ -243,6 +328,7 @@ export const Holidays = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder=""
+              disabled={isLoadingForEdit}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "6px",
@@ -255,7 +341,7 @@ export const Holidays = () => {
           </div>
 
           {/* Date Field */}
-          <div className="mb-4">
+          <div className="mb-6">
             <Typography
               variant="body2"
               sx={{ mb: 1, color: "#374151", fontWeight: 500, fontSize: "0.875rem" }}
@@ -268,6 +354,7 @@ export const Holidays = () => {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
+              disabled={isLoadingForEdit}
               InputProps={{
                 startAdornment: (
                   <MdCalendarToday size={16} className="mr-2 text-gray-400" />
@@ -286,33 +373,18 @@ export const Holidays = () => {
             />
           </div>
 
-          {/* Checkbox */}
-          <div className="mb-6">
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={affectsPayment}
-                  onChange={(e) => setAffectsPayment(e.target.checked)}
-                  size="small"
-                  sx={{
-                    color: "#d1d5db",
-                    "&.Mui-checked": { color: "#29b6f6" },
-                  }}
-                />
-              }
-              label={
-                <Typography variant="body2" sx={{ color: "#374151", fontSize: "0.875rem" }}>
-                  {t("settings.office.holidays.form.affectsPaymentLabel")}
-                </Typography>
-              }
-            />
-          </div>
+          {saveError && (
+            <Typography sx={{ mb: 2, color: "#ef5350", fontSize: "0.8125rem" }}>
+              {saveError}
+            </Typography>
+          )}
 
           {/* Submit Button */}
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={!name.trim() || !date}
+            disabled={!name.trim() || !date || isSaving || isLoadingForEdit}
+            startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : undefined}
             sx={{
               backgroundColor: "#29b6f6",
               "&:hover": { backgroundColor: "#0288d1" },
@@ -329,6 +401,47 @@ export const Holidays = () => {
             {t("settings.office.holidays.form.submit")}
           </Button>
         </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <Dialog
+        open={!!deleteTarget}
+        onClose={() => { setDeleteTarget(null); setDeleteError(null); }}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.office.holidays.deleteConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.office.holidays.deleteConfirm.message", { name: deleteTarget?.name ?? "" })}
+          </DialogContentText>
+          {deleteError && (
+            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
+              {deleteError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => { setDeleteTarget(null); setDeleteError(null); }}
+            variant="outlined"
+            disabled={isDeleting}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.holidays.deleteConfirm.cancel")}
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            variant="contained"
+            color="error"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
+          >
+            {t("settings.office.holidays.delete")}
+          </Button>
+        </DialogActions>
       </Dialog>
     </div>
   );

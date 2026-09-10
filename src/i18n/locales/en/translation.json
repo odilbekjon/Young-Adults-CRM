@@ -5,12 +5,17 @@
   },
   "header": {
     "search": "Search",
+    "searching": "Searching...",
+    "searchNoResults": "No students found",
+    "searchError": "Failed to search. Please try again.",
     "notifications": "Notifications",
     "viewAll": "View all",
     "recentPages": "Recent pages",
     "help": "Help",
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit fullscreen",
+    "darkMode": "Dark mode",
+    "lightMode": "Light mode",
     "account": "Account",
     "signOut": "Sign out",
     "hamburgerMenu": "Menu"
@@ -40,71 +45,94 @@
     "saving": "Saving...",
     "removeField": "Remove",
     "toast": {
-        "created": "Student added successfully",
-        "groupAssignFailed": "Student added, but failed to assign them to the group"
+      "created": "Student added successfully",
+      "groupAssignFailed": "Student added, but failed to assign them to the group"
     },
     "errors": {
-        "name": "Name is required",
-        "password": "Password is required",
-        "contact": "Phone or email is required",
-        "save": "Failed to save the student"
+      "name": "Name is required",
+      "password": "Password is required",
+      "contact": "Phone or email is required",
+      "branch": "Select a branch in the header before adding a student",
+      "save": "Failed to save the student"
     },
     "additional": {
-        "phone": "Parent's phone number",
-        "key": "Passport details",
-        "contact": "Parent's name",
-        "email": "Email",
-        "telegram": "Telegram username",
-        "education": "School name",
-        "location": "Home address",
-        "card": "Instagram username"
+      "phone": "Parent's phone number",
+      "key": "Passport details",
+      "contact": "Parent's name",
+      "email": "Email",
+      "telegram": "Telegram username",
+      "education": "School name",
+      "location": "Home address",
+      "card": "Instagram username"
     }
   },
   "addPayment": {
     "title": "Add payment",
     "student": "Student",
-    "selectStudent": "Select student",
+    "selectStudent": "Select user",
     "studentLoading": "Loading students...",
     "studentError": "Failed to load students",
     "balance": "Balance",
-    "branch": "Branch",
-    "selectBranch": "Select branch",
-    "branchLoading": "Loading branches...",
-    "branchError": "Failed to load branches",
-    "group": "Group",
-    "selectGroup": "Select group (optional)",
-    "noGroupsForStudent": "This student is not assigned to any group",
     "methodPay": "Method pay",
-    "methods": {
-      "cash": "Cash",
-      "click": "Click",
-      "card": "Card",
-      "uzum": "Uzum",
-      "bankAccount": "Bank account",
-      "humo": "Humo",
-      "payme": "Payme"
-    },
-    "paymentMethodId": "Payment method ID (backend)",
-    "paymentMethodIdPlaceholder": "Enter PaymentMethod ID",
-    "paymentMethodIdHelper": "This ID comes from the backend's payment methods list",
+    "paymentMethodId": "Payment method",
+    "selectPaymentMethod": "Select payment method",
+    "paymentMethodLoading": "Loading payment methods...",
+    "paymentMethodError": "Failed to load payment methods",
     "amount": "Amount",
     "date": "Date",
     "comment": "Comment",
-    "receipt": "Receipt photo",
-    "receiptPlaceholder": "Choose a file",
-    "advanced": "+ Advanced (transaction ID)",
-    "transactionId": "Transaction ID",
     "submit": "Submit",
     "saving": "Saving...",
     "errors": {
-      "student": "Select a student",
-      "branch": "Select a branch",
+      "student": "Select a user",
+      "branch": "No branch selected — pick one from the header first",
       "amount": "Enter a valid amount",
-      "paymentMethodId": "Payment method ID is required",
+      "paymentMethodId": "Select a payment method",
       "save": "Failed to save the payment"
     },
     "toast": {
       "created": "Payment added successfully"
+    }
+  },
+  "paymentReceipt": {
+    "title": "Receipt",
+    "print": "Print",
+    "loading": "Loading...",
+    "loadError": "Failed to load the receipt"
+  },
+  "debtorReceipt": {
+    "title": "Debt receipt",
+    "print": "Print",
+    "loadError": "Failed to load the receipt",
+    "name": "Name",
+    "phone": "Phone",
+    "group": "Group",
+    "branch": "Branch",
+    "balance": "Debt amount"
+  },
+  "addWithdrawal": {
+    "title": "Add withdrawal",
+    "recipientName": "Recipient name",
+    "recipientNamePlaceholder": "Full name",
+    "branch": "Branch",
+    "selectBranch": "Select branch",
+    "branchLoading": "Loading branches...",
+    "branchError": "Failed to load branches",
+    "paymentMethodId": "Payment method",
+    "amount": "Amount",
+    "date": "Date",
+    "reason": "Reason",
+    "submit": "Submit",
+    "saving": "Saving...",
+    "errors": {
+      "recipientName": "Enter the recipient's name",
+      "branch": "Select a branch",
+      "amount": "Enter a valid amount",
+      "paymentMethodId": "Select a payment method",
+      "save": "Failed to save the withdrawal"
+    },
+    "toast": {
+      "created": "Withdrawal added successfully"
     }
   },
   "login": {
@@ -164,6 +192,7 @@
       "officeHolidays": "Holidays",
       "officeArchive": "Archive",
       "officeStudentsLeft": "Students left group",
+      "officeStudentFreezes": "Student freezes",
       "forms": "Forms",
       "formsList": "Forms",
       "blog": "Blog",
@@ -232,6 +261,20 @@
     "filters": {
       "searchPlaceholder": "Search by name or phone",
       "byTeacher": "By Teacher",
+      "byCourses": "By Courses",
+      "allCourses": "All courses",
+      "status": "Status",
+      "statusOptions": { "active": "Active", "inactive": "Inactive" },
+      "financialSituation": "Financial situation",
+      "financialOptions": { "positive": "Positive balance", "negative": "Negative balance", "zero": "Zero balance" },
+      "byTags": "By Tags",
+      "tagsUnavailable": "Tags aren't available yet",
+      "externalId": "External ID",
+      "externalIdUnavailable": "External ID isn't available yet",
+      "groupCount": "Group count",
+      "fromCreated": "From created",
+      "toCreatedDate": "To created date",
+      "advancedFilters": "Advanced filters",
       "clearAll": "Clear all"
     },
     "table": {
@@ -266,7 +309,13 @@
       "studentsSelected_one": "{{count}} student selected",
       "studentsSelected_other": "{{count}} students selected",
       "selectGroup": "Select group",
-      "submit": "Add student to group"
+      "submit": "Add student to group",
+      "submitting": "Adding...",
+      "toast": {
+        "success": "Student(s) added to the group",
+        "error": "Failed to add student(s) to the group",
+        "alreadyInGroup": "Selected student(s) are already in this group"
+      }
     },
     "editDrawer": {
       "title": "Edit Student",
@@ -370,7 +419,8 @@
       "phoneOrEmailRequired": "Phone or email is required",
       "nameRequired": "Name is required",
       "dobRequired": "Date of birth is required",
-      "genderRequired": "Gender is required"
+      "genderRequired": "Gender is required",
+      "branchRequired": "Select a branch in the header before adding a teacher"
     },
     "toast": {
       "created": "Teacher added",
@@ -478,6 +528,8 @@
       "menuLabel": "Add to trial",
       "title": "Add to trial",
       "selectGroup": "Select group",
+      "trialDate": "Trial date",
+      "notes": "Notes",
       "submit": "Add",
       "toast": {
         "success": "Lead added to trial",
@@ -491,9 +543,14 @@
     "actions": {
       "addNew": "Add New",
       "exportExcel": "Export to Excel",
+      "exportError": "Failed to export the list. Please try again.",
       "edit": "Edit",
+      "sms": "SMS",
       "delete": "Delete",
       "submit": "Submit"
+    },
+    "sms": {
+      "recipientLabel": "student"
     },
     "filters": {
       "status": "Status",
@@ -599,10 +656,27 @@
   "finance": {
     "allPayments": {
       "title": "All payments",
+      "exportExcel": "Export to Excel",
+      "exportError": "Failed to export the list. Please try again.",
       "stats": {
         "totalRevenue": "Total Revenue:",
         "totalNetProfit": "Total Net Profit:",
-        "details": "Details"
+        "filteredTotal": "Total for selected filters:",
+        "details": "Details",
+        "thisMonth": {
+          "title": "This month",
+          "income": "Income",
+          "expenses": "Expenses",
+          "salaries": "Salaries",
+          "netProfit": "Net profit"
+        }
+      },
+      "chart": {
+        "payments": "Payments",
+        "expenses": "Expenses",
+        "netProfit": "Net profit",
+        "loadError": "Failed to load chart data.",
+        "retry": "Retry"
       },
       "filters": {
         "title": "Filters",
@@ -632,7 +706,20 @@
         "teacher": "Teacher",
         "comment": "Comment",
         "creator": "Creator",
-        "empty": "No payments found"
+        "empty": "No payments found",
+        "loadError": "Failed to load payments",
+        "retry": "Retry",
+        "refund": "Refund"
+      },
+      "refundConfirm": {
+        "title": "Refund payment",
+        "message": "Refund this payment? This action cannot be undone.",
+        "confirm": "Refund",
+        "cancel": "Close",
+        "error": "Failed to refund the payment"
+      },
+      "toast": {
+        "refunded": "Payment refunded"
       },
       "footer": {
         "showing": "Showing",
@@ -643,12 +730,15 @@
     "debtors": {
       "title": "Debtors",
       "quantity": "Quantity — {{count}}",
+      "exportExcel": "Export to Excel",
+      "exportError": "Failed to export the list. Please try again.",
       "summary": {
         "total": "Total:",
         "totalOnPeriod": "Total on period:"
       },
       "filters": {
         "search": "Search",
+        "searchPlaceholder": "Name or phone",
         "searchBy": "Search by",
         "status": "Status",
         "group": "Group",
@@ -674,7 +764,10 @@
         "status": "Status",
         "sendSmsSelected": "Send SMS to selected",
         "selectToSendSms": "Select students to send SMS",
-        "noData": "No Data"
+        "noData": "No Data",
+        "loadError": "Failed to load debtors.",
+        "retry": "Retry",
+        "receipt": "Receipt"
       },
       "pagination": {
         "of": "of"
@@ -708,12 +801,82 @@
         "delete": "Delete"
       },
       "calculate": "Calculate",
-      "showInTeacherProfile": "Show in teacher's profile"
+      "showInTeacherProfile": "Show in teacher's profile",
+      "loadError": "Failed to load salary settings.",
+      "deleteConfirm": "Delete this salary setting?",
+      "createNotSupported": "Creating a salary rate is not available in the current API contract.",
+      "toast": {
+        "deleted": "Salary setting deleted",
+        "deleteError": "Failed to delete the setting. Please try again.",
+        "calculated": "Payrolls calculated",
+        "calculateError": "Failed to calculate payrolls. Please try again.",
+        "published": "Payroll published",
+        "publishError": "Failed to publish the payroll. Please try again.",
+        "paid": "Payroll marked as paid",
+        "payError": "Failed to record the payment. Please try again."
+      },
+      "payrolls": {
+        "title": "Payrolls",
+        "exportExcel": "Export to Excel",
+        "exportError": "Failed to export payrolls. Please try again.",
+        "loadError": "Failed to load payrolls.",
+        "noData": "No payrolls found",
+        "filters": {
+          "period": "Period",
+          "status": "Status",
+          "allStatuses": "All statuses",
+          "reset": "Reset"
+        },
+        "status": {
+          "draft": "Draft",
+          "published": "Published",
+          "paid": "Paid"
+        },
+        "table": {
+          "teacher": "Teacher",
+          "period": "Period",
+          "status": "Status",
+          "total": "Calculated",
+          "paid": "Paid",
+          "actions": "Actions"
+        },
+        "actions": {
+          "details": "Details",
+          "publish": "Publish",
+          "pay": "Pay"
+        },
+        "detail": {
+          "title": "Payroll details",
+          "noItems": "No breakdown returned",
+          "close": "Close",
+          "group": "Group / Course",
+          "student": "Student",
+          "lessons": "Lessons",
+          "attended": "Present",
+          "missed": "Absent",
+          "rate": "Setting amount",
+          "amount": "Estimated amount",
+          "calcSetting": "Calc setting",
+          "salaryType": "Salary type"
+        },
+        "pay": {
+          "title": "Record payment",
+          "paymentMethod": "Payment method",
+          "selectMethod": "Select a payment method",
+          "amount": "Paid amount",
+          "amountHint": "Leave empty to pay the full calculated amount",
+          "confirm": "Confirm",
+          "cancel": "Cancel"
+        }
+      }
     },
     "totalExpenses": {
       "title": "Total Expenses",
+      "exportExcel": "Export to Excel",
+      "exportError": "Failed to export the list. Please try again.",
       "summary": {
-        "totalExpenses": "Total expenses:"
+        "totalExpenses": "Total expenses:",
+        "filteredTotal": "Total for selected filters:"
       },
       "chart": {
         "totalExpensesLabel": "Total Expenses"
@@ -730,21 +893,85 @@
         "filter": "Filter"
       },
       "selectPlaceholder": "Select",
+      "table": {
+        "empty": "No expenses found",
+        "loadError": "Failed to load expenses",
+        "retry": "Retry",
+        "delete": "Delete"
+      },
       "form": {
         "title": "New expense",
         "description": "Description",
         "date": "Date",
         "category": "Category",
+        "branch": "Branch",
         "payee": "Payee",
         "sum": "Sum",
         "methodPay": "Method pay",
-        "submit": "Submit"
+        "receipt": "Receipt photo",
+        "receiptPlaceholder": "Choose a file",
+        "submit": "Submit",
+        "saving": "Saving...",
+        "errors": {
+          "title": "Enter a description",
+          "category": "Select a category",
+          "branch": "Select a branch",
+          "amount": "Enter a valid amount",
+          "methodPay": "Select a payment method",
+          "save": "Failed to save the expense"
+        },
+        "toast": {
+          "created": "Expense added successfully",
+          "deleted": "Expense deleted"
+        }
+      },
+      "categoryModal": {
+        "addCategory": "Add category",
+        "manageTitle": "Expense categories",
+        "title": "Add a new category",
+        "existingTitle": "Existing categories",
+        "noCategories": "No categories yet",
+        "name": "Name",
+        "branch": "Branch (optional)",
+        "save": "Save",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "statusActive": "Active",
+        "statusInactive": "Inactive",
+        "deleteConfirm": {
+          "title": "Delete category",
+          "message": "Delete the category \"{{name}}\"?",
+          "confirm": "Delete"
+        },
+        "errors": {
+          "name": "Enter a category name",
+          "branch": "Select a branch",
+          "save": "Failed to save the category",
+          "update": "Failed to update the category",
+          "delete": "Failed to delete the category"
+        },
+        "toast": {
+          "created": "Category added successfully",
+          "updated": "Category updated successfully",
+          "deleted": "Category deleted"
+        }
+      },
+      "deleteConfirm": {
+        "title": "Delete expense",
+        "message": "Delete this expense record?",
+        "confirm": "Delete",
+        "cancel": "Cancel",
+        "error": "Failed to delete the expense"
       }
     },
     "withdraw": {
       "title": "Withdraw",
+      "exportExcel": "Export to Excel",
+      "exportError": "Failed to export the list. Please try again.",
       "stats": {
-        "totalWithdrawals": "Total withdrawals:"
+        "totalWithdrawals": "Total withdrawals:",
+        "filteredTotal": "Total for selected filters:"
       },
       "filters": {
         "dateFrom": "Date from",
@@ -764,7 +991,19 @@
         "actions": "Actions",
         "notAssigned": "not assigned",
         "deleteTitle": "Delete",
-        "empty": "No withdrawals found"
+        "empty": "No withdrawals found",
+        "loadError": "Failed to load withdrawals",
+        "retry": "Retry"
+      },
+      "deleteConfirm": {
+        "title": "Delete withdrawal",
+        "message": "Delete this record?",
+        "confirm": "Delete",
+        "cancel": "Cancel",
+        "error": "Failed to delete"
+      },
+      "toast": {
+        "deleted": "Record deleted"
       },
       "footer": {
         "showing": "Showing",
@@ -774,6 +1013,12 @@
     }
   },
   "reports": {
+    "common": {
+      "loadError": "Failed to load the report.",
+      "noData": "No data for the selected filters",
+      "exportExcel": "Export to Excel",
+      "exportError": "Failed to export the report. Please try again."
+    },
     "attendance": {
       "title": "Attendance reports",
       "summary": {
@@ -932,6 +1177,10 @@
   },
   "singleGroup": {
     "notFound": "Group not found.",
+    "header": {
+      "branch": "Branch",
+      "groupId": "ID"
+    },
     "leftPanel": {
       "course": "Course",
       "teacher": "Teacher",
@@ -949,6 +1198,9 @@
       "rooms": "Rooms",
       "roomCapacity": "Room capacity",
       "trainingDates": "Training dates",
+      "trainingStart": "Start",
+      "trainingEnd": "End",
+      "notScheduled": "Not scheduled",
       "idLabel": "id",
       "branches": "Branches",
       "sortAZ": "By A-Z",
@@ -957,6 +1209,7 @@
       "showArchivedStudents": "Show archived students",
       "hideArchivedStudents": "Hide archived students",
       "exportToExcel": "Export to excel",
+      "exportError": "Failed to export the list. Please try again.",
       "export": {
         "name": "Name",
         "phone": "Phone",
@@ -979,12 +1232,24 @@
         "current": "Current",
         "name": "Name",
         "months": {
-          "jan": "Jan", "feb": "Feb", "mar": "Mar", "apr": "Apr", "may": "May", "jun": "Jun",
-          "jul": "Jul", "aug": "Aug", "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Dec"
+          "jan": "Jan",
+          "feb": "Feb",
+          "mar": "Mar",
+          "apr": "Apr",
+          "may": "May",
+          "jun": "Jun",
+          "jul": "Jul",
+          "aug": "Aug",
+          "sep": "Sep",
+          "oct": "Oct",
+          "nov": "Nov",
+          "dec": "Dec"
         },
         "was": "Was",
         "notPresent": "Not",
-        "saveError": "Failed to save attendance. Please try again."
+        "saveError": "Failed to save attendance. Please try again.",
+        "exportExcel": "Export to Excel",
+        "exportError": "Failed to export attendance. Please try again."
       },
       "grade": {
         "tabLabel": "Grade",
@@ -1047,12 +1312,27 @@
     },
     "calendar": {
       "weekdays": {
-        "sun": "Sun", "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat"
+        "sun": "Sun",
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat"
       },
       "months": {
-        "january": "January", "february": "February", "march": "March", "april": "April",
-        "may": "May", "june": "June", "july": "July", "august": "August",
-        "september": "September", "october": "October", "november": "November", "december": "December"
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
       }
     },
     "datePickerField": {
@@ -1060,7 +1340,13 @@
     },
     "activateModal": {
       "title": "Select activate date",
-      "submit": "Submit"
+      "submit": "Submit",
+      "saving": "Activating...",
+      "toast": {
+        "success": "Student activated",
+        "error": "Failed to activate the student",
+        "notFound": "No active freeze record found for this student"
+      }
     },
     "addNoteModal": {
       "title": "Add new note",
@@ -1078,7 +1364,18 @@
       "amount": "Amount",
       "date": "Date",
       "comment": "Comment",
-      "submit": "Submit"
+      "submit": "Submit",
+      "saving": "Saving...",
+      "errors": {
+        "student": "Student is missing a backend id",
+        "branch": "No branch selected — pick one from the header first",
+        "amount": "Enter a valid amount",
+        "paymentMethodId": "Select a payment method",
+        "save": "Failed to save the payment"
+      },
+      "toast": {
+        "created": "Payment added successfully"
+      }
     },
     "addStudentDrawer": {
       "title": "Add Student",
@@ -1143,9 +1440,18 @@
       "title": "Indicate the reason",
       "student": "Student",
       "dateFrom": "Date from",
+      "dateTo": "Date to",
       "recalculateBalance": "Recalculate the balance",
       "cancel": "Cancel",
-      "confirm": "Freeze"
+      "confirm": "Submit",
+      "saving": "Submitting...",
+      "errors": {
+        "dates": "Select a start date"
+      },
+      "toast": {
+        "success": "Student frozen",
+        "error": "Failed to freeze the student"
+      }
     },
     "moveStudentDialog": {
       "title": "Move",
@@ -1192,7 +1498,12 @@
       "moveToBranchModal": {
         "title": "Move student to branch",
         "selectBranch": "Select branch",
-        "submit": "Move to branch"
+        "submit": "Move to branch",
+        "moving": "Moving...",
+        "toast": {
+          "success": "Student moved to the branch",
+          "error": "Failed to move student to the branch. Please try again."
+        }
       },
       "activate": "Activate",
       "backToTrialLesson": "Back to trial lesson",
@@ -1202,7 +1513,12 @@
       "moveStudentToGroup": "Move student to group",
       "moveStudentToBranch": "Move student to branch",
       "removeFromGroup": "Remove from group",
-      "reminders": "Reminders"
+      "reminders": "Reminders",
+      "toast": {
+        "activated": "Student activated",
+        "backToTrial": "Student moved back to trial lesson",
+        "error": "Failed to complete the action. Please try again."
+      }
     },
     "studentHoverCard": {
       "activeLearns": "Active (Learns)",
@@ -1216,6 +1532,7 @@
       "phone": "Phone",
       "addedAt": "Added at",
       "activatedAt": "Activated at",
+      "allCoins": "All coins",
       "goToProfile": "Go to profile →"
     }
   },
@@ -1247,15 +1564,35 @@
       "variablesWarningPrefix": "Attentiveness! Using the variables works for",
       "variablesWarningSuffix": ". These variables do not affect SMS sent manually using SMS shablons.",
       "addNew": "Add New",
+      "loadError": "Failed to load. Please try again.",
+      "saving": "Saving...",
+      "toast": {
+        "settingSaved": "Auto-SMS setting saved",
+        "error": "Failed to complete the action. Please try again.",
+        "templateCreated": "Template created",
+        "templateUpdated": "Template updated",
+        "templateDeleted": "Template deleted"
+      },
       "table": {
         "templatesHeader": "SMS templates",
         "actions": "Actions",
-        "empty": "No templates yet. Click \"Add New\" to create one."
+        "empty": "No templates yet. Click \"Add New\" to create one.",
+        "edit": "Edit",
+        "delete": "Delete"
       },
       "drawer": {
         "title": "Add SMS Template",
+        "editTitle": "Edit SMS Template",
+        "titleLabel": "Title",
+        "titlePlaceholder": "Template title",
         "label": "SMS template",
         "submit": "Submit"
+      },
+      "confirmDelete": {
+        "title": "Delete template?",
+        "message": "This action cannot be undone.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
       },
       "types": {
         "advancePayment": { "label": "Advance payment notification", "description": "The message is sent when an advance payment notification is needed." },
@@ -1323,7 +1660,17 @@
         "edit": "Edit",
         "emptyActive": "No active branches",
         "emptyArchived": "No archived branches",
-        "form": { "editTitle": "Edit branch", "name": "Branch name", "namePlaceholder": "e.g. Educoin", "phone": "Phone number", "address": "Address", "addressPlaceholder": "e.g. next to Jarqo'rg'on district administration", "cancel": "Cancel", "save": "Save", "errors": { "name": "Enter the branch name", "phone": "Enter the full phone number", "address": "Enter the address", "save": "Something went wrong. Please try again." } },
+        "form": {
+          "editTitle": "Edit branch",
+          "name": "Branch name",
+          "namePlaceholder": "e.g. Educoin",
+          "phone": "Phone number",
+          "address": "Address",
+          "addressPlaceholder": "e.g. next to Jarqo'rg'on district administration",
+          "cancel": "Cancel",
+          "save": "Save",
+          "errors": { "name": "Enter the branch name", "phone": "Enter the full phone number", "address": "Enter the address", "save": "Something went wrong. Please try again." }
+        },
         "close": "Close",
         "loadError": "Failed to load branches.",
         "deleteConfirm": {
@@ -1420,13 +1767,30 @@
       },
       "staff": {
         "title": "Staff",
+        "countSuffix": "staff",
         "addNew": "ADD NEW",
         "import": "Import",
-        "table": { "id": "id", "name": "Name", "role": "Role", "jobTitle": "Job title", "phone": "Phone", "actions": "Actions" },
-        "form": { "title": "Add New Staff", "name": "Name", "phone": "Phone", "password": "Password", "jobTitle": "Job title", "role": "Role", "dateOfBirth": "Date of birth", "gender": "Gender", "photo": "Photo", "noFileChosen": "No file chosen", "browse": "Browse", "submit": "Submit" },
+        "search": { "placeholder": "Search staff" },
+        "filters": { "status": "Status", "allStatuses": "All statuses", "active": "Active", "inactive": "Inactive" },
+        "table": { "id": "#", "name": "Name", "role": "Role", "jobTitle": "Position", "phone": "Phone", "status": "Status", "actions": "Actions", "noData": "No staff found", "loading": "Loading...", "loadError": "Failed to load staff" },
+        "menu": { "edit": "Edit", "sms": "SMS", "toggleStatus": "Toggle status", "delete": "Delete" },
+        "sms": { "recipientLabel": "staff" },
+        "drawer": { "addTitle": "Add New Staff", "editTitle": "Edit Staff" },
+        "form": {
+          "title": "Add New Staff", "name": "Name", "phone": "Phone", "email": "Email", "emailPlaceholder": "email@example.com",
+          "password": "Password", "passwordPlaceholder": "Enter password", "setPasswordToggle": "+ Set password", "hidePasswordToggle": "− Hide password",
+          "role": "Role", "roleHelp": "Optional (e.g. ADMIN, SUPERADMIN) — Swagger doesn't document a fixed list of values.",
+          "rolePermissionId": "Position (RolePermission ID)",
+          "rolePermissionIdHelp": "Required — the id of a record from the Positions module. No listing endpoint for it exists yet, so it must be entered manually.",
+          "branches": "Branches", "jobTitle": "Position", "dateOfBirth": "Date of birth", "gender": "Gender",
+          "photo": "Photo", "noFileChosen": "No file chosen", "browse": "Browse", "submit": "Submit"
+        },
         "roles": { "ceo": "CEO", "branchDirector": "Branch Director", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Limited Administrator", "teacher": "Teacher", "marketer": "Marketer", "cashier": "Cashier" },
         "gender": { "male": "Male", "female": "Female" },
-        "sms": { "recipientLabel": "staff" }
+        "validation": { "nameRequired": "Name is required", "rolePermissionIdRequired": "Position (RolePermission ID) is required", "contactRequired": "Enter an email or phone number" },
+        "deleteDialog": { "title": "Delete staff member", "message": "Are you sure you want to delete this staff member? This action cannot be undone.", "cancel": "Cancel", "confirm": "Delete" },
+        "toast": { "created": "Staff member added", "updated": "Staff member updated", "deleted": "Staff member deleted", "statusToggled": "Status updated", "error": "Failed to complete the action. Please try again.", "deleteConflict": "This staff member is still assigned to a branch and can't be deleted." },
+        "pagination": { "prev": "Prev", "next": "Next" }
       },
       "general": {
         "accrual": {
@@ -1470,10 +1834,18 @@
           "animation": "Animation",
           "logo": "Logo",
           "uploadLogo": "Upload logo",
+          "noLogo": "No logo",
+          "logoUrlPlaceholder": "Logo URL",
           "selectThemeColor": "Select theme color",
           "companyOferta": "Company Oferta",
           "selectFile": "Select file",
-          "save": "Save"
+          "offerUrlPlaceholder": "Offer URL",
+          "save": "Save",
+          "loadError": "Failed to load settings.",
+          "toast": {
+            "saved": "Settings saved",
+            "error": "Failed to save settings. Please try again."
+          }
         },
         "integrations": {
           "notConnected": "Not Connected",
@@ -1523,7 +1895,20 @@
           "cancel": "Cancel",
           "logoAlt": "Young Adults Logo",
           "preview": {
-            "checkNumber": "Check number:", "company": "Company:", "branch": "Branch:", "student": "Student:", "phone": "Phone:", "balance": "Balance:", "group": "Group:", "coursePrice": "Course price:", "teacher": "Teacher:", "type": "Type:", "paymentAmount": "Payment amount:", "date": "Date:", "creator": "Creator:", "time": "Time:"
+            "checkNumber": "Check number:",
+            "company": "Company:",
+            "branch": "Branch:",
+            "student": "Student:",
+            "phone": "Phone:",
+            "balance": "Balance:",
+            "group": "Group:",
+            "coursePrice": "Course price:",
+            "teacher": "Teacher:",
+            "type": "Type:",
+            "paymentAmount": "Payment amount:",
+            "date": "Date:",
+            "creator": "Creator:",
+            "time": "Time:"
           }
         },
         "landingPage": {
@@ -1599,6 +1984,7 @@
         "reasonsForArchiving": "Reasons for archiving",
         "balance": "Balance",
         "noData": "No Data",
+        "loadError": "Failed to load archive.",
         "filters": { "namePhone": "Name or Phone", "filterByRole": "Filter by role", "student": "Student", "teacher": "Teacher", "filterByReason": "Filter by reason", "startDate": "Start date" },
         "actions": { "delete": "Delete", "reestablish": "Reestablish" },
         "table": { "name": "Name", "phone": "Phone", "roles": "Roles", "reasonsForRemoval": "Reasons for removal", "comment": "Comment", "archived": "Archived", "actions": "Actions" },
@@ -1608,7 +1994,34 @@
           "table": { "id": "id", "name": "Name", "actions": "Actions" },
           "form": { "name": "Name" },
           "submit": "Submit",
-          "save": "Save"
+          "save": "Save",
+          "edit": "Edit",
+          "delete": "Delete",
+          "noData": "No reasons found",
+          "loadError": "Failed to load reasons.",
+          "status": {
+            "active": "Active",
+            "inactive": "Inactive",
+            "toggle": "Change status"
+          },
+          "errors": {
+            "name": "Enter the reason name",
+            "branchRequired": "Select a specific branch first — a reason is created for one branch.",
+            "save": "Something went wrong. Please try again.",
+            "toggle": "Failed to change the status. Please try again."
+          },
+          "deleteConfirm": {
+            "title": "Delete reason",
+            "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+            "cancel": "Cancel",
+            "error": "Failed to delete the reason. Please try again."
+          },
+          "toast": {
+            "created": "Reason added successfully",
+            "updated": "Reason updated successfully",
+            "deleted": "Reason deleted successfully",
+            "statusToggled": "Reason status updated"
+          }
         }
       },
       "courses": {
@@ -1655,12 +2068,38 @@
         "title": "Holidays",
         "addNew": "Add New",
         "addHoliday": "Add holiday",
+        "editHoliday": "Edit holiday",
         "noData": "No Data",
         "yes": "Yes",
         "no": "No",
+        "edit": "Edit",
+        "delete": "Delete",
+        "loadError": "Failed to load holidays.",
         "tabs": { "upcoming": "Upcoming", "past": "Past" },
         "table": { "name": "Name", "dateOfHoliday": "Date of the holiday", "createdAt": "Create at", "affectsPayment": "Affects to payment", "actions": "Actions" },
-        "form": { "name": "Name", "date": "Date", "noDateSelected": "No date selected", "affectsPaymentLabel": "Student's payment and teacher's salary", "submit": "Submit" }
+        "form": {
+          "name": "Name",
+          "date": "Date",
+          "noDateSelected": "No date selected",
+          "affectsPaymentLabel": "Student's payment and teacher's salary",
+          "submit": "Submit",
+          "errors": {
+            "name": "Enter the holiday name",
+            "date": "Select the holiday date",
+            "save": "Something went wrong. Please try again."
+          }
+        },
+        "deleteConfirm": {
+          "title": "Delete holiday",
+          "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+          "cancel": "Cancel",
+          "error": "Failed to delete the holiday. Please try again."
+        },
+        "toast": {
+          "created": "Holiday added successfully",
+          "updated": "Holiday updated successfully",
+          "deleted": "Holiday deleted successfully"
+        }
       },
       "rooms": {
         "title": "Rooms",
@@ -1757,6 +2196,85 @@
         "prompts": { "enterUrl": "Enter URL:", "imageUrl": "Image URL:" },
         "actions": { "save": "Save" }
       }
+    }
+  },
+  "studentPortal": {
+    "appTitle": "Student Portal",
+    "toggleTheme": "Toggle theme",
+    "signOut": "Sign out",
+    "nav": {
+      "student": "Student",
+      "dashboard": "Dashboard",
+      "attendance": "Attendance",
+      "balance": "Balance",
+      "payments": "Payments",
+      "groups": "My groups",
+      "schedule": "Schedule",
+      "profile": "Profile"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "loadError": "Failed to load dashboard data",
+      "attendancePercentage": "Attendance rate",
+      "activeCourses": "Active courses"
+    },
+    "attendance": {
+      "title": "Attendance",
+      "date": "Date",
+      "group": "Group",
+      "status": "Status",
+      "reason": "Reason",
+      "loadError": "Failed to load attendance history",
+      "empty": "No attendance records yet",
+      "statuses": { "present": "Present", "absent": "Absent", "late": "Late", "excused": "Excused" }
+    },
+    "balance": {
+      "title": "Balance",
+      "loadError": "Failed to load balance",
+      "balance": "Current balance",
+      "paidAmount": "Total paid",
+      "debt": "Debt"
+    },
+    "payments": {
+      "title": "Payments",
+      "date": "Date",
+      "amount": "Amount",
+      "method": "Method",
+      "comment": "Comment",
+      "loadError": "Failed to load payment history",
+      "empty": "No payments yet"
+    },
+    "groups": {
+      "title": "My groups",
+      "loadError": "Failed to load groups",
+      "empty": "You aren't in any group yet",
+      "noTeacher": "No teacher assigned"
+    },
+    "profile": {
+      "title": "Profile",
+      "loadError": "Failed to load profile",
+      "phone": "Phone",
+      "email": "Email",
+      "branch": "Branch",
+      "comments": "Comments",
+      "noComments": "No comments yet"
+    },
+    "schedule": {
+      "title": "Schedule",
+      "loadError": "Failed to load schedule",
+      "empty": "No schedule yet",
+      "days": {
+        "monday": "Monday", "tuesday": "Tuesday", "wednesday": "Wednesday",
+        "thursday": "Thursday", "friday": "Friday", "saturday": "Saturday", "sunday": "Sunday"
+      }
+    }
+  },
+  "layout": {
+    "footer": {
+      "support": "Support",
+      "videoTutorials": "Video tutorials",
+      "paymentMode": "Payment mode: Monthly (per calendar month)",
+      "brand": "CRM"
     }
   }
 }

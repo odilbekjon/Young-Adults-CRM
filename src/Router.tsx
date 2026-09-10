@@ -1,6 +1,15 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { PublicRoute } from "./routes/PublicRoute";
+import { StudentRoute } from "./routes/StudentRoute";
+import { StudentPortalLayout } from "./layouts/StudentPortalLayout/StudentPortalLayout";
+import { StudentPortalDashboard } from "./pages/StudentPortal/Dashboard/Dashboard";
+import { StudentPortalAttendance } from "./pages/StudentPortal/Attendance/Attendance";
+import { StudentPortalBalance } from "./pages/StudentPortal/Balance/Balance";
+import { StudentPortalPayments } from "./pages/StudentPortal/Payments/Payments";
+import { StudentPortalGroups } from "./pages/StudentPortal/Groups/Groups";
+import { StudentPortalProfile } from "./pages/StudentPortal/Profile/Profile";
+import { StudentPortalSchedule } from "./pages/StudentPortal/Schedule/Schedule";
 import { NotFound } from "./pages/NotFound";
 import { Dashboard } from "./pages/Dashboard";
 import { Layout } from "./layouts/layout";
@@ -36,6 +45,7 @@ import { SingleCourse } from "./pages/SingleCourse";
 import { Rooms } from "./pages/Settings/office/pages";
 import { Holidays } from "./pages/Settings/office/pages";
 import { StudentLeft } from "./pages/Settings/office/pages";
+import { StudentFreezes } from "./pages/Settings/office/pages";
 import { Archive } from "./pages/Settings/office/pages";
 import { Forms } from "./pages/Settings/forms";
 import { Lists } from "./pages/Settings/forms/pages";
@@ -108,6 +118,7 @@ export const AppRouter = () => {
                     <Route path="rooms"      element={<Rooms />} />
                     <Route path="holidays"        element={<Holidays />} />
                     <Route path="students-left-group"      element={<StudentLeft />} />
+                    <Route path="student-freezes"      element={<StudentFreezes />} />
                 </Route>
 
                 <Route path="forms"             element={<Forms />} >
@@ -149,6 +160,20 @@ export const AppRouter = () => {
                 </Route>
 
             </Route>
+        </Route>
+
+        {/* Student self-service portal — requires a STUDENT-role session
+            (see src/routes/StudentRoute.tsx); a staff session is redirected
+            away by ProtectedRoute above. */}
+        <Route element={<StudentRoute />}>
+            <Route path="/portal" element={<Navigate to="/portal/dashboard" replace />} />
+            <Route path="/portal/dashboard" element={<StudentPortalLayout><StudentPortalDashboard/></StudentPortalLayout>} />
+            <Route path="/portal/attendance" element={<StudentPortalLayout><StudentPortalAttendance/></StudentPortalLayout>} />
+            <Route path="/portal/balance" element={<StudentPortalLayout><StudentPortalBalance/></StudentPortalLayout>} />
+            <Route path="/portal/payments" element={<StudentPortalLayout><StudentPortalPayments/></StudentPortalLayout>} />
+            <Route path="/portal/groups" element={<StudentPortalLayout><StudentPortalGroups/></StudentPortalLayout>} />
+            <Route path="/portal/profile" element={<StudentPortalLayout><StudentPortalProfile/></StudentPortalLayout>} />
+            <Route path="/portal/schedule" element={<StudentPortalLayout><StudentPortalSchedule/></StudentPortalLayout>} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

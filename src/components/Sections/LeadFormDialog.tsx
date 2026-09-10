@@ -4,9 +4,11 @@ import {
   Box, TextField, Button, MenuItem, CircularProgress,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
 import { useCreateLeadMutation, useUpdateLeadMutation, useLeadForEditQuery } from "../../app/api/leadsApi";
 import { useAllLeadSourcesQuery } from "../../app/api/leadSourcesApi";
 import { useToast } from "../../Context/ToastContext";
+import type { RootState } from "../../app/store";
 
 interface Props {
   open: boolean;
@@ -19,6 +21,7 @@ export const LeadFormDialog = ({ open, onClose, sectionId, leadId }: Props) => {
   const { t } = useTranslation();
   const toast = useToast();
   const isEdit = Boolean(leadId);
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const { data: leadData, isLoading: leadLoading } = useLeadForEditQuery(leadId ?? "", { skip: !leadId || !open });
   const { data: sourcesData } = useAllLeadSourcesQuery();
@@ -29,20 +32,18 @@ export const LeadFormDialog = ({ open, onClose, sectionId, leadId }: Props) => {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [leadSourceId, setLeadSourceId] = useState("");
-  const [comment, setComment] = useState("");
+  const [sourceId, setSourceId] = useState("");
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (open) {
       if (leadData) {
         setName(leadData.data.name ?? "");
         setPhone(leadData.data.phone ?? "");
-        setEmail(leadData.data.email ?? "");
-        setLeadSourceId(leadData.data.leadSourceId ?? "");
-        setComment(leadData.data.comment ?? "");
+        setSourceId(leadData.data.sourceId ?? "");
+        setNotes(leadData.data.notes ?? "");
       } else if (!leadId) {
-        setName(""); setPhone(""); setEmail(""); setLeadSourceId(""); setComment("");
+        setName(""); setPhone(""); setSourceId(""); setNotes("");
       }
     }
   }, [open, leadData, leadId]);
@@ -51,25 +52,26 @@ export const LeadFormDialog = ({ open, onClose, sectionId, leadId }: Props) => {
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
+    // POST /leads requires phone (Swagger); PATCH doesn't, so only enforce on create.
+    if (!isEdit && !phone.trim()) return;
     try {
       if (isEdit && leadId) {
         await updateLead({
           id: leadId,
           name: name.trim(),
           phone: phone || undefined,
-          email: email || undefined,
-          leadSourceId: leadSourceId || undefined,
-          comment: comment || undefined,
+          sourceId: sourceId || undefined,
+          notes: notes || undefined,
         }).unwrap();
         toast.success(t("leadsPage.leadForm.toast.updated"));
       } else {
         await createLead({
           name: name.trim(),
-          phone: phone || undefined,
-          email: email || undefined,
+          phone: phone.trim(),
           sectionId,
-          leadSourceId: leadSourceId || undefined,
-          comment: comment || undefined,
+          sourceId: sourceId || undefined,
+          notes: notes || undefined,
+          branchId: selectedBranchId || undefined,
         }).unwrap();
         toast.success(t("leadsPage.leadForm.toast.created"));
       }
@@ -91,23 +93,22 @@ export const LeadFormDialog = ({ open, onClose, sectionId, leadId }: Props) => {
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 0.5 }}>
             <TextField size="small" label={t("leadsPage.leadForm.name")} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
             <TextField size="small" label={t("leadsPage.leadForm.phone")} value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <TextField size="small" label={t("leadsPage.leadForm.email")} value={email} onChange={(e) => setEmail(e.target.value)} />
             <TextField
               size="small" select label={t("leadsPage.leadForm.source")}
-              value={leadSourceId} onChange={(e) => setLeadSourceId(e.target.value)}
+              value={sourceId} onChange={(e) => setSourceId(e.target.value)}
             >
               <MenuItem value=""><em>{t("leadsPage.leadForm.noSource")}</em></MenuItem>
               {sources.map((s) => (
                 <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
               ))}
             </TextField>
-            <TextField size="small" label={t("leadsPage.leadForm.comment")} value={comment} onChange={(e) => setComment(e.target.value)} multiline rows={2} />
+            <TextField size="small" label={t("leadsPage.leadForm.comment")} value={notes} onChange={(e) => setNotes(e.target.value)} multiline rows={2} />
           </Box>
         )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={isSaving} sx={{ textTransform: "none" }}>{t("leadsPage.leadForm.cancel")}</Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={isSaving || !name.trim()} sx={{ textTransform: "none" }}>
+        <Button variant="contained" onClick={handleSubmit} disabled={isSaving || !name.trim() || (!isEdit && !phone.trim())} sx={{ textTransform: "none" }}>
           {isSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : t("leadsPage.leadForm.save")}
         </Button>
       </DialogActions>

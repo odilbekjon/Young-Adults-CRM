@@ -18,15 +18,28 @@ export const AddToTrialPopover = ({ leadId, anchorEl, onClose }: Props) => {
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
   const [addLeadToTrial, { isLoading }] = useAddLeadToTrialMutation();
   const [groupId, setGroupId] = useState("");
+  const [trialDate, setTrialDate] = useState("");
+  const [notes, setNotes] = useState("");
 
   const groups = groupsData?.data ?? [];
+
+  const reset = () => {
+    setGroupId("");
+    setTrialDate("");
+    setNotes("");
+  };
 
   const handleSubmit = async () => {
     if (!groupId) return;
     try {
-      await addLeadToTrial({ id: leadId, groupId }).unwrap();
+      await addLeadToTrial({
+        id: leadId,
+        groupId,
+        trialDate: trialDate || undefined,
+        notes: notes || undefined,
+      }).unwrap();
       toast.success(t("leadsPage.addToTrial.toast.success"));
-      setGroupId("");
+      reset();
       onClose();
     } catch {
       toast.error(t("leadsPage.addToTrial.toast.error"));
@@ -53,6 +66,19 @@ export const AddToTrialPopover = ({ leadId, anchorEl, onClose }: Props) => {
           <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>
         ))}
       </TextField>
+      <TextField
+        size="small" fullWidth type="date" value={trialDate}
+        onChange={(e) => setTrialDate(e.target.value)}
+        label={t("leadsPage.addToTrial.trialDate")}
+        InputLabelProps={{ shrink: true }}
+        sx={{ mb: 1 }}
+      />
+      <TextField
+        size="small" fullWidth multiline rows={2} value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder={t("leadsPage.addToTrial.notes")}
+        sx={{ mb: 1 }}
+      />
       <Button
         fullWidth variant="contained" size="small" disabled={!groupId || isLoading}
         onClick={handleSubmit} sx={{ textTransform: "none" }}

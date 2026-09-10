@@ -24,7 +24,17 @@ export const StudentHoverCard = ({
     const cardWidth = 300;
     let left = rect.right + 10;
     if (left + cardWidth > window.innerWidth - 12) left = rect.left - cardWidth - 10;
-    setPos({ top: rect.top, left });
+
+    // Clamp vertically too — anchoring to the hovered row's own top edge
+    // (as before) pushes the card off the bottom of the screen for rows
+    // near the end of a long list. cardRef isn't mounted yet on this first
+    // measurement, so a conservative estimate of its full (frozen-student)
+    // height is used for the clamp.
+    const estimatedCardHeight = cardRef.current?.offsetHeight ?? 440;
+    const maxTop = window.innerHeight - estimatedCardHeight - 12;
+    const top = Math.max(12, Math.min(rect.top, maxTop));
+
+    setPos({ top, left });
   }, [anchorEl, student]);
 
   useEffect(() => {
@@ -43,14 +53,6 @@ export const StudentHoverCard = ({
 
   const isDebtor = student.balance !== undefined && student.balance < 0;
   const isFrozen = !student.active;
-  const today = new Date();
-  const dateStr = `${today.getDate().toString().padStart(2, "0")}.${(today.getMonth() + 1).toString().padStart(2, "0")}.${today.getFullYear()}`;
-  const mockPayments = isFrozen
-    ? [
-        { date: "15.05.2026", amount: 500000, label: "Cash" },
-        { date: "01.04.2026", amount: 500000, label: "Payme" },
-      ]
-    : [];
 
   return (
     <div
@@ -124,26 +126,6 @@ export const StudentHoverCard = ({
             )}
           </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: "#aaa", marginBottom: 8, fontWeight: 600 }}>{t("singleGroup.studentHoverCard.recentPayments")}</div>
-            {mockPayments.length > 0 ? (
-              mockPayments.map((p, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    fontSize: 12, padding: "6px 0",
-                    borderBottom: idx < mockPayments.length - 1 ? "1px solid #f0f0f0" : "none",
-                  }}
-                >
-                  <span style={{ color: "#555" }}>{p.date} · {p.label}</span>
-                  <span style={{ fontWeight: 600, color: "#2e7d32" }}>+{p.amount.toLocaleString()} UZS</span>
-                </div>
-              ))
-            ) : (
-              <span style={{ fontSize: 12, color: "#bbb" }}>{t("singleGroup.studentHoverCard.noPayments")}</span>
-            )}
-          </div>
         </>
       )}
 
@@ -179,14 +161,26 @@ export const StudentHoverCard = ({
 
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.addedAt")}</div>
-        <div style={{ fontSize: 13, color: "#1a1a1a" }}>{student.addedAt || dateStr}</div>
+        <div style={{ fontSize: 13, color: "#1a1a1a" }}>{student.addedAt || "—"}</div>
       </div>
 
       <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
 
-      <div style={{ marginBottom: 14 }}>
+      <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.activatedAt")}</div>
-        <div style={{ fontSize: 13, color: "#1a1a1a" }}>{student.activatedAt || dateStr}</div>
+        <div style={{ fontSize: 13, color: "#1a1a1a" }}>{student.activatedAt || "—"}</div>
+      </div>
+
+      <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
+
+      {/* Coins aren't tracked by the backend anywhere in this app yet — shown
+          as a static 0 to match the reference design rather than a fetched
+          value that doesn't exist. */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.allCoins")}</div>
+        <div style={{ fontSize: 13, color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
+          <span aria-hidden>🪙</span> 0
+        </div>
       </div>
 
       <div style={{ textAlign: "right" }}>

@@ -12,7 +12,7 @@ export const Leads = () => {
   return (
     <Box
       sx={{
-        backgroundColor: "#f5f7fb",
+        backgroundColor: "background.default",
         display: "flex",
         flexDirection: "column",
       }}

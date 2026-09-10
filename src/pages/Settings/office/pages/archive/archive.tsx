@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
   Button,
   Checkbox,
+  CircularProgress,
   Dialog,
+  DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   IconButton,
   MenuItem,
@@ -22,69 +26,40 @@ import {
   MdCalendarToday,
   MdArrowBack,
 } from "react-icons/md";
+import { useAllArchivesQuery } from "../../../../../app/api/archivesApi/archivesApi";
+import type { ArchiveRole } from "../../../../../app/api/archivesApi/types";
+import {
+  useAllReasonsQuery,
+  useReasonsSelectQuery,
+  useLazyReasonForEditQuery,
+  useCreateReasonMutation,
+  useUpdateReasonMutation,
+  useToggleReasonStatusMutation,
+  useDeleteReasonMutation,
+} from "../../../../../app/api/reasonsApi";
+import type { Reason } from "../../../../../app/api/reasonsApi/types";
+import { useToast } from "../../../../../Context/ToastContext";
+import { extractApiError } from "../../../../../utils";
+import type { RootState } from "../../../../../app/store";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-interface ArchiveRecord {
-  id: number;
-  name: string;
-  campus: string;
-  balance: number;
-  phone: string;
-  role: string;
-  reason: string;
-  comment: string;
-  archivedBy: string;
-  archivedAt: string;
-}
-
-interface ArchiveReason {
-  id: number;
-  name: string;
-}
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const MOCK_ARCHIVE: ArchiveRecord[] = Array.from({ length: 35 }, (_, i) => ({
-  id: i + 1,
-  name: [
-    "Mamaraimov Og'abek",
-    "Matiyev Ilyos",
-    "Nazarov Fayzullo",
-    "Tojiyeva Tursunoy To'ra qizi",
-    "Jumayeva Shaxlo",
-    "Abdullayev Sardor",
-    "G'iyomova Nilufar",
-    "Karimov Jasur",
-    "Toshmatov Bobur",
-    "Yusupova Malika",
-  ][i % 10],
-  campus: ["YA IELTS Campus", "YA Grammar Campus"][i % 2],
-  balance: [-399999.92, -1440000, -400000, 1000.38, -538.47, 0, -384.62, 500, -200, 1500][i % 10],
-  phone: ["930752906", "972270051", "881550081", "937093073", "979008387"][i % 5],
-  role: "Student",
-  reason: ["", "Can't handle", "Finished", "", "Finished", "", "Finished"][i % 7],
-  comment: ["", "", "", "Part time ishlaydi ulgurmayapti to'xt atdi", "", "", "cefr topshirgan"][i % 7],
-  archivedBy: ["Ugilbeka Abdullaeva", "Maksuda Abraykulova", "Iskandar Tojiyev"][i % 3],
-  archivedAt: ["20.05.2026 - 17:38", "20.05.2026 - 16:09", "19.05.2026 - 17:33", "19.05.2026 - 16:58"][i % 4],
-}));
-
-const INITIAL_REASONS: ArchiveReason[] = [
-  { id: 793, name: "Moving Away" },
-  { id: 794, name: "Can't Afford" },
-  { id: 795, name: "Not Satisfied" },
-  { id: 796, name: "Can't handle" },
-  { id: 797, name: "Failed an Exam" },
-  { id: 798, name: "Finished" },
-  { id: 830, name: "Changed The Group" },
-  { id: 1575, name: "No contact" },
-];
+const SEARCH_DEBOUNCE_MS = 350;
 
 const PAGE_SIZE = 10;
+
+// The reasons view has no pagination control in the design, so the whole
+// (small) reference list is requested at once — GET /reasons would otherwise
+// fall back to its documented default of limit=10 and silently truncate.
+const REASONS_LIMIT = 200;
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const Archive = () => {
   const { t } = useTranslation();
+  const toast = useToast();
+  // POST /reasons requires a concrete branchId query param — the real branch
+  // UUID lives in the Redux branch slice (the same source baseApi uses for the
+  // x-branch-id header); BranchContext only carries display labels.
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const [view, setView] = useState<"archive" | "reasons">("archive");
-  const [reasons, setReasons] = useState<ArchiveReason[]>(INITIAL_REASONS);
 
   // Archive filters & selection
   const [search, setSearch] = useState("");
@@ -92,29 +67,59 @@ export const Archive = () => {
   const [filterReason, setFilterReason] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [selected, setSelected] = useState<number[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
   const [page, setPage] = useState(1);
 
   // Reasons modal
   const [addOpen, setAddOpen] = useState(false);
   const [newReason, setNewReason] = useState("");
-  const [editId, setEditId] = useState<number | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editOpen, setEditOpen] = useState(false);
+  const [reasonError, setReasonError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Reason | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // ── Filter logic ────────────────────────────────────────────────────────────
-  const filtered = MOCK_ARCHIVE.filter((r) => {
-    const matchSearch =
-      !search ||
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.phone.includes(search);
-    const matchRole = !filterRole || r.role === filterRole;
-    const matchReason = !filterReason || r.reason === filterReason;
-    return matchSearch && matchRole && matchReason;
+  // ── Server-side query ───────────────────────────────────────────────────────
+  // Debounced the same way as Header's student search bar (350ms) so we don't
+  // fire a request on every keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const handle = setTimeout(() => setDebouncedSearch(search.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [search]);
+
+  const { data, isLoading, isError } = useAllArchivesQuery({
+    page,
+    limit: PAGE_SIZE,
+    search: debouncedSearch || undefined,
+    role: (filterRole as ArchiveRole) || undefined,
+    reasonId: filterReason || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
   });
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageData = data?.data ?? [];
+  const total = data?.meta?.total ?? pageData.length;
+  const totalPages = data?.meta?.totalPages ?? Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // ── Reasons ─────────────────────────────────────────────────────────────────
+  // Full list (ACTIVE + INACTIVE) for the management table…
+  const {
+    data: reasonsData,
+    isLoading: reasonsLoading,
+    isError: reasonsError,
+  } = useAllReasonsQuery({ page: 1, limit: REASONS_LIMIT });
+  // …and the active-only shortlist for the archive "filter by reason" dropdown.
+  const { data: reasonOptions } = useReasonsSelectQuery({ page: 1, limit: REASONS_LIMIT });
+
+  const [fetchReasonForEdit, { isFetching: isLoadingReasonForEdit }] = useLazyReasonForEditQuery();
+  const [createReason, { isLoading: isCreatingReason }] = useCreateReasonMutation();
+  const [updateReason, { isLoading: isUpdatingReason }] = useUpdateReasonMutation();
+  const [toggleReasonStatus, { isLoading: isTogglingReason }] = useToggleReasonStatusMutation();
+  const [deleteReason, { isLoading: isDeletingReason }] = useDeleteReasonMutation();
+
+  const reasons = reasonsData?.data ?? [];
 
   // ── Selection ───────────────────────────────────────────────────────────────
   const allSelected = pageData.length > 0 && pageData.every((r) => selected.includes(r.id));
@@ -122,28 +127,90 @@ export const Archive = () => {
     if (allSelected) setSelected((s) => s.filter((id) => !pageData.find((r) => r.id === id)));
     else setSelected((s) => [...new Set([...s, ...pageData.map((r) => r.id)])]);
   };
-  const toggleOne = (id: number) =>
+  const toggleOne = (id: string) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   // ── Reason CRUD ─────────────────────────────────────────────────────────────
-  const handleAddReason = () => {
-    if (!newReason.trim()) return;
-    setReasons((prev) => [...prev, { id: Date.now(), name: newReason.trim() }]);
-    setNewReason("");
-    setAddOpen(false);
+  const reportReasonError = (err: unknown, genericKey: string) => {
+    const detail = extractApiError(err);
+    const generic = t(genericKey);
+    const message = detail ? `${generic}: ${detail}` : generic;
+    toast.error(message);
+    return message;
   };
 
-  const handleEditReason = () => {
-    setReasons((prev) => prev.map((r) => (r.id === editId ? { ...r, name: editName } : r)));
-    setEditOpen(false);
+  const handleAddReason = async () => {
+    if (!newReason.trim() || isCreatingReason) return;
+    // Swagger marks branchId as a required query param on POST /reasons, and
+    // "all branches" has no single id to send — ask for a concrete branch
+    // instead of inventing one.
+    if (!selectedBranchId) {
+      setReasonError(t("settings.office.archive.reasons.errors.branchRequired"));
+      return;
+    }
+    setReasonError(null);
+    try {
+      await createReason({ branchId: selectedBranchId, name: newReason.trim() }).unwrap();
+      toast.success(t("settings.office.archive.reasons.toast.created"));
+      setNewReason("");
+      setAddOpen(false);
+    } catch (err) {
+      setReasonError(reportReasonError(err, "settings.office.archive.reasons.errors.save"));
+    }
   };
 
-  const handleDeleteReason = (id: number) =>
-    setReasons((prev) => prev.filter((r) => r.id !== id));
+  // GET /reasons/{id}/for-edit — the row's values fill the form immediately,
+  // then the dedicated edit endpoint refreshes them.
+  const handleOpenEditReason = async (reason: Reason) => {
+    setEditId(reason.id);
+    setEditName(reason.name);
+    setReasonError(null);
+    setEditOpen(true);
+    try {
+      const detail = await fetchReasonForEdit(reason.id).unwrap();
+      if (detail?.data) setEditName(detail.data.name ?? "");
+    } catch {
+      // The row already provided a usable value — keep the form open.
+    }
+  };
+
+  const handleEditReason = async () => {
+    if (!editId || !editName.trim() || isUpdatingReason) return;
+    setReasonError(null);
+    try {
+      await updateReason({ id: editId, name: editName.trim() }).unwrap();
+      toast.success(t("settings.office.archive.reasons.toast.updated"));
+      setEditOpen(false);
+    } catch (err) {
+      setReasonError(reportReasonError(err, "settings.office.archive.reasons.errors.save"));
+    }
+  };
+
+  const handleToggleReasonStatus = async (id: string) => {
+    if (isTogglingReason) return;
+    try {
+      await toggleReasonStatus(id).unwrap();
+      toast.success(t("settings.office.archive.reasons.toast.statusToggled"));
+    } catch (err) {
+      reportReasonError(err, "settings.office.archive.reasons.errors.toggle");
+    }
+  };
+
+  const handleDeleteReason = async () => {
+    if (!deleteTarget) return;
+    setDeleteError(null);
+    try {
+      await deleteReason(deleteTarget.id).unwrap();
+      toast.success(t("settings.office.archive.reasons.toast.deleted"));
+      setDeleteTarget(null);
+    } catch (err) {
+      setDeleteError(reportReasonError(err, "settings.office.archive.reasons.deleteConfirm.error"));
+    }
+  };
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
-  const balanceColor = (b: number) =>
-    b > 0 ? "text-green-600" : b < 0 ? "text-red-500" : "text-gray-500";
+  const balanceColor = (b: number | null | undefined) =>
+    !b ? "text-gray-500" : b > 0 ? "text-green-600" : "text-red-500";
 
   const inputSx = {
     "& .MuiOutlinedInput-root": {
@@ -179,7 +246,7 @@ export const Archive = () => {
           </div>
           <Button
             variant="contained"
-            onClick={() => { setNewReason(""); setAddOpen(true); }}
+            onClick={() => { setNewReason(""); setReasonError(null); setAddOpen(true); }}
             sx={{
               backgroundColor: "#1e3a5f",
               "&:hover": { backgroundColor: "#162c47" },
@@ -205,34 +272,70 @@ export const Archive = () => {
               </tr>
             </thead>
             <tbody>
-              {reasons.map((r) => (
-                <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-gray-600">{r.id}</td>
-                  <td className="px-6 py-4 text-gray-800">{r.name}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <IconButton
-                        size="small"
-                        sx={{ color: "#6b7280" }}
-                        onClick={() => {
-                          setEditId(r.id);
-                          setEditName(r.name);
-                          setEditOpen(true);
-                        }}
-                      >
-                        <MdEdit size={16} />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        sx={{ color: "#ef5350" }}
-                        onClick={() => handleDeleteReason(r.id)}
-                      >
-                        <MdDelete size={16} />
-                      </IconButton>
-                    </div>
+              {reasonsLoading ? (
+                <tr>
+                  <td colSpan={3} className="text-center py-12">
+                    <CircularProgress size={26} />
                   </td>
                 </tr>
-              ))}
+              ) : reasonsError ? (
+                <tr>
+                  <td colSpan={3} className="text-center py-12 text-red-500 text-sm">
+                    {t("settings.office.archive.reasons.loadError")}
+                  </td>
+                </tr>
+              ) : reasons.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="text-center py-12 text-gray-400">
+                    {t("settings.office.archive.reasons.noData")}
+                  </td>
+                </tr>
+              ) : (
+                reasons.map((r) => {
+                  const isActive = r.status !== "INACTIVE";
+                  return (
+                    <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 text-gray-600">{r.id.slice(0, 8)}</td>
+                      <td className="px-6 py-4 text-gray-800">{r.name}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleReasonStatus(r.id)}
+                            disabled={isTogglingReason}
+                            title={t("settings.office.archive.reasons.status.toggle")}
+                            className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors disabled:opacity-60 ${
+                              isActive
+                                ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                            }`}
+                          >
+                            {isActive
+                              ? t("settings.office.archive.reasons.status.active")
+                              : t("settings.office.archive.reasons.status.inactive")}
+                          </button>
+                          <IconButton
+                            size="small"
+                            sx={{ color: "#6b7280" }}
+                            onClick={() => handleOpenEditReason(r)}
+                            aria-label={t("settings.office.archive.reasons.edit")}
+                          >
+                            <MdEdit size={16} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            sx={{ color: "#ef5350" }}
+                            onClick={() => { setDeleteError(null); setDeleteTarget(r); }}
+                            aria-label={t("settings.office.archive.reasons.delete")}
+                          >
+                            <MdDelete size={16} />
+                          </IconButton>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -274,13 +377,19 @@ export const Archive = () => {
               size="small"
               value={newReason}
               onChange={(e) => setNewReason(e.target.value)}
-              sx={{ ...inputSx, mb: 2 }}
+              sx={{ ...inputSx, mb: reasonError ? 1 : 2 }}
               onKeyDown={(e) => e.key === "Enter" && handleAddReason()}
             />
+            {reasonError && (
+              <Typography sx={{ mb: 2, color: "#ef5350", fontSize: "0.8125rem" }}>
+                {reasonError}
+              </Typography>
+            )}
             <Button
               variant="contained"
               onClick={handleAddReason}
-              disabled={!newReason.trim()}
+              disabled={!newReason.trim() || isCreatingReason}
+              startIcon={isCreatingReason ? <CircularProgress size={16} color="inherit" /> : undefined}
               sx={{
                 backgroundColor: "#29b6f6",
                 "&:hover": { backgroundColor: "#0288d1" },
@@ -330,14 +439,24 @@ export const Archive = () => {
               size="small"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              sx={{ ...inputSx, mb: 2 }}
+              disabled={isLoadingReasonForEdit}
+              sx={{ ...inputSx, mb: reasonError ? 1 : 2 }}
+              onKeyDown={(e) => e.key === "Enter" && handleEditReason()}
             />
+            {reasonError && (
+              <Typography sx={{ mb: 2, color: "#ef5350", fontSize: "0.8125rem" }}>
+                {reasonError}
+              </Typography>
+            )}
             <Button
               variant="contained"
               onClick={handleEditReason}
+              disabled={!editName.trim() || isUpdatingReason || isLoadingReasonForEdit}
+              startIcon={isUpdatingReason ? <CircularProgress size={16} color="inherit" /> : undefined}
               sx={{
                 backgroundColor: "#29b6f6",
                 "&:hover": { backgroundColor: "#0288d1" },
+                "&.Mui-disabled": { backgroundColor: "#bae6fd", color: "#fff" },
                 textTransform: "none",
                 fontWeight: 600,
                 borderRadius: "6px",
@@ -348,6 +467,47 @@ export const Archive = () => {
               {t("settings.office.archive.reasons.save")}
             </Button>
           </DialogContent>
+        </Dialog>
+
+        {/* Delete confirmation */}
+        <Dialog
+          open={!!deleteTarget}
+          onClose={() => { setDeleteTarget(null); setDeleteError(null); }}
+          PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+        >
+          <DialogTitle sx={{ fontWeight: 600 }}>
+            {t("settings.office.archive.reasons.deleteConfirm.title")}
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              {t("settings.office.archive.reasons.deleteConfirm.message", { name: deleteTarget?.name ?? "" })}
+            </DialogContentText>
+            {deleteError && (
+              <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
+                {deleteError}
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+            <Button
+              onClick={() => { setDeleteTarget(null); setDeleteError(null); }}
+              variant="outlined"
+              disabled={isDeletingReason}
+              sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+            >
+              {t("settings.office.archive.reasons.deleteConfirm.cancel")}
+            </Button>
+            <Button
+              onClick={handleDeleteReason}
+              variant="contained"
+              color="error"
+              disabled={isDeletingReason}
+              startIcon={isDeletingReason ? <CircularProgress size={16} color="inherit" /> : undefined}
+              sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
+            >
+              {t("settings.office.archive.reasons.delete")}
+            </Button>
+          </DialogActions>
         </Dialog>
       </div>
     );
@@ -365,7 +525,7 @@ export const Archive = () => {
             {t("settings.office.archive.title")}
           </Typography>
           <Typography variant="body2" sx={{ color: "#6b7280" }}>
-            {t("settings.office.archive.quantity", { count: filtered.length })}
+            {t("settings.office.archive.quantity", { count: total })}
           </Typography>
         </div>
         <Button
@@ -403,8 +563,8 @@ export const Archive = () => {
           sx={{ ...inputSx["& .MuiOutlinedInput-root"], width: 160, height: 38, fontSize: "0.82rem", borderRadius: "6px", backgroundColor: "#fff", "& fieldset": { borderColor: "#e5e7eb" } }}
         >
           <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.archive.filters.filterByRole")}</em></MenuItem>
-          <MenuItem value="Student">{t("settings.office.archive.filters.student")}</MenuItem>
-          <MenuItem value="Teacher">{t("settings.office.archive.filters.teacher")}</MenuItem>
+          <MenuItem value="STUDENT">{t("settings.office.archive.filters.student")}</MenuItem>
+          <MenuItem value="TEACHER">{t("settings.office.archive.filters.teacher")}</MenuItem>
         </Select>
 
         <Select
@@ -415,8 +575,8 @@ export const Archive = () => {
           sx={{ width: 180, height: 38, fontSize: "0.82rem", borderRadius: "6px", backgroundColor: "#fff", "& fieldset": { borderColor: "#e5e7eb" } }}
         >
           <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.archive.filters.filterByReason")}</em></MenuItem>
-          {reasons.map((r) => (
-            <MenuItem key={r.id} value={r.name}>{r.name}</MenuItem>
+          {(reasonOptions ?? []).map((r) => (
+            <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
           ))}
         </Select>
 
@@ -424,7 +584,7 @@ export const Archive = () => {
           size="small"
           type="date"
           value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
+          onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
           InputProps={{ startAdornment: <MdCalendarToday size={14} className="mr-1 text-gray-400" /> }}
           inputProps={{ placeholder: t("settings.office.archive.filters.startDate") }}
           sx={{ ...inputSx, width: 160 }}
@@ -434,7 +594,7 @@ export const Archive = () => {
           size="small"
           type="date"
           value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
+          onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
           InputProps={{ startAdornment: <MdCalendarToday size={14} className="mr-1 text-gray-400" /> }}
           sx={{ ...inputSx, width: 160 }}
         />
@@ -481,7 +641,19 @@ export const Archive = () => {
             </tr>
           </thead>
           <tbody>
-            {pageData.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan={8} className="text-center py-12">
+                  <CircularProgress size={26} />
+                </td>
+              </tr>
+            ) : isError ? (
+              <tr>
+                <td colSpan={8} className="text-center py-12 text-red-500 text-sm">
+                  {t("settings.office.archive.loadError")}
+                </td>
+              </tr>
+            ) : pageData.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center py-12 text-gray-400">
                   {t("settings.office.archive.noData")}
@@ -502,17 +674,19 @@ export const Archive = () => {
                     <div className="font-medium text-blue-500 cursor-pointer hover:underline text-sm">
                       {r.name}
                     </div>
-                    <div className="text-xs text-gray-400 mt-0.5">{r.campus}</div>
+                    {r.branch?.name && (
+                      <div className="text-xs text-gray-400 mt-0.5">{r.branch.name}</div>
+                    )}
                     <div className={`text-xs mt-0.5 font-medium ${balanceColor(r.balance)}`}>
-                      {t("settings.office.archive.balance")}: {r.balance.toLocaleString()}
+                      {t("settings.office.archive.balance")}: {(r.balance ?? 0).toLocaleString()}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{r.phone}</td>
                   <td className="px-4 py-3 text-gray-600">{r.role}</td>
-                  <td className="px-4 py-3 text-gray-500 text-sm">{r.reason}</td>
+                  <td className="px-4 py-3 text-gray-500 text-sm">{r.reason?.name}</td>
                   <td className="px-4 py-3 text-gray-500 text-sm max-w-[180px]">{r.comment}</td>
                   <td className="px-4 py-3">
-                    <div className="text-gray-600 text-sm">{r.archivedBy}</div>
+                    <div className="text-gray-600 text-sm">{r.archivedBy?.name}</div>
                     <div className="text-gray-400 text-xs">{r.archivedAt}</div>
                   </td>
                   <td className="px-4 py-3">

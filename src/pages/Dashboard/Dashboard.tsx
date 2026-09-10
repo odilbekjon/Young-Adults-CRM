@@ -88,11 +88,11 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <Box sx={{
-      background: "#fff", border: "1px solid #e5e7eb",
+      background: "var(--color-surface)", border: "1px solid var(--color-border)",
       borderRadius: 2, px: 2.2, py: 1.6,
       boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
     }}>
-      <Typography sx={{ fontSize: 12, color: "#6b7280", fontWeight: 700 }}>{label}</Typography>
+      <Typography sx={{ fontSize: 12, color: "var(--color-text-secondary)", fontWeight: 700 }}>{label}</Typography>
       <Typography sx={{ fontSize: 15, fontWeight: 800, color: "#f97316", mt: 0.3 }}>
         {formatChartValue(payload[0].value, t("dashboard.chart.currency"))}
       </Typography>
@@ -155,7 +155,7 @@ export const Dashboard = () => {
   return (
     <Box sx={{
       minHeight: "100vh",
-      backgroundColor: "#f8fafc",
+      backgroundColor: "var(--color-bg-page)",
       pt: 3, px: { xs: 2, md: 4 }, pb: 6,
     }}>
 
@@ -178,8 +178,8 @@ export const Dashboard = () => {
               sx={{
                 px: 1.5, py: 2,
                 borderRadius: "12px",
-                border: "1px solid #f0f0f0",
-                background: "#fff",
+                border: "1px solid var(--color-border)",
+                background: "var(--color-surface)",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -198,13 +198,13 @@ export const Dashboard = () => {
             >
               <Box sx={{ color: "#f97316", mb: 0.25 }}>{icon}</Box>
               <Typography sx={{
-                fontSize: 15, color: "#6b7280", lineHeight: 1.3,
+                fontSize: 15, color: "var(--color-text-secondary)", lineHeight: 1.3,
                  minHeight: 32, display: "flex",
                 alignItems: "center", justifyContent: "center",
               }}>
                 {t(labelKey)}
               </Typography>
-              <Typography sx={{ fontSize: 32,  color: "#022081", lineHeight: 1 }}>
+              <Typography sx={{ fontSize: 32,  color: "var(--color-primary)", lineHeight: 1 }}>
                 {liveStatValues[key] ?? value}
               </Typography>
             </Paper>
@@ -217,21 +217,21 @@ export const Dashboard = () => {
           schedule tab (Odd/Even/Other) is selected below
       ════════════════════════════════════════════════════════════════ */}
       <Paper elevation={0} sx={{
-        borderRadius: "16px", border: "1px solid #f0f0f0",
-        p: 3, mb: 3, background: "#fff",
+        borderRadius: "16px", border: "1px solid var(--color-border)",
+        p: 3, mb: 3, background: "var(--color-surface)",
       }}>
         <Box height={230}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={MONTHLY_REVENUE} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
               <XAxis
                 dataKey="month"
-                tick={{ fontSize: 11, fill: "#6b7280" }}
+                tick={{ fontSize: 11, fill: "var(--color-text-secondary)" }}
                 axisLine={false} tickLine={false}
                 interval={0}
               />
               <YAxis
-                tick={{ fontSize: 12, fill: "#6b7280" }}
+                tick={{ fontSize: 12, fill: "var(--color-text-secondary)" }}
                 axisLine={false} tickLine={false}
                 tickFormatter={(v) => formatChartValue(v as number, t("dashboard.chart.currency"))}
                 width={130}
@@ -240,14 +240,14 @@ export const Dashboard = () => {
               <Line
                 type="monotone" dataKey="value"
                 stroke="#f97316" strokeWidth={2.5}
-                dot={{ r: 4, fill: "#fff", stroke: "#f97316", strokeWidth: 2 }}
+                dot={{ r: 4, fill: "var(--color-surface)", stroke: "#f97316", strokeWidth: 2 }}
                 activeDot={{ r: 6, fill: "#f97316" }}
                 isAnimationActive
               />
               <ReferenceDot
                 x={PEAK_POINT.month}
                 y={PEAK_POINT.value}
-                r={5} fill="#f97316" stroke="#fff" strokeWidth={2}
+                r={5} fill="#f97316" stroke="var(--color-surface)" strokeWidth={2}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -264,24 +264,24 @@ export const Dashboard = () => {
         "@media(max-width:960px)": { gridTemplateColumns: "1fr" },
       }}>
         {/* Attendance */}
-        <Paper elevation={0} sx={{ borderRadius: "16px", border: "1px solid #f0f0f0", background: "#fff", p: 2.5 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#111827", mb: 1.5 }}>
+        <Paper elevation={0} sx={{ borderRadius: "16px", border: "1px solid var(--color-border)", background: "var(--color-surface)", p: 2.5 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 14, color: "var(--color-text-primary)", mb: 1.5 }}>
             {t("dashboard.attendance.title")}
           </Typography>
           {attendanceLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
           ) : attendanceError ? (
-            <Typography sx={{ color: "#e53935", fontSize: 12 }}>{t("dashboard.loadError")}</Typography>
+            <Typography sx={{ color: "var(--color-danger)", fontSize: 12 }}>{t("dashboard.loadError")}</Typography>
           ) : (
             <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
               <Typography sx={{ fontSize: 32, fontWeight: 700, color: "#f97316" }}>
                 {attendance?.percentage ?? 0}%
               </Typography>
               <Box>
-                <Typography sx={{ fontSize: 12, color: "#6b7280" }}>
+                <Typography sx={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
                   {t("dashboard.attendance.present")}: {attendance?.present ?? 0}
                 </Typography>
-                <Typography sx={{ fontSize: 12, color: "#6b7280" }}>
+                <Typography sx={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
                   {t("dashboard.attendance.absent")}: {attendance?.absent ?? 0}
                 </Typography>
               </Box>
@@ -290,22 +290,22 @@ export const Dashboard = () => {
         </Paper>
 
         {/* Recent activities */}
-        <Paper elevation={0} sx={{ borderRadius: "16px", border: "1px solid #f0f0f0", background: "#fff", p: 2.5, maxHeight: 220, overflowY: "auto" }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#111827", mb: 1.5 }}>
+        <Paper elevation={0} sx={{ borderRadius: "16px", border: "1px solid var(--color-border)", background: "var(--color-surface)", p: 2.5, maxHeight: 220, overflowY: "auto" }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 14, color: "var(--color-text-primary)", mb: 1.5 }}>
             {t("dashboard.recentActivities.title")}
           </Typography>
           {activitiesLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
           ) : activitiesError ? (
-            <Typography sx={{ color: "#e53935", fontSize: 12 }}>{t("dashboard.loadError")}</Typography>
+            <Typography sx={{ color: "var(--color-danger)", fontSize: 12 }}>{t("dashboard.loadError")}</Typography>
           ) : activities.length === 0 ? (
-            <Typography sx={{ fontSize: 12, color: "#9ca3af" }}>{t("dashboard.recentActivities.emptyState")}</Typography>
+            <Typography sx={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("dashboard.recentActivities.emptyState")}</Typography>
           ) : (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {activities.map((a, i) => (
-                <Box key={i} sx={{ borderBottom: "1px solid #f9fafb", pb: 0.75 }}>
-                  <Typography sx={{ fontSize: 12.5, color: "#374151" }}>{a.message}</Typography>
-                  <Typography sx={{ fontSize: 10.5, color: "#9ca3af" }}>{new Date(a.date).toLocaleString()}</Typography>
+                <Box key={i} sx={{ borderBottom: "1px solid var(--color-border-subtle)", pb: 0.75 }}>
+                  <Typography sx={{ fontSize: 12.5, color: "var(--color-text-secondary)" }}>{a.message}</Typography>
+                  <Typography sx={{ fontSize: 10.5, color: "var(--color-text-muted)" }}>{new Date(a.date).toLocaleString()}</Typography>
                 </Box>
               ))}
             </Box>
@@ -313,29 +313,29 @@ export const Dashboard = () => {
         </Paper>
 
         {/* Teacher performance */}
-        <Paper elevation={0} sx={{ borderRadius: "16px", border: "1px solid #f0f0f0", background: "#fff", p: 2.5, maxHeight: 220, overflowY: "auto" }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#111827", mb: 1.5 }}>
+        <Paper elevation={0} sx={{ borderRadius: "16px", border: "1px solid var(--color-border)", background: "var(--color-surface)", p: 2.5, maxHeight: 220, overflowY: "auto" }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 14, color: "var(--color-text-primary)", mb: 1.5 }}>
             {t("dashboard.teacherPerformance.title")}
           </Typography>
           {teacherPerfLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
           ) : teacherPerfError ? (
-            <Typography sx={{ color: "#e53935", fontSize: 12 }}>{t("dashboard.loadError")}</Typography>
+            <Typography sx={{ color: "var(--color-danger)", fontSize: 12 }}>{t("dashboard.loadError")}</Typography>
           ) : teacherPerf.length === 0 ? (
-            <Typography sx={{ fontSize: 12, color: "#9ca3af" }}>{t("dashboard.teacherPerformance.emptyState")}</Typography>
+            <Typography sx={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("dashboard.teacherPerformance.emptyState")}</Typography>
           ) : (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {teacherPerf.map((tp) => (
                 <Box key={tp.id} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
-                  <Typography sx={{ fontSize: 12.5, color: "#374151" }}>{tp.name}</Typography>
+                  <Typography sx={{ fontSize: 12.5, color: "var(--color-text-secondary)" }}>{tp.name}</Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <Typography sx={{ fontSize: 10.5, color: "#9ca3af" }}>
+                    <Typography sx={{ fontSize: 10.5, color: "var(--color-text-muted)" }}>
                       {t("dashboard.teacherPerformance.activityScore")}: {tp.activityScore}
                     </Typography>
                     <Chip
                       label={`${t("dashboard.teacherPerformance.activeGroups")}: ${tp.activeGroups}`}
                       size="small"
-                      sx={{ fontSize: 10.5, height: 20, bgcolor: "#fff7ed", color: "#f97316" }}
+                      sx={{ fontSize: 10.5, height: 20, bgcolor: "var(--color-accent-surface)", color: "#f97316" }}
                     />
                   </Box>
                 </Box>
@@ -349,8 +349,8 @@ export const Dashboard = () => {
           SCHEDULE
       ════════════════════════════════════════════════════════════════ */}
       <Paper elevation={0} sx={{
-        borderRadius: "16px", border: "1px solid #f0f0f0",
-        background: "#fff", overflow: "hidden",
+        borderRadius: "16px", border: "1px solid var(--color-border)",
+        background: "var(--color-surface)", overflow: "hidden",
       }}>
 
         {/* Schedule header */}
@@ -358,7 +358,7 @@ export const Dashboard = () => {
           display: "flex", alignItems: "center",
           justifyContent: "space-between",
           px: 3, py: 1.5,
-          borderBottom: "1px solid #f3f4f6",
+          borderBottom: "1px solid var(--color-border)",
           flexWrap: "wrap", gap: 1,
         }}>
           {/* Tabs */}
@@ -371,7 +371,7 @@ export const Dashboard = () => {
                   background: "none", border: "none",
                   cursor: "pointer", padding: "6px 14px",
                   fontSize: 13, fontWeight: 600,
-                  color: tab === t ? "#f97316" : "#9ca3af",
+                  color: tab === t ? "#f97316" : "var(--color-text-muted)",
                   borderBottom: tab === t ? "2px solid #f97316" : "2px solid transparent",
                   transition: "all 0.15s",
                 }}
@@ -382,7 +382,7 @@ export const Dashboard = () => {
           </Box>
 
           {/* Title */}
-          <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 15, color: "var(--color-text-primary)" }}>
             {t("dashboard.schedule.title")}
           </Typography>
 
@@ -392,11 +392,11 @@ export const Dashboard = () => {
               onClick={() => setOrientation("horizontal")}
               title={t("dashboard.schedule.horizontalViewTitle")}
               style={{
-                background: orientation === "horizontal" ? "#fff7ed" : "transparent",
-                border: orientation === "horizontal" ? "1px solid #f97316" : "1px solid #e5e7eb",
+                background: orientation === "horizontal" ? "var(--color-accent-surface)" : "transparent",
+                border: orientation === "horizontal" ? "1px solid #f97316" : "1px solid var(--color-border)",
                 borderRadius: 8, padding: "4px 10px",
                 cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
-                color: orientation === "horizontal" ? "#f97316" : "#9ca3af",
+                color: orientation === "horizontal" ? "#f97316" : "var(--color-text-muted)",
                 fontSize: 12, fontWeight: 600, transition: "all 0.15s",
               }}
             >
@@ -407,11 +407,11 @@ export const Dashboard = () => {
               onClick={() => setOrientation("vertical")}
               title={t("dashboard.schedule.verticalViewTitle")}
               style={{
-                background: orientation === "vertical" ? "#fff7ed" : "transparent",
-                border: orientation === "vertical" ? "1px solid #f97316" : "1px solid #e5e7eb",
+                background: orientation === "vertical" ? "var(--color-accent-surface)" : "transparent",
+                border: orientation === "vertical" ? "1px solid #f97316" : "1px solid var(--color-border)",
                 borderRadius: 8, padding: "4px 10px",
                 cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
-                color: orientation === "vertical" ? "#f97316" : "#9ca3af",
+                color: orientation === "vertical" ? "#f97316" : "var(--color-text-muted)",
                 fontSize: 12, fontWeight: 600, transition: "all 0.15s",
               }}
             >
@@ -429,7 +429,7 @@ export const Dashboard = () => {
 
         {!scheduleLoading && scheduleError && (
           <Box sx={{ py: 6, textAlign: "center" }}>
-            <Typography sx={{ color: "#e53935", fontSize: 13 }}>
+            <Typography sx={{ color: "var(--color-danger)", fontSize: 13 }}>
               {t("dashboard.loadError")}
             </Typography>
           </Box>
@@ -444,10 +444,10 @@ export const Dashboard = () => {
               <Box sx={{
                 display: "grid",
                 gridTemplateColumns: "110px 1fr",
-                borderBottom: "1px solid #f3f4f6",
-                background: "#fafafa",
+                borderBottom: "1px solid var(--color-border)",
+                background: "var(--color-surface-alt)",
               }}>
-                <Box sx={{ borderRight: "1px solid #f3f4f6", py: 1 }} />
+                <Box sx={{ borderRight: "1px solid var(--color-border)", py: 1 }} />
                 <Box sx={{ position: "relative", height: 32 }}>
                   {TIME_LABELS.map((t, i) => (
                     <Typography
@@ -459,7 +459,7 @@ export const Dashboard = () => {
                         top: "50%", mt: "-9px",
                         fontSize: 10, whiteSpace: "nowrap",
                         fontWeight: 500,
-                        color: (t === "10:30" || t === "11:00") ? "#f97316" : "#9ca3af",
+                        color: (t === "10:30" || t === "11:00") ? "#f97316" : "var(--color-text-muted)",
                       }}
                     >
                       {t}
@@ -477,16 +477,16 @@ export const Dashboard = () => {
                     sx={{
                       display: "grid",
                       gridTemplateColumns: "110px 1fr",
-                      borderBottom: "1px solid #f9fafb",
+                      borderBottom: "1px solid var(--color-border-subtle)",
                       minHeight: 68,
-                      "&:hover": { background: "#fffbf7" },
+                      "&:hover": { background: "var(--color-surface-hover)" },
                     }}
                   >
                     <Box sx={{
                       px: 2, display: "flex", alignItems: "center",
-                      borderRight: "1px solid #f3f4f6",
+                      borderRight: "1px solid var(--color-border)",
                     }}>
-                      <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>
+                      <Typography sx={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>
                         {room}
                       </Typography>
                     </Box>
@@ -497,7 +497,7 @@ export const Dashboard = () => {
                           position: "absolute",
                           left: `${(i / (TIME_LABELS.length - 1)) * 100}%`,
                           top: 0, bottom: 0,
-                          borderLeft: "1px solid #f3f4f6",
+                          borderLeft: "1px solid var(--color-border)",
                         }} />
                       ))}
                       {/* Events */}
@@ -530,12 +530,12 @@ export const Dashboard = () => {
                                   <Box sx={{
                                     background: ev.tagColor, borderRadius: "3px",
                                     px: 0.6, fontSize: 9, fontWeight: 700,
-                                    color: "#fff", lineHeight: 1.5,
+                                    color: "var(--color-surface)", lineHeight: 1.5,
                                   }}>
                                     {ev.tag}
                                   </Box>
                                 )}
-                                <Typography sx={{ fontSize: 10, fontWeight: 700, color: "#fff", lineHeight: 1.3 }}>
+                                <Typography sx={{ fontSize: 10, fontWeight: 700, color: "var(--color-surface)", lineHeight: 1.3 }}>
                                   {ev.groupName}
                                 </Typography>
                               </Box>
@@ -550,7 +550,7 @@ export const Dashboard = () => {
                                   {(ev.students ?? 0) > 0 && (
                                     <Box sx={{
                                       background: "rgba(0,0,0,0.2)", borderRadius: "3px",
-                                      px: 0.6, fontSize: 9, color: "#fff", fontWeight: 700,
+                                      px: 0.6, fontSize: 9, color: "var(--color-surface)", fontWeight: 700,
                                     }}>
                                       {t("dashboard.schedule.studentsFractionSlash", { count: ev.students ?? 0, max: ev.maxStudents })}
                                     </Box>
@@ -577,18 +577,18 @@ export const Dashboard = () => {
               <Box sx={{
                 display: "grid",
                 gridTemplateColumns: `80px repeat(${rooms.length}, 1fr)`,
-                borderBottom: "1px solid #f3f4f6",
-                background: "#fafafa",
+                borderBottom: "1px solid var(--color-border)",
+                background: "var(--color-surface-alt)",
                 position: "sticky", top: 0, zIndex: 2,
               }}>
-                <Box sx={{ borderRight: "1px solid #f3f4f6", py: 1 }} />
+                <Box sx={{ borderRight: "1px solid var(--color-border)", py: 1 }} />
                 {rooms.map((r: string) => (
                   <Box key={r} sx={{
                     py: 1, px: 1,
-                    borderRight: "1px solid #f3f4f6",
+                    borderRight: "1px solid var(--color-border)",
                     textAlign: "center",
                   }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#374151" }}>{r}</Typography>
+                    <Typography sx={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-secondary)" }}>{r}</Typography>
                   </Box>
                 ))}
               </Box>
@@ -605,7 +605,7 @@ export const Dashboard = () => {
                     sx={{
                       display: "grid",
                       gridTemplateColumns: `80px repeat(${rooms.length}, 1fr)`,
-                      borderBottom: "1px solid #f9fafb",
+                      borderBottom: "1px solid var(--color-border-subtle)",
                       minHeight: 48,
                     }}
                   >
@@ -613,11 +613,11 @@ export const Dashboard = () => {
                     <Box sx={{
                       px: 1.5,
                       display: "flex", alignItems: "flex-start", pt: 1,
-                      borderRight: "1px solid #f3f4f6",
+                      borderRight: "1px solid var(--color-border)",
                     }}>
                       <Typography sx={{
                         fontSize: 10, fontWeight: 500,
-                        color: (timeLabel === "10:30" || timeLabel === "11:00") ? "#f97316" : "#9ca3af",
+                        color: (timeLabel === "10:30" || timeLabel === "11:00") ? "#f97316" : "var(--color-text-muted)",
                         whiteSpace: "nowrap",
                       }}>
                         {timeLabel}
@@ -642,9 +642,9 @@ export const Dashboard = () => {
                         <Box
                           key={room}
                           sx={{
-                            borderRight: "1px solid #f3f4f6",
+                            borderRight: "1px solid var(--color-border)",
                             p: 0.5, minHeight: 48,
-                            background: tIdx % 2 === 0 ? "#fff" : "#fafafa",
+                            background: tIdx % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-alt)",
                           }}
                         >
                           {cellEvents.map((ev) => (
@@ -670,12 +670,12 @@ export const Dashboard = () => {
                                   <Box sx={{
                                     background: ev.tagColor, borderRadius: "3px",
                                     px: 0.5, mb: 0.25, display: "inline-block",
-                                    fontSize: 8, fontWeight: 700, color: "#fff",
+                                    fontSize: 8, fontWeight: 700, color: "var(--color-surface)",
                                   }}>
                                     {ev.tag}
                                   </Box>
                                 )}
-                                <Typography sx={{ fontSize: 9, fontWeight: 700, color: "#fff", lineHeight: 1.3 }}>
+                                <Typography sx={{ fontSize: 9, fontWeight: 700, color: "var(--color-surface)", lineHeight: 1.3 }}>
                                   {ev.groupName}
                                 </Typography>
                                 <Typography sx={{ fontSize: 8, color: "rgba(255,255,255,0.85)", lineHeight: 1.2 }}>
@@ -711,7 +711,7 @@ export const Dashboard = () => {
         {/* Empty state */}
         {!scheduleLoading && !scheduleError && visibleEvents.length === 0 && (
           <Box sx={{ py: 6, textAlign: "center" }}>
-            <Typography sx={{ color: "#9ca3af", fontSize: 14 }}>
+            <Typography sx={{ color: "var(--color-text-muted)", fontSize: 14 }}>
               {t("dashboard.schedule.emptyState")}
             </Typography>
           </Box>

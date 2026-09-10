@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -30,6 +31,7 @@ import type { Course } from "../../../../../app/api/coursesApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi/branchesApi";
 import { useBranch } from "../../../../../Context/BranchContext";
 import { useToast } from "../../../../../Context/ToastContext";
+import type { RootState } from "../../../../../app/store";
 import { CARD_COLORS } from "../../../../../constants/CardColors";
 
 export const BookIllustration = () => (
@@ -60,6 +62,7 @@ export const Courses = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { branch: selectedBranch } = useBranch();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const { data, isLoading, isError, refetch, isFetching } = useAllCoursesQuery();
   const { data: branchesData } = useAllBranchesQuery();
@@ -83,7 +86,9 @@ export const Courses = () => {
 
   const openAddDrawer = () => {
     setEditingCourse(null);
-    setForm(defaultForm);
+    // Pre-fill with whichever branch is active in the header, same as every
+    // other create form — still editable, just no longer defaulting to blank.
+    setForm({ ...defaultForm, branchId: selectedBranchId ?? "" });
     setErrors({});
     setSaveError(null);
     setDrawerOpen(true);

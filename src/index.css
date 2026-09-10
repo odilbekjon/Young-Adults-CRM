@@ -2,17 +2,87 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Theme tokens — consumed as var(--token-name) from component inline
+ * styles/sx props (this codebase mixes raw inline styles and MUI sx, not
+ * Tailwind's dark: variant, so CSS custom properties are the shared
+ * mechanism both can read). Dark values live under html.dark, toggled by
+ * ThemeContext (src/Context/ThemeContext).
+ */
+:root {
+  --color-bg-page: #f4f6fa;
+  --color-bg-body: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f5f6f8;
+  --color-surface-hover: #f0f4f9;
+  --color-border: #e0e5ec;
+  --color-border-subtle: #f0f0f0;
+  --color-text-primary: #1a2332;
+  --color-text-secondary: #6b7a8d;
+  --color-text-muted: #9ca3af;
+  --color-primary: #185fa5;
+  --color-primary-hover: #0f4b87;
+  --color-primary-surface: #f0f7ff;
+  --color-danger: #e53935;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-shadow: rgba(0, 0, 0, 0.1);
+  --color-scrollbar-thumb: #cbd2dc;
+  --color-scrollbar-track: transparent;
+  --color-nav-active: #003366;
+  --color-accent-surface: #fff7ed;
+  --color-success-surface: #f0f9f4;
+  --color-success-border: #b6dfc8;
+  --color-success-text: #0f6e56;
+}
+
+html.dark {
+  --color-bg-page: #0d1220;
+  --color-bg-body: #0b0f1a;
+  --color-surface: #141a29;
+  --color-surface-alt: #1a2233;
+  --color-surface-hover: #202a3d;
+  --color-border: #2a3245;
+  --color-border-subtle: #232c3e;
+  --color-text-primary: #e8ecf3;
+  --color-text-secondary: #9aa7bd;
+  --color-text-muted: #6b7a8d;
+  --color-primary: #4d9fe0;
+  --color-primary-hover: #6fb4ea;
+  --color-primary-surface: #16283f;
+  --color-danger: #f87171;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-shadow: rgba(0, 0, 0, 0.4);
+  --color-scrollbar-thumb: #384258;
+  --color-scrollbar-track: transparent;
+  --color-nav-active: #6fb4ea;
+  --color-accent-surface: #3a2412;
+  --color-success-surface: #123023;
+  --color-success-border: #1f4d38;
+  --color-success-text: #6ee7b7;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background-color: var(--color-scrollbar-thumb);
+}
+
+* {
+  scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+}
+
 :root {
   font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 15px;
   line-height: 1.5;
   font-weight: 400;
-  color: #111827;
-  background-color: #f8fafc;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-body);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 html {
@@ -24,8 +94,8 @@ body {
   margin: 0;
   min-width: 320px;
   overflow-x: hidden;
-  background-color: #f8fafc;
-  color: #111827;
+  background-color: var(--color-bg-body);
+  color: var(--color-text-primary);
   font-size: 0.95rem;
   line-height: 1.6;
 }

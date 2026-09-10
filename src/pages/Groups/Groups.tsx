@@ -8,27 +8,29 @@ import {
   TextField, Tooltip, Typography, Drawer,
 } from "@mui/material";
 import { GoPlus }                        from "react-icons/go";
-import { MdEdit, MdDelete }              from "react-icons/md";
+import { MdEdit, MdDelete, MdSms }       from "react-icons/md";
 import { BsThreeDotsVertical }           from "react-icons/bs";
 import { PiMicrosoftExcelLogoFill }      from "react-icons/pi";
 import { IoClose }                       from "react-icons/io5";
 import { TbAdjustmentsHorizontal, TbColumns3, TbCalendar } from "react-icons/tb";
 import { HiChevronDown }                 from "react-icons/hi";
 import { useMemo, useRef, useState }     from "react";
-import * as XLSX                         from "xlsx";
 import { useNavigate }                   from "react-router-dom";
 import { useTranslation }                from "react-i18next";
 
 import {
   useAllGroupsQuery, useCreateGroupMutation, useUpdateGroupMutation, useDeleteGroupMutation,
+  useLazyGroupsExcelQuery,
 } from "../../app/api/groupsApi";
 import type { Group, GroupDay } from "../../app/api/groupsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
 import { useAllRoomsQuery } from "../../app/api/roomsApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
-import { useAllStudentsQuery } from "../../app/api/studentsApi";
+import { useAllTeachersQuery } from "../../app/api/teachersApi";
 import { useBranch } from "../../Context/BranchContext";
 import { useToast } from "../../Context/ToastContext";
+import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
+import { extractApiError } from "../../utils";
 
 /* ─── types ─────────────────────────────────────────────── */
 type SortKey = keyof GroupRow | "";
@@ -41,6 +43,7 @@ interface GroupRow {
   course: string;
   roomId: string;
   room: string;
+  teacherIds: string[];
   teacherNames: string[];
   teacher: string;
   days: string;
@@ -69,12 +72,12 @@ interface Filters {
 interface FormState {
   name: string;
   courseId: string;
+  teacherIds: string[];
   roomId: string;
   days: GroupDay[];
-  weekOfStudy: string;
+  time: string;
   trainingStart: string;
   trainingEnd: string;
-  studentIds: string[];
 }
 
 /* ─── static ─────────────────────────────────────────────── */
@@ -93,8 +96,8 @@ const ALL_COLUMNS = [
 ];
 
 const EMPTY_FORM: FormState = {
-  name: "", courseId: "", roomId: "", days: [],
-  weekOfStudy: "", trainingStart: "", trainingEnd: "", studentIds: [],
+  name: "", courseId: "", teacherIds: [], roomId: "", days: [],
+  time: "", trainingStart: "", trainingEnd: "",
 };
 
 /* ─── shared input sx ────────────────────────────────────── */
@@ -117,6 +120,17 @@ const formatDate = (d: string) => {
   return `${day}.${m}.${y}`;
 };
 
+// GroupRow.days holds a display string ("Even days"/"Odd days") or the raw
+// daysType value itself (MIXED/OTHER) — map it back to the backend's
+// daysType enum for the GET /groups/excel filter. Unrecognized values are
+// dropped rather than guessed.
+const toDaysType = (days: string): string | undefined => {
+  if (days === "Even days") return "EVEN";
+  if (days === "Odd days") return "ODD";
+  if (days === "MIXED" || days === "OTHER") return days;
+  return undefined;
+};
+
 const deriveTags = (g: Group): string[] => {
   const tags: string[] = [];
   const studentCount = g.students?.length ?? 0;
@@ -135,6 +149,7 @@ const toGroupRow = (g: Group): GroupRow => ({
   course: g.course?.name ?? "—",
   roomId: g.roomId ?? "",
   room: g.room?.name ?? "—",
+  teacherIds: g.teachers?.map((t) => t.id) ?? [],
   teacherNames: g.teachers?.map((t) => t.name) ?? [],
   teacher: g.teachers?.map((t) => t.name).join(", ") || "—",
   days: g.daysType === "EVEN" ? "Even days" : g.daysType === "ODD" ? "Odd days" : (g.daysType || "—"),
@@ -274,11 +289,12 @@ export const Groups = () => {
   const { data: coursesData } = useAllCoursesQuery();
   const { data: roomsData } = useAllRoomsQuery();
   const { data: branchesData } = useAllBranchesQuery();
-  const { data: studentsData } = useAllStudentsQuery({ page: 1, limit: 100 });
+  const { data: teachersData } = useAllTeachersQuery({ page: 1, limit: 100 });
 
   const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [updateGroup, { isLoading: isUpdating }] = useUpdateGroupMutation();
   const [deleteGroup, { isLoading: isDeleting }] = useDeleteGroupMutation();
+  const [fetchGroupsExcel, { isFetching: isExportingExcel }] = useLazyGroupsExcelQuery();
 
   const WEEKDAY_LABELS: Record<GroupDay, string> = {
     MONDAY:    t("groups.weekdays.monday"),
@@ -341,7 +357,9 @@ export const Groups = () => {
   const activeRooms = (roomsData?.data ?? [])
     .filter((r) => r.status === "ACTIVE")
     .filter((r) => selectedBranch === "all" || r.branch?.name === selectedBranch);
-  const allStudents = studentsData?.data ?? [];
+  const activeTeachers = (teachersData?.data ?? [])
+    .filter((tc) => tc.status === "ACTIVE")
+    .filter((tc) => selectedBranch === "all" || (tc.branches ?? []).some((b) => b.name === selectedBranch));
 
   const COURSES  = [...new Set(allGroups.map((g) => g.course).filter(Boolean))];
   const TEACHERS = [...new Set(allGroups.flatMap((g) => g.teacherNames))];
@@ -362,6 +380,7 @@ export const Groups = () => {
   const [deleteId,          setDeleteId]          = useState<string | null>(null);
   const [deleteError,       setDeleteError]       = useState<string | null>(null);
   const [actionMenuAnchor,  setActionMenuAnchor]  = useState<{ el: HTMLElement; id: string } | null>(null);
+  const [smsGroupId,        setSmsGroupId]        = useState<string | null>(null);
   const [sortKey,           setSortKey]           = useState<SortKey>("");
   const [sortDir,           setSortDir]           = useState<SortDir>("asc");
   const [visibleCols,       setVisibleCols]       = useState<string[]>(ALL_COLUMNS.map((c) => c.key));
@@ -398,35 +417,39 @@ export const Groups = () => {
     else { setSortKey(key); setSortDir("asc"); }
   };
 
-  const handleExportExcel = () => {
-    const data = filteredGroups.map((g, i) => ({
-      [t("groups.export.number")]:    i + 1,
-      [t("groups.export.group")]:     g.name,
-      [t("groups.export.course")]:    g.course,
-      [t("groups.export.teacher")]:   g.teacher,
-      [t("groups.export.days")]:      g.days,
-      [t("groups.export.startDate")]: formatDate(g.startDate),
-      [t("groups.export.endDate")]:   formatDate(g.endDate),
-      [t("groups.export.room")]:      g.room,
-      [t("groups.export.students")]:  g.studentCount,
-      [t("groups.export.status")]:    STATUS_LABELS[g.status] ?? g.status,
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Groups");
-    XLSX.writeFile(wb, "groups.xlsx");
+  const handleExportExcel = async () => {
+    // GET /groups/excel only accepts a status of ACTIVE/INACTIVE — the app's
+    // own status domain (ACTIVE/ARCHIVE/COMPLETED) is wider, so only ACTIVE
+    // is forwarded as-is; other selections are left unfiltered rather than
+    // risking a 400 from an unsupported enum value.
+    const courseId = activeCourses.find((c) => c.name === filters.course)?.id;
+    const teacherId = activeTeachers.find((tc) => tc.name === filters.teacher)?.id;
+    try {
+      const blob = await fetchGroupsExcel({
+        status: filters.status === "ACTIVE" ? filters.status : undefined,
+        courseId,
+        teacherId,
+        daysType: filters.days ? toDaysType(filters.days) : undefined,
+        startDate: filters.startDate || undefined,
+        endDate: filters.endDate || undefined,
+        page: 1,
+        limit: Math.max(groupsData?.meta?.total ?? allGroups.length, 1),
+      }).unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "groups.xlsx";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("groups.actions.exportError"));
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
-
-  const toggleDay = (day: GroupDay) =>
-    setForm((prev) => ({
-      ...prev,
-      days: prev.days.includes(day) ? prev.days.filter((d) => d !== day) : [...prev.days, day],
-    }));
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -441,12 +464,12 @@ export const Groups = () => {
     setForm({
       name: group.name,
       courseId: group.courseId,
+      teacherIds: group.teacherIds,
       roomId: group.roomId,
       days: group.dayList,
-      weekOfStudy: group.weekOfStudy,
+      time: group.lessonStartTime,
       trainingStart: group.startDate,
       trainingEnd: group.endDate,
-      studentIds: group.studentIds,
     });
     setFormErrors({});
     setSaveError(null);
@@ -468,12 +491,12 @@ export const Groups = () => {
     const payload = {
       name: form.name.trim(),
       courseId: form.courseId,
+      teacherIds: form.teacherIds.length ? form.teacherIds : undefined,
       roomId: form.roomId || undefined,
       days: form.days.length ? form.days : undefined,
-      weekOfStudy: form.weekOfStudy.trim() || undefined,
+      time: form.time || undefined,
       trainingStart: form.trainingStart || undefined,
       trainingEnd: form.trainingEnd || undefined,
-      studentIds: form.studentIds.length ? form.studentIds : undefined,
     };
     try {
       if (editingId !== null) {
@@ -484,9 +507,12 @@ export const Groups = () => {
         toast.success(t("groups.toast.created"));
       }
       setOpen(false);
-    } catch {
-      setSaveError(t("groups.form.errors.save"));
-      toast.error(t("groups.form.errors.save"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      console.error("Group save failed:", err);
+      const message = detail ? `${t("groups.form.errors.save")}: ${detail}` : t("groups.form.errors.save");
+      setSaveError(message);
+      toast.error(message);
     }
   };
 
@@ -497,9 +523,12 @@ export const Groups = () => {
       await deleteGroup(deleteId).unwrap();
       setDeleteId(null);
       toast.success(t("groups.toast.deleted"));
-    } catch {
-      setDeleteError(t("groups.deleteDialog.error"));
-      toast.error(t("groups.deleteDialog.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      console.error("Group delete failed:", err);
+      const message = detail ? `${t("groups.deleteDialog.error")}: ${detail}` : t("groups.deleteDialog.error");
+      setDeleteError(message);
+      toast.error(message);
     }
   };
 
@@ -785,6 +814,12 @@ export const Groups = () => {
                       <MenuItem onClick={() => handleOpenEdit(g)} sx={{ fontSize: 13, gap: 1 }}>
                         <MdEdit size={15} /> {t("groups.actions.edit")}
                       </MenuItem>
+                      <MenuItem
+                        onClick={() => { setSmsGroupId(g.id); setActionMenuAnchor(null); }}
+                        sx={{ fontSize: 13, gap: 1 }}
+                      >
+                        <MdSms size={15} /> {t("groups.actions.sms")}
+                      </MenuItem>
                       <Divider sx={{ my: 0.5 }} />
                       <MenuItem
                         onClick={() => { setDeleteId(g.id); setDeleteError(null); setActionMenuAnchor(null); }}
@@ -811,19 +846,21 @@ export const Groups = () => {
 
       {/* EXCEL */}
       <Tooltip title={t("groups.actions.exportExcel")} placement="left">
-        <IconButton
-          onClick={handleExportExcel}
-          sx={{
-            position: "fixed", bottom: 28, right: 28,
-            bgcolor: "white", color: "#217346",
-            width: 40, height: 40,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            border: "1px solid #e5e7eb",
-            "&:hover": { bgcolor: "#f0fdf4" },
-          }}
-        >
-          <PiMicrosoftExcelLogoFill size={20} />
-        </IconButton>
+        <span style={{ position: "fixed", bottom: 28, right: 28 }}>
+          <IconButton
+            onClick={handleExportExcel}
+            disabled={isExportingExcel}
+            sx={{
+              bgcolor: "white", color: "#217346",
+              width: 40, height: 40,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              border: "1px solid #e5e7eb",
+              "&:hover": { bgcolor: "#f0fdf4" },
+            }}
+          >
+            {isExportingExcel ? <CircularProgress size={18} /> : <PiMicrosoftExcelLogoFill size={20} />}
+          </IconButton>
+        </span>
       </Tooltip>
 
       {/* ── DRAWER ───────────────────────────────────────────── */}
@@ -890,6 +927,60 @@ export const Groups = () => {
             </TextField>
           </Box>
 
+          {/* Select teacher */}
+          <Box mb={2.5}>
+            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+              {t("groups.form.teacher")}
+            </Typography>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              SelectProps={{
+                multiple: true,
+                value: form.teacherIds,
+                onChange: (e) => setForm((p) => ({ ...p, teacherIds: e.target.value as string[] })),
+                displayEmpty: true,
+                renderValue: (selected) =>
+                  (selected as string[]).length
+                    ? (selected as string[]).map((id) => activeTeachers.find((tc) => tc.id === id)?.name ?? id).join(", ")
+                    : <span style={{ color: "#9ca3af" }}>{t("groups.form.teacher")}</span>,
+              }}
+              sx={inputSx}
+            >
+              {activeTeachers.map((tc) => (
+                <MenuItem key={tc.id} value={tc.id} sx={{ fontSize: 13 }}>{tc.name}</MenuItem>
+              ))}
+            </TextField>
+          </Box>
+
+          {/* Days */}
+          <Box mb={2.5}>
+            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+              {t("groups.form.days")}
+            </Typography>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              SelectProps={{
+                multiple: true,
+                value: form.days,
+                onChange: (e) => setForm((p) => ({ ...p, days: e.target.value as GroupDay[] })),
+                displayEmpty: true,
+                renderValue: (selected) =>
+                  (selected as GroupDay[]).length
+                    ? (selected as GroupDay[]).map((d) => WEEKDAY_LABELS[d]).join(", ")
+                    : <span style={{ color: "#9ca3af" }}>{t("groups.form.days")}</span>,
+              }}
+              sx={inputSx}
+            >
+              {WEEKDAY_VALUES.map((day) => (
+                <MenuItem key={day} value={day} sx={{ fontSize: 13 }}>{WEEKDAY_LABELS[day]}</MenuItem>
+              ))}
+            </TextField>
+          </Box>
+
           {/* Select room */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
@@ -911,55 +1002,27 @@ export const Groups = () => {
             </TextField>
           </Box>
 
-          {/* Days */}
+          {/* Lesson start time */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.days")}
-            </Typography>
-            <Stack direction="row" flexWrap="wrap" gap={1}>
-              {WEEKDAY_VALUES.map((day) => (
-                <Chip
-                  key={day}
-                  label={WEEKDAY_LABELS[day]}
-                  clickable
-                  size="small"
-                  onClick={() => toggleDay(day)}
-                  sx={{
-                    fontSize: 12, height: 28, borderRadius: "6px",
-                    bgcolor:     form.days.includes(day) ? "#dbeafe" : "white",
-                    color:       form.days.includes(day) ? "#1d4ed8" : "#374151",
-                    border:      "1px solid",
-                    borderColor: form.days.includes(day) ? "#93c5fd" : "#d0d5dd",
-                    "&:hover": {
-                      bgcolor:     form.days.includes(day) ? "#bfdbfe" : "#f9fafb",
-                      borderColor: form.days.includes(day) ? "#60a5fa" : "#a0aec0",
-                    },
-                  }}
-                />
-              ))}
-            </Stack>
-          </Box>
-
-          {/* Week of study */}
-          <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.weekOfStudy")}
+              {t("groups.form.lessonStartTime")}
             </Typography>
             <TextField
-              name="weekOfStudy"
-              value={form.weekOfStudy}
+              type="time"
+              name="time"
+              value={form.time}
               onChange={handleChange}
               size="small"
               fullWidth
-              placeholder="3 months 0 weeks"
+              InputLabelProps={{ shrink: true }}
               sx={inputSx}
             />
           </Box>
 
-          {/* Training start date */}
+          {/* Group start date */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.trainingStart")}
+              {t("groups.form.startDate")}
             </Typography>
             <TextField
               type="date"
@@ -973,48 +1036,24 @@ export const Groups = () => {
             />
           </Box>
 
-          {/* Training end date */}
-          <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.trainingEnd")}
-            </Typography>
-            <TextField
-              type="date"
-              name="trainingEnd"
-              value={form.trainingEnd}
-              onChange={handleChange}
-              size="small"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              sx={inputSx}
-            />
-          </Box>
-
-          {/* Students */}
-          <Box mb={3}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.students")}
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              SelectProps={{
-                multiple: true,
-                value: form.studentIds,
-                onChange: (e) => setForm((p) => ({ ...p, studentIds: e.target.value as string[] })),
-                renderValue: (selected) =>
-                  (selected as string[])
-                    .map((id) => allStudents.find((s) => s.id === id)?.name ?? id)
-                    .join(", "),
-              }}
-              sx={inputSx}
-            >
-              {allStudents.map((s) => (
-                <MenuItem key={s.id} value={s.id} sx={{ fontSize: 13 }}>{s.name}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
+          {/* Group end date — edit only */}
+          {editingId !== null && (
+            <Box mb={2.5}>
+              <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+                {t("groups.form.endDate")}
+              </Typography>
+              <TextField
+                type="date"
+                name="trainingEnd"
+                value={form.trainingEnd}
+                onChange={handleChange}
+                size="small"
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                sx={inputSx}
+              />
+            </Box>
+          )}
 
           {saveError && (
             <Typography fontSize={13} color="error" mb={2}>{saveError}</Typography>
@@ -1070,6 +1109,15 @@ export const Groups = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* SMS DRAWER */}
+      <SendSmsModal
+        open={smsGroupId !== null}
+        onClose={() => setSmsGroupId(null)}
+        selectedCount={allGroups.find((g) => g.id === smsGroupId)?.studentCount ?? 0}
+        recipientLabel={t("groups.sms.recipientLabel")}
+        sender="3700"
+      />
     </Box>
   );
 };

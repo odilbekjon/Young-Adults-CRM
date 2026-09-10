@@ -238,7 +238,7 @@ export const Sections = () => {
           borderColor: "divider",
           borderRadius: 2,
           overflow: "hidden",
-          backgroundColor: "#fff",
+          backgroundColor: "background.paper",
           minHeight: 500,
           flex: 1,
         }}

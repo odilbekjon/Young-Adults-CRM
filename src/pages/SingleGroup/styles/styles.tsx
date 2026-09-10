@@ -53,6 +53,3 @@ export const paymentSubmitBtn: React.CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
 };
-
-export const PAYMENT_METHODS_LEFT = ["Cash", "Card", "Bank account", "Payme"] as const;
-export const PAYMENT_METHODS_RIGHT = ["Click", "Uzum", "Humo"] as const;

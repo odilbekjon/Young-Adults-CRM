@@ -1,5 +1,6 @@
 // CreateForm.tsx
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import {
   Box, Button,  FormControl, FormControlLabel,
   MenuItem, Radio, Select, TextField, Typography,
@@ -22,6 +23,7 @@ import {
 import type { LeadFormFieldType } from "../../../../../app/api/leadFormsApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi";
 import { useToast } from "../../../../../Context/ToastContext";
+import type { RootState } from "../../../../../app/store";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type BlockType = "One of the list" | "Short answer" | "Long answer";
@@ -451,6 +453,7 @@ export const CreateForm = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
+  const headerBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   // ✅ Edit rejimida Lead form tab (1) avtomatik tanlanadi
   const [tab, setTab] = useState<number>(isEdit ? 1 : 0);
@@ -458,7 +461,9 @@ export const CreateForm = () => {
   // Lead Form (real API) state — bu yerda saqlanadi, chunki Save/Update
   // tugmasi umumiy va real sinxronizatsiyani shu yerdan ishga tushiradi.
   const [formName, setFormName] = useState("");
-  const [branch, setBranch] = useState("");
+  // Default to whichever branch is active in the header for a new form —
+  // editing an existing form still loads its real branch below.
+  const [branch, setBranch] = useState(isEdit ? "" : headerBranchId ?? "");
   const [section, setSection] = useState("");
   const [leadSource, setLeadSource] = useState("");
   const [blocks, setBlocks] = useState<Block[]>([]);

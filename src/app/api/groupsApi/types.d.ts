@@ -239,3 +239,135 @@ export interface ToggleGroupStatusResponse {
   message?: string;
   data?: Group;
 }
+
+// ── /student-groups — each row is one student's membership in one group.
+// Its own `id` is distinct from both studentId and groupId, and is what
+// freeze/unfreeze/graduate-trial/update/status/delete below all key off —
+// confirmed against Swagger, which documents this as a full CRUD resource
+// (GET list, GET/{id}, GET/{id}/for-edit, POST, POST/{id}/freeze,
+// POST/{id}/unfreeze, POST/{id}/graduate-trial, PATCH/{id},
+// PATCH/{id}/status, DELETE/{id}). GET envelopes aren't documented beyond a
+// 200 status, so responses are normalized defensively (same approach as
+// GroupHistoryEntry/GroupComment above).
+export type StudentGroupStatus = "PROBATION" | "ACTIVE" | "FROZEN" | "INACTIVE" | "DELETED";
+
+export interface StudentGroupRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentPhone: string;
+  groupId: string;
+  groupName: string;
+  status: StudentGroupStatus | string;
+  joinedAt: string | null;
+  exitedAt: string | null;
+  paymentStartDate: string | null;
+  customPrice: number | null;
+  discountReason: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface StudentGroupsRequest {
+  branchId?: string;
+  groupId?: string;
+  studentId?: string;
+  status?: StudentGroupStatus;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface StudentGroupsMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface StudentGroupsResult {
+  rows: StudentGroupRecord[];
+  meta: StudentGroupsMeta;
+}
+
+// POST /student-groups — adds a student as a brand-new member of a group
+// (initial status PROBATION or ACTIVE). Swagger declares the body as
+// multipart/form-data; only studentId/groupId are required, the rest are
+// optional per-student overrides.
+export interface AddStudentToGroupRequest {
+  studentId: string;
+  groupId: string;
+  status?: string;
+  joinedAt?: string;
+  paymentStartDate?: string;
+  customPrice?: number;
+  discountReason?: string;
+}
+
+export interface AddStudentToGroupResponse {
+  success?: boolean;
+  message?: string;
+  data?: unknown;
+}
+
+// POST /student-groups/{id}/freeze — {id} is the membership's own id
+// (StudentGroupRecord.id), NOT the student id. Swagger: multipart/form-data,
+// startDate required.
+export interface FreezeStudentGroupRequest {
+  id: string;
+  startDate: string;
+  endDate?: string;
+  reason?: string;
+}
+
+export interface StudentGroupActionResponse {
+  success?: boolean;
+  message?: string;
+  data?: unknown;
+}
+
+// PATCH /student-groups/{id} — edits the membership's own fields (dates,
+// custom price), distinct from PATCH /student-groups/{id}/status below.
+export interface UpdateStudentGroupRequest {
+  id: string;
+  joinedAt?: string;
+  paymentStartDate?: string;
+  exitedAt?: string;
+  customPrice?: number;
+  discountReason?: string;
+}
+
+// PATCH /student-groups/{id}/status — Swagger: status is required;
+// studentDelete's own description reads "Talabani o'chirish (INACTIVE
+// qilish)" — it's a separate flag from `status`, not an alias for it.
+export interface UpdateStudentGroupStatusRequest {
+  id: string;
+  status: StudentGroupStatus;
+  reason?: string;
+  reasonId?: string;
+  isAllGroup?: boolean;
+  studentDelete?: boolean;
+}
+
+// GET /groups/select — simplified dropdown list, distinct from GET /groups
+// (which returns the full Group shape with course/room/teachers/students).
+export interface GroupSelectOption {
+  id: string;
+  name: string;
+}
+
+// GET /groups/excel query params (Swagger reference: search, status, page,
+// limit, branchId, courseId, teacherId, daysType, startDate, endDate).
+// branchId isn't included here — it's already sent on every request via the
+// centralized x-branch-id header (see baseApi), so it isn't duplicated here.
+export interface GroupsExcelQueryArgs {
+  search?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+  courseId?: string;
+  teacherId?: string;
+  daysType?: string;
+  startDate?: string;
+  endDate?: string;
+}

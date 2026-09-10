@@ -79,7 +79,7 @@ export const LeadSectionBlock = ({ section }: Props) => {
     const leadId = e.dataTransfer.getData("text/plain");
     if (!leadId) return;
     try {
-      await moveLeadSection({ id: leadId, sectionId: section.id }).unwrap();
+      await moveLeadSection({ id: leadId, targetSectionId: section.id }).unwrap();
     } catch {
       toast.error(t("leadsPage.leadForm.toast.error"));
     }

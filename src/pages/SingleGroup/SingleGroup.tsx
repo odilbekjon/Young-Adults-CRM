@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/groups/SingleGroup.tsx
 
 import {
@@ -9,32 +8,45 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { MdEdit, MdDelete, MdEmail, MdDownload, MdSwapHoriz } from "react-icons/md";
-import * as XLSX from "xlsx";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
+import { MdEdit, MdDelete, MdEmail, MdDownload, MdSwapHoriz, MdCalendarToday } from "react-icons/md";
 import { GoPlus } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
   findTeacherById,
-  formatDate,
   type Group as LegacyGroup,
 } from "../../constants/Teachers";
 import {
   useGroupByIdQuery,
-  useAllGroupsQuery,
+  useLazyGroupForEditQuery,
+  useGroupsSelectQuery,
   useGroupHistoryQuery,
   useAssignStudentsToGroupMutation,
-  useRemoveStudentFromGroupMutation,
   useTransferStudentMutation,
   useUpdateGroupMutation,
   useDeleteGroupMutation,
   useRemoveTeacherFromGroupMutation,
   useToggleGroupStatusMutation,
+  useLazyGroupExcelQuery,
+  useStudentGroupsQuery,
+  useFreezeStudentGroupMutation,
+  useUnfreezeStudentGroupMutation,
+  useUpdateStudentGroupStatusMutation,
 } from "../../app/api/groupsApi";
-import type { GroupDetail, GroupHistoryEntry, UpdateGroupRequest } from "../../app/api/groupsApi/types";
-import { useAllStudentsQuery, useDeleteStudentMutation } from "../../app/api/studentsApi";
+import type { GroupDetail, GroupHistoryEntry, StudentGroupRecord, UpdateGroupRequest } from "../../app/api/groupsApi/types";
+import {
+  useAllStudentsQuery,
+  useTransferStudentBranchMutation,
+  useLazyStudentByIdQuery,
+} from "../../app/api/studentsApi";
+import type { StudentDetail } from "../../app/api/studentsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
 import { useAllRoomsQuery } from "../../app/api/roomsApi";
+import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
 import { useToast } from "../../Context/ToastContext";
+import { extractApiError, formatTrainingDate } from "../../utils";
+import { formatDate } from "../../constants/FlatStudents";
 
 import { AddStudentDrawer, type AddStudentOption } from "./AddStudentDrawer/AddStudentDrawer";
 
@@ -57,7 +69,7 @@ import { DeleteDropdown } from "./DeleteDropdown";
 import { SmsDrawer } from "../../components/SmsDrawer";
 import { AddNoteModal } from "./AddNoteModal";
 import { ReminderDrawer } from "./ReminderDrawer";
-import { AddPaymentDrawer } from "./AddPaymentDrawer";
+import { AddPayment } from "../../components/AddPayment";
 import { MoveStudentDialog } from "./MoveStudentDialog";
 import { RemoveStudentDialog } from "./RemoveStudentDialog";
 
@@ -66,10 +78,14 @@ const TAB_KEYS = [
   "discountPrices", "exams", "history", "comments",
 ];
 
-// Real backend student refs kelmagan hususiyatlar (balance/archived/frozen
-// holati) uchun hozircha alohida endpoint yo'q — shu sabab neytral default
-// qiymatlar bilan to'ldiramiz (o'ylab topilgan raqamlar emas).
-type RealGroupStudent = GroupStudent & { realId: string };
+// GroupDetail.students carries no balance/archived/frozen status at all, so
+// those start out as neutral defaults here and are corrected afterwards by
+// overlaying real per-membership data from GET /student-groups (see
+// combinedStudents below) — studentGroupId in particular comes only from
+// that overlay, since it's the /student-groups row's own id, required by
+// freeze/unfreeze/status-change calls (distinct from realId, the student's
+// own id).
+type RealGroupStudent = GroupStudent & { realId: string; studentGroupId?: string };
 
 const toLegacyGroup = (d: GroupDetail): LegacyGroup => ({
   id: 0,
@@ -139,7 +155,7 @@ const deriveArchivedFromHistory = (
 };
 
 export const SingleGroup = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -148,19 +164,30 @@ export const SingleGroup = () => {
   const [showCoins, setShowCoins] = useState(false);
 
   const { data: groupDetailData, isLoading: groupLoading } = useGroupByIdQuery(id ?? "", { skip: !id });
+  const [fetchGroupForEdit, { data: groupForEditData }] = useLazyGroupForEditQuery();
   const { data: historyData } = useGroupHistoryQuery(id ?? "", { skip: !id });
-  const { data: allGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
-  const { data: allStudentsData } = useAllStudentsQuery({ page: 1, limit: 100 });
+  const { data: groupsSelectData } = useGroupsSelectQuery();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { data: allStudentsData } = useAllStudentsQuery({ page: 1, limit: 100, branchId: selectedBranchId ?? undefined });
   const { data: allCoursesData } = useAllCoursesQuery();
   const { data: allRoomsData } = useAllRoomsQuery();
+  const { data: allBranchesData } = useAllBranchesQuery();
+  // Full membership roster for this group (every status: PROBATION/ACTIVE/
+  // FROZEN/INACTIVE/DELETED) — the authoritative source for each student's
+  // real status and their /student-groups row id (see combinedStudents).
+  const { data: studentGroupsData } = useStudentGroupsQuery({ groupId: id ?? "", limit: 500 }, { skip: !id });
   const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
-  const [removeStudentFromGroup, { isLoading: isRemovingFromGroup }] = useRemoveStudentFromGroupMutation();
   const [transferStudent, { isLoading: isTransferring }] = useTransferStudentMutation();
-  const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
   const [updateGroup, { isLoading: isSavingGroup }] = useUpdateGroupMutation();
   const [deleteGroup, { isLoading: isDeletingGroup }] = useDeleteGroupMutation();
   const [removeTeacherFromGroup, { isLoading: isRemovingTeacher }] = useRemoveTeacherFromGroupMutation();
   const [toggleGroupStatus] = useToggleGroupStatusMutation();
+  const [freezeStudentGroup, { isLoading: isFreezing }] = useFreezeStudentGroupMutation();
+  const [unfreezeStudentGroup, { isLoading: isUnfreezing }] = useUnfreezeStudentGroupMutation();
+  const [updateStudentGroupStatus, { isLoading: isChangingMembershipStatus }] = useUpdateStudentGroupStatusMutation();
+  const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
+  const [fetchStudentDetail] = useLazyStudentByIdQuery();
+  const [fetchGroupExcel, { isFetching: isExportingExcel }] = useLazyGroupExcelQuery();
 
   const group = groupDetailData ? toLegacyGroup(groupDetailData.data) : undefined;
   const teacher = group ? findTeacherById(group.teacherId) : undefined;
@@ -174,10 +201,32 @@ export const SingleGroup = () => {
     const activeIds = new Set(students.map((s) => s.realId));
     return deriveArchivedFromHistory(historyData ?? [], activeIds);
   }, [historyData, students]);
-  const combinedStudents = useMemo(
-    () => [...students, ...archivedStudents],
-    [students, archivedStudents]
-  );
+
+  const membershipByStudentId = useMemo(() => {
+    const map = new Map<string, StudentGroupRecord>();
+    (studentGroupsData?.rows ?? []).forEach((m) => { if (m.studentId) map.set(m.studentId, m); });
+    return map;
+  }, [studentGroupsData]);
+
+  // Overlays each student's real membership status/id (from
+  // membershipByStudentId) on top of the neutral GroupDetail-derived
+  // defaults — active/archived only change for students a matching
+  // /student-groups row was actually found for; everyone else keeps the
+  // prior placeholder rather than being guessed at.
+  const combinedStudents = useMemo(() => {
+    const base = [...students, ...archivedStudents];
+    if (membershipByStudentId.size === 0) return base;
+    return base.map((s) => {
+      const membership = membershipByStudentId.get(s.realId);
+      if (!membership) return s;
+      return {
+        ...s,
+        studentGroupId: membership.id,
+        active: membership.status === "ACTIVE" || membership.status === "PROBATION",
+        archived: membership.status === "INACTIVE" || membership.status === "DELETED",
+      };
+    });
+  }, [students, archivedStudents, membershipByStudentId]);
 
   const addStudentCandidates: AddStudentOption[] = useMemo(() => {
     const existingIds = new Set(combinedStudents.map((s) => s.realId));
@@ -187,10 +236,8 @@ export const SingleGroup = () => {
   }, [allStudentsData, combinedStudents]);
 
   const otherGroups = useMemo(
-    () => (allGroupsData?.data ?? [])
-      .filter((g) => g.id !== id)
-      .map((g) => ({ id: g.id, name: g.name })),
-    [allGroupsData, id]
+    () => (groupsSelectData ?? []).filter((g) => g.id !== id),
+    [groupsSelectData, id]
   );
 
   const courseOptions = useMemo(
@@ -211,6 +258,11 @@ export const SingleGroup = () => {
   const [hoverAnchorEl, setHoverAnchorEl] = useState<HTMLElement | null>(null);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // GroupDetail.students only carries {id,name,role,photo,phone} — no
+  // balance/dates — so the hover card's real numbers are fetched lazily via
+  // GET /students/{id} once hovered, keyed here to ignore a stale response
+  // if the user has since moved on to a different student.
+  const hoverRequestId = useRef<string | null>(null);
 
   // Drawers
   const [editOpen, setEditOpen] = useState(false);
@@ -233,7 +285,6 @@ export const SingleGroup = () => {
   const [removeReason, setRemoveReason] = useState<RemoveReason>("");
   const [removeComment, setRemoveComment] = useState("");
   const [removeRecalculate, setRemoveRecalculate] = useState(false);
-  const [, setMoveToBranchOpen] = useState(false);
   const [removeScope, setRemoveScope] = useState<"current" | "all">("current");
 
   if (groupLoading) {
@@ -254,7 +305,12 @@ export const SingleGroup = () => {
     sortBy === "az" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
   );
 
-  const archivedCount = archivedStudents.length;
+  // The group's branch isn't in GroupDetail directly — it's derived from its
+  // course, which does carry a nested branch object (Course.branch.name).
+  const groupCourse = allCoursesData?.data.find((c) => c.id === groupDetailData.data.courseId);
+  const branchName = groupCourse?.branch?.name;
+
+  const branchOptions = (allBranchesData?.data ?? []).map((b) => ({ id: b.id, name: b.name }));
 
   const handleOpenMenu = (e: React.MouseEvent<HTMLElement>, student: RealGroupStudent) => {
     e.stopPropagation();
@@ -271,16 +327,19 @@ export const SingleGroup = () => {
     navigate(`/students/${uid}`);
   };
 
-  function buildHoverData(student: RealGroupStudent) {
+  // `detail` (GET /students/{id}) carries the real balance/status/dates that
+  // GroupDetail.students doesn't — when present, it takes priority over the
+  // group-summary placeholder so the card shows real numbers instead of 0.
+  function buildHoverData(student: RealGroupStudent, detail?: StudentDetail | null) {
     return {
       id: student.id,
       uid: student.realId,
-      name: student.name,
-      phone: student.phone,
-      active: student.active,
-      balance: student.balance,
-      addedAt: student.addedAt,
-      activatedAt: student.activatedAt,
+      name: detail?.name ?? student.name,
+      phone: detail?.phone ?? student.phone,
+      active: detail ? detail.status === "ACTIVE" : student.active,
+      balance: detail?.balance ?? student.balance,
+      addedAt: detail?.createdAt ? formatDate(detail.createdAt) : student.addedAt,
+      activatedAt: detail?.groupsStart ? formatDate(detail.groupsStart) : student.activatedAt,
       frozenAt: student.frozenAt,
     };
   }
@@ -292,6 +351,13 @@ export const SingleGroup = () => {
     hoverTimeout.current = setTimeout(() => {
       setHoverStudent(buildHoverData(student));
       setHoverAnchorEl(target);
+      hoverRequestId.current = student.realId;
+      fetchStudentDetail(student.realId)
+        .then((res) => {
+          if (hoverRequestId.current !== student.realId || !res.data) return;
+          setHoverStudent(buildHoverData(student, res.data.data));
+        })
+        .catch(() => {});
     }, student.active ? 200 : 80);
   };
 
@@ -300,6 +366,7 @@ export const SingleGroup = () => {
     leaveTimeout.current = setTimeout(() => {
       setHoverStudent(null);
       setHoverAnchorEl(null);
+      hoverRequestId.current = null;
     }, 300);
   };
 
@@ -319,73 +386,128 @@ export const SingleGroup = () => {
     return `${d}.${m}.${y}`;
   };
 
-  const handleFreezeConfirm = (data: { comment: string; fromDate: string; recalculate: boolean }) => {
-    setStudents((prev) =>
-      prev.map((s) =>
-        s.id === selectedStudent?.id
-          ? { ...s, active: false, frozenAt: data.fromDate ? formatDisplayDate(data.fromDate) : undefined }
-          : s
-      )
-    );
+  const handleFreezeConfirm = async (data: { reason: string; startDate: string; recalculateBalance: boolean }) => {
+    if (!selectedStudent) return;
+    const studentGroupId = selectedStudent.studentGroupId;
+    if (!studentGroupId) {
+      toast.error(t("singleGroup.freezeModal.toast.error"));
+      return;
+    }
+    try {
+      // POST /student-groups/{id}/freeze (Swagger): {id} is the membership's
+      // own id (StudentGroupRecord.id), not the student id — startDate is
+      // required. `recalculateBalance` isn't part of the documented request
+      // body, so it isn't sent — the checkbox stays purely local until the
+      // backend documents support for it.
+      await freezeStudentGroup({
+        id: studentGroupId,
+        startDate: data.startDate,
+        reason: data.reason.trim() || undefined,
+      }).unwrap();
+      toast.success(t("singleGroup.freezeModal.toast.success"));
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === selectedStudent.id
+            ? { ...s, active: false, frozenAt: formatDisplayDate(data.startDate) }
+            : s
+        )
+      );
+      setFreezeOpen(false);
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.freezeModal.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
+    }
   };
 
-  const handleActivateConfirm = (activateDate: string) => {
-    setStudents((prev) =>
-      prev.map((s) =>
-        s.id === selectedStudent?.id
-          ? {
-              ...s,
-              active: true,
-              frozenAt: undefined,
-              activatedAt: formatDisplayDate(activateDate),
-            }
-          : s
-      )
-    );
+  const handleActivateConfirm = async (activateDate: string) => {
+    if (!selectedStudent) return;
+    const studentGroupId = selectedStudent.studentGroupId;
+    if (!studentGroupId) {
+      toast.error(t("singleGroup.activateModal.toast.notFound"));
+      return;
+    }
+    try {
+      // POST /student-groups/{id}/unfreeze — same membership id as freeze,
+      // no request body.
+      await unfreezeStudentGroup(studentGroupId).unwrap();
+      toast.success(t("singleGroup.activateModal.toast.success"));
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === selectedStudent.id
+            ? {
+                ...s,
+                active: true,
+                frozenAt: undefined,
+                activatedAt: formatDisplayDate(activateDate),
+              }
+            : s
+        )
+      );
+      setActivateOpen(false);
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.activateModal.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
+    }
   };
 
-  const handleExportExcel = () => {
-    const data = sortedStudents.map((s, i) => ({
-      "#": i + 1,
-      [t("singleGroup.leftPanel.export.name")]: s.name,
-      [t("singleGroup.leftPanel.export.phone")]: s.phone,
-      [t("singleGroup.leftPanel.export.status")]: s.archived
-        ? t("singleGroup.leftPanel.export.archived")
-        : s.active
-        ? t("singleGroup.leftPanel.export.active")
-        : t("singleGroup.leftPanel.export.frozen"),
-      [t("singleGroup.leftPanel.export.balance")]: s.balance ?? 0,
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, t("singleGroup.leftPanel.export.sheetName"));
-    const safeName = group.name.replace(/[^\w\s-]/g, "").trim() || "group";
-    XLSX.writeFile(wb, `${safeName}-students.xlsx`);
+  const handleExportExcel = async () => {
+    if (!id) return;
+    try {
+      const blob = await fetchGroupExcel(id).unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const safeName = group.name.replace(/[^\w\s-]/g, "").trim() || "group";
+      link.download = `${safeName}-students.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("singleGroup.leftPanel.exportError"));
+    }
   };
 
   const isSelectedArchived = Boolean(selectedStudent?.archived);
   const isSelectedFrozen = selectedStudent ? !selectedStudent.active && !selectedStudent.archived : false;
 
-  const handleActivateArchived = () => {
-    setStudents((prev) =>
-      prev.map((s) =>
-        s.id === selectedStudent?.id
-          ? { ...s, archived: false, active: true, activatedAt: formatDisplayDate(new Date().toISOString().slice(0, 10)) }
-          : s
-      )
-    );
+  // Both actions below use PATCH /student-groups/{id}/status (Swagger:
+  // status is required) to bring an archived (INACTIVE/DELETED) membership
+  // back — "Activate" straight to ACTIVE, "Back to trial lesson" to
+  // PROBATION — rather than the pure local-state stand-ins these were
+  // before (no backend call at all).
+  const handleActivateArchived = async () => {
+    const target = selectedStudent;
     handleCloseMenu();
+    if (!target?.studentGroupId) {
+      toast.error(t("singleGroup.studentActionsMenu.toast.error"));
+      return;
+    }
+    try {
+      await updateStudentGroupStatus({ id: target.studentGroupId, status: "ACTIVE" }).unwrap();
+      toast.success(t("singleGroup.studentActionsMenu.toast.activated"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.studentActionsMenu.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
+    }
   };
 
-  const handleBackToTrialLesson = () => {
-    setStudents((prev) =>
-      prev.map((s) =>
-        s.id === selectedStudent?.id
-          ? { ...s, archived: false, active: false }
-          : s
-      )
-    );
+  const handleBackToTrialLesson = async () => {
+    const target = selectedStudent;
     handleCloseMenu();
+    if (!target?.studentGroupId) {
+      toast.error(t("singleGroup.studentActionsMenu.toast.error"));
+      return;
+    }
+    try {
+      await updateStudentGroupStatus({ id: target.studentGroupId, status: "PROBATION" }).unwrap();
+      toast.success(t("singleGroup.studentActionsMenu.toast.backToTrial"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.studentActionsMenu.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
+    }
   };
 
   const resetRemoveState = () => {
@@ -402,19 +524,41 @@ export const SingleGroup = () => {
   };
 
   const handleRemoveStudent = async () => {
-    if (!selectedStudent || !id) return;
+    if (!selectedStudent) return;
+    const studentGroupId = selectedStudent.studentGroupId;
+    if (!studentGroupId) {
+      toast.error(t("singleGroup.removeStudentDialog.toast.error"));
+      return;
+    }
     try {
-      if (removeDeleteMode) {
-        await deleteStudent(selectedStudent.realId).unwrap();
-        toast.success(t("singleGroup.removeStudentDialog.toast.deleted"));
-      } else {
-        await removeStudentFromGroup({ id, studentId: selectedStudent.realId }).unwrap();
-        toast.success(t("singleGroup.removeStudentDialog.toast.removed"));
-      }
+      // PATCH /student-groups/{id}/status (Swagger: status required; reason/
+      // reasonId/isAllGroup/studentDelete optional) — this is what the
+      // dialog's reason/comment/scope/delete-mode fields were collected for
+      // but never actually sent before. `studentDelete`'s own Swagger
+      // description reads "Talabani o'chirish (INACTIVE qilish)", so
+      // deleteMode maps to that flag rather than a separate DELETE
+      // /students/{id} call. No reasonId is sent since the dialog's reason
+      // dropdown isn't backed by the real Reason model (reasonsApi) — its
+      // label is folded into the free-text `reason` field instead.
+      const reasonParts = [removeReason, removeComment.trim()].filter(Boolean);
+      await updateStudentGroupStatus({
+        id: studentGroupId,
+        status: removeDeleteMode ? "DELETED" : "INACTIVE",
+        reason: reasonParts.length ? reasonParts.join(" — ") : undefined,
+        isAllGroup: removeScope === "all",
+        studentDelete: removeDeleteMode,
+      }).unwrap();
+      toast.success(
+        removeDeleteMode
+          ? t("singleGroup.removeStudentDialog.toast.deleted")
+          : t("singleGroup.removeStudentDialog.toast.removed")
+      );
       setRemoveOpen(false);
       resetRemoveState();
-    } catch {
-      toast.error(t("singleGroup.removeStudentDialog.toast.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.removeStudentDialog.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
 
@@ -424,19 +568,37 @@ export const SingleGroup = () => {
       await assignStudentsToGroup({ id, studentIds: [studentId] }).unwrap();
       toast.success(t("singleGroup.addStudentDrawer.toast.success"));
       setAddStudentOpen(false);
-    } catch {
-      toast.error(t("singleGroup.addStudentDrawer.toast.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.addStudentDrawer.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
 
   const handleMoveStudent = async (newGroupId: string) => {
     if (!selectedStudent || !id) return;
     try {
-      await transferStudent({ id, studentId: selectedStudent.realId, newGroupId, reason: "" }).unwrap();
+      await transferStudent({ id, studentId: selectedStudent.realId, newGroupId }).unwrap();
       toast.success(t("singleGroup.moveStudentDialog.toast.success"));
       setMoveOpen(false);
-    } catch {
-      toast.error(t("singleGroup.moveStudentDialog.toast.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.moveStudentDialog.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
+    }
+  };
+
+  const handleMoveToBranch = async (branchId: string): Promise<boolean> => {
+    if (!selectedStudent) return false;
+    try {
+      await transferStudentBranch({ id: selectedStudent.realId, newBranchId: branchId }).unwrap();
+      toast.success(t("singleGroup.studentActionsMenu.moveToBranchModal.toast.success"));
+      return true;
+    } catch (err) {
+      const apiDetail = extractApiError(err);
+      const generic = t("singleGroup.studentActionsMenu.moveToBranchModal.toast.error");
+      toast.error(apiDetail ? `${generic}: ${apiDetail}` : generic);
+      return false;
     }
   };
 
@@ -446,8 +608,10 @@ export const SingleGroup = () => {
       await updateGroup({ id, ...data }).unwrap();
       toast.success(t("singleGroup.editGroupDrawer.toast.success"));
       setEditOpen(false);
-    } catch {
-      toast.error(t("singleGroup.editGroupDrawer.toast.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.editGroupDrawer.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
 
@@ -456,8 +620,10 @@ export const SingleGroup = () => {
     try {
       await removeTeacherFromGroup({ id, teacherId }).unwrap();
       toast.success(t("singleGroup.editGroupDrawer.toast.teacherRemoved"));
-    } catch {
-      toast.error(t("singleGroup.editGroupDrawer.toast.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.editGroupDrawer.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
 
@@ -468,8 +634,10 @@ export const SingleGroup = () => {
       toast.success(t("singleGroup.deleteDropdown.toast.success"));
       setDeleteOpen(false);
       navigate(-1);
-    } catch {
-      toast.error(t("singleGroup.deleteDropdown.toast.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.deleteDropdown.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
 
@@ -478,15 +646,17 @@ export const SingleGroup = () => {
     try {
       await toggleGroupStatus(id).unwrap();
       toast.success(t("singleGroup.leftPanel.toast.statusToggled"));
-    } catch {
-      toast.error(t("singleGroup.leftPanel.toast.statusToggleError"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.leftPanel.toast.statusToggleError");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f7f8fa" }}>
       {/* PAGE TITLE */}
-      <Stack direction="row" alignItems="center" spacing={1.5} px={3} pt={3} pb={2}>
+      <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" rowGap={0.5} px={3} pt={3} pb={2}>
         <Typography
           variant="h5" fontWeight={700}
           sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
@@ -506,9 +676,9 @@ export const SingleGroup = () => {
         </Typography>
       </Stack>
 
-      <Stack direction="row" gap={2} px={3} pb={3} alignItems="flex-start">
+      <Stack direction={{ xs: "column", md: "row" }} gap={2} px={3} pb={3} alignItems="flex-start">
         {/* ── LEFT PANEL ── */}
-        <Paper sx={{ width: 300, flexShrink: 0, borderRadius: 3, p: 2.5 }}>
+        <Paper sx={{ width: { xs: "100%", md: 300 }, flexShrink: 0, borderRadius: 3, p: 2.5 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
             <Box>
               <Typography fontSize={14}><b>{t("singleGroup.leftPanel.course")}:</b> {group.course}</Typography>
@@ -520,10 +690,13 @@ export const SingleGroup = () => {
             </Box>
 
             <Stack spacing={1}>
-              <ActionIconBtn label={t("singleGroup.leftPanel.editGroup")} onClick={() => setEditOpen(true)}>
+              <ActionIconBtn
+                label={t("singleGroup.leftPanel.editGroup")}
+                onClick={() => { if (id) fetchGroupForEdit(id); setEditOpen(true); }}
+              >
                 <MdEdit size={16} color="#1976d2" />
               </ActionIconBtn>
-              <ActionIconBtn label={t("singleGroup.leftPanel.deleteGroup")} btnRef={deleteAnchorRef as any} onClick={() => setDeleteOpen((p) => !p)}>
+              <ActionIconBtn label={t("singleGroup.leftPanel.deleteGroup")} btnRef={deleteAnchorRef} onClick={() => setDeleteOpen((p) => !p)}>
                 <MdDelete size={16} color="#e53935" />
               </ActionIconBtn>
               <ActionIconBtn label={t("singleGroup.leftPanel.sendSms")} onClick={() => setSmsOpen(true)}>
@@ -542,16 +715,65 @@ export const SingleGroup = () => {
 
           <Typography fontSize={14}><b>{t("singleGroup.leftPanel.rooms")}:</b> {group.room}</Typography>
           <Typography fontSize={14}><b>{t("singleGroup.leftPanel.roomCapacity")}:</b> {group.roomCapacity ?? 30}</Typography>
-          <Typography fontSize={14} mt={0.5}><b>{t("singleGroup.leftPanel.trainingDates")}:</b></Typography>
-          <Typography fontSize={14}>{formatDate(group.startDate)} — {formatDate(group.endDate)}</Typography>
-          <Typography fontSize={12} color="text.secondary">({t("singleGroup.leftPanel.idLabel")}: {group.id})</Typography>
 
-          {group.branch && (
-            <Box mt={1}>
-              <Typography fontSize={13} color="text.secondary">{t("singleGroup.leftPanel.branches")}:</Typography>
-              <Chip label={group.branch} size="small" sx={{ mt: 0.5 }} />
-            </Box>
-          )}
+          <Box
+            sx={{
+              mt: 1.5, p: 1.5, borderRadius: 2,
+              bgcolor: "#f5f7fb", border: "1px solid #eef0f4",
+            }}
+          >
+            <Stack direction="row" alignItems="center" spacing={0.8} mb={1}>
+              <MdCalendarToday size={14} color="#6b7280" />
+              <Typography
+                fontSize={11.5} fontWeight={700} color="text.secondary"
+                sx={{ textTransform: "uppercase", letterSpacing: 0.4 }}
+              >
+                {t("singleGroup.leftPanel.trainingDates")}
+              </Typography>
+            </Stack>
+
+            {group.startDate || group.endDate ? (
+              <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" rowGap={1}>
+                <Box>
+                  <Typography fontSize={10.5} color="text.secondary">
+                    {t("singleGroup.leftPanel.trainingStart")}
+                  </Typography>
+                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">
+                    {formatTrainingDate(group.startDate, i18n.language)}
+                  </Typography>
+                </Box>
+                <Typography fontSize={14} color="#c1c7d0">→</Typography>
+                <Box>
+                  <Typography fontSize={10.5} color="text.secondary">
+                    {t("singleGroup.leftPanel.trainingEnd")}
+                  </Typography>
+                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">
+                    {formatTrainingDate(group.endDate, i18n.language)}
+                  </Typography>
+                </Box>
+              </Stack>
+            ) : (
+              <Typography fontSize={13} color="text.secondary">
+                {t("singleGroup.leftPanel.notScheduled")}
+              </Typography>
+            )}
+          </Box>
+
+          <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" rowGap={0.5} mt={1.25}>
+            {branchName && (
+              <Typography fontSize={13} color="text.secondary">
+                {t("singleGroup.header.branch")}: <b>{branchName}</b>
+              </Typography>
+            )}
+            {branchName && id && (
+              <Typography fontSize={12} color="text.secondary" sx={{ opacity: 0.4 }}>·</Typography>
+            )}
+            {id && (
+              <Typography fontSize={12} color="text.secondary" sx={{ opacity: 0.55 }}>
+                {t("singleGroup.header.groupId")}: #{id}
+              </Typography>
+            )}
+          </Stack>
 
           <Divider sx={{ my: 1.5 }} />
 
@@ -646,7 +868,7 @@ export const SingleGroup = () => {
           </List>
 
           <Box sx={{ mt: 2, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1.5 }}>
-            {archivedCount > 0 && (
+            {archivedStudents.length > 0 && (
               <Button
                 variant="contained"
                 size="small"
@@ -670,6 +892,7 @@ export const SingleGroup = () => {
             )}
             <IconButton
               onClick={handleExportExcel}
+              disabled={isExportingExcel}
               title={t("singleGroup.leftPanel.exportToExcel")}
               sx={{
                 border: "2px solid #43a047",
@@ -679,7 +902,7 @@ export const SingleGroup = () => {
                 "&:hover": { bgcolor: "#e8f5e9", borderColor: "#2e7d32", color: "#2e7d32" },
               }}
             >
-              <MdDownload size={22} />
+              {isExportingExcel ? <CircularProgress size={20} sx={{ color: "#43a047" }} /> : <MdDownload size={22} />}
             </IconButton>
           </Box>
         </Paper>
@@ -764,7 +987,9 @@ export const SingleGroup = () => {
         onAddPayment={() => { handleCloseMenu(); setPaymentOpen(true); }}
         onAddNote={() => { handleCloseMenu(); setNoteOpen(true); }}
         onMoveGroup={() => { handleCloseMenu(); setMoveOpen(true); }}
-        onMoveToBranch={() => { handleCloseMenu(); setMoveToBranchOpen(true); }}
+        branches={branchOptions}
+        isMovingBranch={isMovingBranch}
+        onMoveToBranch={handleMoveToBranch}
         onRemove={() => { handleCloseMenu(); setRemoveOpen(true); }}
         onReminders={() => { handleCloseMenu(); setReminderOpen(true); }}
       />
@@ -775,17 +1000,19 @@ export const SingleGroup = () => {
         onClose={() => setFreezeOpen(false)}
         student={selectedStudent}
         onConfirm={handleFreezeConfirm}
+        isSaving={isFreezing}
       />
 
       <ActivateModal
         open={activateOpen}
         onClose={() => setActivateOpen(false)}
         onConfirm={handleActivateConfirm}
+        isSaving={isUnfreezing}
       />
 
       {/* ══ EDIT GROUP DRAWER ══ */}
       <EditGroupDrawer
-        group={groupDetailData.data}
+        group={groupForEditData?.data ?? groupDetailData.data}
         open={editOpen}
         onClose={() => setEditOpen(false)}
         courses={courseOptions}
@@ -800,7 +1027,7 @@ export const SingleGroup = () => {
       <DeleteDropdown
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
-        anchorRef={deleteAnchorRef as any}
+        anchorRef={deleteAnchorRef}
         groupName={group.name}
         onConfirm={handleDeleteGroup}
         loading={isDeletingGroup}
@@ -824,11 +1051,13 @@ export const SingleGroup = () => {
       {/* ══ REMINDER DRAWER ══ */}
       <ReminderDrawer open={reminderOpen} onClose={() => setReminderOpen(false)} student={selectedStudent} />
 
-      {/* ══ ADD PAYMENT DRAWER (right) ══ */}
-      <AddPaymentDrawer
+      {/* ══ ADD PAYMENT (shared with the Header's quick-add — same design, same logic) ══ */}
+      <AddPayment
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
-        student={selectedStudent}
+        initialStudentId={selectedStudent?.realId}
+        initialStudentName={selectedStudent?.name}
+        groupId={id}
       />
 
       {/* ══ MOVE DIALOG ══ */}
@@ -856,7 +1085,7 @@ export const SingleGroup = () => {
         onRecalculateChange={setRemoveRecalculate}
         scope={removeScope}
         onScopeChange={setRemoveScope}
-        loading={isRemovingFromGroup || isDeletingStudent}
+        loading={isChangingMembershipStatus}
       />
     </Box>
   );

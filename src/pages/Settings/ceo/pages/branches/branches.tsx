@@ -27,6 +27,7 @@ import {
 } from "../../../../../app/api/branchesApi/branchesApi";
 import type { Branch } from "../../../../../app/api/branchesApi/types";
 import { useToast } from "../../../../../Context/ToastContext";
+import { extractApiError } from "../../../../../utils";
 
 export const Branches = () => {
   const { t } = useTranslation();
@@ -87,9 +88,12 @@ export const Branches = () => {
       await deleteBranch(deleteTarget.id).unwrap();
       setDeleteTarget(null);
       toast.success(t("settings.ceo.branches.toast.deleted"));
-    } catch {
-      setDeleteError(t("settings.ceo.branches.deleteConfirm.error"));
-      toast.error(t("settings.ceo.branches.deleteConfirm.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.ceo.branches.deleteConfirm.error");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setDeleteError(message);
+      toast.error(message);
     }
   };
 
@@ -114,9 +118,12 @@ export const Branches = () => {
         toast.success(t("settings.ceo.branches.toast.created"));
       }
       setModalOpen(false);
-    } catch {
-      setSaveError(t("settings.ceo.branches.form.errors.save"));
-      toast.error(t("settings.ceo.branches.form.errors.save"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.ceo.branches.form.errors.save");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setSaveError(message);
+      toast.error(message);
     }
   };
 

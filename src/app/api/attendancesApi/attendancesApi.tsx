@@ -6,6 +6,11 @@ import {
   AttendanceRecord,
   AttendanceStatus,
   GroupAttendanceQueryArgs,
+  AttendanceReportQueryArgs,
+  AttendanceReportRow,
+  AttendanceReportMeta,
+  AttendanceReportResult,
+  AttendanceReportAttendanceStatus,
 } from "./types";
 
 const normalizeStatus = (raw: unknown): AttendanceStatus | null => {
@@ -99,6 +104,68 @@ const normalizeDates = (raw: unknown): string[] => {
     .map((d) => d.slice(0, 10));
 };
 
+const asString = (raw: unknown): string =>
+  raw === undefined || raw === null ? "" : String(raw);
+
+const normalizeReportMeta = (raw: unknown): AttendanceReportMeta => {
+  const obj = (raw ?? {}) as Record<string, unknown>;
+  return {
+    total: Number(obj.total ?? 0) || 0,
+    page: Number(obj.page ?? 1) || 1,
+    limit: Number(obj.limit ?? 10) || 10,
+    totalPages: Number(obj.totalPages ?? 0) || 0,
+  };
+};
+
+const normalizeReportAttendanceStatus = (raw: unknown): AttendanceReportAttendanceStatus | null => {
+  if (typeof raw !== "string") return null;
+  const upper = raw.toUpperCase();
+  return upper === "PRESENT" || upper === "ABSENT" || upper === "EXCUSED" || upper === "UNMARKED"
+    ? (upper as AttendanceReportAttendanceStatus)
+    : null;
+};
+
+const normalizeReportGroupStatus = (raw: unknown): AttendanceReportRow["status"] => {
+  if (typeof raw !== "string") return null;
+  const upper = raw.toUpperCase();
+  return upper === "ACTIVE" || upper === "INACTIVE" || upper === "PROBATION" || upper === "FROZEN" || upper === "DELETED"
+    ? (upper as AttendanceReportRow["status"])
+    : null;
+};
+
+// Backend's exact row shape isn't documented beyond the endpoint
+// description, so each field is read from a few plausible name variants
+// (flat or nested under student/group/teacher objects) — same defensive
+// approach as normalizeRecords above.
+const normalizeReportRow = (raw: unknown, index: number): AttendanceReportRow => {
+  const obj = (raw ?? {}) as Record<string, unknown>;
+  const student = (obj.student ?? {}) as Record<string, unknown>;
+  const group = (obj.group ?? {}) as Record<string, unknown>;
+  const teacher = (obj.teacher ?? {}) as Record<string, unknown>;
+
+  return {
+    id: asString(obj.id ?? obj.attendanceId ?? `row-${index}`),
+    date: obj.date ? String(obj.date).slice(0, 10) : null,
+    studentId: asId(obj.studentId ?? student.id ?? obj.student) || null,
+    studentName: asString(obj.studentName ?? obj.name ?? student.name ?? student.fullName),
+    phone: asString(obj.phone ?? obj.studentPhone ?? student.phone),
+    status: normalizeReportGroupStatus(obj.status ?? obj.studentStatus),
+    groupId: asId(obj.groupId ?? group.id ?? (typeof obj.group === "string" ? obj.group : undefined)) || null,
+    groupName: asString(obj.groupName ?? group.name ?? (typeof obj.group === "string" ? obj.group : "")),
+    teacherId: asId(obj.teacherId ?? teacher.id ?? (typeof obj.teacher === "string" ? obj.teacher : undefined)) || null,
+    teacherName: asString(
+      obj.teacherName ?? teacher.name ?? teacher.fullName ?? (typeof obj.teacher === "string" ? obj.teacher : "")
+    ),
+    attendanceStatus: normalizeReportAttendanceStatus(obj.attendanceStatus ?? obj.attendance),
+    comment: obj.comment ? asString(obj.comment) : obj.lastComment ? asString(obj.lastComment) : null,
+  };
+};
+
+const normalizeReportRows = (raw: unknown): AttendanceReportRow[] => {
+  const list = Array.isArray(raw) ? raw : [];
+  return list.map((item, index) => normalizeReportRow(item, index));
+};
+
 export const attendancesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     groupAttendanceDates: builder.query<string[], GroupAttendanceQueryArgs>({
@@ -125,7 +192,44 @@ export const attendancesApi = baseApi.injectEndpoints({
       },
       providesTags: ["attendance"],
     }),
+    attendanceReport: builder.query<AttendanceReportResult, AttendanceReportQueryArgs>({
+      query: (args) => {
+        const qs = new URLSearchParams();
+        if (args.date) qs.set("date", args.date);
+        if (args.name) qs.set("name", args.name);
+        if (args.phone) qs.set("phone", args.phone);
+        if (args.status) qs.set("status", args.status);
+        if (args.groupId) qs.set("groupId", args.groupId);
+        if (args.teacherId) qs.set("teacherId", args.teacherId);
+        if (args.attendanceStatus) qs.set("attendanceStatus", args.attendanceStatus);
+        if (args.branchId) qs.set("branchId", args.branchId);
+        qs.set("page", String(args.page ?? 1));
+        qs.set("limit", String(args.limit ?? 10));
+        return {
+          url: `${PATHS.ATTENDANCES}/report?${qs.toString()}`,
+          method: "GET",
+        };
+      },
+      transformResponse: (response: { success: boolean; data: unknown; meta?: unknown }) => {
+        // TEMP DEBUG — remove once the real row shape is confirmed.
+        if (import.meta.env.DEV) console.log("[attendancesApi] report raw response:", response);
+        return {
+          rows: normalizeReportRows(response?.data),
+          meta: normalizeReportMeta(response?.meta),
+        };
+      },
+      providesTags: ["attendance"],
+    }),
     saveAttendance: builder.mutation<SaveAttendanceResponse, SaveAttendanceRequest>({
+      // Swagger labels this endpoint's body as multipart/form-data, but that
+      // was confirmed wrong against the real backend: sending `records` as a
+      // multipart field (JSON-stringified) 400'd, because a multipart parser
+      // (multer/busboy) hands the array-typed DTO field a raw string instead
+      // of parsing it back into an array, which fails validation. This
+      // endpoint has no file to upload (unlike students/leads/rooms, which
+      // genuinely use multipart for photo fields), so the Swagger label here
+      // looks like a documentation artifact — plain JSON is what the backend
+      // actually accepts.
       query: (body) => ({
         url: PATHS.ATTENDANCES,
         method: "POST",
@@ -138,11 +242,24 @@ export const attendancesApi = baseApi.injectEndpoints({
       },
       invalidatesTags: ["attendance"],
     }),
+    // GET /attendances/group/{id}/excel — confirmed via Swagger: downloads the
+    // group's monthly attendance sheet as a file. Modeled as a lazy query
+    // returning a Blob (fetchBaseQuery's responseHandler reads the raw
+    // response) since it's a one-off download trigger, not cached list data.
+    groupAttendanceExcel: builder.query<Blob, GroupAttendanceQueryArgs>({
+      query: ({ groupId, month }) => ({
+        url: `${PATHS.ATTENDANCES}/group/${groupId}/excel?month=${month}`,
+        method: "GET",
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
   }),
 });
 
 export const {
   useGroupAttendanceDatesQuery,
   useGroupAttendanceQuery,
+  useAttendanceReportQuery,
   useSaveAttendanceMutation,
+  useLazyGroupAttendanceExcelQuery,
 } = attendancesApi;

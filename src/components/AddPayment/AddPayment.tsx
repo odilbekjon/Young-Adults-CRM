@@ -1,103 +1,77 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
-import { RightDrawer } from "../common/RightDrawer";
+import { MdKeyboardArrowDown } from "react-icons/md";
 import { useToast } from "../../Context/ToastContext";
 import { useAllStudentsQuery } from "../../app/api/studentsApi/studentsApi";
-import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
 import { useCreatePaymentMutation } from "../../app/api/financeApi/financeApi";
-import type { PaymentProvider } from "../../app/api/financeApi/types";
-
-import {
-  MdKeyboardArrowDown, MdCalendarToday, MdOutlineAttachFile,
-} from "react-icons/md";
-
-/* ─── shared styles ─── */
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  border: "1px solid #e0e0e0",
-  borderRadius: 8,
-  padding: "10px 12px",
-  fontSize: 13,
-  color: "#1a1a1a",
-  outline: "none",
-  boxSizing: "border-box",
-  background: "#fff",
-  fontFamily: "inherit",
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 500,
-  color: "#1a1a1a",
-  marginBottom: 6,
-  display: "block",
-};
-
-/* payment method keys map to translation.json -> addPayment.methods.*
-   Also drives the optional `provider` field sent to the backend. */
-const PAYMENT_METHOD_ROWS: (string | null)[][] = [
-  ["cash", "click"],
-  ["card", "uzum"],
-  ["bankAccount", "humo"],
-  ["payme", null],
-];
-
-const METHOD_TO_PROVIDER: Record<string, PaymentProvider> = {
-  cash: "MANUAL",
-  card: "MANUAL",
-  bankAccount: "MANUAL",
-  humo: "MANUAL",
-  click: "CLICK",
-  uzum: "UZUM",
-  payme: "PAYME",
-};
+import { PaymentMethodPicker } from "../PaymentMethodPicker";
+import { PaymentReceiptModal } from "../PaymentReceiptModal";
+import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
+import { RightDrawer } from "../RightDrawer";
+import { inputStyle, labelStyle, paymentSubmitBtn } from "../../pages/SingleGroup/styles/styles";
+import type { RootState } from "../../app/store";
+import type { PaymentMethod, PaymentProvider } from "../../app/api/financeApi/types";
+import { extractApiError } from "../../utils/extractApiError";
+import { getProviderFromMethodName } from "../../utils/paymentProvider";
 
 const todayISO = () => new Date().toISOString().split("T")[0];
 
-export const AddPayment = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+// Matches the reference "Add payment" modal: student, method pay, amount,
+// date, comment. Branch is not a field here — it comes from the branch
+// already selected in the header (state.branch.selectedBranchId), which is
+// also what every request is scoped to via the x-branch-id header, so asking
+// for it a second time in this form would be redundant.
+export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName, groupId }: {
+  open: boolean; onClose: () => void; initialStudentId?: string; initialStudentName?: string; groupId?: string;
+}) => {
   const { t } = useTranslation();
   const toast = useToast();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const { data: studentsData, isFetching: isStudentsLoading, isError: isStudentsError } = useAllStudentsQuery(
-    { page: 1, limit: 100 },
-    { skip: !open }
-  );
-  const { data: branchesData, isFetching: isBranchesLoading, isError: isBranchesError } = useAllBranchesQuery(
-    undefined,
+    { page: 1, limit: 100, branchId: selectedBranchId ?? undefined },
     { skip: !open }
   );
   const [createPayment, { isLoading: isSaving }] = useCreatePaymentMutation();
 
   const students = studentsData?.data ?? [];
-  const branches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
+  // The dropdown's own list is fetched separately (branch-scoped, first 100)
+  // from wherever initialStudentId came from — if the two don't happen to
+  // agree (e.g. this student falls outside that scope/page), the <select>
+  // would silently show no selection at all instead of the intended
+  // student. Rather than leave that unexplained, the known student is
+  // injected as an explicit option so the pre-fill always visibly works.
+  const missingInitialStudent = Boolean(
+    initialStudentId && initialStudentName && !students.some((s) => s.id === initialStudentId)
+  );
 
-  const [method, setMethod] = useState("cash");
   const [paymentMethodId, setPaymentMethodId] = useState("");
+  const [provider, setProvider] = useState<PaymentProvider>("MANUAL");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayISO());
   const [notes, setNotes] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState("");
-  const [selectedBranchId, setSelectedBranchId] = useState("");
-  const [selectedGroupId, setSelectedGroupId] = useState("");
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [transactionId, setTransactionId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [receiptPaymentId, setReceiptPaymentId] = useState<string | null>(null);
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
-  const studentGroups = selectedStudent?.groups ?? [];
+
+  // Pre-fill the student when this drawer is opened from a specific
+  // student's page (e.g. StudentProfile's "Add payment" action).
+  useEffect(() => {
+    if (open && initialStudentId) setSelectedStudentId(initialStudentId);
+  }, [open, initialStudentId]);
 
   const handleClose = () => {
-    setMethod("cash"); setPaymentMethodId(""); setAmount(""); setNotes("");
-    setSelectedStudentId(""); setSelectedBranchId(""); setSelectedGroupId("");
-    setReceiptFile(null); setShowAdvanced(false); setTransactionId("");
-    setDate(todayISO()); setError(null);
+    setPaymentMethodId(""); setProvider("MANUAL"); setAmount(""); setNotes("");
+    setSelectedStudentId(""); setDate(todayISO()); setError(null);
     onClose();
   };
 
-  const handleStudentChange = (id: string) => {
-    setSelectedStudentId(id);
-    setSelectedGroupId("");
+  const handlePaymentMethodChange = (id: string, method?: PaymentMethod) => {
+    setPaymentMethodId(id);
+    if (method) setProvider(getProviderFromMethodName(method.name));
   };
 
   const handleSubmit = async () => {
@@ -109,28 +83,30 @@ export const AddPayment = ({ open, onClose }: { open: boolean; onClose: () => vo
     if (!paymentMethodId.trim()) { setError(t("addPayment.errors.paymentMethodId")); return; }
 
     try {
-      await createPayment({
+      const created = await createPayment({
         amount: Number(amount),
         paymentMethodId: paymentMethodId.trim(),
         studentId: selectedStudentId,
         branchId: selectedBranchId,
-        groupId: selectedGroupId || undefined,
+        groupId: groupId || undefined,
         date: date || undefined,
         notes: notes.trim() || undefined,
-        receiptUrl: receiptFile || undefined,
-        provider: METHOD_TO_PROVIDER[method],
-        transactionId: transactionId.trim() || undefined,
+        provider,
       }).unwrap();
       toast.success(t("addPayment.toast.created"));
       handleClose();
-    } catch {
-      setError(t("addPayment.errors.save"));
-      toast.error(t("addPayment.errors.save"));
+      setReceiptPaymentId(created.data.id);
+    } catch (err) {
+      const detail = extractApiError(err);
+      const message = detail ? `${t("addPayment.errors.save")}: ${detail}` : t("addPayment.errors.save");
+      setError(message);
+      toast.error(message);
     }
   };
 
   return (
-    <RightDrawer open={open} onClose={handleClose} title={t("addPayment.title")} width={440}>
+    <>
+    <RightDrawer open={open} onClose={handleClose} title={t("addPayment.title")} width={420}>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Student */}
@@ -139,7 +115,7 @@ export const AddPayment = ({ open, onClose }: { open: boolean; onClose: () => vo
           <div style={{ position: "relative" }}>
             <select
               value={selectedStudentId}
-              onChange={(e) => handleStudentChange(e.target.value)}
+              onChange={(e) => setSelectedStudentId(e.target.value)}
               disabled={isStudentsLoading}
               style={{
                 ...inputStyle, appearance: "none",
@@ -149,6 +125,9 @@ export const AddPayment = ({ open, onClose }: { open: boolean; onClose: () => vo
               <option value="">
                 {isStudentsLoading ? t("addPayment.studentLoading") : t("addPayment.selectStudent")}
               </option>
+              {missingInitialStudent && (
+                <option value={initialStudentId}>{initialStudentName}</option>
+              )}
               {!isStudentsLoading && students.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -165,117 +144,33 @@ export const AddPayment = ({ open, onClose }: { open: boolean; onClose: () => vo
 
         {/* Show balance if student selected */}
         {selectedStudent && (
-          <div style={{
-            background: "#2d4a5a", color: "#fff", borderRadius: 20,
-            padding: "6px 16px", fontSize: 13, fontWeight: 600,
-            display: "inline-flex", alignSelf: "flex-start",
-          }}>
-            {t("addPayment.balance")}: {(selectedStudent.balance ?? 0).toLocaleString("ru-RU")} UZS
-          </div>
-        )}
-
-        {/* Branch */}
-        <div>
-          <label style={labelStyle}>{t("addPayment.branch")}</label>
-          <div style={{ position: "relative" }}>
-            <select
-              value={selectedBranchId}
-              onChange={(e) => setSelectedBranchId(e.target.value)}
-              disabled={isBranchesLoading}
+          <div>
+            <label style={labelStyle}>{t("addPayment.balance")}</label>
+            <span
               style={{
-                ...inputStyle, appearance: "none",
-                color: selectedBranchId ? "#1a1a1a" : "#aaa", paddingRight: 36,
+                display: "inline-block",
+                background: "#1a3a5c",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 600,
+                padding: "6px 14px",
+                borderRadius: 999,
               }}
             >
-              <option value="">
-                {isBranchesLoading ? t("addPayment.branchLoading") : t("addPayment.selectBranch")}
-              </option>
-              {!isBranchesLoading && branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-            <MdKeyboardArrowDown size={18} style={{
-              position: "absolute", right: 12, top: "50%",
-              transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
-            }} />
-          </div>
-          {isBranchesError && (
-            <div style={{ fontSize: 12, color: "#d93f4f", marginTop: 6 }}>{t("addPayment.branchError")}</div>
-          )}
-        </div>
-
-        {/* Group (optional, scoped to the selected student's groups) */}
-        {selectedStudentId && (
-          <div>
-            <label style={labelStyle}>{t("addPayment.group")}</label>
-            <div style={{ position: "relative" }}>
-              <select
-                value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
-                disabled={studentGroups.length === 0}
-                style={{
-                  ...inputStyle, appearance: "none",
-                  color: selectedGroupId ? "#1a1a1a" : "#aaa", paddingRight: 36,
-                }}
-              >
-                <option value="">{t("addPayment.selectGroup")}</option>
-                {studentGroups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-              <MdKeyboardArrowDown size={18} style={{
-                position: "absolute", right: 12, top: "50%",
-                transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
-              }} />
-            </div>
-            {studentGroups.length === 0 && (
-              <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 6 }}>
-                {t("addPayment.noGroupsForStudent")}
-              </div>
-            )}
+              {(selectedStudent.balance ?? 0).toLocaleString("ru-RU")} UZS
+            </span>
           </div>
         )}
 
-        {/* Method pay */}
+        {/* Payment method */}
         <div>
           <label style={labelStyle}>{t("addPayment.methodPay")}</label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
-            {PAYMENT_METHOD_ROWS.map((row, ri) =>
-              row.map((m, ci) =>
-                m ? (
-                  <label key={m} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
-                    <div
-                      onClick={() => setMethod(m)}
-                      style={{
-                        width: 18, height: 18, borderRadius: "50%",
-                        border: `2px solid ${method === m ? "#185FA5" : "#ccc"}`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: "pointer", flexShrink: 0,
-                        background: method === m ? "#185FA5" : "#fff",
-                      }}
-                    >
-                      {method === m && <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff" }} />}
-                    </div>
-                    {t(`addPayment.methods.${m}`)}
-                  </label>
-                ) : <div key={`empty-${ri}-${ci}`} />
-              )
-            )}
-          </div>
-        </div>
-
-        {/* Payment method ID (backend PaymentMethod reference) */}
-        <div>
-          <label style={labelStyle}>{t("addPayment.paymentMethodId")}</label>
-          <input
-            style={inputStyle}
+          <PaymentMethodPicker
             value={paymentMethodId}
-            onChange={(e) => setPaymentMethodId(e.target.value)}
-            placeholder={t("addPayment.paymentMethodIdPlaceholder")}
+            onChange={handlePaymentMethodChange}
+            loadingLabel={t("addPayment.paymentMethodLoading")}
+            errorLabel={t("addPayment.paymentMethodError")}
           />
-          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
-            {t("addPayment.paymentMethodIdHelper")}
-          </div>
         </div>
 
         {/* Amount */}
@@ -293,86 +188,39 @@ export const AddPayment = ({ open, onClose }: { open: boolean; onClose: () => vo
         {/* Date */}
         <div>
           <label style={labelStyle}>{t("addPayment.date")}</label>
-          <div style={{ position: "relative" }}>
-            <MdCalendarToday size={14} style={{
-              position: "absolute", left: 12, top: "50%",
-              transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
-            }} />
-            <input
-              type="date"
-              style={{ ...inputStyle, paddingLeft: 34 }}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
+          <DatePickerField value={date} onChange={setDate} />
         </div>
 
         {/* Comment / notes */}
         <div>
           <label style={labelStyle}>{t("addPayment.comment")}</label>
           <textarea
-            style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+            style={{ ...inputStyle, minHeight: 100, resize: "vertical" }}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
-        </div>
-
-        {/* Receipt photo */}
-        <div>
-          <label style={labelStyle}>{t("addPayment.receipt")}</label>
-          <label style={{
-            ...inputStyle, display: "flex", alignItems: "center", gap: 8,
-            cursor: "pointer", color: receiptFile ? "#1a1a1a" : "#aaa",
-          }}>
-            <MdOutlineAttachFile size={16} color="#4a7aaa" />
-            {receiptFile ? receiptFile.name : t("addPayment.receiptPlaceholder")}
-            <input
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
-            />
-          </label>
-        </div>
-
-        {/* Advanced (transaction id) */}
-        <div>
-          <span
-            onClick={() => setShowAdvanced((p) => !p)}
-            style={{ fontSize: 13, color: "#555", cursor: "pointer", userSelect: "none" }}
-          >
-            {t("addPayment.advanced")}
-          </span>
-          {showAdvanced && (
-            <input
-              style={{ ...inputStyle, marginTop: 8 }}
-              value={transactionId}
-              onChange={(e) => setTransactionId(e.target.value)}
-              placeholder={t("addPayment.transactionId")}
-            />
-          )}
         </div>
 
         {error && (
           <div style={{ fontSize: 13, color: "#d93f4f" }}>{error}</div>
         )}
 
-        {/* Submit */}
-        <div>
-          <button
-            onClick={handleSubmit}
-            disabled={isSaving}
-            style={{
-              background: "#4a9bb5", color: "#fff", border: "none",
-              borderRadius: 20, padding: "11px 32px",
-              fontSize: 14, fontWeight: 600, cursor: isSaving ? "default" : "pointer",
-              opacity: isSaving ? 0.7 : 1,
-            }}
-          >
-            {isSaving ? t("addPayment.saving") : t("addPayment.submit")}
-          </button>
-        </div>
+        <button
+          type="button"
+          style={{ ...paymentSubmitBtn, opacity: isSaving ? 0.7 : 1, cursor: isSaving ? "default" : "pointer" }}
+          onClick={handleSubmit}
+          disabled={isSaving}
+        >
+          {isSaving ? t("addPayment.saving") : t("addPayment.submit")}
+        </button>
       </div>
     </RightDrawer>
+
+    <PaymentReceiptModal
+      open={Boolean(receiptPaymentId)}
+      onClose={() => setReceiptPaymentId(null)}
+      paymentId={receiptPaymentId}
+    />
+    </>
   );
 };

@@ -8,7 +8,7 @@ import {
   FiChevronDown, FiChevronRight, FiMail, FiPhone,
   FiStar, FiSettings, FiUser, FiFileText, FiTag,
   FiBriefcase, FiBook, FiMap, FiArchive, FiCalendar,
-  FiGrid, FiUserMinus, FiSmartphone, FiTrendingUp, FiList
+  FiGrid, FiUserMinus, FiSmartphone, FiTrendingUp, FiList, FiPauseCircle
 } from "react-icons/fi";
 import { MdOutlineDiamond } from "react-icons/md";
 import { PiStudentDuotone } from "react-icons/pi";
@@ -19,7 +19,7 @@ import { AiOutlineDollar, AiOutlinePieChart } from "react-icons/ai";
 import { HiBuildingLibrary } from "react-icons/hi2";
 import { useSidebar } from "../../Context/SidebarContext";
 
-export const SIDEBAR_WIDTH = 120;
+export const SIDEBAR_WIDTH = 140;
 export const SUBMENU_WIDTH = 200;
 export const HEADER_HEIGHT = 64;
 export const MOBILE_DRAWER_WIDTH = 280;
@@ -43,6 +43,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   diamond:   <MdOutlineDiamond size={17} />,
   grid:      <FiGrid size={17} />,
   userMinus: <FiUserMinus size={17} />,
+  pauseCircle: <FiPauseCircle size={17} />,
   layers:    <FiLayers size={17} />,
   rss:       <FiBook size={17} />,
   // Reports uchun yangi iconlar
@@ -113,6 +114,7 @@ const SUBMENUS: Record<string, SubMenuItem[]> = {
         { labelKey: "sidebar.settings.officeHolidays",    path: "/settings/office/holidays",            icon: "calendar" },
         { labelKey: "sidebar.settings.officeArchive",     path: "/settings/office/archive",             icon: "archive" },
         { labelKey: "sidebar.settings.officeStudentsLeft", path: "/settings/office/students-left-group", icon: "userMinus" },
+        { labelKey: "sidebar.settings.officeStudentFreezes", path: "/settings/office/student-freezes", icon: "pauseCircle" },
       ],
     },
     {
@@ -142,18 +144,18 @@ const SUBMENUS: Record<string, SubMenuItem[]> = {
 // ─── NAV ITEMS ────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
-  { labelKey: "sidebar.nav.dashboard",          path: "/dashboard",                  icon: <FiHome size={35}  /> },
-  { labelKey: "sidebar.nav.leads",               path: "/leads",                      icon: <FiDownload size={35}  /> },
-  { labelKey: "sidebar.nav.teachers",            path: "/teachers",                   icon: <FiUsers size={35}/> },
-  { labelKey: "sidebar.nav.groups",              path: "/groups",                     icon: <FiLayers size={35} /> },
-  { labelKey: "sidebar.nav.students",            path: "/students",                   icon: <PiStudentDuotone size={35} /> },
-  // { labelKey: "sidebar.nav.reminders",           path: "/reminders",                  icon: <FiClock size={35}  /> },
-  // { labelKey: "sidebar.nav.rating",              path: "/rating",                     icon: <IoTrophyOutline size={35} /> },
-  { labelKey: "sidebar.nav.attendanceReports",  path: "/attendance-reports",         icon: <FaRegCalendarAlt size={35} /> },
-  // { labelKey: "sidebar.nav.teacherAttendanceReports", path: "/teacher-attendance-reports", icon: <FaRegCalendarAlt size={35} /> },
-  { labelKey: "sidebar.nav.finance",             path: "/finance",                    icon: <AiOutlineDollar size={35} /> },
-  { labelKey: "sidebar.nav.reports",             path: "/reports",                    icon: <AiOutlinePieChart size={35} /> },
-  { labelKey: "sidebar.nav.settings",            path: "/settings",                   icon: <IoMdSettings size={35} /> },
+  { labelKey: "sidebar.nav.dashboard",          path: "/dashboard",                  icon: <FiHome size={40}  /> },
+  { labelKey: "sidebar.nav.leads",               path: "/leads",                      icon: <FiDownload size={40}  /> },
+  { labelKey: "sidebar.nav.teachers",            path: "/teachers",                   icon: <FiUsers size={40}/> },
+  { labelKey: "sidebar.nav.groups",              path: "/groups",                     icon: <FiLayers size={40} /> },
+  { labelKey: "sidebar.nav.students",            path: "/students",                   icon: <PiStudentDuotone size={40} /> },
+  // { labelKey: "sidebar.nav.reminders",           path: "/reminders",                  icon: <FiClock size={40}  /> },
+  // { labelKey: "sidebar.nav.rating",              path: "/rating",                     icon: <IoTrophyOutline size={40} /> },
+  { labelKey: "sidebar.nav.attendanceReports",  path: "/attendance-reports",         icon: <FaRegCalendarAlt size={40} /> },
+  // { labelKey: "sidebar.nav.teacherAttendanceReports", path: "/teacher-attendance-reports", icon: <FaRegCalendarAlt size={40} /> },
+  { labelKey: "sidebar.nav.finance",             path: "/finance",                    icon: <AiOutlineDollar size={40} /> },
+  { labelKey: "sidebar.nav.reports",             path: "/reports",                    icon: <AiOutlinePieChart size={40} /> },
+  { labelKey: "sidebar.nav.settings",            path: "/settings",                   icon: <IoMdSettings size={40} /> },
 ];
 
 // ─── SubMenuLeaf ──────────────────────────────────────────────────────────────
@@ -176,11 +178,11 @@ const SubMenuLeaf = ({ item, depth = 0 }: { item: SubMenuItem; depth?: number })
           display: "flex",
           alignItems: "center",
           gap: 1.2,
-          color: isActive ? "#003366" : "#374151",
+          color: isActive ? "var(--color-nav-active)" : "var(--color-text-secondary)",
           fontWeight: isActive ? 600 : 400,
-          backgroundColor: isActive ? "#eef2f9" : "transparent",
+          backgroundColor: isActive ? "var(--color-primary-surface)" : "transparent",
           transition: "background 0.12s, color 0.12s",
-          "&:hover": { backgroundColor: "#f5f8ff", color: "#003366" },
+          "&:hover": { backgroundColor: "var(--color-primary-surface)", color: "var(--color-nav-active)" },
         }}
       >
         {iconNode && (
@@ -215,9 +217,9 @@ const SubMenuGroup = ({ item }: { item: SubMenuItem }) => {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          color: "#9ca3af",
+          color: "var(--color-text-muted)",
           userSelect: "none",
-          "&:hover": { color: "#374151" },
+          "&:hover": { color: "var(--color-text-secondary)" },
         }}
       >
         <span>{t(item.labelKey)}</span>
@@ -267,8 +269,8 @@ const SubMenuPanel = ({ items }: SubMenuPanelProps) => {
         left: SIDEBAR_WIDTH,
         width: SUBMENU_WIDTH,
         height: `calc(100vh - ${HEADER_HEIGHT}px)`,
-        backgroundColor: "#fff",
-        borderRight: "1px solid #e0e5ec",
+        backgroundColor: "var(--color-surface)",
+        borderRight: "1px solid var(--color-border)",
         zIndex: 10,
         overflowY: "auto",
         scrollbarWidth: "none",
@@ -281,7 +283,7 @@ const SubMenuPanel = ({ items }: SubMenuPanelProps) => {
           if (item.dividerBefore) {
             return (
               <Box key={item.path}>
-                <Box sx={{ height: "0.5px", bgcolor: "#e0e5ec", mx: 2, my: 0.5 }} />
+                <Box sx={{ height: "0.5px", bgcolor: "var(--color-border)", mx: 2, my: 0.5 }} />
                 <SubMenuLeaf item={item} />
               </Box>
             );
@@ -335,23 +337,24 @@ const NavItem = ({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        py: 1,
+        py: 1.2,
         px: 0.5,
         cursor: "pointer",
-        borderLeft: isHighlighted ? "3px solid #003366" : "3px solid transparent",
-        backgroundColor: isHighlighted ? "#eef2f9" : "transparent",
+        borderLeft: isHighlighted ? "3px solid var(--color-nav-active)" : "3px solid transparent",
+        borderBottom: "1px solid var(--color-border)",
+        backgroundColor: isHighlighted ? "var(--color-primary-surface)" : "transparent",
         transition: "background-color 0.15s, border-color 0.15s",
         "&:hover": {
-          backgroundColor: "#eef2f9",
-          "& .nav-icon": { color: "#003366" },
-          "& .nav-label": { color: "#003366" },
+          backgroundColor: "var(--color-primary-surface)",
+          "& .nav-icon": { color: "var(--color-nav-active)" },
+          "& .nav-label": { color: "var(--color-nav-active)" },
         },
       }}
     >
       <Box
         className="nav-icon"
         sx={{
-          color: isHighlighted ? "#003366" : "#6b7a8d",
+          color: isHighlighted ? "var(--color-nav-active)" : "var(--color-text-secondary)",
           display: "flex",
           alignItems: "center",
           mb: 0.4,
@@ -363,9 +366,9 @@ const NavItem = ({
       <span
         className="nav-label"
         style={{
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: isHighlighted ? 600 : 400,
-          color: isHighlighted ? "#003366" : "#6b7a8d",
+          color: isHighlighted ? "var(--color-nav-active)" : "var(--color-text-secondary)",
           lineHeight: 1.2,
           textAlign: "center",
           whiteSpace: "normal",
@@ -421,7 +424,7 @@ const MobileSubMenuItem = ({ item, depth = 0 }: { item: SubMenuItem; depth?: num
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            color: "#374151",
+            color: "var(--color-text-secondary)",
             userSelect: "none",
           }}
         >
@@ -452,10 +455,10 @@ const MobileSubMenuItem = ({ item, depth = 0 }: { item: SubMenuItem; depth?: num
           display: "flex",
           alignItems: "center",
           gap: 1.2,
-          color: isActive ? "#003366" : "#374151",
+          color: isActive ? "var(--color-nav-active)" : "var(--color-text-secondary)",
           fontWeight: isActive ? 600 : 400,
-          backgroundColor: isActive ? "#eef2f9" : "transparent",
-          "&:hover": { backgroundColor: "#f5f8ff" },
+          backgroundColor: isActive ? "var(--color-primary-surface)" : "transparent",
+          "&:hover": { backgroundColor: "var(--color-primary-surface)" },
         }}
       >
         {iconNode && (
@@ -487,10 +490,10 @@ const MobileNavItem = ({ item }: { item: (typeof NAV_ITEMS)[number] }) => {
         px: 2,
         py: 1.5,
         cursor: "pointer",
-        color: isActive ? "#003366" : "#1a2332",
-        backgroundColor: isActive && !hasSubmenu ? "#eef2f9" : "transparent",
+        color: isActive ? "var(--color-nav-active)" : "var(--color-text-primary)",
+        backgroundColor: isActive && !hasSubmenu ? "var(--color-primary-surface)" : "transparent",
         fontWeight: isActive ? 600 : 500,
-        "&:hover": { backgroundColor: "#f5f8ff" },
+        "&:hover": { backgroundColor: "var(--color-primary-surface)" },
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", "& svg": { fontSize: 20 } }}>
@@ -510,11 +513,11 @@ const MobileNavItem = ({ item }: { item: (typeof NAV_ITEMS)[number] }) => {
       )}
       {hasSubmenu && (
         <Collapse in={open}>
-          <Box sx={{ backgroundColor: "#fafbfc" }}>
+          <Box sx={{ backgroundColor: "var(--color-surface-alt)" }}>
             {SUBMENUS[item.path].map((sub) =>
               sub.dividerBefore ? (
                 <Box key={sub.path}>
-                  <Box sx={{ height: "0.5px", bgcolor: "#e0e5ec", mx: 2, my: 0.5 }} />
+                  <Box sx={{ height: "0.5px", bgcolor: "var(--color-border)", mx: 2, my: 0.5 }} />
                   <MobileSubMenuItem item={sub} depth={1} />
                 </Box>
               ) : (
@@ -559,8 +562,8 @@ export const Sidebar = () => {
           overflowY: "auto",
           overflowX: "hidden",
           zIndex: 11,
-          borderRight: "1px solid #e0e5ec",
-          backgroundColor: "#fff",
+          borderRight: "1px solid var(--color-border)",
+          backgroundColor: "var(--color-surface)",
           flexDirection: "column",
           boxSizing: "border-box",
           scrollbarWidth: "none",

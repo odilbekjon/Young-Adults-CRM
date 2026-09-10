@@ -1,45 +1,56 @@
-import { useState, useRef, useEffect } from "react";
-import { FiCalendar, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { FiChevronDown, FiChevronUp, FiDownload } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
+import { CircularProgress } from "@mui/material";
 
-// ---------- Types ----------
-interface Student {
-  id: number;
-  name: string;
-  groupName: string;
-  status: "Active" | "Demo" | "Frozen";
-  attended: boolean | null; // true=green, false=absent, null=not set
-}
-
-// ---------- Mock data ----------
-const MOCK_STUDENTS: Student[] = [
-  { id: 1, name: "Baxromov Quvonchbek", groupName: "The Speech Sphere", status: "Active", attended: true },
-  { id: 2, name: "Shaymardonova Marjona", groupName: "English Planet", status: "Active", attended: true },
-  { id: 3, name: "Zoirov Bobur", groupName: "English Planet", status: "Active", attended: true },
-  { id: 4, name: "Eshnazarov Diyorbek", groupName: "English Planet", status: "Active", attended: true },
-  { id: 5, name: "O'rolova Diyora", groupName: "English Planet", status: "Active", attended: true },
-  { id: 6, name: "Ramazonov Qahramon", groupName: "Cobandence", status: "Active", attended: null },
-  { id: 7, name: "Ramazonov Farrux", groupName: "Cobandence", status: "Active", attended: null },
-  { id: 8, name: "Toshmatov Jasur", groupName: "Math Masters", status: "Active", attended: false },
-  { id: 9, name: "Karimova Nilufar", groupName: "Math Masters", status: "Frozen", attended: null },
-  { id: 10, name: "Yusupov Sardor", groupName: "The Speech Sphere", status: "Active", attended: true },
-  { id: 11, name: "Ergasheva Mohira", groupName: "Cobandence", status: "Demo", attended: null },
-  { id: 12, name: "Nazarov Ulugbek", groupName: "English Planet", status: "Active", attended: true },
-  { id: 13, name: "Rahimova Dilnoza", groupName: "Math Masters", status: "Active", attended: false },
-  { id: 14, name: "Abdullayev Temur", groupName: "The Speech Sphere", status: "Active", attended: null },
-  { id: 15, name: "Xoliqova Zulfiya", groupName: "English Planet", status: "Frozen", attended: null },
-];
-
-const BRANCHES = ["YA IELTS Campus", "Main Campus", "North Branch"];
-const GROUPS = ["The Speech Sphere", "English Planet", "Cobandence", "Math Masters"];
+import {
+  useReportAttendanceQuery,
+  useLazyReportAttendanceExcelQuery,
+} from "../../../../app/api/reportsApi";
+import type {
+  AttendanceReportOrderBy,
+  AttendanceReportRow,
+} from "../../../../app/api/reportsApi/types";
+import { useAllBranchesQuery } from "../../../../app/api/branchesApi";
+import { useGroupsSelectQuery } from "../../../../app/api/groupsApi";
+import { useToast } from "../../../../Context/ToastContext";
 
 type SortKey = "name" | "status" | "group" | "attendance";
 type SortDir = "asc" | "desc";
 
+// The table's own sort keys map onto Swagger's documented `orderBy` enum
+// (studentName, status, groupName, attendance). Swagger has no sort-direction
+// parameter, so the direction stays a client-side flip of the ordered rows.
+const ORDER_BY: Record<SortKey, AttendanceReportOrderBy> = {
+  name: "studentName",
+  status: "status",
+  group: "groupName",
+  attendance: "attendance",
+};
+
+interface Option {
+  value: string;
+  label: string;
+}
+
+// The backend's `attendance` value isn't documented, so it's interpreted
+// defensively into the three states this table renders and otherwise left
+// alone (the raw value is still surfaced as a tooltip).
+const toAttended = (value: AttendanceReportRow["attendance"]): boolean | null => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value > 0;
+  if (typeof value === "string") {
+    const v = value.trim().toUpperCase();
+    if (["TRUE", "1", "PRESENT", "CAME", "YES", "ATTENDED"].includes(v)) return true;
+    if (["FALSE", "0", "ABSENT", "NO", "MISSED"].includes(v)) return false;
+  }
+  return null;
+};
+
 // ---------- SelectBox ----------
 const SelectBox = ({
   value, onChange, options, placeholder, disabled,
-}: { value: string; onChange: (v: string) => void; options: string[]; placeholder?: string; disabled?: boolean }) => {
+}: { value: string; onChange: (v: string) => void; options: Option[]; placeholder?: string; disabled?: boolean }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -48,24 +59,25 @@ const SelectBox = ({
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+  const selectedLabel = options.find((o) => o.value === value)?.label ?? "";
   return (
     <div className="relative" ref={ref}>
       <button type="button" disabled={disabled} onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-2 text-sm bg-white text-left hover:border-gray-400 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed">
-        <span className={value ? "text-gray-800" : "text-gray-400"}>{value || placeholder || t("reports.attendance.filters.select")}</span>
+        <span className={selectedLabel ? "text-gray-800" : "text-gray-400"}>{selectedLabel || placeholder || t("reports.attendance.filters.select")}</span>
         <FiChevronDown size={14} className="text-gray-400 flex-shrink-0" />
       </button>
       {open && !disabled && (
-        <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-full py-1">
+        <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-full py-1 max-h-64 overflow-y-auto">
           <button className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:bg-gray-50"
             onClick={() => { onChange(""); setOpen(false); }}>
             {placeholder || t("reports.attendance.filters.select")}
           </button>
           {options.map(opt => (
-            <button key={opt} type="button"
+            <button key={opt.value} type="button"
               className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              onClick={() => { onChange(opt); setOpen(false); }}>
-              {opt}
+              onClick={() => { onChange(opt.value); setOpen(false); }}>
+              {opt.label}
             </button>
           ))}
         </div>
@@ -83,29 +95,28 @@ const SortIcon = ({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; s
 );
 
 // ---------- Attendance dot ----------
-const AttDot = ({ val }: { val: boolean | null }) => {
+const AttDot = ({ val, raw }: { val: boolean | null; raw: AttendanceReportRow["attendance"] }) => {
   const cls = val === true
     ? "bg-green-500"
     : val === false
     ? "bg-red-400"
     : "bg-gray-400";
-  return <span className={`inline-block w-7 h-7 rounded-md ${cls}`} />;
+  return <span title={raw === null || raw === undefined ? "" : String(raw)} className={`inline-block w-7 h-7 rounded-md ${cls}`} />;
 };
 
 // ---------- Summary table ----------
-const SummaryTable = ({ students }: { students: Student[] }) => {
+const SummaryTable = ({ students }: { students: AttendanceReportRow[] }) => {
   const { t } = useTranslation();
-  const visited = students.filter(s => s.attended === true).length;
-  const absent = students.filter(s => s.attended === false).length;
-  const notSet = students.filter(s => s.attended === null).length;
+  const attended = students.map((s) => toAttended(s.attendance));
+  const visited = attended.filter((a) => a === true).length;
+  const absent = attended.filter((a) => a === false).length;
+  const notSet = attended.filter((a) => a === null).length;
   const all = students.length;
-  const active = students.filter(s => s.status === "Active").length;
-  const demo = students.filter(s => s.status === "Demo").length;
-  const frozen = students.filter(s => s.status === "Frozen").length;
-  const allStatus = students.length;
-
-  // const rowCls = "flex items-center border-b border-gray-100 last:border-0";
-  // const cellCls = "py-2.5 text-sm text-gray-600";
+  const countStatus = (name: string) =>
+    students.filter((s) => s.status.trim().toUpperCase() === name).length;
+  const active = countStatus("ACTIVE");
+  const demo = countStatus("DEMO");
+  const frozen = countStatus("FROZEN");
 
   return (
     <div className="grid grid-cols-2 gap-0 border border-gray-200 rounded-lg overflow-hidden bg-white mb-5 shadow-sm">
@@ -140,7 +151,7 @@ const SummaryTable = ({ students }: { students: Student[] }) => {
         ))}
         <div className="flex items-center justify-between px-4 py-2.5">
           <span className="text-sm text-gray-600">{t("reports.attendance.summary.all")}</span>
-          <span className="text-sm text-gray-700 font-medium">{allStatus}</span>
+          <span className="text-sm text-gray-700 font-medium">{all}</span>
         </div>
       </div>
     </div>
@@ -150,36 +161,80 @@ const SummaryTable = ({ students }: { students: Student[] }) => {
 // ---------- Main Component ----------
 export const AttendanceReports = () => {
   const { t } = useTranslation();
-  const [dateFrom, setDateFrom] = useState("13.05.2026");
-  const [dateTo, setDateTo] = useState("13.05.2026");
-  const [branch, setBranch] = useState("YA IELTS Campus");
+  const toast = useToast();
+
+  // Draft filter values (the sidebar) vs. the applied ones that hit the API —
+  // the existing "Filter"/"Reset" buttons keep driving that transition.
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [branch, setBranch] = useState("");
   const [group, setGroup] = useState("");
-  const [, setActiveBranch] = useState("YA IELTS Campus");
-  const [activeGroup, setActiveGroup] = useState("");
+  const [applied, setApplied] = useState({ startDate: "", endDate: "", branchId: "", groupId: "" });
+
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const { data: branchesData } = useAllBranchesQuery();
+  const { data: groupsData } = useGroupsSelectQuery();
+
+  const branchOptions: Option[] = useMemo(
+    () => (branchesData?.data ?? []).map((b) => ({ value: b.id, label: b.name })),
+    [branchesData]
+  );
+  const groupOptions: Option[] = useMemo(
+    () => (groupsData ?? []).map((g) => ({ value: g.id, label: g.name })),
+    [groupsData]
+  );
+
+  const queryArgs = useMemo(
+    () => ({
+      startDate: applied.startDate || undefined,
+      endDate: applied.endDate || undefined,
+      branchId: applied.branchId || undefined,
+      groupId: applied.groupId || undefined,
+      orderBy: ORDER_BY[sortKey],
+    }),
+    [applied, sortKey]
+  );
+
+  const { data: rows, isLoading, isFetching, isError } = useReportAttendanceQuery(queryArgs);
+  const [fetchExcel, { isFetching: isExporting }] = useLazyReportAttendanceExcelQuery();
+
+  const students = useMemo(() => rows ?? [], [rows]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("asc"); }
   };
 
-  const handleFilter = () => { setActiveBranch(branch); setActiveGroup(group); };
-  const handleReset = () => { setBranch("YA IELTS Campus"); setGroup(""); setActiveBranch("YA IELTS Campus"); setActiveGroup(""); };
+  const handleFilter = () =>
+    setApplied({ startDate: dateFrom, endDate: dateTo, branchId: branch, groupId: group });
 
-  const filtered = MOCK_STUDENTS.filter(s => {
-    if (activeGroup && s.groupName !== activeGroup) return false;
-    return true;
-  });
+  const handleReset = () => {
+    setDateFrom(""); setDateTo(""); setBranch(""); setGroup("");
+    setApplied({ startDate: "", endDate: "", branchId: "", groupId: "" });
+  };
 
-  const sorted = [...filtered].sort((a, b) => {
-    let cmp = 0;
-    if (sortKey === "name") cmp = a.name.localeCompare(b.name);
-    else if (sortKey === "status") cmp = a.status.localeCompare(b.status);
-    else if (sortKey === "group") cmp = a.groupName.localeCompare(b.groupName);
-    else if (sortKey === "attendance") cmp = (a.attended === b.attended ? 0 : a.attended ? -1 : 1);
-    return sortDir === "asc" ? cmp : -cmp;
-  });
+  const handleExportExcel = async () => {
+    try {
+      const blob = await fetchExcel(queryArgs).unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "attendance-report.xlsx";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("reports.common.exportError"));
+    }
+  };
+
+  // The backend already applies `orderBy`; only the direction is flipped here
+  // since Swagger exposes no sort-direction parameter.
+  const sorted = useMemo(
+    () => (sortDir === "asc" ? students : [...students].reverse()),
+    [students, sortDir]
+  );
 
   const thCls = "px-5 py-3 text-left text-gray-500 font-medium text-sm cursor-pointer select-none hover:text-gray-700 transition-colors";
 
@@ -188,10 +243,21 @@ export const AttendanceReports = () => {
       <div className="flex">
         {/* ===== Main content ===== */}
         <div className="flex-1 p-6 pr-4">
-          <h1 className="text-2xl font-semibold text-gray-800 mb-5">{t("reports.attendance.title")}</h1>
+          <div className="flex items-center justify-between mb-5">
+            <h1 className="text-2xl font-semibold text-gray-800">{t("reports.attendance.title")}</h1>
+            <button
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              title={t("reports.common.exportExcel")}
+              className="flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-60"
+            >
+              {isExporting ? <CircularProgress size={14} /> : <FiDownload size={15} />}
+              {t("reports.common.exportExcel")}
+            </button>
+          </div>
 
           {/* Summary */}
-          <SummaryTable students={filtered} />
+          <SummaryTable students={students} />
 
           {/* Table */}
           <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-x-auto">
@@ -213,21 +279,26 @@ export const AttendanceReports = () => {
                 </tr>
               </thead>
               <tbody>
-                {sorted.map(s => (
-                  <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3.5 text-gray-800">{s.name}</td>
-                    <td className="px-5 py-3.5 text-gray-700">
-                      <span className="font-semibold">{s.groupName}:</span>{" "}
-                      <span className="text-gray-600">{s.status}</span>
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-700">{s.groupName}</td>
-                    <td className="px-5 py-3.5">
-                      <AttDot val={s.attended} />
-                    </td>
-                  </tr>
-                ))}
-                {sorted.length === 0 && (
+                {isLoading || isFetching ? (
+                  <tr><td colSpan={4} className="text-center py-10"><CircularProgress size={26} /></td></tr>
+                ) : isError ? (
+                  <tr><td colSpan={4} className="text-center py-10 text-red-500">{t("reports.common.loadError")}</td></tr>
+                ) : sorted.length === 0 ? (
                   <tr><td colSpan={4} className="text-center py-10 text-gray-400">{t("reports.attendance.table.noData")}</td></tr>
+                ) : (
+                  sorted.map(s => (
+                    <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-3.5 text-gray-800">{s.studentName}</td>
+                      <td className="px-5 py-3.5 text-gray-700">
+                        <span className="font-semibold">{s.groupName}:</span>{" "}
+                        <span className="text-gray-600">{s.status}</span>
+                      </td>
+                      <td className="px-5 py-3.5 text-gray-700">{s.groupName}</td>
+                      <td className="px-5 py-3.5">
+                        <AttDot val={toAttended(s.attendance)} raw={s.attendance} />
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -241,30 +312,24 @@ export const AttendanceReports = () => {
           <div className="flex flex-col gap-4">
             <div>
               <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.dateFrom")}</label>
-              <div className="relative">
-                <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
-                <input type="text" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 pl-8 text-sm bg-white focus:outline-none focus:border-blue-400 text-gray-700" />
-              </div>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400 text-gray-700" />
             </div>
 
             <div>
               <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.dateTo")}</label>
-              <div className="relative">
-                <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
-                <input type="text" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 pl-8 text-sm bg-white focus:outline-none focus:border-blue-400 text-gray-700" />
-              </div>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400 text-gray-700" />
             </div>
 
             <div>
               <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.branches")}</label>
-              <SelectBox value={branch} onChange={setBranch} options={BRANCHES} placeholder={t("reports.attendance.filters.selectBranch")} />
+              <SelectBox value={branch} onChange={setBranch} options={branchOptions} placeholder={t("reports.attendance.filters.selectBranch")} />
             </div>
 
             <div>
               <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.group")}</label>
-              <SelectBox value={group} onChange={setGroup} options={GROUPS} placeholder={t("reports.attendance.filters.select")} />
+              <SelectBox value={group} onChange={setGroup} options={groupOptions} placeholder={t("reports.attendance.filters.select")} />
             </div>
 
             <div className="flex gap-2 mt-1">

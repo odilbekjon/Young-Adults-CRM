@@ -1,28 +1,71 @@
+export type LeadStatus = "ACTIVE" | "IN_TRIAL" | "CONVERTED" | "CANCELLED";
+
+export interface LeadSectionRef {
+  id: string;
+  name: string;
+}
+
+export interface LeadColumnRef {
+  id: string;
+  name: string;
+}
+
+export interface LeadSourceRef {
+  id: string;
+  name: string;
+}
+
+export interface LeadTrialGroupRef {
+  id: string;
+  name: string;
+}
+
+export interface LeadStudentRef {
+  id: string;
+  name: string;
+}
+
+// GET /leads/{id}'s description (Swagger) says the response includes the
+// lead's source, its section+column, submitted form answers (extraData), the
+// attached trial group and the resulting student account — but the exact
+// nested shapes aren't shown beyond that description, so they're modeled
+// defensively as {id,name} refs (same pattern as StudentGroupRef) and kept
+// optional throughout.
 export interface Lead {
   id: string;
   name: string;
   phone: string | null;
-  email?: string | null;
   sectionId: string;
   columnId?: string | null;
-  leadSourceId?: string | null;
-  comment?: string | null;
+  sourceId?: string | null;
+  notes?: string | null;
+  birthdate?: string | null;
+  courseId?: string | null;
+  status?: LeadStatus | string;
+  extraData?: Record<string, unknown> | null;
+  section?: LeadSectionRef | null;
+  column?: LeadColumnRef | null;
+  source?: LeadSourceRef | null;
+  trialGroup?: LeadTrialGroupRef | null;
+  student?: LeadStudentRef | null;
   createdAt?: string;
   updatedAt?: string;
 }
 
-// Swagger only shows the endpoint list ("Kengaytirilgan filtrlar bilan" —
-// with extended filters) without the exact query-param schema, so this is a
-// defensible set derived from the resource's own foreign keys plus the
-// page/limit + search convention already used by every other list endpoint
-// in this codebase.
+// GET /leads — confirmed via Swagger: page/limit + search (name or phone) +
+// branchId/columnId/sectionId/sourceId/courseId/status/startDate/endDate.
 export interface LeadsRequest {
   page?: number;
   limit?: number;
   search?: string;
-  sectionId?: string;
+  branchId?: string;
   columnId?: string;
-  leadSourceId?: string;
+  sectionId?: string;
+  sourceId?: string;
+  courseId?: string;
+  status?: LeadStatus | string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface LeadsResponse {
@@ -43,25 +86,34 @@ export interface LeadResponse {
   data: Lead;
 }
 
-// GET /leads/{id}/for-edit — response shape not documented beyond a 200
-// status, so we expect the same Lead shape as GET /leads/{id}.
+// GET /leads/{id}/for-edit — "tahrirlash modali uchun lidning barcha
+// maydonlarini (ism, telefon, bo'lim, manba, kurs, izoh) qaytaradi" — same
+// Lead shape as GET /leads/{id}.
 export interface LeadForEditResponse {
   success: boolean;
   message?: string;
   data: Lead;
 }
 
+// POST /leads — confirmed via Swagger as multipart/form-data with this exact
+// field set (name/phone/sectionId required, rest optional).
 export interface CreateLeadRequest {
   name: string;
-  phone?: string;
-  email?: string;
+  phone: string;
   sectionId: string;
-  leadSourceId?: string;
-  comment?: string;
+  sourceId?: string;
+  notes?: string;
+  birthdate?: string;
+  courseId?: string;
+  branchId?: string;
+  extraData?: Record<string, unknown>;
 }
 
-export interface UpdateLeadRequest extends Partial<Omit<CreateLeadRequest, "sectionId">> {
+// PATCH /leads/{id} — same field set as create (all optional) plus `status`;
+// confirmed via Swagger as multipart/form-data too.
+export interface UpdateLeadRequest extends Partial<CreateLeadRequest> {
   id: string;
+  status?: LeadStatus | string;
 }
 
 export interface DeleteLeadResponse {
@@ -69,12 +121,13 @@ export interface DeleteLeadResponse {
   message?: string;
 }
 
-// POST /leads/{id}/add-to-trial — "Lidni guruhga sinov darsiga biriktirish".
-// Body schema not shown in Swagger; a target group id is the minimal
-// information needed to attach the lead to a trial lesson.
+// POST /leads/{id}/add-to-trial — confirmed via Swagger as multipart/
+// form-data; groupId required, trialDate/notes optional. Response is 201.
 export interface AddLeadToTrialRequest {
   id: string;
   groupId: string;
+  trialDate?: string;
+  notes?: string;
 }
 
 export interface AddLeadToTrialResponse {
@@ -82,10 +135,12 @@ export interface AddLeadToTrialResponse {
   message?: string;
 }
 
-// PATCH /leads/{id}/move-section — Kanban drag & drop.
+// PATCH /leads/{id}/move-section — Kanban drag & drop. Confirmed via Swagger
+// as multipart/form-data with a single required field named
+// `targetSectionId` (not `sectionId`).
 export interface MoveLeadSectionRequest {
   id: string;
-  sectionId: string;
+  targetSectionId: string;
 }
 
 export interface MoveLeadSectionResponse {

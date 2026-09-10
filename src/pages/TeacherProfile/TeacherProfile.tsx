@@ -11,6 +11,7 @@ import { useTeacherByIdQuery, useTeacherForEditQuery, useUpdateTeacherMutation, 
 import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useAllGroupsQuery } from "../../app/api/groupsApi";
+import { useTeacherSalariesQuery } from "../../app/api/salariesApi";
 import { useToast } from "../../Context/ToastContext";
 
 const BADGE_COLORS = [
@@ -403,14 +404,35 @@ const HistoryTab = ({ teacherId }: { teacherId: string }) => {
 };
 
 /* ══════════════════════════════════════════
-   SalaryTab — no backend endpoint yet, kept as
-   the pre-existing "coming soon" placeholder.
+   SalaryTab — GET /salaries/teacher/{teacherId}
+   ("O'qituvchi profilidagi Oyliklar tarixi"):
+   the teacher's published/paid payroll history.
 ══════════════════════════════════════════ */
-const SalaryTab = () => {
-  const [selectedMonth, setSelectedMonth] = useState<string>("—");
-  const rows: never[] = [];
-  const total = 0;
-  const months = ["—", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"];
+const SalaryTab = ({ teacherId }: { teacherId: string }) => {
+  const { t } = useTranslation();
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const { data, isLoading, isError } = useTeacherSalariesQuery(teacherId, { skip: !teacherId });
+
+  const all = useMemo(() => data ?? [], [data]);
+
+  // The endpoint takes no period parameter, so the month picker filters the
+  // returned history and its options come from the periods actually present.
+  const months = useMemo(() => {
+    const keys = all
+      .filter((r) => r.periodYear && r.periodMonth)
+      .map((r) => `${r.periodYear}-${String(r.periodMonth).padStart(2, "0")}`);
+    return [...new Set(keys)].sort().reverse();
+  }, [all]);
+
+  const rows = useMemo(
+    () =>
+      selectedMonth
+        ? all.filter((r) => `${r.periodYear}-${String(r.periodMonth).padStart(2, "0")}` === selectedMonth)
+        : all,
+    [all, selectedMonth]
+  );
+
+  const total = rows.reduce((sum, r) => sum + r.totalAmount, 0);
 
   const thStyle: React.CSSProperties = {
     padding: "12px 14px",
@@ -421,6 +443,20 @@ const SalaryTab = () => {
     borderBottom: "1px solid #e8e8e8",
     whiteSpace: "nowrap",
   };
+  const tdStyle: React.CSSProperties = {
+    padding: "12px 14px",
+    fontSize: 13,
+    color: "#1a1a1a",
+    borderBottom: "1px solid #f2f2f2",
+    whiteSpace: "nowrap",
+  };
+
+  const statusLabel = (status: string) => {
+    const key = status.toLowerCase();
+    return ["draft", "published", "paid"].includes(key)
+      ? t(`finance.salaries.payrolls.status.${key}`)
+      : status || "—";
+  };
 
   return (
     <div>
@@ -430,11 +466,11 @@ const SalaryTab = () => {
           onChange={(e) => setSelectedMonth(e.target.value)}
           style={{ border: "1px solid #e0e0e0", borderRadius: 6, padding: "5px 10px", fontSize: 13, color: "#1a1a1a", outline: "none", background: "#fff", cursor: "pointer" }}
         >
+          <option value="">—</option>
           {months.map((m) => (
             <option key={m} value={m}>{m}</option>
           ))}
         </select>
-        <span style={{ fontSize: 13, color: "#888" }}>—</span>
       </div>
 
       <div style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
@@ -445,18 +481,48 @@ const SalaryTab = () => {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "#fff" }}>
-              {["No", "Group / Course", "Student", "Lessons / Present / Absent / Not Marked", "Setting amount", "Estimated amount", "Calc setting", "Salary type"].map((h) => (
+              {[
+                t("finance.salaries.payrolls.table.period"),
+                t("finance.salaries.payrolls.table.status"),
+                t("finance.salaries.payrolls.table.total"),
+                t("finance.salaries.payrolls.table.paid"),
+              ].map((h) => (
                 <th key={h} style={thStyle}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && (
+            {isLoading ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: "center", padding: "32px 0", fontSize: 14, color: "#aaa" }}>
-                  No Data
+                <td colSpan={4} style={{ textAlign: "center", padding: "32px 0" }}>
+                  <CircularProgress size={24} />
                 </td>
               </tr>
+            ) : isError ? (
+              <tr>
+                <td colSpan={4} style={{ textAlign: "center", padding: "32px 0", fontSize: 14, color: "#e53935" }}>
+                  {t("finance.salaries.payrolls.loadError")}
+                </td>
+              </tr>
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={4} style={{ textAlign: "center", padding: "32px 0", fontSize: 14, color: "#aaa" }}>
+                  {t("finance.salaries.payrolls.noData")}
+                </td>
+              </tr>
+            ) : (
+              rows.map((r) => (
+                <tr key={r.id}>
+                  <td style={tdStyle}>
+                    {r.periodYear && r.periodMonth
+                      ? `${String(r.periodMonth).padStart(2, "0")}.${r.periodYear}`
+                      : "—"}
+                  </td>
+                  <td style={tdStyle}>{statusLabel(r.status)}</td>
+                  <td style={tdStyle}>{r.totalAmount.toLocaleString("ru-RU")}</td>
+                  <td style={tdStyle}>{r.paidAmount.toLocaleString("ru-RU")}</td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -639,7 +705,7 @@ export const TeacherProfile = () => {
       )}
 
       {activeTab === "history" && <HistoryTab teacherId={teacher.id} />}
-      {activeTab === "salary" && <SalaryTab />}
+      {activeTab === "salary" && <SalaryTab teacherId={id ?? ""} />}
 
       <EditDrawer teacher={teacherForEditData?.data ?? teacher} open={editOpen} onClose={() => setEditOpen(false)} branches={branches} onSave={handleSaveTeacher} isSaving={isSaving} />
       <FlagDropdown open={flagOpen} onClose={() => setFlagOpen(false)} anchorRef={flagAnchorRef} />

@@ -5,12 +5,17 @@
   },
   "header": {
     "search": "Поиск",
+    "searching": "Поиск...",
+    "searchNoResults": "Студенты не найдены",
+    "searchError": "Ошибка поиска. Попробуйте снова.",
     "notifications": "Уведомления",
     "viewAll": "Смотреть все",
     "recentPages": "Недавние страницы",
     "help": "Помощь",
     "fullscreen": "На весь экран",
     "exitFullscreen": "Выйти из полноэкранного режима",
+    "darkMode": "Тёмная тема",
+    "lightMode": "Светлая тема",
     "account": "Аккаунт",
     "signOut": "Выйти",
     "hamburgerMenu": "Меню"
@@ -47,6 +52,7 @@
       "name": "Введите имя",
       "password": "Введите пароль",
       "contact": "Укажите телефон или email",
+      "branch": "Выберите филиал в шапке перед добавлением студента",
       "save": "Не удалось сохранить студента"
     },
     "additional": {
@@ -63,48 +69,70 @@
   "addPayment": {
     "title": "Добавить платёж",
     "student": "Студент",
-    "selectStudent": "Выберите студента",
+    "selectStudent": "Выберите пользователя",
     "studentLoading": "Загрузка студентов...",
     "studentError": "Не удалось загрузить студентов",
     "balance": "Баланс",
-    "branch": "Филиал",
-    "selectBranch": "Выберите филиал",
-    "branchLoading": "Загрузка филиалов...",
-    "branchError": "Не удалось загрузить филиалы",
-    "group": "Группа",
-    "selectGroup": "Выберите группу (необязательно)",
-    "noGroupsForStudent": "Этот студент не прикреплён ни к одной группе",
     "methodPay": "Способ оплаты",
-    "methods": {
-      "cash": "Наличные",
-      "click": "Click",
-      "card": "Карта",
-      "uzum": "Uzum",
-      "bankAccount": "Банковский счёт",
-      "humo": "Humo",
-      "payme": "Payme"
-    },
-    "paymentMethodId": "ID способа оплаты (backend)",
-    "paymentMethodIdPlaceholder": "Введите PaymentMethod ID",
-    "paymentMethodIdHelper": "Этот ID берётся из списка способов оплаты на backend",
+    "paymentMethodId": "Способ оплаты",
+    "selectPaymentMethod": "Выберите способ оплаты",
+    "paymentMethodLoading": "Загрузка способов оплаты...",
+    "paymentMethodError": "Не удалось загрузить способы оплаты",
     "amount": "Сумма",
     "date": "Дата",
     "comment": "Комментарий",
-    "receipt": "Фото чека",
-    "receiptPlaceholder": "Выберите файл",
-    "advanced": "+ Дополнительно (ID транзакции)",
-    "transactionId": "ID транзакции",
     "submit": "Отправить",
     "saving": "Сохранение...",
     "errors": {
-      "student": "Выберите студента",
-      "branch": "Выберите филиал",
+      "student": "Выберите пользователя",
+      "branch": "Филиал не выбран — выберите его в шапке сайта",
       "amount": "Введите корректную сумму",
-      "paymentMethodId": "Укажите ID способа оплаты",
+      "paymentMethodId": "Выберите способ оплаты",
       "save": "Не удалось сохранить платёж"
     },
     "toast": {
       "created": "Платёж успешно добавлен"
+    }
+  },
+  "paymentReceipt": {
+    "title": "Чек",
+    "print": "Печать",
+    "loading": "Загрузка...",
+    "loadError": "Не удалось загрузить чек"
+  },
+  "debtorReceipt": {
+    "title": "Чек задолженности",
+    "print": "Печать",
+    "loadError": "Не удалось загрузить чек",
+    "name": "Имя",
+    "phone": "Телефон",
+    "group": "Группа",
+    "branch": "Филиал",
+    "balance": "Сумма долга"
+  },
+  "addWithdrawal": {
+    "title": "Добавить вывод средств",
+    "recipientName": "Имя получателя",
+    "recipientNamePlaceholder": "Полное имя",
+    "branch": "Филиал",
+    "selectBranch": "Выберите филиал",
+    "branchLoading": "Загрузка филиалов...",
+    "branchError": "Не удалось загрузить филиалы",
+    "paymentMethodId": "Способ оплаты",
+    "amount": "Сумма",
+    "date": "Дата",
+    "reason": "Причина",
+    "submit": "Отправить",
+    "saving": "Сохранение...",
+    "errors": {
+      "recipientName": "Введите имя получателя",
+      "branch": "Выберите филиал",
+      "amount": "Введите корректную сумму",
+      "paymentMethodId": "Выберите способ оплаты",
+      "save": "Не удалось сохранить вывод средств"
+    },
+    "toast": {
+      "created": "Вывод средств успешно добавлен"
     }
   },
   "login": {
@@ -164,6 +192,7 @@
       "officeHolidays": "Праздники",
       "officeArchive": "Архив",
       "officeStudentsLeft": "Студенты, покинувшие группу",
+      "officeStudentFreezes": "Заморозки студентов",
       "forms": "Формы",
       "formsList": "Формы",
       "blog": "Блог",
@@ -232,6 +261,20 @@
     "filters": {
       "searchPlaceholder": "Поиск по имени или телефону",
       "byTeacher": "По учителю",
+      "byCourses": "По курсам",
+      "allCourses": "Все курсы",
+      "status": "Статус",
+      "statusOptions": { "active": "Активный", "inactive": "Неактивный" },
+      "financialSituation": "Финансовое состояние",
+      "financialOptions": { "positive": "Положительный баланс", "negative": "Отрицательный баланс", "zero": "Нулевой баланс" },
+      "byTags": "По тегам",
+      "tagsUnavailable": "Теги пока недоступны",
+      "externalId": "Внешний ID",
+      "externalIdUnavailable": "Внешний ID пока недоступен",
+      "groupCount": "Кол-во групп",
+      "fromCreated": "Дата создания от",
+      "toCreatedDate": "Дата создания до",
+      "advancedFilters": "Доп. фильтры",
       "clearAll": "Сбросить всё"
     },
     "table": {
@@ -270,7 +313,13 @@
       "studentsSelected_many": "Выбрано {{count}} студентов",
       "studentsSelected_other": "Выбрано {{count}} студентов",
       "selectGroup": "Выберите группу",
-      "submit": "Добавить студента в группу"
+      "submit": "Добавить студента в группу",
+      "submitting": "Добавление...",
+      "toast": {
+        "success": "Студент(ы) добавлены в группу",
+        "error": "Не удалось добавить студента(ов) в группу",
+        "alreadyInGroup": "Выбранные студенты уже состоят в этой группе"
+      }
     },
     "editDrawer": {
       "title": "Редактировать студента",
@@ -374,7 +423,8 @@
       "phoneOrEmailRequired": "Телефон или email обязателен",
       "nameRequired": "Имя обязательно",
       "dobRequired": "Дата рождения обязательна",
-      "genderRequired": "Пол обязателен"
+      "genderRequired": "Пол обязателен",
+      "branchRequired": "Выберите филиал в шапке перед добавлением учителя"
     },
     "toast": {
       "created": "Учитель добавлен",
@@ -482,6 +532,8 @@
       "menuLabel": "Добавить на пробный урок",
       "title": "Добавить на пробный урок",
       "selectGroup": "Выберите группу",
+      "trialDate": "Дата пробного урока",
+      "notes": "Комментарий",
       "submit": "Добавить",
       "toast": {
         "success": "Лид добавлен на пробный урок",
@@ -495,9 +547,14 @@
     "actions": {
       "addNew": "Добавить",
       "exportExcel": "Экспорт в Excel",
+      "exportError": "Не удалось экспортировать список. Попробуйте снова.",
       "edit": "Редактировать",
+      "sms": "СМС",
       "delete": "Удалить",
       "submit": "Отправить"
+    },
+    "sms": {
+      "recipientLabel": "ученик"
     },
     "filters": {
       "status": "Статус",
@@ -603,10 +660,27 @@
   "finance": {
     "allPayments": {
       "title": "Все платежи",
+      "exportExcel": "Экспорт в Excel",
+      "exportError": "Не удалось экспортировать список. Попробуйте снова.",
+      "chart": {
+        "payments": "Платежи",
+        "expenses": "Расходы",
+        "netProfit": "Чистая прибыль",
+        "loadError": "Не удалось загрузить данные графика.",
+        "retry": "Повторить"
+      },
       "stats": {
         "totalRevenue": "Общая выручка:",
         "totalNetProfit": "Общая чистая прибыль:",
-        "details": "Подробнее"
+        "filteredTotal": "Итого по выбранным фильтрам:",
+        "details": "Подробнее",
+        "thisMonth": {
+          "title": "Текущий месяц",
+          "income": "Доход",
+          "expenses": "Расходы",
+          "salaries": "Зарплаты",
+          "netProfit": "Чистая прибыль"
+        }
       },
       "filters": {
         "title": "Фильтры",
@@ -636,7 +710,20 @@
         "teacher": "Учитель",
         "comment": "Комментарий",
         "creator": "Создатель",
-        "empty": "Платежи не найдены"
+        "empty": "Платежи не найдены",
+        "loadError": "Не удалось загрузить платежи",
+        "retry": "Повторить",
+        "refund": "Отменить"
+      },
+      "refundConfirm": {
+        "title": "Отменить платёж",
+        "message": "Отменить этот платёж? Это действие нельзя отменить.",
+        "confirm": "Отменить платёж",
+        "cancel": "Закрыть",
+        "error": "Не удалось отменить платёж"
+      },
+      "toast": {
+        "refunded": "Платёж отменён"
       },
       "footer": {
         "showing": "Показано",
@@ -647,12 +734,15 @@
     "debtors": {
       "title": "Должники",
       "quantity": "Количество — {{count}}",
+      "exportExcel": "Экспорт в Excel",
+      "exportError": "Не удалось экспортировать список. Попробуйте снова.",
       "summary": {
         "total": "Всего:",
         "totalOnPeriod": "Всего за период:"
       },
       "filters": {
         "search": "Поиск",
+        "searchPlaceholder": "Имя или телефон",
         "searchBy": "Искать по",
         "status": "Статус",
         "group": "Группа",
@@ -678,7 +768,10 @@
         "status": "Статус",
         "sendSmsSelected": "Отправить SMS выбранным",
         "selectToSendSms": "Выберите студентов для отправки SMS",
-        "noData": "Нет данных"
+        "noData": "Нет данных",
+        "loadError": "Не удалось загрузить список должников.",
+        "retry": "Повторить",
+        "receipt": "Чек"
       },
       "pagination": {
         "of": "из"
@@ -712,12 +805,82 @@
         "delete": "Удалить"
       },
       "calculate": "Рассчитать",
-      "showInTeacherProfile": "Показывать в профиле учителя"
+      "showInTeacherProfile": "Показывать в профиле учителя",
+      "loadError": "Не удалось загрузить настройки зарплат.",
+      "deleteConfirm": "Удалить эту настройку зарплаты?",
+      "createNotSupported": "Создание ставки зарплаты недоступно в текущем контракте API.",
+      "toast": {
+        "deleted": "Настройка удалена",
+        "deleteError": "Не удалось удалить настройку. Попробуйте снова.",
+        "calculated": "Ведомости рассчитаны",
+        "calculateError": "Не удалось рассчитать ведомости. Попробуйте снова.",
+        "published": "Ведомость опубликована",
+        "publishError": "Не удалось опубликовать ведомость. Попробуйте снова.",
+        "paid": "Ведомость отмечена как оплаченная",
+        "payError": "Не удалось записать оплату. Попробуйте снова."
+      },
+      "payrolls": {
+        "title": "Ведомости",
+        "exportExcel": "Экспорт в Excel",
+        "exportError": "Не удалось экспортировать ведомости. Попробуйте снова.",
+        "loadError": "Не удалось загрузить ведомости.",
+        "noData": "Ведомости не найдены",
+        "filters": {
+          "period": "Период",
+          "status": "Статус",
+          "allStatuses": "Все статусы",
+          "reset": "Сбросить"
+        },
+        "status": {
+          "draft": "Черновик",
+          "published": "Опубликована",
+          "paid": "Оплачена"
+        },
+        "table": {
+          "teacher": "Преподаватель",
+          "period": "Период",
+          "status": "Статус",
+          "total": "Начислено",
+          "paid": "Оплачено",
+          "actions": "Действия"
+        },
+        "detail": {
+          "title": "Детали ведомости",
+          "noItems": "Детализация не получена",
+          "close": "Закрыть",
+          "group": "Группа / Курс",
+          "student": "Студент",
+          "lessons": "Уроки",
+          "attended": "Присутствовал",
+          "missed": "Отсутствовал",
+          "rate": "Сумма настройки",
+          "amount": "Расчётная сумма",
+          "calcSetting": "Настройка расчёта",
+          "salaryType": "Тип зарплаты"
+        },
+        "actions": {
+          "details": "Детали",
+          "publish": "Опубликовать",
+          "pay": "Оплатить"
+        },
+        "pay": {
+          "title": "Записать оплату",
+          "paymentMethod": "Способ оплаты",
+          "selectMethod": "Выберите способ оплаты",
+          "amount": "Сумма оплаты",
+          "amountHint": "Оставьте пустым, чтобы оплатить всю начисленную сумму",
+          "confirm": "Подтвердить",
+          "cancel": "Отмена"
+        }
+      }
     },
     "totalExpenses": {
       "title": "Общие расходы",
+      "exportExcel": "Экспорт в Excel",
+      "exportError": "Не удалось экспортировать список. Попробуйте снова.",
       "summary": {
-        "totalExpenses": "Общие расходы:"
+        "totalExpenses": "Общие расходы:",
+        "filteredTotal": "Итого по выбранным фильтрам:"
       },
       "chart": {
         "totalExpensesLabel": "Общие расходы"
@@ -734,21 +897,85 @@
         "filter": "Фильтр"
       },
       "selectPlaceholder": "Выберите",
+      "table": {
+        "empty": "Расходы не найдены",
+        "loadError": "Не удалось загрузить расходы",
+        "retry": "Повторить",
+        "delete": "Удалить"
+      },
       "form": {
         "title": "Новый расход",
         "description": "Описание",
         "date": "Дата",
         "category": "Категория",
+        "branch": "Филиал",
         "payee": "Получатель",
         "sum": "Сумма",
         "methodPay": "Способ оплаты",
-        "submit": "Отправить"
+        "receipt": "Фото чека",
+        "receiptPlaceholder": "Выберите файл",
+        "submit": "Отправить",
+        "saving": "Сохранение...",
+        "errors": {
+          "title": "Введите описание",
+          "category": "Выберите категорию",
+          "branch": "Выберите филиал",
+          "amount": "Введите корректную сумму",
+          "methodPay": "Выберите способ оплаты",
+          "save": "Не удалось сохранить расход"
+        },
+        "toast": {
+          "created": "Расход успешно добавлен",
+          "deleted": "Расход удалён"
+        }
+      },
+      "categoryModal": {
+        "addCategory": "Добавить категорию",
+        "manageTitle": "Категории расходов",
+        "title": "Добавить новую категорию",
+        "existingTitle": "Существующие категории",
+        "noCategories": "Категорий нет",
+        "name": "Название",
+        "branch": "Филиал (необязательно)",
+        "save": "Сохранить",
+        "edit": "Редактировать",
+        "delete": "Удалить",
+        "cancel": "Отмена",
+        "statusActive": "Активна",
+        "statusInactive": "Неактивна",
+        "deleteConfirm": {
+          "title": "Удалить категорию",
+          "message": "Удалить категорию \"{{name}}\"?",
+          "confirm": "Удалить"
+        },
+        "errors": {
+          "name": "Введите название категории",
+          "branch": "Выберите филиал",
+          "save": "Не удалось сохранить категорию",
+          "update": "Не удалось обновить категорию",
+          "delete": "Не удалось удалить категорию"
+        },
+        "toast": {
+          "created": "Категория успешно добавлена",
+          "updated": "Категория успешно обновлена",
+          "deleted": "Категория удалена"
+        }
+      },
+      "deleteConfirm": {
+        "title": "Удалить расход",
+        "message": "Удалить эту запись расхода?",
+        "confirm": "Удалить",
+        "cancel": "Отмена",
+        "error": "Не удалось удалить расход"
       }
     },
     "withdraw": {
       "title": "Вывод средств",
+      "exportExcel": "Экспорт в Excel",
+      "exportError": "Не удалось экспортировать список. Попробуйте снова.",
       "stats": {
-        "totalWithdrawals": "Всего выведено:"
+        "totalWithdrawals": "Всего выведено:",
+        "filteredTotal": "Итого по выбранным фильтрам:"
       },
       "filters": {
         "dateFrom": "Дата от",
@@ -768,7 +995,19 @@
         "actions": "Действия",
         "notAssigned": "не назначено",
         "deleteTitle": "Удалить",
-        "empty": "Выводы не найдены"
+        "empty": "Выводы не найдены",
+        "loadError": "Не удалось загрузить выводы средств",
+        "retry": "Повторить"
+      },
+      "deleteConfirm": {
+        "title": "Удалить вывод средств",
+        "message": "Удалить эту запись?",
+        "confirm": "Удалить",
+        "cancel": "Отмена",
+        "error": "Не удалось удалить"
+      },
+      "toast": {
+        "deleted": "Запись удалена"
       },
       "footer": {
         "showing": "Показано",
@@ -778,6 +1017,12 @@
     }
   },
   "reports": {
+    "common": {
+      "loadError": "Не удалось загрузить отчёт.",
+      "noData": "Нет данных по выбранным фильтрам",
+      "exportExcel": "Экспорт в Excel",
+      "exportError": "Не удалось экспортировать отчёт. Попробуйте снова."
+    },
     "attendance": {
       "title": "Отчёты посещаемости",
       "summary": {
@@ -936,6 +1181,10 @@
   },
   "singleGroup": {
     "notFound": "Группа не найдена.",
+    "header": {
+      "branch": "Филиал",
+      "groupId": "ID"
+    },
     "leftPanel": {
       "course": "Курс",
       "teacher": "Учитель",
@@ -953,6 +1202,9 @@
       "rooms": "Кабинеты",
       "roomCapacity": "Вместимость кабинета",
       "trainingDates": "Даты занятий",
+      "trainingStart": "Начало",
+      "trainingEnd": "Окончание",
+      "notScheduled": "Даты не заданы",
       "idLabel": "id",
       "branches": "Филиалы",
       "sortAZ": "По А-Я",
@@ -961,6 +1213,7 @@
       "showArchivedStudents": "Показать архивных студентов",
       "hideArchivedStudents": "Скрыть архивных студентов",
       "exportToExcel": "Экспорт в Excel",
+      "exportError": "Не удалось экспортировать список. Попробуйте снова.",
       "export": {
         "name": "Имя",
         "phone": "Телефон",
@@ -983,12 +1236,24 @@
         "current": "Текущий",
         "name": "Имя",
         "months": {
-          "jan": "Янв", "feb": "Фев", "mar": "Мар", "apr": "Апр", "may": "Май", "jun": "Июн",
-          "jul": "Июл", "aug": "Авг", "sep": "Сен", "oct": "Окт", "nov": "Ноя", "dec": "Дек"
+          "jan": "Янв",
+          "feb": "Фев",
+          "mar": "Мар",
+          "apr": "Апр",
+          "may": "Май",
+          "jun": "Июн",
+          "jul": "Июл",
+          "aug": "Авг",
+          "sep": "Сен",
+          "oct": "Окт",
+          "nov": "Ноя",
+          "dec": "Дек"
         },
         "was": "Был",
         "notPresent": "Нет",
-        "saveError": "Не удалось сохранить посещаемость. Попробуйте снова."
+        "saveError": "Не удалось сохранить посещаемость. Попробуйте снова.",
+        "exportExcel": "Экспорт в Excel",
+        "exportError": "Не удалось экспортировать посещаемость. Попробуйте снова."
       },
       "grade": {
         "tabLabel": "Оценка",
@@ -1051,12 +1316,27 @@
     },
     "calendar": {
       "weekdays": {
-        "sun": "Вс", "mon": "Пн", "tue": "Вт", "wed": "Ср", "thu": "Чт", "fri": "Пт", "sat": "Сб"
+        "sun": "Вс",
+        "mon": "Пн",
+        "tue": "Вт",
+        "wed": "Ср",
+        "thu": "Чт",
+        "fri": "Пт",
+        "sat": "Сб"
       },
       "months": {
-        "january": "Январь", "february": "Февраль", "march": "Март", "april": "Апрель",
-        "may": "Май", "june": "Июнь", "july": "Июль", "august": "Август",
-        "september": "Сентябрь", "october": "Октябрь", "november": "Ноябрь", "december": "Декабрь"
+        "january": "Январь",
+        "february": "Февраль",
+        "march": "Март",
+        "april": "Апрель",
+        "may": "Май",
+        "june": "Июнь",
+        "july": "Июль",
+        "august": "Август",
+        "september": "Сентябрь",
+        "october": "Октябрь",
+        "november": "Ноябрь",
+        "december": "Декабрь"
       }
     },
     "datePickerField": {
@@ -1064,7 +1344,13 @@
     },
     "activateModal": {
       "title": "Выберите дату активации",
-      "submit": "Отправить"
+      "submit": "Отправить",
+      "saving": "Активация...",
+      "toast": {
+        "success": "Студент активирован",
+        "error": "Не удалось активировать студента",
+        "notFound": "Активная запись о заморозке для этого студента не найдена"
+      }
     },
     "addNoteModal": {
       "title": "Добавить новую заметку",
@@ -1082,7 +1368,18 @@
       "amount": "Сумма",
       "date": "Дата",
       "comment": "Комментарий",
-      "submit": "Отправить"
+      "submit": "Отправить",
+      "saving": "Сохранение...",
+      "errors": {
+        "student": "У студента отсутствует backend id",
+        "branch": "Филиал не выбран — выберите его в шапке сайта",
+        "amount": "Введите корректную сумму",
+        "paymentMethodId": "Выберите способ оплаты",
+        "save": "Не удалось сохранить платёж"
+      },
+      "toast": {
+        "created": "Платёж успешно добавлен"
+      }
     },
     "addStudentDrawer": {
       "title": "Добавить студента",
@@ -1147,9 +1444,18 @@
       "title": "Укажите причину",
       "student": "Студент",
       "dateFrom": "Дата от",
+      "dateTo": "Дата до",
       "recalculateBalance": "Пересчитать баланс",
       "cancel": "Отмена",
-      "confirm": "Заморозить"
+      "confirm": "Отправить",
+      "saving": "Отправка...",
+      "errors": {
+        "dates": "Выберите дату начала"
+      },
+      "toast": {
+        "success": "Студент заморожен",
+        "error": "Не удалось заморозить студента"
+      }
     },
     "moveStudentDialog": {
       "title": "Переместить",
@@ -1196,7 +1502,12 @@
       "moveToBranchModal": {
         "title": "Переместить студента в филиал",
         "selectBranch": "Выберите филиал",
-        "submit": "Переместить в филиал"
+        "submit": "Переместить в филиал",
+        "moving": "Перемещение...",
+        "toast": {
+          "success": "Студент перемещён в филиал",
+          "error": "Не удалось переместить студента в филиал. Попробуйте снова."
+        }
       },
       "activate": "Активировать",
       "backToTrialLesson": "Вернуть на пробный урок",
@@ -1206,7 +1517,12 @@
       "moveStudentToGroup": "Переместить студента в группу",
       "moveStudentToBranch": "Переместить студента в филиал",
       "removeFromGroup": "Удалить из группы",
-      "reminders": "Напоминания"
+      "reminders": "Напоминания",
+      "toast": {
+        "activated": "Студент активирован",
+        "backToTrial": "Студент возвращён на пробный урок",
+        "error": "Не удалось выполнить действие. Попробуйте ещё раз."
+      }
     },
     "studentHoverCard": {
       "activeLearns": "Активен (учится)",
@@ -1220,6 +1536,7 @@
       "phone": "Телефон",
       "addedAt": "Добавлен",
       "activatedAt": "Активирован",
+      "allCoins": "Всего монет",
       "goToProfile": "Перейти в профиль →"
     }
   },
@@ -1251,15 +1568,35 @@
       "variablesWarningPrefix": "Внимание! Использование переменных работает для",
       "variablesWarningSuffix": ". Эти переменные не влияют на SMS, отправленные вручную с помощью шаблонов SMS.",
       "addNew": "Добавить",
+      "loadError": "Не удалось загрузить. Попробуйте снова.",
+      "saving": "Сохранение...",
+      "toast": {
+        "settingSaved": "Настройка Авто-SMS сохранена",
+        "error": "Не удалось выполнить действие. Попробуйте снова.",
+        "templateCreated": "Шаблон создан",
+        "templateUpdated": "Шаблон обновлён",
+        "templateDeleted": "Шаблон удалён"
+      },
       "table": {
         "templatesHeader": "Шаблоны SMS",
         "actions": "Действия",
-        "empty": "Шаблонов пока нет. Нажмите «Добавить», чтобы создать."
+        "empty": "Шаблонов пока нет. Нажмите «Добавить», чтобы создать.",
+        "edit": "Изменить",
+        "delete": "Удалить"
       },
       "drawer": {
         "title": "Добавить шаблон SMS",
+        "editTitle": "Изменить шаблон SMS",
+        "titleLabel": "Название",
+        "titlePlaceholder": "Название шаблона",
         "label": "Шаблон SMS",
         "submit": "Отправить"
+      },
+      "confirmDelete": {
+        "title": "Удалить шаблон?",
+        "message": "Это действие нельзя отменить.",
+        "confirm": "Удалить",
+        "cancel": "Отмена"
       },
       "types": {
         "advancePayment": { "label": "Уведомление об авансовом платеже", "description": "Сообщение отправляется, когда требуется уведомление об авансовом платеже." },
@@ -1327,7 +1664,17 @@
         "edit": "Редактировать",
         "emptyActive": "Нет активных филиалов",
         "emptyArchived": "Нет архивных филиалов",
-        "form": { "editTitle": "Редактировать филиал", "name": "Название филиала", "namePlaceholder": "например: Educoin", "phone": "Номер телефона", "address": "Адрес", "addressPlaceholder": "например: рядом с администрацией района Джаркурган", "cancel": "Отмена", "save": "Сохранить", "errors": { "name": "Введите название филиала", "phone": "Введите полный номер телефона", "address": "Введите адрес", "save": "Что-то пошло не так. Попробуйте еще раз." } },
+        "form": {
+          "editTitle": "Редактировать филиал",
+          "name": "Название филиала",
+          "namePlaceholder": "например: Educoin",
+          "phone": "Номер телефона",
+          "address": "Адрес",
+          "addressPlaceholder": "например: рядом с администрацией района Джаркурган",
+          "cancel": "Отмена",
+          "save": "Сохранить",
+          "errors": { "name": "Введите название филиала", "phone": "Введите полный номер телефона", "address": "Введите адрес", "save": "Что-то пошло не так. Попробуйте еще раз." }
+        },
         "close": "Закрыть",
         "loadError": "Не удалось загрузить филиалы.",
         "deleteConfirm": {
@@ -1424,13 +1771,30 @@
       },
       "staff": {
         "title": "Персонал",
+        "countSuffix": "сотрудников",
         "addNew": "ДОБАВИТЬ",
         "import": "Импорт",
-        "table": { "id": "id", "name": "Имя", "role": "Роль", "jobTitle": "Должность", "phone": "Телефон", "actions": "Действия" },
-        "form": { "title": "Добавить нового сотрудника", "name": "Имя", "phone": "Телефон", "password": "Пароль", "jobTitle": "Должность", "role": "Роль", "dateOfBirth": "Дата рождения", "gender": "Пол", "photo": "Фото", "noFileChosen": "Файл не выбран", "browse": "Обзор", "submit": "Отправить" },
+        "search": { "placeholder": "Поиск сотрудника" },
+        "filters": { "status": "Статус", "allStatuses": "Все статусы", "active": "Активен", "inactive": "Неактивен" },
+        "table": { "id": "#", "name": "Имя", "role": "Роль", "jobTitle": "Должность", "phone": "Телефон", "status": "Статус", "actions": "Действия", "noData": "Сотрудники не найдены", "loading": "Загрузка...", "loadError": "Не удалось загрузить список сотрудников" },
+        "menu": { "edit": "Редактировать", "sms": "SMS", "toggleStatus": "Изменить статус", "delete": "Удалить" },
+        "sms": { "recipientLabel": "сотрудник" },
+        "drawer": { "addTitle": "Добавить нового сотрудника", "editTitle": "Редактировать сотрудника" },
+        "form": {
+          "title": "Добавить нового сотрудника", "name": "Имя", "phone": "Телефон", "email": "Email", "emailPlaceholder": "email@example.com",
+          "password": "Пароль", "passwordPlaceholder": "Введите пароль", "setPasswordToggle": "+ Задать пароль", "hidePasswordToggle": "− Скрыть пароль",
+          "role": "Роль", "roleHelp": "Необязательно (например ADMIN, SUPERADMIN) — Swagger не документирует фиксированный список значений.",
+          "rolePermissionId": "Должность (RolePermission ID)",
+          "rolePermissionIdHelp": "Обязательно — id записи из модуля \"Должности\". Endpoint для получения списка пока недоступен, поэтому значение вводится вручную.",
+          "branches": "Филиалы", "jobTitle": "Должность", "dateOfBirth": "Дата рождения", "gender": "Пол",
+          "photo": "Фото", "noFileChosen": "Файл не выбран", "browse": "Обзор", "submit": "Отправить"
+        },
         "roles": { "ceo": "CEO", "branchDirector": "Директор филиала", "administrator": "Администратор", "administrator2": "Администратор2", "limitedAdministrator": "Ограниченный администратор", "teacher": "Учитель", "marketer": "Маркетолог", "cashier": "Кассир" },
         "gender": { "male": "Мужской", "female": "Женский" },
-        "sms": { "recipientLabel": "сотрудник" }
+        "validation": { "nameRequired": "Имя обязательно", "rolePermissionIdRequired": "Должность (RolePermission ID) обязательна", "contactRequired": "Укажите email или номер телефона" },
+        "deleteDialog": { "title": "Удалить сотрудника", "message": "Вы уверены, что хотите удалить этого сотрудника? Это действие нельзя отменить.", "cancel": "Отмена", "confirm": "Удалить" },
+        "toast": { "created": "Сотрудник добавлен", "updated": "Сотрудник обновлён", "deleted": "Сотрудник удалён", "statusToggled": "Статус обновлён", "error": "Не удалось выполнить действие. Попробуйте ещё раз.", "deleteConflict": "Этот сотрудник всё ещё привязан к филиалу и не может быть удалён." },
+        "pagination": { "prev": "Назад", "next": "Далее" }
       },
       "general": {
         "accrual": {
@@ -1474,10 +1838,18 @@
           "animation": "Анимация",
           "logo": "Логотип",
           "uploadLogo": "Загрузить логотип",
+          "noLogo": "Нет логотипа",
+          "logoUrlPlaceholder": "URL логотипа",
           "selectThemeColor": "Выберите цвет темы",
           "companyOferta": "Оферта компании",
           "selectFile": "Выберите файл",
-          "save": "Сохранить"
+          "offerUrlPlaceholder": "URL оферты",
+          "save": "Сохранить",
+          "loadError": "Не удалось загрузить настройки.",
+          "toast": {
+            "saved": "Настройки сохранены",
+            "error": "Не удалось сохранить настройки. Попробуйте снова."
+          }
         },
         "integrations": {
           "notConnected": "Не подключено",
@@ -1527,7 +1899,20 @@
           "cancel": "Отмена",
           "logoAlt": "Логотип Young Adults",
           "preview": {
-            "checkNumber": "Номер чека:", "company": "Компания:", "branch": "Филиал:", "student": "Студент:", "phone": "Телефон:", "balance": "Баланс:", "group": "Группа:", "coursePrice": "Цена курса:", "teacher": "Учитель:", "type": "Тип:", "paymentAmount": "Сумма платежа:", "date": "Дата:", "creator": "Создатель:", "time": "Время:"
+            "checkNumber": "Номер чека:",
+            "company": "Компания:",
+            "branch": "Филиал:",
+            "student": "Студент:",
+            "phone": "Телефон:",
+            "balance": "Баланс:",
+            "group": "Группа:",
+            "coursePrice": "Цена курса:",
+            "teacher": "Учитель:",
+            "type": "Тип:",
+            "paymentAmount": "Сумма платежа:",
+            "date": "Дата:",
+            "creator": "Создатель:",
+            "time": "Время:"
           }
         },
         "landingPage": {
@@ -1603,6 +1988,7 @@
         "reasonsForArchiving": "Причины архивации",
         "balance": "Баланс",
         "noData": "Нет данных",
+        "loadError": "Не удалось загрузить архив.",
         "filters": { "namePhone": "Имя или телефон", "filterByRole": "Фильтр по роли", "student": "Студент", "teacher": "Учитель", "filterByReason": "Фильтр по причине", "startDate": "Дата начала" },
         "actions": { "delete": "Удалить", "reestablish": "Восстановить" },
         "table": { "name": "Имя", "phone": "Телефон", "roles": "Роли", "reasonsForRemoval": "Причины удаления", "comment": "Комментарий", "archived": "В архиве", "actions": "Действия" },
@@ -1612,7 +1998,34 @@
           "table": { "id": "id", "name": "Название", "actions": "Действия" },
           "form": { "name": "Название" },
           "submit": "Отправить",
-          "save": "Сохранить"
+          "save": "Сохранить",
+          "edit": "Редактировать",
+          "delete": "Удалить",
+          "noData": "Причины не найдены",
+          "loadError": "Не удалось загрузить причины.",
+          "status": {
+            "active": "Активна",
+            "inactive": "Неактивна",
+            "toggle": "Изменить статус"
+          },
+          "errors": {
+            "name": "Введите название причины",
+            "branchRequired": "Сначала выберите конкретный филиал — причина создаётся для одного филиала.",
+            "save": "Что-то пошло не так. Попробуйте еще раз.",
+            "toggle": "Не удалось изменить статус. Попробуйте еще раз."
+          },
+          "deleteConfirm": {
+            "title": "Удалить причину",
+            "message": "Вы уверены, что хотите удалить \"{{name}}\"? Это действие нельзя отменить.",
+            "cancel": "Отмена",
+            "error": "Не удалось удалить причину. Попробуйте еще раз."
+          },
+          "toast": {
+            "created": "Причина успешно добавлена",
+            "updated": "Причина успешно обновлена",
+            "deleted": "Причина успешно удалена",
+            "statusToggled": "Статус причины обновлён"
+          }
         }
       },
       "courses": {
@@ -1659,12 +2072,38 @@
         "title": "Праздники",
         "addNew": "Добавить",
         "addHoliday": "Добавить праздник",
+        "editHoliday": "Редактировать праздник",
         "noData": "Нет данных",
         "yes": "Да",
         "no": "Нет",
+        "edit": "Редактировать",
+        "delete": "Удалить",
+        "loadError": "Не удалось загрузить праздники.",
         "tabs": { "upcoming": "Предстоящие", "past": "Прошедшие" },
         "table": { "name": "Название", "dateOfHoliday": "Дата праздника", "createdAt": "Создано", "affectsPayment": "Влияет на оплату", "actions": "Действия" },
-        "form": { "name": "Название", "date": "Дата", "noDateSelected": "Дата не выбрана", "affectsPaymentLabel": "Оплата студента и зарплата учителя", "submit": "Отправить" }
+        "form": {
+          "name": "Название",
+          "date": "Дата",
+          "noDateSelected": "Дата не выбрана",
+          "affectsPaymentLabel": "Оплата студента и зарплата учителя",
+          "submit": "Отправить",
+          "errors": {
+            "name": "Введите название праздника",
+            "date": "Выберите дату праздника",
+            "save": "Что-то пошло не так. Попробуйте еще раз."
+          }
+        },
+        "deleteConfirm": {
+          "title": "Удалить праздник",
+          "message": "Вы уверены, что хотите удалить \"{{name}}\"? Это действие нельзя отменить.",
+          "cancel": "Отмена",
+          "error": "Не удалось удалить праздник. Попробуйте еще раз."
+        },
+        "toast": {
+          "created": "Праздник успешно добавлен",
+          "updated": "Праздник успешно обновлён",
+          "deleted": "Праздник успешно удалён"
+        }
       },
       "rooms": {
         "title": "Кабинеты",
@@ -1761,6 +2200,85 @@
         "prompts": { "enterUrl": "Введите URL:", "imageUrl": "URL изображения:" },
         "actions": { "save": "Сохранить" }
       }
+    }
+  },
+  "studentPortal": {
+    "appTitle": "Портал студента",
+    "toggleTheme": "Переключить тему",
+    "signOut": "Выйти",
+    "nav": {
+      "student": "Студент",
+      "dashboard": "Главная",
+      "attendance": "Посещаемость",
+      "balance": "Баланс",
+      "payments": "Платежи",
+      "groups": "Мои группы",
+      "schedule": "Расписание",
+      "profile": "Профиль"
+    },
+    "dashboard": {
+      "title": "Главная",
+      "loadError": "Не удалось загрузить данные",
+      "attendancePercentage": "Посещаемость",
+      "activeCourses": "Активные курсы"
+    },
+    "attendance": {
+      "title": "Посещаемость",
+      "date": "Дата",
+      "group": "Группа",
+      "status": "Статус",
+      "reason": "Причина",
+      "loadError": "Не удалось загрузить историю посещаемости",
+      "empty": "Записей о посещаемости пока нет",
+      "statuses": { "present": "Присутствовал", "absent": "Отсутствовал", "late": "Опоздал", "excused": "Уважительная причина" }
+    },
+    "balance": {
+      "title": "Баланс",
+      "loadError": "Не удалось загрузить баланс",
+      "balance": "Текущий баланс",
+      "paidAmount": "Всего оплачено",
+      "debt": "Задолженность"
+    },
+    "payments": {
+      "title": "Платежи",
+      "date": "Дата",
+      "amount": "Сумма",
+      "method": "Способ",
+      "comment": "Комментарий",
+      "loadError": "Не удалось загрузить историю платежей",
+      "empty": "Платежей пока нет"
+    },
+    "groups": {
+      "title": "Мои группы",
+      "loadError": "Не удалось загрузить группы",
+      "empty": "Вы пока не состоите ни в одной группе",
+      "noTeacher": "Учитель не назначен"
+    },
+    "profile": {
+      "title": "Профиль",
+      "loadError": "Не удалось загрузить профиль",
+      "phone": "Телефон",
+      "email": "Email",
+      "branch": "Филиал",
+      "comments": "Комментарии",
+      "noComments": "Комментариев пока нет"
+    },
+    "schedule": {
+      "title": "Расписание",
+      "loadError": "Не удалось загрузить расписание",
+      "empty": "Расписание пока не задано",
+      "days": {
+        "monday": "Понедельник", "tuesday": "Вторник", "wednesday": "Среда",
+        "thursday": "Четверг", "friday": "Пятница", "saturday": "Суббота", "sunday": "Воскресенье"
+      }
+    }
+  },
+  "layout": {
+    "footer": {
+      "support": "Поддержка",
+      "videoTutorials": "Видеоуроки",
+      "paymentMode": "Режим оплаты: Ежемесячно (по календарному месяцу)",
+      "brand": "CRM"
     }
   }
 }

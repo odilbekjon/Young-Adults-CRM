@@ -22,6 +22,7 @@ import {
   MdKeyboardArrowRight,
   MdClose,
   MdCheck,
+  MdDownload,
 } from "react-icons/md";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,6 +31,7 @@ import {
   useGroupAttendanceDatesQuery,
   useGroupAttendanceQuery,
   useSaveAttendanceMutation,
+  useLazyGroupAttendanceExcelQuery,
 } from "../../../app/api/attendancesApi";
 import type { AttendanceStatus } from "../../../app/api/attendancesApi/types";
 import { useToast } from "../../../Context/ToastContext";
@@ -91,6 +93,21 @@ export const Attendance = ({ groupId, students }: Props) => {
   const { data: records = [], isFetching: recordsLoading } =
     useGroupAttendanceQuery({ groupId, month: monthStr }, { skip: !groupId });
   const [saveAttendance] = useSaveAttendanceMutation();
+  const [fetchExcel, { isFetching: isExporting }] = useLazyGroupAttendanceExcelQuery();
+
+  const handleExportExcel = async () => {
+    try {
+      const blob = await fetchExcel({ groupId, month: monthStr }).unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `attendance-${groupId}-${monthStr}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("singleGroup.tabs.attendance.exportError"));
+    }
+  };
 
   const totalDays = getDaysInMonth(year, month);
   const today = now.getDate();
@@ -145,9 +162,7 @@ export const Attendance = ({ groupId, students }: Props) => {
     }));
 
     saveAttendance({
-      records: [
-        { studentId, groupId, date, status: VAL_TO_STATUS[val], reason: "" },
-      ],
+      records: [{ studentId, groupId, date, status: VAL_TO_STATUS[val] }],
     })
       .unwrap()
       .catch(() => {
@@ -222,6 +237,13 @@ export const Attendance = ({ groupId, students }: Props) => {
           <IconButton size="small" onClick={nextYear}>
             <MdKeyboardDoubleArrowRight />
           </IconButton>
+          <Tooltip title={t("singleGroup.tabs.attendance.exportExcel")} placement="top" arrow>
+            <span>
+              <IconButton size="small" onClick={handleExportExcel} disabled={isExporting}>
+                {isExporting ? <CircularProgress size={16} /> : <MdDownload />}
+              </IconButton>
+            </span>
+          </Tooltip>
         </Stack>
       </Stack>
 

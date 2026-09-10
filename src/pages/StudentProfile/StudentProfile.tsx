@@ -1,5 +1,5 @@
 // src/pages/StudentProfile.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   FiEdit2, FiMail, FiTrash2, FiFlag, FiPrinter,
   FiChevronDown, FiUsers, FiDollarSign, FiPhone,
@@ -14,90 +14,27 @@ import {
   InputAdornment, Menu, MenuItem,
 } from "@mui/material";
 
-import { FlatStudent, mapApiStudentToFlat, formatDate } from "../../constants/FlatStudents";
+import { FlatStudent, mapApiStudentToFlat, formatDate, formatLongDate } from "../../constants/FlatStudents";
 import { TEACHERS_DATA } from "../../constants/Teachers";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useStudentByIdQuery,
   useUpdateStudentMutation,
   useDeleteStudentMutation,
+  useTransferStudentBranchMutation,
 } from "../../app/api/studentsApi";
 import type { StudentGender } from "../../app/api/studentsApi/types";
+import { useAllGroupsQuery, useAddStudentToGroupMutation } from "../../app/api/groupsApi";
+import { useAllBranchesQuery } from "../../app/api/branchesApi";
+import { usePaymentsListQuery } from "../../app/api/financeApi";
+import type { PaymentRow } from "../../app/api/financeApi/types";
 import { useToast } from "../../Context/ToastContext";
+import { extractApiError } from "../../utils/extractApiError";
+import { AddPayment } from "../../components/AddPayment";
+import { PaymentReceiptModal } from "../../components/PaymentReceiptModal";
 
 /* ─── TYPES ─────────────────────────────────────────── */
-interface Payment {
-  date: string;
-  type: "system" | "manual";
-  amount: string;
-  comment: string;
-  period: string;
-  creator: string;
-  creatorDate: string;
-}
-
-interface SmsHistory {
-  text: string;
-  creator: string;
-  createdAt: string;
-}
-
-interface GroupHistoryItem {
-  title: string;
-  createdAt: string;
-  creator: string;
-  details?: string[];
-}
-
 const TABS = ["Groups", "Comments", "Call history", "SMS", "History", "Lead history"];
-
-const makeMockPayments = (student: FlatStudent): Payment[] => [
-  {
-    date: "01.05.2026",
-    type: "system",
-    amount: `${(student.balance ?? 0).toLocaleString("ru-RU")} UZS`,
-    comment: `${student.course} — 8 les.`,
-    period: `${formatDate(student.startDate)} — ${formatDate(student.endDate)}`,
-    creator: student.teacher,
-    creatorDate: "14.05.2026 16:40:43",
-  },
-];
-
-const makeMockSms = (student: FlatStudent): SmsHistory[] => [
-  {
-    text: "Hurmatli (STUDENT). O'qishni davom ettirish uchun guruh (GROUP): (SUM) sum. O'qishni to'xtovsiz davom ettirish uchun pul to'lang. Rahmat!",
-    creator: student.teacher,
-    createdAt: "02.06.2026 09:02:22",
-  },
-  {
-    text: `Hurmatli, ${student.name}! Siz o'quv guruhiga qo'shildingiz.\nO'qituvchi: ${student.teacher}\nO'quv kunlari: Du, Cho, Ju\nVaqt: ${student.groupSchedule.split("·")[1]?.trim() ?? "10:30"}\nKabinet: ${student.room}\n\nSizni Young Adultsda kutamiz!`,
-    creator: student.teacher,
-    createdAt: "01.06.2026 10:36:36",
-  },
-];
-
-const makeMockGroupHistory = (student: FlatStudent): GroupHistoryItem[] => [
-  {
-    title: "Status changed",
-    createdAt: "01.06.2026 10:36:47",
-    creator: "Maksuda Abraykulova",
-    details: [
-      `Group Name: ${student.groupName}`,
-      `Group: #${student.groupId}`,
-      `Activated from: ${student.startDate}`,
-    ],
-  },
-  {
-    title: "Added new student",
-    createdAt: "01.06.2026 10:36:34",
-    creator: "Maksuda Abraykulova",
-  },
-  {
-    title: "Added to group",
-    createdAt: "01.06.2026 10:36:34",
-    creator: "Maksuda Abraykulova",
-  },
-];
 
 /* ─── BALANCE BADGE ──────────────────────────────────── */
 const BalanceBadge = ({ amount }: { amount: number }) => (
@@ -720,27 +657,40 @@ const AddToGroupModal = ({
   open,
   onClose,
   onSubmit,
+  groups,
+  isSubmitting,
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (groupId: string) => void;
+  onSubmit: (groupId: string) => Promise<boolean>;
+  groups: { id: string; name: string }[];
+  isSubmitting?: boolean;
 }) => {
   const [groupId, setGroupId] = useState("");
-  const allGroups = TEACHERS_DATA.flatMap((t) => t.groups);
+
+  useEffect(() => {
+    if (!open) setGroupId("");
+  }, [open]);
 
   const handleClose = () => {
-    setGroupId("");
+    if (isSubmitting) return;
     onClose();
+  };
+
+  const handleSubmit = async () => {
+    if (!groupId || isSubmitting) return;
+    const success = await onSubmit(groupId);
+    if (success) setGroupId("");
   };
 
   return (
     <Dialog open={open} onClose={handleClose} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
       <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid #e5e7eb" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 34, transform: "scale(0.42)", transformOrigin: "left center", color: "#2e2e2e", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 16, fontWeight: 600, color: "#2e2e2e" }}>
             Add student to group
           </span>
-          <IconButton size="small" onClick={handleClose}>
+          <IconButton size="small" onClick={handleClose} disabled={isSubmitting}>
             <FiX size={20} />
           </IconButton>
         </div>
@@ -749,6 +699,7 @@ const AddToGroupModal = ({
         <select
           value={groupId}
           onChange={(e) => setGroupId(e.target.value)}
+          disabled={isSubmitting}
           style={{
             width: "100%",
             border: "1px solid #e5e7eb",
@@ -761,16 +712,16 @@ const AddToGroupModal = ({
           }}
         >
           <option value="">Select group</option>
-          {allGroups.map((g) => (
-            <option key={g.id} value={String(g.id)}>
-              {g.name}: {g.course} {g.teacher} ({g.schedule})
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
             </option>
           ))}
         </select>
         <Button
           variant="contained"
-          onClick={() => onSubmit(groupId)}
-          disabled={!groupId}
+          onClick={handleSubmit}
+          disabled={!groupId || isSubmitting}
           sx={{
             textTransform: "none",
             borderRadius: 999,
@@ -781,7 +732,7 @@ const AddToGroupModal = ({
             "&:hover": { bgcolor: "#55b3c7" },
           }}
         >
-          Add student to group
+          {isSubmitting ? "Adding..." : "Add student to group"}
         </Button>
       </DialogContent>
     </Dialog>
@@ -792,27 +743,43 @@ const MoveToBranchModal = ({
   open,
   onClose,
   onSubmit,
+  branches,
+  currentBranchIds,
+  isSubmitting,
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (branch: string) => void;
+  onSubmit: (branchId: string, reason?: string) => Promise<boolean>;
+  branches: { id: string; name: string }[];
+  currentBranchIds: string[];
+  isSubmitting?: boolean;
 }) => {
   const [branch, setBranch] = useState("");
-  const branches = Array.from(new Set(TEACHERS_DATA.map((t) => t.branch))).filter(Boolean);
+  const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    if (!open) { setBranch(""); setReason(""); }
+  }, [open]);
 
   const handleClose = () => {
-    setBranch("");
+    if (isSubmitting) return;
     onClose();
+  };
+
+  const handleSubmit = async () => {
+    if (!branch || isSubmitting) return;
+    const success = await onSubmit(branch, reason.trim() || undefined);
+    if (success) { setBranch(""); setReason(""); }
   };
 
   return (
     <Dialog open={open} onClose={handleClose} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
       <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid #e5e7eb" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 34, transform: "scale(0.42)", transformOrigin: "left center", color: "#2e2e2e", whiteSpace: "nowrap" }}>
-            Move to other branch
+          <span style={{ fontSize: 16, fontWeight: 600, color: "#2e2e2e" }}>
+            Move to another branch
           </span>
-          <IconButton size="small" onClick={handleClose}>
+          <IconButton size="small" onClick={handleClose} disabled={isSubmitting}>
             <FiX size={20} />
           </IconButton>
         </div>
@@ -821,6 +788,7 @@ const MoveToBranchModal = ({
         <select
           value={branch}
           onChange={(e) => setBranch(e.target.value)}
+          disabled={isSubmitting}
           style={{
             width: "100%",
             border: "1px solid #e5e7eb",
@@ -829,20 +797,32 @@ const MoveToBranchModal = ({
             padding: "0 12px",
             color: branch ? "#1f2937" : "#a8b0bb",
             fontSize: 14,
-            marginBottom: 18,
+            marginBottom: 12,
           }}
         >
           <option value="">Select branch</option>
-          {branches.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
+          {branches.map((b) => {
+            const isCurrent = currentBranchIds.includes(b.id);
+            return (
+              <option key={b.id} value={b.id} disabled={isCurrent}>
+                {b.name}{isCurrent ? " (current)" : ""}
+              </option>
+            );
+          })}
         </select>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Reason (optional)"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          disabled={isSubmitting}
+          sx={{ mb: 2.25, "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 } }}
+        />
         <Button
           variant="contained"
-          onClick={() => onSubmit(branch)}
-          disabled={!branch}
+          onClick={handleSubmit}
+          disabled={!branch || isSubmitting}
           sx={{
             textTransform: "none",
             borderRadius: 999,
@@ -853,109 +833,10 @@ const MoveToBranchModal = ({
             "&:hover": { bgcolor: "#55b3c7" },
           }}
         >
-          Move to other branch
+          {isSubmitting ? "Moving..." : "Move to another branch"}
         </Button>
       </DialogContent>
     </Dialog>
-  );
-};
-
-const AddPaymentModal = ({
-  open,
-  onClose,
-  student,
-}: {
-  open: boolean;
-  onClose: () => void;
-  student: FlatStudent;
-}) => {
-  const [method, setMethod] = useState("Cash");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState("2026-06-02");
-  const [comment, setComment] = useState("");
-  const groupOptions = TEACHERS_DATA.flatMap((t) => t.groups);
-  const [groupId, setGroupId] = useState(String(student.groupId));
-
-  const methodsLeft = ["Cash", "Card", "Bank account", "Payme"];
-  const methodsRight = ["Click", "Uzum", "Humo"];
-
-  const handleClose = () => {
-    setMethod("Cash");
-    setAmount("");
-    setDate("2026-06-02");
-    setComment("");
-    setGroupId(String(student.groupId));
-    onClose();
-  };
-
-  return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={handleClose}
-      PaperProps={{
-        sx: {
-          width: 380,
-          borderRadius: "12px 0 0 12px",
-          boxShadow: "-8px 0 32px rgba(0,0,0,0.12)",
-        },
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 18px", borderBottom: "1px solid #ececec" }}>
-        <span style={{ fontSize: 34, transform: "scale(0.42)", transformOrigin: "left center", whiteSpace: "nowrap", color: "#2d2d2d" }}>Add payment</span>
-        <IconButton size="small" onClick={handleClose}><FiX size={20} /></IconButton>
-      </div>
-      <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
-        <div>
-          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Student</div>
-          <div style={{ background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 4, padding: "10px 12px", color: "#6b7280", fontSize: 14 }}>
-            {student.name}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Balance</div>
-          <span style={{ background: "#1d5f98", color: "#fff", borderRadius: 999, fontSize: 26, transform: "scale(0.42)", transformOrigin: "left center", display: "inline-block", padding: "4px 16px", fontWeight: 700 }}>
-            {(student.balance ?? 0).toLocaleString("ru-RU")} UZS
-          </span>
-        </div>
-        <div>
-          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Group</div>
-          <select value={groupId} onChange={(e) => setGroupId(e.target.value)} style={{ width: "100%", border: "1px solid #d9dee5", borderRadius: 6, padding: "10px 12px", fontSize: 14, color: "#334155" }}>
-            {groupOptions.map((g) => (
-              <option key={g.id} value={String(g.id)}>
-                {g.name}: {g.course} {g.teacher} ({g.schedule})
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Method pay</div>
-          <div style={{ display: "flex", gap: 26 }}>
-            <RadioGroup value={method} onChange={(e) => setMethod(e.target.value)}>
-              {methodsLeft.map((m) => <FormControlLabel key={m} value={m} control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{m}</span>} />)}
-            </RadioGroup>
-            <RadioGroup value={method} onChange={(e) => setMethod(e.target.value)}>
-              {methodsRight.map((m) => <FormControlLabel key={m} value={m} control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{m}</span>} />)}
-            </RadioGroup>
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Amount</div>
-          <input value={amount} onChange={(e) => setAmount(e.target.value)} style={{ width: "100%", border: "1px solid #d9dee5", borderRadius: 4, padding: "10px 12px", boxSizing: "border-box" }} />
-        </div>
-        <div>
-          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Date</div>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: "100%", border: "1px solid #d9dee5", borderRadius: 4, padding: "10px 12px", boxSizing: "border-box", color: "#6b7280" }} />
-        </div>
-        <div>
-          <div style={{ fontSize: 13, color: "#374151", marginBottom: 6 }}>Comment</div>
-          <textarea value={comment} onChange={(e) => setComment(e.target.value)} style={{ width: "100%", minHeight: 62, border: "1px solid #d9dee5", borderRadius: 4, padding: "10px 12px", boxSizing: "border-box" }} />
-        </div>
-        <Button variant="contained" onClick={handleClose} sx={{ textTransform: "none", borderRadius: 999, bgcolor: "#66c4d8", alignSelf: "flex-start", px: 3, py: 1, "&:hover": { bgcolor: "#55b3c7" } }}>
-          Submit
-        </Button>
-      </div>
-    </Drawer>
   );
 };
 
@@ -1029,7 +910,7 @@ const SideCard = ({
         marginBottom: 16,
       }}
     >
-      <Avatar sx={{ width: 72, height: 72, bgcolor: "#e5e7eb", color: "#9ca3af" }}>
+      <Avatar src={student.photo || undefined} sx={{ width: 72, height: 72, bgcolor: "#e5e7eb", color: "#9ca3af" }}>
         <FiUser size={32} />
       </Avatar>
       <div style={{ textAlign: "center" }}>
@@ -1050,23 +931,61 @@ const SideCard = ({
 
     <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "14px 0" }} />
 
+    {/* Personal info — only fields the backend actually returned are shown */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div>
+        <div style={{ fontSize: 12, color: "#9ca3af" }}>Phone:</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#5c7fa3" }}>{student.phone || "—"}</div>
+      </div>
+      {student.parentPhone && (
+        <div>
+          <div style={{ fontSize: 12, color: "#9ca3af" }}>Additional phone:</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{student.parentPhone}</div>
+        </div>
+      )}
+      {student.birthdate && (
+        <div style={{ fontSize: 13, color: "#6b7280" }}>
+          Birthday: <strong style={{ color: "#111827" }}>{formatDate(student.birthdate)}</strong>
+        </div>
+      )}
+      {student.gender && (
+        <div style={{ fontSize: 13, color: "#6b7280" }}>
+          Gender: <strong style={{ color: "#111827" }}>{student.gender === "MALE" ? "Male" : "Female"}</strong>
+        </div>
+      )}
+      {student.address && (
+        <div style={{ fontSize: 13, color: "#6b7280" }}>
+          Address: <strong style={{ color: "#111827" }}>{student.address}</strong>
+        </div>
+      )}
+    </div>
+
+    <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "14px 0" }} />
+
     {/* Info rows */}
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div
-        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
-      >
-        <FiPhone size={14} />
-        <span style={{ color: "#5c7fa3", fontWeight: 500 }}>{student.phone}</span>
-      </div>
-      <div
-        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
-      >
-        <FiCalendar size={14} />
-        <span>
-          Group start:{" "}
-          <strong style={{ color: "#111827" }}>{formatDate(student.startDate)}</strong>
-        </span>
-      </div>
+      {student.createdAt && formatLongDate(student.createdAt) && (
+        <div
+          style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
+        >
+          <FiCalendar size={14} />
+          <span>
+            Added at:{" "}
+            <strong style={{ color: "#111827" }}>{formatLongDate(student.createdAt)}</strong>
+          </span>
+        </div>
+      )}
+      {student.startDate && (
+        <div
+          style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
+        >
+          <FiCalendar size={14} />
+          <span>
+            Group start:{" "}
+            <strong style={{ color: "#111827" }}>{formatDate(student.startDate)}</strong>
+          </span>
+        </div>
+      )}
       <div
         style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
       >
@@ -1291,46 +1210,61 @@ const GroupCard = ({ student }: { student: FlatStudent }) => {
 };
 
 /* ─── MONTHLY BALANCE ────────────────────────────────── */
-const MonthlyBalance = ({ balance }: { balance: number }) => (
-  <div>
-    <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: "20px 0 12px" }}>
-      Monthly balance status
-    </div>
-    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-      <div
-        style={{
-          border: `2px solid ${balance < 0 ? "#f87171" : "#34d399"}`,
-          borderRadius: 12,
-          padding: "12px 20px",
-          minWidth: 120,
-        }}
-      >
+const MonthlyBalance = ({ balance }: { balance: number }) => {
+  const now = new Date();
+  const label = `${now.getFullYear()} M${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return (
+    <div>
+      <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: "20px 0 12px" }}>
+        Monthly balance status
+      </div>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <div
           style={{
-            fontSize: 11,
-            color: balance < 0 ? "#f87171" : "#34d399",
-            fontWeight: 500,
-            marginBottom: 4,
+            border: `2px solid ${balance < 0 ? "#f87171" : "#34d399"}`,
+            borderRadius: 12,
+            padding: "12px 20px",
+            minWidth: 120,
           }}
         >
-          2026 M05 1
-        </div>
-        <div
-          style={{
-            fontSize: 20,
-            fontWeight: 700,
-            color: balance < 0 ? "#ef4444" : "#16a34a",
-          }}
-        >
-          {balance.toLocaleString("ru-RU")}
+          <div
+            style={{
+              fontSize: 11,
+              color: balance < 0 ? "#f87171" : "#34d399",
+              fontWeight: 500,
+              marginBottom: 4,
+            }}
+          >
+            {label}
+          </div>
+          <div
+            style={{
+              fontSize: 20,
+              fontWeight: 700,
+              color: balance < 0 ? "#ef4444" : "#16a34a",
+            }}
+          >
+            {balance.toLocaleString("ru-RU")}
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 /* ─── PAYMENTS TABLE ─────────────────────────────────── */
-const PaymentsTable = ({ payments }: { payments: Payment[] }) => (
+const PaymentsTable = ({
+  payments,
+  isLoading,
+  isError,
+}: {
+  payments: PaymentRow[];
+  isLoading?: boolean;
+  isError?: boolean;
+}) => {
+  const [receiptId, setReceiptId] = useState<string | null>(null);
+
+  return (
   <div>
     <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: "20px 0 12px" }}>
       Payments
@@ -1340,13 +1274,13 @@ const PaymentsTable = ({ payments }: { payments: Payment[] }) => (
         background: "white",
         border: "1px solid #eaecf0",
         borderRadius: 12,
-        overflow: "hidden",
+        overflowX: "auto",
       }}
     >
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
         <thead>
           <tr style={{ borderBottom: "1px solid #f3f4f6" }}>
-            {["Date", "Type", "Amount", "Comment", "Creator", ""].map((h) => (
+            {["Date", "Method", "Amount", "Comment", "Creator", ""].map((h) => (
               <th
                 key={h}
                 style={{
@@ -1365,8 +1299,8 @@ const PaymentsTable = ({ payments }: { payments: Payment[] }) => (
           </tr>
         </thead>
         <tbody>
-          {payments.map((p, i) => (
-            <tr key={i} style={{ borderBottom: "1px solid #f9fafb" }}>
+          {payments.map((p) => (
+            <tr key={p.id} style={{ borderBottom: "1px solid #f9fafb" }}>
               <td
                 style={{
                   padding: "14px 16px",
@@ -1375,7 +1309,7 @@ const PaymentsTable = ({ payments }: { payments: Payment[] }) => (
                   whiteSpace: "nowrap",
                 }}
               >
-                {p.date}
+                {formatDate(p.date ?? "")}
               </td>
               <td style={{ padding: "14px 16px" }}>
                 <span
@@ -1388,7 +1322,7 @@ const PaymentsTable = ({ payments }: { payments: Payment[] }) => (
                     fontWeight: 600,
                   }}
                 >
-                  {p.type}
+                  {p.paymentMethodName || "—"}
                 </span>
               </td>
               <td
@@ -1399,36 +1333,28 @@ const PaymentsTable = ({ payments }: { payments: Payment[] }) => (
                   whiteSpace: "nowrap",
                 }}
               >
-                {p.amount}
+                {p.amount.toLocaleString("ru-RU")} UZS
               </td>
               <td style={{ padding: "14px 16px", fontSize: 13, color: "#374151" }}>
-                <div style={{ fontWeight: 500 }}>{p.comment}</div>
-                <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
-                  {p.period}
-                </div>
-                <button
-                  style={{
-                    marginTop: 4,
-                    fontSize: 11,
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 4,
-                    padding: "2px 8px",
-                    cursor: "pointer",
-                    background: "white",
-                  }}
-                >
-                  more
-                </button>
+                <div style={{ fontWeight: 500 }}>{p.notes || "—"}</div>
+                {p.groupName && (
+                  <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
+                    {p.groupName}
+                  </div>
+                )}
               </td>
               <td style={{ padding: "14px 16px", fontSize: 13 }}>
-                <div style={{ fontWeight: 500, color: "#111827" }}>{p.creator}</div>
-                <div style={{ fontSize: 12, color: "#9ca3af" }}>{p.creatorDate}</div>
+                <div style={{ fontWeight: 500, color: "#111827" }}>{p.createdBy || "—"}</div>
+                {p.createdAt && (
+                  <div style={{ fontSize: 12, color: "#9ca3af" }}>{formatDate(p.createdAt.slice(0, 10))}</div>
+                )}
               </td>
               <td style={{ padding: "14px 16px" }}>
                 <Button
                   size="small"
                   variant="outlined"
                   startIcon={<FiPrinter size={12} />}
+                  onClick={() => setReceiptId(p.id)}
                   sx={{
                     textTransform: "none",
                     fontSize: 12,
@@ -1441,7 +1367,21 @@ const PaymentsTable = ({ payments }: { payments: Payment[] }) => (
               </td>
             </tr>
           ))}
-          {payments.length === 0 && (
+          {isLoading && (
+            <tr>
+              <td colSpan={6} style={{ textAlign: "center", padding: 32, color: "#9ca3af", fontSize: 14 }}>
+                Loading...
+              </td>
+            </tr>
+          )}
+          {!isLoading && isError && (
+            <tr>
+              <td colSpan={6} style={{ textAlign: "center", padding: 32, color: "#ef4444", fontSize: 14 }}>
+                Failed to load payments
+              </td>
+            </tr>
+          )}
+          {!isLoading && !isError && payments.length === 0 && (
             <tr>
               <td
                 colSpan={6}
@@ -1454,128 +1394,11 @@ const PaymentsTable = ({ payments }: { payments: Payment[] }) => (
         </tbody>
       </table>
     </div>
-  </div>
-);
 
-const SmsTabContent = ({ sms }: { sms: SmsHistory[] }) => (
-  <div
-    style={{
-      background: "white",
-      border: "1px solid #eaecf0",
-      borderRadius: 12,
-      overflow: "hidden",
-    }}
-  >
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead>
-        <tr style={{ borderBottom: "1px solid #f1f3f5" }}>
-          {["SMS", "Creator", "Create at"].map((h) => (
-            <th
-              key={h}
-              style={{
-                padding: "14px 18px",
-                fontSize: 12,
-                color: "#9aa1aa",
-                textAlign: "left",
-                fontWeight: 600,
-              }}
-            >
-              {h}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {sms.map((row, idx) => (
-          <tr key={idx} style={{ borderBottom: idx === sms.length - 1 ? "none" : "1px solid #f1f3f5" }}>
-            <td style={{ padding: "14px 18px", color: "#444", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-line" }}>{row.text}</td>
-            <td style={{ padding: "14px 18px", color: "#6b7280", fontSize: 13, verticalAlign: "top" }}>{row.creator}</td>
-            <td style={{ padding: "14px 18px", color: "#8b95a1", fontSize: 13, whiteSpace: "nowrap", verticalAlign: "top" }}>{row.createdAt}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <PaymentReceiptModal open={Boolean(receiptId)} onClose={() => setReceiptId(null)} paymentId={receiptId} />
   </div>
-);
-
-const HistoryTabContent = ({
-  student,
-  items,
-}: {
-  student: FlatStudent;
-  items: GroupHistoryItem[];
-}) => (
-  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {items.map((item, idx) => (
-        <div
-          key={`${item.title}-${idx}`}
-          style={{
-            background: "white",
-            border: "1px solid #eaecf0",
-            borderRadius: 8,
-            padding: 18,
-            minHeight: 98,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 33, transform: "scale(0.42)", transformOrigin: "left top", color: "#2c2c2c", marginBottom: -8 }}>{item.title}</div>
-              {item.details?.map((line) => (
-                <div key={line} style={{ fontSize: 13, color: "#4b5563", marginTop: 2 }}>{line}</div>
-              ))}
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 12, color: "#8b95a1" }}>{item.createdAt}</div>
-              <div style={{ fontSize: 12, color: "#8b95a1", marginTop: 2 }}>{item.creator}</div>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-
-    <div>
-      <div style={{ fontSize: 40, transform: "scale(0.42)", transformOrigin: "left top", color: "#2c2c2c", marginBottom: -6 }}>Group History</div>
-      <div
-        style={{
-          position: "relative",
-          background: "white",
-          border: "1px solid #eaecf0",
-          borderRadius: 8,
-          padding: 16,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: 10,
-            right: -40,
-            transform: "rotate(40deg)",
-            background: "#38a169",
-            color: "white",
-            fontSize: 11,
-            fontWeight: 700,
-            width: 140,
-            textAlign: "center",
-            padding: "4px 0",
-          }}
-        >
-          ACTIVE
-        </div>
-        <div style={{ fontSize: 12, color: "#111827", fontWeight: 700 }}>{student.groupBadge}</div>
-        <div style={{ fontSize: 13, color: "#4b5563", marginTop: 4 }}>{student.course}</div>
-        <div style={{ fontSize: 13, color: "#4b5563", marginTop: 2 }}>{student.teacher}</div>
-        <div style={{ fontSize: 13, color: "#4b5563", marginTop: 2 }}>Status: Active (Learns)</div>
-        <div style={{ position: "absolute", top: 16, right: 16, textAlign: "right", fontSize: 13, color: "#6b7280" }}>
-          <div>{formatDate(student.startDate)} —</div>
-          <div>{formatDate(student.endDate)}</div>
-          <div style={{ marginTop: 2 }}>{student.groupSchedule}</div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 /* ─── MAIN COMPONENT ─────────────────────────────────── */
 export const StudentProfile = () => {
@@ -1588,6 +1411,33 @@ export const StudentProfile = () => {
 
   const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
   const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
+  const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
+  const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
+
+  const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
+  const groupOptions = useMemo(
+    () => (groupsData?.data ?? []).map((g) => ({ id: g.id, name: g.name })),
+    [groupsData]
+  );
+
+  const { data: branchesData } = useAllBranchesQuery();
+  const branchOptions = useMemo(
+    () => (branchesData?.data ?? []).map((b) => ({ id: b.id, name: b.name })),
+    [branchesData]
+  );
+  const currentBranchIds = useMemo(() => (data?.data.branch ?? []).map((b) => b.id), [data]);
+
+  // GET /finance/payments has no studentId filter, so it's narrowed by the
+  // student's name server-side (same `search` convention as the rest of the
+  // finance module) and filtered exactly by studentId client-side.
+  const {
+    data: paymentsData, isFetching: isPaymentsLoading, isError: isPaymentsError,
+  } = usePaymentsListQuery(
+    { page: 1, limit: 50, search: student?.name },
+    { skip: !student }
+  );
+  const payments = (paymentsData?.rows ?? []).filter((p) => p.studentId === student?.uid);
+
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const toast = useToast();
@@ -1644,10 +1494,6 @@ export const StudentProfile = () => {
     );
   }
 
-  const payments = makeMockPayments(student);
-  const smsHistory = makeMockSms(student);
-  const groupHistory = makeMockGroupHistory(student);
-
   const handleSaveStudent = async (data: { name: string; phone: string; gender: StudentGender; birthdate: string }): Promise<boolean> => {
     setSaveError(null);
     try {
@@ -1684,6 +1530,34 @@ export const StudentProfile = () => {
     }
   };
 
+  // GET /students/{id} (StudentDetail) doesn't return the student's current
+  // group id, unlike the students-list shape used on the Students page, so
+  // there's no client-side "already in this group" check here — the backend
+  // is relied on to reject/ignore a duplicate membership.
+  const handleAddToGroup = async (groupId: string): Promise<boolean> => {
+    try {
+      await addStudentToGroup({ studentId: student.uid, groupId }).unwrap();
+      toast.success("Student added to the group");
+      return true;
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to add to the group: ${detail}` : "Failed to add to the group");
+      return false;
+    }
+  };
+
+  const handleMoveToBranch = async (branchId: string, reason?: string): Promise<boolean> => {
+    try {
+      await transferStudentBranch({ id: student.uid, newBranchId: branchId, reason }).unwrap();
+      toast.success("Student moved to the new branch");
+      return true;
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to move branch: ${detail}` : "Failed to move branch");
+      return false;
+    }
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: "#f0f2f5", padding: 24 }}>
       {/* Back button */}
@@ -1708,9 +1582,9 @@ export const StudentProfile = () => {
         </div>
       )}
 
-      <div style={{ maxWidth: 1200, display: "flex", gap: 24, alignItems: "flex-start" }}>
+      <Box sx={{ maxWidth: 1200, display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: 3, alignItems: "flex-start" }}>
         {/* Left sidebar */}
-        <div style={{ width: 320, flexShrink: 0 }}>
+        <Box sx={{ width: { xs: "100%", lg: 320 }, flexShrink: 0 }}>
           <SideCard
             student={student}
             onEdit={() => setEditOpen(true)}
@@ -1721,10 +1595,10 @@ export const StudentProfile = () => {
             onAddPayment={() => setAddPaymentOpen(true)}
             onOpenAddPaymentMenu={(e) => setPaymentMenuAnchor(e.currentTarget)}
           />
-        </div>
+        </Box>
 
         {/* Right content */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
           <div
             style={{
               background: "white",
@@ -1762,12 +1636,8 @@ export const StudentProfile = () => {
                 <>
                   <GroupCard student={student} />
                   <MonthlyBalance balance={student.balance ?? 0} />
-                  <PaymentsTable payments={payments} />
+                  <PaymentsTable payments={payments} isLoading={isPaymentsLoading} isError={isPaymentsError} />
                 </>
-              ) : activeTab === 3 ? (
-                <SmsTabContent sms={smsHistory} />
-              ) : activeTab === 4 ? (
-                <HistoryTabContent student={student} items={groupHistory} />
               ) : (
                 <div
                   style={{
@@ -1782,8 +1652,8 @@ export const StudentProfile = () => {
               )}
             </Box>
           </div>
-        </div>
-      </div>
+        </Box>
+      </Box>
 
       {/* ── Modals ── */}
       <EditStudentDrawer
@@ -1811,19 +1681,33 @@ export const StudentProfile = () => {
       <AddToGroupModal
         open={addToGroupOpen}
         onClose={() => setAddToGroupOpen(false)}
-        onSubmit={() => setAddToGroupOpen(false)}
+        onSubmit={async (groupId) => {
+          const ok = await handleAddToGroup(groupId);
+          if (ok) setAddToGroupOpen(false);
+          return ok;
+        }}
+        groups={groupOptions}
+        isSubmitting={isAddingToGroup}
       />
 
       <MoveToBranchModal
         open={moveBranchOpen}
         onClose={() => setMoveBranchOpen(false)}
-        onSubmit={() => setMoveBranchOpen(false)}
+        onSubmit={async (branchId, reason) => {
+          const ok = await handleMoveToBranch(branchId, reason);
+          if (ok) setMoveBranchOpen(false);
+          return ok;
+        }}
+        branches={branchOptions}
+        currentBranchIds={currentBranchIds}
+        isSubmitting={isMovingBranch}
       />
 
-      <AddPaymentModal
+      <AddPayment
         open={addPaymentOpen}
         onClose={() => setAddPaymentOpen(false)}
-        student={student}
+        initialStudentId={student.uid}
+        initialStudentName={student.name}
       />
 
       <Menu

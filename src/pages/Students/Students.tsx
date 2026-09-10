@@ -1,6 +1,7 @@
 // src/pages/Students.tsx
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
 import {
   Avatar,
   Box,
@@ -32,7 +33,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { MdDelete, MdMail, MdEdit, MdPayment, MdAdd } from "react-icons/md";
+import { MdDelete, MdMail, MdEdit, MdPayment, MdAdd, MdCalendarToday } from "react-icons/md";
 import { BsThreeDotsVertical, BsPersonPlus } from "react-icons/bs";
 import { TbAdjustmentsHorizontal, TbColumns3 } from "react-icons/tb";
 import { HiChevronDown } from "react-icons/hi";
@@ -46,7 +47,10 @@ import { useNavigate } from "react-router-dom";
 import { AddStudent } from "../../components/AddStudent";
 import { AddPayment } from "../../components/AddPayment";
 import { useAllStudentsQuery, useUpdateStudentMutation, useDeleteStudentMutation } from "../../app/api/studentsApi";
+import { useAllGroupsQuery, useAddStudentToGroupMutation } from "../../app/api/groupsApi";
 import { useToast } from "../../Context/ToastContext";
+import { extractApiError } from "../../utils/extractApiError";
+import type { RootState } from "../../app/store";
 
 import { SendSmsModal } from "../../components/SendSmsModal";
 
@@ -57,6 +61,12 @@ type SortKey = keyof FlatStudent | "";
 interface Filters {
   search: string;
   teacher: string;
+  course: string;
+  status: string;
+  financial: string;
+  groupCount: string;
+  fromCreated: string;
+  toCreatedDate: string;
 }
 
 /* ─── STYLES ─────────────────────────────────────────── */
@@ -64,9 +74,9 @@ const inputSx = {
   "& .MuiOutlinedInput-root": {
     borderRadius: "6px",
     fontSize: 13,
-    bgcolor: "white",
-    "& fieldset": { borderColor: "#d0d5dd" },
-    "&:hover fieldset": { borderColor: "#a0aec0" },
+    bgcolor: "var(--color-surface)",
+    "& fieldset": { borderColor: "var(--color-border)" },
+    "&:hover fieldset": { borderColor: "var(--color-text-muted)" },
     "&.Mui-focused fieldset": { borderColor: "#5c7fa3" },
   },
 };
@@ -79,18 +89,18 @@ const IconBtn = ({ children, onClick, active, title }: {
     title={title}
     onClick={onClick}
     style={{
-      width: 34, height: 34, border: "1px solid #e0e5ec", borderRadius: 8,
-      background: active ? "#f0f4f9" : "#fff", display: "flex",
+      width: 34, height: 34, border: "1px solid var(--color-border)", borderRadius: 8,
+      background: active ? "var(--color-surface-hover)" : "var(--color-surface)", display: "flex",
       alignItems: "center", justifyContent: "center", cursor: "pointer",
-      color: "#6b7a8d", flexShrink: 0, transition: "background 0.15s, color 0.15s",
+      color: "var(--color-text-secondary)", flexShrink: 0, transition: "background 0.15s, color 0.15s",
     }}
     onMouseEnter={(e) => {
-      (e.currentTarget as HTMLButtonElement).style.background = "#f0f4f9";
-      (e.currentTarget as HTMLButtonElement).style.color = "#1a2332";
+      (e.currentTarget as HTMLButtonElement).style.background = "var(--color-surface-hover)";
+      (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-primary)";
     }}
     onMouseLeave={(e) => {
-      (e.currentTarget as HTMLButtonElement).style.background = active ? "#f0f4f9" : "#fff";
-      (e.currentTarget as HTMLButtonElement).style.color = "#6b7a8d";
+      (e.currentTarget as HTMLButtonElement).style.background = active ? "var(--color-surface-hover)" : "var(--color-surface)";
+      (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-secondary)";
     }}
   >
     {children}
@@ -117,12 +127,12 @@ const DropdownFilter = ({ label, value, options, onChange, onClear }: DropdownPr
         onClick={(e) => setAnchor(e.currentTarget)}
         sx={{
           borderRadius: "6px",
-          borderColor: value ? "#5c7fa3" : "#d0d5dd",
-          color: value ? "#5c7fa3" : "#667085",
-          bgcolor: value ? "#eef4f9" : "white",
+          borderColor: value ? "#5c7fa3" : "var(--color-border)",
+          color: value ? "#5c7fa3" : "var(--color-text-secondary)",
+          bgcolor: value ? "var(--color-primary-surface)" : "var(--color-surface)",
           fontWeight: 400, fontSize: 13, px: 1.5, py: 0.6,
           textTransform: "none", whiteSpace: "nowrap",
-          "&:hover": { borderColor: "#5c7fa3", bgcolor: "#eef4f9" },
+          "&:hover": { borderColor: "#5c7fa3", bgcolor: "var(--color-primary-surface)" },
         }}
       >
         {value ? (
@@ -152,6 +162,70 @@ const DropdownFilter = ({ label, value, options, onChange, onClear }: DropdownPr
   );
 };
 
+/* ─── PLAIN TEXT FILTER BOX (External ID, Group count) ── */
+interface TextFilterProps {
+  placeholder: string;
+  value: string;
+  onChange: (val: string) => void;
+  disabled?: boolean;
+  disabledTitle?: string;
+  type?: "text" | "number";
+  minWidth?: number;
+}
+
+const TextFilterInput = ({ placeholder, value, onChange, disabled, disabledTitle, type = "text", minWidth = 140 }: TextFilterProps) => (
+  <Tooltip title={disabled ? disabledTitle ?? "" : ""} arrow disableHoverListener={!disabled}>
+    <Box
+      sx={{
+        display: "flex", alignItems: "center",
+        border: "1px solid var(--color-border)", borderRadius: "6px",
+        px: 1.2, py: 0.6, bgcolor: disabled ? "var(--color-surface-alt)" : "var(--color-surface)",
+        minWidth, opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      <input
+        placeholder={placeholder}
+        value={value}
+        type={type}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ border: "none", outline: "none", fontSize: 13, color: "var(--color-text-secondary)", background: "transparent", width: "100%", cursor: disabled ? "not-allowed" : "text" }}
+      />
+    </Box>
+  </Tooltip>
+);
+
+/* ─── DATE FILTER BOX (From/To created) ─────────────────── */
+// Native <input type="date"> ignores the `placeholder` attribute in every
+// browser, so an empty-state label ("From created") is layered on top
+// (pointer-events: none) instead — it just hides once a value is picked.
+const DateFilterInput = ({ placeholder, value, onChange }: { placeholder: string; value: string; onChange: (val: string) => void }) => (
+  <Box
+    sx={{
+      position: "relative", display: "flex", alignItems: "center", gap: 0.6,
+      border: "1px solid var(--color-border)", borderRadius: "6px",
+      px: 1.2, py: 0.6, bgcolor: "var(--color-surface)", minWidth: 150,
+    }}
+  >
+    <input
+      aria-label={placeholder}
+      value={value}
+      type="date"
+      onChange={(e) => onChange(e.target.value)}
+      style={{ border: "none", outline: "none", fontSize: 13, color: "var(--color-text-secondary)", background: "transparent", width: "100%" }}
+    />
+    {!value && (
+      <span style={{
+        position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+        fontSize: 13, color: "var(--color-text-muted)", pointerEvents: "none", background: "var(--color-surface)",
+      }}>
+        {placeholder}
+      </span>
+    )}
+    <MdCalendarToday size={13} color="var(--color-text-muted)" style={{ flexShrink: 0, position: "relative", zIndex: 1 }} />
+  </Box>
+);
+
 /* ─── ADD TO GROUP MODAL ─────────────────────────────── */
 const AddToGroupModal = ({
   open,
@@ -159,28 +233,37 @@ const AddToGroupModal = ({
   onSubmit,
   groups,
   selectedCount,
+  isSubmitting,
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (groupId: string) => void;
+  onSubmit: (groupId: string) => Promise<boolean>;
   groups: { id: string; name: string }[];
   selectedCount: number;
+  isSubmitting?: boolean;
 }) => {
   const { t } = useTranslation();
   const [groupId, setGroupId] = useState("");
 
-  const handleSubmit = () => {
-    if (groupId) {
-      onSubmit(groupId);
-      setGroupId("");
-      onClose();
-    }
+  useEffect(() => {
+    if (!open) setGroupId("");
+  }, [open]);
+
+  const handleClose = () => {
+    if (isSubmitting) return;
+    onClose();
+  };
+
+  const handleSubmit = async () => {
+    if (!groupId || isSubmitting) return;
+    const success = await onSubmit(groupId);
+    if (success) setGroupId("");
   };
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       PaperProps={{ sx: { borderRadius: "12px", width: 580, maxWidth: "95vw", p: 0 } }}
     >
       <Stack
@@ -190,16 +273,16 @@ const AddToGroupModal = ({
         sx={{ px: 3, py: 2.5 }}
       >
         <Box>
-          <Typography fontWeight={600} fontSize={16} color="#111827">
+          <Typography fontWeight={600} fontSize={16} color="var(--color-text-primary)">
             {t("students.addToGroup.title")}
           </Typography>
           {selectedCount > 0 && (
-            <Typography fontSize={12} color="#6b7280" mt={0.3}>
+            <Typography fontSize={12} color="var(--color-text-secondary)" mt={0.3}>
               {t("students.addToGroup.studentsSelected", { count: selectedCount })}
             </Typography>
           )}
         </Box>
-        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}>
+        <IconButton size="small" onClick={handleClose} disabled={isSubmitting} sx={{ color: "var(--color-text-muted)" }}>
           <IoClose size={20} />
         </IconButton>
       </Stack>
@@ -213,19 +296,20 @@ const AddToGroupModal = ({
           size="small"
           value={groupId}
           onChange={(e) => setGroupId(e.target.value)}
+          disabled={isSubmitting}
           SelectProps={{ displayEmpty: true }}
           sx={{
             "& .MuiOutlinedInput-root": {
               borderRadius: "8px",
               fontSize: 14,
-              bgcolor: "white",
-              "& fieldset": { borderColor: "#d0d5dd" },
-              "&:hover fieldset": { borderColor: "#a0aec0" },
+              bgcolor: "var(--color-surface)",
+              "& fieldset": { borderColor: "var(--color-border)" },
+              "&:hover fieldset": { borderColor: "var(--color-text-muted)" },
               "&.Mui-focused fieldset": { borderColor: "#5c7fa3" },
             },
           }}
         >
-          <MenuItem value="" disabled sx={{ fontSize: 14, color: "#9ca3af" }}>
+          <MenuItem value="" disabled sx={{ fontSize: 14, color: "var(--color-text-muted)" }}>
             {t("students.addToGroup.selectGroup")}
           </MenuItem>
           {groups.map((g) => (
@@ -239,19 +323,19 @@ const AddToGroupModal = ({
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={!groupId}
+            disabled={!groupId || isSubmitting}
             sx={{
               borderRadius: "20px",
               py: 1.1, px: 3,
               fontWeight: 600, fontSize: 14,
               bgcolor: "#4bbfbf",
               "&:hover": { bgcolor: "#3aacac" },
-              "&.Mui-disabled": { bgcolor: "#d0d5dd", color: "white" },
+              "&.Mui-disabled": { bgcolor: "var(--color-border)", color: "var(--color-surface)" },
               boxShadow: "none",
               textTransform: "none",
             }}
           >
-            {t("students.addToGroup.submit")}
+            {isSubmitting ? t("students.addToGroup.submitting") : t("students.addToGroup.submit")}
           </Button>
         </Box>
       </Box>
@@ -284,17 +368,17 @@ const EditStudentDrawer = ({
     <Drawer anchor="right" open={open} onClose={onClose} PaperProps={{ sx: { width: 420 } }}>
       <Stack
         direction="row" justifyContent="space-between" alignItems="center"
-        sx={{ px: 3, py: 2.5, borderBottom: "1px solid #eaecf0", bgcolor: "white" }}
+        sx={{ px: 3, py: 2.5, borderBottom: "1px solid var(--color-border)", bgcolor: "var(--color-surface)" }}
       >
         <Typography fontWeight={700} fontSize={17}>{t("students.editDrawer.title")}</Typography>
-        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}><IoClose size={20} /></IconButton>
+        <IconButton size="small" onClick={onClose} sx={{ color: "var(--color-text-muted)" }}><IoClose size={20} /></IconButton>
       </Stack>
 
-      <Box sx={{ px: 3, py: 2.5, overflowY: "auto", flex: 1, bgcolor: "#f8f9fa" }}>
+      <Box sx={{ px: 3, py: 2.5, overflowY: "auto", flex: 1, bgcolor: "var(--color-bg-page)" }}>
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>{t("students.editDrawer.phone")}</Typography>
+          <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("students.editDrawer.phone")}</Typography>
           <Stack direction="row" gap={1}>
-            <Box sx={{ border: "1px solid #d0d5dd", borderRadius: "6px", px: 1.5, display: "flex", alignItems: "center", bgcolor: "white", fontSize: 13, color: "#374151", whiteSpace: "nowrap", minWidth: 60, justifyContent: "center" }}>
+            <Box sx={{ border: "1px solid var(--color-border)", borderRadius: "6px", px: 1.5, display: "flex", alignItems: "center", bgcolor: "var(--color-surface)", fontSize: 13, color: "var(--color-text-secondary)", whiteSpace: "nowrap", minWidth: 60, justifyContent: "center" }}>
               +998
             </Box>
             <TextField fullWidth size="small" value={phone} onChange={(e) => setPhone(e.target.value)} sx={inputSx} />
@@ -302,25 +386,25 @@ const EditStudentDrawer = ({
         </Box>
 
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>{t("students.editDrawer.name")}</Typography>
+          <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("students.editDrawer.name")}</Typography>
           <TextField fullWidth size="small" value={name} onChange={(e) => setName(e.target.value)} sx={inputSx} />
         </Box>
 
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>{t("students.editDrawer.dob")}</Typography>
+          <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("students.editDrawer.dob")}</Typography>
           <TextField fullWidth size="small" type="date" value={dob} onChange={(e) => setDob(e.target.value)} InputLabelProps={{ shrink: true }} sx={inputSx} />
         </Box>
 
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>{t("students.editDrawer.gender")}</Typography>
+          <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("students.editDrawer.gender")}</Typography>
           <RadioGroup row value={gender} onChange={(e) => setGender(e.target.value)} sx={{ gap: 3 }}>
             {[
               { value: "male", label: t("students.editDrawer.male") },
               { value: "female", label: t("students.editDrawer.female") },
             ].map((g) => (
               <FormControlLabel key={g.value} value={g.value}
-                control={<Radio size="small" sx={{ color: "#d0d5dd", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
-                label={<Typography fontSize={13} color="#374151">{g.label}</Typography>}
+                control={<Radio size="small" sx={{ color: "var(--color-border)", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
+                label={<Typography fontSize={13} color="var(--color-text-secondary)">{g.label}</Typography>}
                 sx={{ m: 0, gap: 0.5 }}
               />
             ))}
@@ -328,11 +412,11 @@ const EditStudentDrawer = ({
         </Box>
 
         <Box mb={2.5}>
-          <Typography fontSize={13} fontWeight={500} color="#344054" mb={1}>{t("students.editDrawer.additionalContacts")}</Typography>
+          <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={1}>{t("students.editDrawer.additionalContacts")}</Typography>
           <Stack direction="row" gap={1} flexWrap="wrap">
             {CONTACT_ICONS.map((item, i) => (
               <Tooltip key={i} title={t(`students.contacts.${item.key}`)} arrow>
-                <IconButton size="small" sx={{ width: 40, height: 40, border: "1.5px solid #c5d4e3", borderRadius: "50%", color: "#5c7fa3", bgcolor: "white" }}>
+                <IconButton size="small" sx={{ width: 40, height: 40, border: "1.5px solid var(--color-border)", borderRadius: "50%", color: "#5c7fa3", bgcolor: "var(--color-surface)" }}>
                   {item.icon}
                 </IconButton>
               </Tooltip>
@@ -392,7 +476,7 @@ const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 8px)", left: 0,
-          background: "#fff", border: "1px solid #e0e5ec", borderRadius: 10,
+          background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 10,
           boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 500,
           minWidth: 180, animation: "dropDown 0.15s ease", overflow: "hidden",
         }}>
@@ -404,10 +488,10 @@ const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
               style={{
                 padding: "11px 16px", fontSize: 13, cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 10,
-                color: "#1a2332", transition: "background 0.1s",
+                color: "var(--color-text-primary)", transition: "background 0.1s",
               }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "#f7f8fa")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "#fff")}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "var(--color-surface-alt)")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "var(--color-surface)")}
             >
               <span style={{ fontSize: 16 }}>{item.emoji}</span>
               <span>{item.label}</span>
@@ -429,9 +513,14 @@ export const Students = () => {
 
   const [page, setPage] = useState(1);
   const limit = 20;
-  const { data: studentsData, isLoading: studentsLoading } = useAllStudentsQuery({ page, limit });
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { data: studentsData, isLoading: studentsLoading } = useAllStudentsQuery({
+    page, limit, branchId: selectedBranchId ?? undefined,
+  });
   const [updateStudent, { isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
   const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
+  const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
+  const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
 
   const [students, setStudents] = useState<FlatStudent[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -454,12 +543,17 @@ export const Students = () => {
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
 
-  const [filters, setFilters] = useState<Filters>({ search: "", teacher: "" });
+  const EMPTY_FILTERS: Filters = {
+    search: "", teacher: "", course: "", status: "", financial: "",
+    groupCount: "", fromCreated: "", toCreatedDate: "",
+  };
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [advancedAnchor, setAdvancedAnchor] = useState<null | HTMLElement>(null);
 
   const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) =>
     setFilters((p) => ({ ...p, [key]: val }));
 
-  const clearAll = () => setFilters({ search: "", teacher: "" });
+  const clearAll = () => setFilters(EMPTY_FILTERS);
 
   const hasFilters = Object.values(filters).some(Boolean);
 
@@ -469,11 +563,22 @@ export const Students = () => {
     return Array.from(names);
   }, [studentsData]);
 
-  const ALL_GROUPS = useMemo(() => {
-    const groups = new Map<string, string>();
-    studentsData?.data.forEach((s) => (s.groups ?? []).forEach((g) => groups.set(g.id, g.name)));
-    return Array.from(groups, ([id, name]) => ({ id, name }));
-  }, [studentsData]);
+  // "Course" reuses FlatStudent.course, which the backend mapper currently
+  // fills from the student's (first) group name — students.groups doesn't
+  // carry a separate course reference, so this is the closest real field.
+  const COURSES_LIST = useMemo(() => {
+    const names = new Set<string>();
+    students.forEach((s) => { if (s.course && s.course !== "—") names.add(s.course); });
+    return Array.from(names);
+  }, [students]);
+
+  // AddToGroupModal ochiladigan barcha guruhlar — backenddan (GET /groups),
+  // joriy sahifadagi studentlarning guruhlaridan hosil qilingan taxminiy
+  // ro'yxat emas.
+  const allGroupsOptions = useMemo(
+    () => (groupsData?.data ?? []).map((g) => ({ id: g.id, name: g.name })),
+    [groupsData]
+  );
 
   // Backend hozircha sahifalash meta'sini qaytarmaydi; shu sababli joriy
   // sahifa hajmidan taxminiy meta hosil qilamiz, chunki bu maydon kelib
@@ -493,9 +598,25 @@ export const Students = () => {
     return students
       .filter((s) => {
         const search = filters.search.toLowerCase();
+        const balance = s.balance ?? 0;
+        const financialMatch =
+          !filters.financial ||
+          (filters.financial === "positive" && balance > 0) ||
+          (filters.financial === "negative" && balance < 0) ||
+          (filters.financial === "zero" && balance === 0);
+        const statusMatch =
+          !filters.status ||
+          (filters.status === "active" ? s.active : !s.active);
+        const groupCountMatch =
+          !filters.groupCount || String(s.groupsCount ?? 0) === filters.groupCount.trim();
+        const createdAt = s.createdAt ? s.createdAt.slice(0, 10) : "";
+        const fromMatch = !filters.fromCreated || (createdAt && createdAt >= filters.fromCreated);
+        const toMatch = !filters.toCreatedDate || (createdAt && createdAt <= filters.toCreatedDate);
         return (
           (!search || s.name.toLowerCase().includes(search) || s.phone.includes(search)) &&
-          (!filters.teacher || s.teacher === filters.teacher)
+          (!filters.teacher || s.teacher === filters.teacher) &&
+          (!filters.course || s.course === filters.course) &&
+          statusMatch && financialMatch && groupCountMatch && fromMatch && toMatch
         );
       })
       .sort((a, b) => {
@@ -556,6 +677,33 @@ export const Students = () => {
     }
   };
 
+  const handleAddToGroup = async (groupId: string): Promise<boolean> => {
+    setActionError(null);
+    // Backend student-groups' allaqachon a'zo bo'lgan studentni qayta
+    // qo'shishga ruxsat bermasligi mumkin — shu sabab tanlanganlar orasidan
+    // bu guruhda allaqachon bor bo'lganlarni oldindan chiqarib tashlaymiz.
+    const eligibleUids = selected.filter((uid) => {
+      const raw = studentsData?.data.find((s) => s.id === uid);
+      return !(raw?.groups ?? []).some((g) => g.id === groupId);
+    });
+    if (eligibleUids.length === 0) {
+      toast.error(t("students.addToGroup.toast.alreadyInGroup"));
+      return false;
+    }
+    try {
+      await Promise.all(eligibleUids.map((uid) => addStudentToGroup({ studentId: uid, groupId }).unwrap()));
+      toast.success(t("students.addToGroup.toast.success"));
+      setSelected([]);
+      setAddToGroupOpen(false);
+      return true;
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("students.addToGroup.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
+      return false;
+    }
+  };
+
   const openActionMenu = (e: React.MouseEvent<HTMLButtonElement>, uid: string) => {
     e.stopPropagation();
     const student = students.find((s) => s.uid === uid) || null;
@@ -578,68 +726,124 @@ export const Students = () => {
 
   /* ── UI ─────────────────────────────────────────────── */
   return (
-    <Box sx={{ p: 3, bgcolor: "#f8f9fa", minHeight: "100vh" }}>
+    <Box sx={{ p: 3, bgcolor: "var(--color-bg-page)", minHeight: "100vh" }}>
 
       {/* HEADER */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
         <Stack direction="row" alignItems="baseline" gap={1.5}>
-          <Typography variant="h5" fontWeight={700} fontSize={26} color="#111827">{t("students.header.title")}</Typography>
-          <Typography fontSize={14} color="#6b7280">{t("students.header.quantity", { count: studentsData ? pageMeta.total : filtered.length })}</Typography>
+          <Typography variant="h5" fontWeight={700} fontSize={26} color="var(--color-text-primary)">{t("students.header.title")}</Typography>
+          <Typography fontSize={14} color="var(--color-text-secondary)">{t("students.header.quantity", { count: studentsData ? pageMeta.total : filtered.length })}</Typography>
         </Stack>
-        <Button
-          variant="contained"
-          onClick={() => setAddStudentOpen(true)}
-          sx={{
-            bgcolor: "#2d4a5a", color: "white", borderRadius: "8px",
-            px: 3, py: 1.1, fontWeight: 700, fontSize: 13, letterSpacing: 0.5,
-            textTransform: "uppercase", "&:hover": { bgcolor: "#1e3340" }, boxShadow: "none",
-          }}
-        >
-          {t("students.header.addNew")}
-        </Button>
+        <Stack direction="row" alignItems="center" gap={1}>
+          <QuickAddBtn
+            onAddStudent={() => setAddStudentOpen(true)}
+            onAddPayment={() => setAddPaymentOpen(true)}
+          />
+          <Button
+            variant="contained"
+            onClick={() => setAddStudentOpen(true)}
+            sx={{
+              bgcolor: "#2d4a5a", color: "var(--color-surface)", borderRadius: "8px",
+              px: 3, py: 1.1, fontWeight: 700, fontSize: 13, letterSpacing: 0.5,
+              textTransform: "uppercase", "&:hover": { bgcolor: "#1e3340" }, boxShadow: "none",
+            }}
+          >
+            {t("students.header.addNew")}
+          </Button>
+        </Stack>
       </Stack>
 
       {/* FILTER ROW */}
       <Stack
         direction="row" flexWrap="wrap" gap={1} mb={1.5}
-        sx={{ bgcolor: "white", border: "1px solid #eaecf0", borderRadius: "8px", p: 1.5 }}
+        sx={{ bgcolor: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "8px", p: 1.5 }}
       >
         {/* Search */}
         <Box
           sx={{
             display: "flex", alignItems: "center", gap: 0.5,
-            border: "1px solid #d0d5dd", borderRadius: "6px",
-            px: 1.2, py: 0.6, bgcolor: "white", minWidth: 220,
+            border: "1px solid var(--color-border)", borderRadius: "6px",
+            px: 1.2, py: 0.6, bgcolor: "var(--color-surface)", minWidth: 220,
           }}
         >
-          <IoSearchOutline size={15} color="#9ca3af" />
+          <IoSearchOutline size={15} color="var(--color-text-muted)" />
           <input
             placeholder={t("students.filters.searchPlaceholder")}
             value={filters.search}
             onChange={(e) => setFilter("search", e.target.value)}
-            style={{ border: "none", outline: "none", fontSize: 13, color: "#374151", background: "transparent", width: "100%" }}
+            style={{ border: "none", outline: "none", fontSize: 13, color: "var(--color-text-secondary)", background: "transparent", width: "100%" }}
           />
           {filters.search && (
-            <IoClose size={13} color="#9ca3af" style={{ cursor: "pointer" }} onClick={() => setFilter("search", "")} />
+            <IoClose size={13} color="var(--color-text-muted)" style={{ cursor: "pointer" }} onClick={() => setFilter("search", "")} />
           )}
         </Box>
 
-         <QuickAddBtn
-            onAddStudent={() => setAddStudentOpen(true)}
-            onAddPayment={() => setAddPaymentOpen(true)}
-          />
-
+        <DropdownFilter
+          label={t("students.filters.byCourses")} value={filters.course}
+          options={COURSES_LIST.map((c) => ({ value: c, label: c }))}
+          onChange={(v) => setFilter("course", v)} onClear={() => setFilter("course", "")}
+        />
 
         <DropdownFilter
-          label={t("students.filters.byTeacher")} value={filters.teacher}
-          options={TEACHERS_LIST.map((tch) => ({ value: tch, label: tch }))}
-          onChange={(v) => setFilter("teacher", v)} onClear={() => setFilter("teacher", "")}
+          label={t("students.filters.status")} value={filters.status}
+          options={[
+            { value: "active", label: t("students.filters.statusOptions.active") },
+            { value: "inactive", label: t("students.filters.statusOptions.inactive") },
+          ]}
+          onChange={(v) => setFilter("status", v)} onClear={() => setFilter("status", "")}
+        />
+
+        <DropdownFilter
+          label={t("students.filters.financialSituation")} value={filters.financial}
+          options={[
+            { value: "positive", label: t("students.filters.financialOptions.positive") },
+            { value: "negative", label: t("students.filters.financialOptions.negative") },
+            { value: "zero", label: t("students.filters.financialOptions.zero") },
+          ]}
+          onChange={(v) => setFilter("financial", v)} onClear={() => setFilter("financial", "")}
+        />
+
+        {/* No tags relationship exists on students in the backend yet — kept
+            visible for layout parity but disabled rather than faked. */}
+        <TextFilterInput
+          placeholder={t("students.filters.byTags")}
+          value="" onChange={() => {}} disabled
+          disabledTitle={t("students.filters.tagsUnavailable")}
+          minWidth={130}
+        />
+
+        {/* No externalId field exists on students in the backend yet —
+            same reasoning as the Tags box above. */}
+        <TextFilterInput
+          placeholder={t("students.filters.externalId")}
+          value="" onChange={() => {}} disabled
+          disabledTitle={t("students.filters.externalIdUnavailable")}
+          minWidth={130}
+        />
+
+        <TextFilterInput
+          placeholder={t("students.filters.groupCount")}
+          value={filters.groupCount}
+          onChange={(v) => setFilter("groupCount", v.replace(/[^0-9]/g, ""))}
+          type="number" minWidth={110}
+        />
+
+        <DateFilterInput
+          placeholder={t("students.filters.fromCreated")}
+          value={filters.fromCreated}
+          onChange={(v) => setFilter("fromCreated", v)}
+        />
+
+        <DateFilterInput
+          placeholder={t("students.filters.toCreatedDate")}
+          value={filters.toCreatedDate}
+          onChange={(v) => setFilter("toCreatedDate", v)}
         />
 
         {hasFilters && (
           <Button
             size="small" startIcon={<IoClose />} onClick={clearAll} variant="outlined"
-            sx={{ borderRadius: "6px", borderColor: "#d0d5dd", color: "#667085", fontSize: 12, px: 1.5, textTransform: "none" }}
+            sx={{ borderRadius: "6px", borderColor: "var(--color-border)", color: "var(--color-text-secondary)", fontSize: 12, px: 1.5, textTransform: "none" }}
           >
             {t("students.filters.clearAll")}
           </Button>
@@ -655,14 +859,29 @@ export const Students = () => {
         )}
         <Button
           size="small" startIcon={<TbAdjustmentsHorizontal size={14} />} variant="outlined"
-          sx={{ borderRadius: "6px", borderColor: "#d0d5dd", color: "#667085", fontSize: 12, px: 1.5, textTransform: "none" }}
+          onClick={(e) => setAdvancedAnchor(e.currentTarget)}
+          sx={{ borderRadius: "6px", borderColor: filters.teacher ? "#5c7fa3" : "var(--color-border)", color: filters.teacher ? "#5c7fa3" : "var(--color-text-secondary)", fontSize: 12, px: 1.5, textTransform: "none" }}
         >
           {t("students.table.filters")}
         </Button>
+        <Menu
+          anchorEl={advancedAnchor} open={Boolean(advancedAnchor)}
+          onClose={() => setAdvancedAnchor(null)}
+          PaperProps={{ sx: { borderRadius: 2, minWidth: 220, mt: 0.5, p: 1.5 } }}
+        >
+          <Typography fontSize={12} fontWeight={600} color="var(--color-text-secondary)" sx={{ px: 0.5, pb: 1 }}>
+            {t("students.filters.advancedFilters")}
+          </Typography>
+          <DropdownFilter
+            label={t("students.filters.byTeacher")} value={filters.teacher}
+            options={TEACHERS_LIST.map((tch) => ({ value: tch, label: tch }))}
+            onChange={(v) => setFilter("teacher", v)} onClear={() => setFilter("teacher", "")}
+          />
+        </Menu>
         <Button
           size="small" startIcon={<TbColumns3 size={14} />} variant="outlined"
           onClick={(e) => setColumnsAnchor(e.currentTarget)}
-          sx={{ borderRadius: "6px", borderColor: "#d0d5dd", color: "#667085", fontSize: 12, px: 1.5, textTransform: "none" }}
+          sx={{ borderRadius: "6px", borderColor: "var(--color-border)", color: "var(--color-text-secondary)", fontSize: 12, px: 1.5, textTransform: "none" }}
         >
           {t("students.table.columns")}
         </Button>
@@ -685,12 +904,12 @@ export const Students = () => {
       </Stack>
 
       {/* TABLE */}
-      <Paper sx={{ borderRadius: "12px", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #eaecf0" }}>
+      <Paper sx={{ borderRadius: "12px", overflow: "hidden", boxShadow: "0 1px 4px var(--color-shadow)", border: "1px solid var(--color-border)" }}>
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow
-                sx={{ "& th": { fontWeight: 600, fontSize: 13, color: "#374151", py: 1.5, borderBottom: "1px solid #eaecf0", bgcolor: "white" } }}
+                sx={{ "& th": { fontWeight: 600, fontSize: 13, color: "var(--color-text-secondary)", py: 1.5, borderBottom: "1px solid var(--color-border)", bgcolor: "var(--color-surface)" } }}
               >
                 <TableCell sx={{ width: 32, pr: 0 }} />
                 <TableCell sx={{ width: 32, pl: 0 }}>
@@ -711,8 +930,8 @@ export const Students = () => {
                       <IconButton
                         size="small"
                         sx={{
-                          color: selected.length > 0 ? "#5c7fa3" : "#9ca3af",
-                          "&:hover": { bgcolor: selected.length > 0 ? "#eef4f9" : "transparent" },
+                          color: selected.length > 0 ? "#5c7fa3" : "var(--color-text-muted)",
+                          "&:hover": { bgcolor: selected.length > 0 ? "var(--color-primary-surface)" : "transparent" },
                         }}
                         onClick={() => { if (selected.length > 0) setAddToGroupOpen(true); }}
                       >
@@ -722,7 +941,7 @@ export const Students = () => {
 
                     {/* Mail */}
                     <Tooltip title={t("students.table.mailSelected")}>
-                      <IconButton size="small" sx={{ color: "#9ca3af" }} onClick={() => { if (selected.length > 0) setSendSmsOpen(true); }}>
+                      <IconButton size="small" sx={{ color: "var(--color-text-muted)" }} onClick={() => { if (selected.length > 0) setSendSmsOpen(true); }}>
                         <MdMail />
                       </IconButton>
                     </Tooltip>
@@ -730,7 +949,7 @@ export const Students = () => {
                     {/* Delete selected */}
                     <Tooltip title={t("students.table.deleteSelected")}>
                       <IconButton
-                        size="small" sx={{ color: "#9ca3af" }}
+                        size="small" sx={{ color: "var(--color-text-muted)" }}
                         onClick={handleBulkDelete}
                       >
                         <MdDelete size={15} />
@@ -751,26 +970,26 @@ export const Students = () => {
                     hover
                     onClick={() => navigate(`/students/${s.uid}`)}
                     sx={{
-                      "& td": { borderBottom: "1px solid #f3f4f6", py: 1.4, fontSize: 13 },
+                      "& td": { borderBottom: "1px solid var(--color-border)", py: 1.4, fontSize: 13 },
                       "&:last-child td": { borderBottom: "none" },
-                      bgcolor: isSelected ? "#f0f7ff" : "white",
-                      "&:hover": { bgcolor: isSelected ? "#e8f2ff" : "#f9fafb", cursor: "pointer" },
+                      bgcolor: isSelected ? "var(--color-primary-surface)" : "var(--color-surface)",
+                      "&:hover": { bgcolor: isSelected ? "var(--color-primary-surface)" : "var(--color-surface-hover)", cursor: "pointer" },
                     }}
                   >
-                    <TableCell sx={{ color: "#9ca3af", fontSize: 12, pr: 0, width: 32 }}>{i + 1}.</TableCell>
+                    <TableCell sx={{ color: "var(--color-text-muted)", fontSize: 12, pr: 0, width: 32 }}>{i + 1}.</TableCell>
                     <TableCell sx={{ pl: 0, width: 32 }} onClick={(e) => e.stopPropagation()}>
                       <Checkbox size="small" checked={isSelected} onChange={() => toggleOne(s.uid)} sx={{ p: 0 }} />
                     </TableCell>
 
                     {col("photo") && (
                       <TableCell>
-                        <Avatar sx={{ width: 34, height: 34, fontSize: 13, fontWeight: 700, bgcolor: "#d1d9e0", color: "#6b7280" }}>
+                        <Avatar sx={{ width: 34, height: 34, fontSize: 13, fontWeight: 700, bgcolor: "#d1d9e0", color: "var(--color-text-secondary)" }}>
                           <FiUser size={16} />
                         </Avatar>
                       </TableCell>
                     )}
                     {col("name") && (
-                      <TableCell sx={{ fontWeight: 500, color: "#111827", minWidth: 160 }}>{s.name}</TableCell>
+                      <TableCell sx={{ fontWeight: 500, color: "var(--color-text-primary)", minWidth: 160 }}>{s.name}</TableCell>
                     )}
                     {col("phone") && (
                       <TableCell><Typography fontSize={13} color="#5c7fa3">{s.phone}</Typography></TableCell>
@@ -782,23 +1001,23 @@ export const Students = () => {
                             label={s.groupBadge} size="small"
                             sx={{ fontSize: 10, height: 20, fontWeight: 600, bgcolor: badge.bg, color: badge.color, borderRadius: "4px" }}
                           />
-                          <Typography fontSize={13} color="#374151">{s.groupName}</Typography>
-                          <Typography fontSize={12} color="#9ca3af">({s.groupSchedule.split("• ")[1] || ""})</Typography>
+                          <Typography fontSize={13} color="var(--color-text-secondary)">{s.groupName}</Typography>
+                          <Typography fontSize={12} color="var(--color-text-muted)">({s.groupSchedule.split("• ")[1] || ""})</Typography>
                         </Stack>
                       </TableCell>
                     )}
                     {col("teachers") && (
-                      <TableCell sx={{ minWidth: 140, color: "#374151" }}>{s.teacher}</TableCell>
+                      <TableCell sx={{ minWidth: 140, color: "var(--color-text-secondary)" }}>{s.teacher}</TableCell>
                     )}
                     {col("training") && (
                       <TableCell sx={{ minWidth: 120 }}>
-                        <Typography fontSize={13} color="#9ca3af">{formatDate(s.startDate)} —</Typography>
-                        <Typography fontSize={13} color="#9ca3af">{formatDate(s.endDate)}</Typography>
+                        <Typography fontSize={13} color="var(--color-text-muted)">{formatDate(s.startDate)} —</Typography>
+                        <Typography fontSize={13} color="var(--color-text-muted)">{formatDate(s.endDate)}</Typography>
                       </TableCell>
                     )}
                     {col("balance") && (
                       <TableCell>
-                        <Typography fontSize={13} fontWeight={500} color={(s.balance ?? 0) < 0 ? "#ef4444" : "#16a34a"}>
+                        <Typography fontSize={13} fontWeight={500} color={(s.balance ?? 0) < 0 ? "var(--color-danger)" : "var(--color-success)"}>
                           {(s.balance ?? 0).toLocaleString("ru-RU")}
                         </Typography>
                       </TableCell>
@@ -807,26 +1026,26 @@ export const Students = () => {
 
                     {/* ACTIONS */}
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      <IconButton size="small" onClick={(e) => openActionMenu(e, s.uid)} sx={{ color: "#6b7280" }}>
+                      <IconButton size="small" onClick={(e) => openActionMenu(e, s.uid)} sx={{ color: "var(--color-text-secondary)" }}>
                         <BsThreeDotsVertical size={15} />
                       </IconButton>
                       <Menu
                         anchorEl={actionMenu?.uid === s.uid ? actionMenu.el : null}
                         open={actionMenu?.uid === s.uid}
                         onClose={() => setActionMenu(null)}
-                        PaperProps={{ sx: { borderRadius: 2, minWidth: 170, boxShadow: "0 4px 20px rgba(0,0,0,0.13)", border: "1px solid #f0f0f0" } }}
+                        PaperProps={{ sx: { borderRadius: 2, minWidth: 170, boxShadow: "0 4px 20px var(--color-shadow)", border: "1px solid var(--color-border)" } }}
                         transformOrigin={{ horizontal: "right", vertical: "top" }}
                         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
                       >
-                        <MenuItem onClick={() => { setActionMenu(null); setEditDrawerOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "#374151" }}>
-                          <MdEdit size={16} color="#6b7280" /> {t("students.actions.editStudent")}
+                        <MenuItem onClick={() => { setActionMenu(null); setEditDrawerOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-text-secondary)" }}>
+                          <MdEdit size={16} color="var(--color-text-secondary)" /> {t("students.actions.editStudent")}
                         </MenuItem>
                         <Divider sx={{ my: 0.5 }} />
-                        <MenuItem onClick={() => { setActionMenu(null); setAddPaymentOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "#16a34a" }}>
-                          <MdPayment size={16} color="#16a34a" /> {t("students.actions.addPayment")}
+                        <MenuItem onClick={() => { setActionMenu(null); setAddPaymentOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-success)" }}>
+                          <MdPayment size={16} color="var(--color-success)" /> {t("students.actions.addPayment")}
                         </MenuItem>
                         <Divider sx={{ my: 0.5 }} />
-                        <MenuItem onClick={() => { setActionMenu(null); setDeleteUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "#ef4444" }}>
+                        <MenuItem onClick={() => { setActionMenu(null); setDeleteUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-danger)" }}>
                           <MdDelete size={16} /> {t("students.actions.remove")}
                         </MenuItem>
                       </Menu>
@@ -837,14 +1056,14 @@ export const Students = () => {
 
               {!studentsLoading && filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={12} align="center" sx={{ py: 6, color: "#9ca3af" }}>
+                  <TableCell colSpan={12} align="center" sx={{ py: 6, color: "var(--color-text-muted)" }}>
                     {t("students.table.noStudentsFound")}
                   </TableCell>
                 </TableRow>
               )}
               {studentsLoading && (
                 <TableRow>
-                  <TableCell colSpan={12} align="center" sx={{ py: 6, color: "#9ca3af" }}>
+                  <TableCell colSpan={12} align="center" sx={{ py: 6, color: "var(--color-text-muted)" }}>
                     {t("students.table.loading")}
                   </TableCell>
                 </TableRow>
@@ -854,7 +1073,7 @@ export const Students = () => {
         </TableContainer>
 
         {/* PAGINATION */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 3, py: 1.5, borderTop: "1px solid #f3f4f6" }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 3, py: 1.5, borderTop: "1px solid var(--color-border)" }}>
           <Typography fontSize={13} color="text.secondary">
             {studentsData
               ? t("students.pagination.range", {
@@ -869,7 +1088,7 @@ export const Students = () => {
               size="small" variant="outlined"
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: "6px", fontSize: 13 }}
+              sx={{ minWidth: 32, px: 1, borderColor: "var(--color-border)", color: "var(--color-text-secondary)", borderRadius: "6px", fontSize: 13 }}
             >
               {"<"}
             </Button>
@@ -877,7 +1096,7 @@ export const Students = () => {
               size="small" variant="outlined"
               disabled={!studentsData || page >= pageMeta.totalPages}
               onClick={() => setPage((p) => (studentsData && p < pageMeta.totalPages ? p + 1 : p))}
-              sx={{ minWidth: 32, px: 1, borderColor: "#e5e7eb", color: "#374151", borderRadius: "6px", fontSize: 13 }}
+              sx={{ minWidth: 32, px: 1, borderColor: "var(--color-border)", color: "var(--color-text-secondary)", borderRadius: "6px", fontSize: 13 }}
             >
               {">"}
             </Button>
@@ -901,12 +1120,10 @@ export const Students = () => {
       <AddToGroupModal
         open={addToGroupOpen}
         onClose={() => setAddToGroupOpen(false)}
-        groups={ALL_GROUPS}
+        groups={allGroupsOptions}
         selectedCount={selected.length}
-        onSubmit={(groupId) => {
-          console.log("Add students to group:", groupId, selected);
-          // Real logika shu yerda
-        }}
+        onSubmit={handleAddToGroup}
+        isSubmitting={isAddingToGroup}
       />
 
       <SendSmsModal
@@ -925,7 +1142,7 @@ export const Students = () => {
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteUid(null)} disabled={isDeletingStudent} sx={{ color: "#667085" }}>{t("students.deleteDialog.cancel")}</Button>
+          <Button onClick={() => setDeleteUid(null)} disabled={isDeletingStudent} sx={{ color: "var(--color-text-secondary)" }}>{t("students.deleteDialog.cancel")}</Button>
           <Button variant="contained" color="error" disabled={isDeletingStudent} onClick={handleDeleteConfirm} sx={{ borderRadius: 2 }}>{t("students.deleteDialog.confirm")}</Button>
         </DialogActions>
       </Dialog>

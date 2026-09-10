@@ -1,387 +1,299 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Dot,
+  Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import {
   Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Collapse, Pagination,
+  TableHead, TableRow, Collapse, Pagination, CircularProgress,
+  IconButton, Tooltip as MuiTooltip,
 } from "@mui/material";
-import { FiFilter, FiChevronDown, FiChevronUp, FiInfo } from "react-icons/fi";
+import { FiFilter, FiChevronDown, FiChevronUp, FiAlertCircle, FiDownload, FiRotateCcw } from "react-icons/fi";
 import { BsCash, BsGraphUp } from "react-icons/bs";
 import { useTranslation } from "react-i18next";
+import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from "@mui/material";
 
-// ── Reuse the SAME student data source & types as the Students page ─────────
-import { buildFlatStudents, FlatStudent } from "../../../../constants/FlatStudents";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface Payment {
-  id: number;
-  studentUid: string; // links back to the FlatStudent this payment belongs to
-  date: string;
-  name: string;
-  sum: number;
-  methodPay: "Cash" | "Click" | "Payme" | "Transfer" | "Bank" | "UZCARD" | "Uzum" | "Humo";
-  teacher: string;
-  comment: string;
-  creator: string;
-  createdAt: string;
-  groupName: string;
-  course: string;
-}
-
-type SortKey = keyof Pick<Payment, "date" | "name" | "sum" | "methodPay" | "teacher" | "creator">;
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const METHOD_PAY: Payment["methodPay"][] = ["Cash", "Click", "Payme", "Transfer", "Bank", "UZCARD", "Uzum", "Humo"];
-const COMMENTS   = ["Computer Engineers", "BandForce", "IELTS Prep", "Kids English", "SAT Group", "Speaking Club"];
-const CREATOR    = "Maksuda Abraykulova";
-const PAGE_SIZE  = 20;
-
-const DATES = [
-  "2026-05-09","2026-05-09","2026-05-09","2026-05-09",
-  "2026-05-08","2026-05-08","2026-05-08",
-  "2026-05-07","2026-05-07","2026-05-07",
-  "2026-05-06","2026-05-06",
-  "2026-05-05","2026-05-05","2026-05-05",
-  "2026-05-04","2026-05-04",
-  "2026-05-03","2026-05-03","2026-05-03",
-  "2026-05-02","2026-05-02","2026-05-02",
-  "2026-05-01","2026-05-01",
-  "2026-04-30","2026-04-30","2026-04-29","2026-04-29","2026-04-28",
-];
-
-// ─── Build complete payment history per student ───────────────────────────────
-// Every student from the shared FlatStudents source gets 1–3 payment records,
-// each tagged with studentUid so the row can link back to their real profile.
-
-function generatePayments(students: FlatStudent[]): Payment[] {
-  const payments: Payment[] = [];
-  let id = 1;
-  let di = 0;
-
-  for (const student of students) {
-    const historyCount = 1 + (student.id % 3); // 1–3 payments = "payment history"
-    for (let h = 0; h < historyCount; h++) {
-      const date = DATES[di % DATES.length];
-      const hh = String(17 + (id % 5)).padStart(2, "0");
-      const mm = String((id * 7) % 60).padStart(2, "0");
-      const ss = String((id * 13) % 60).padStart(2, "0");
-
-      payments.push({
-        id,
-        studentUid: student.uid,
-        date,
-        name: student.name,
-        sum: student.price || 400000,
-        methodPay: METHOD_PAY[id % METHOD_PAY.length],
-        teacher: student.teacher,
-        comment: student.comment || COMMENTS[id % COMMENTS.length],
-        creator: CREATOR,
-        createdAt: `${date.split("-").reverse().join(".")} ${hh}:${mm}:${ss}`,
-        groupName: student.groupName,
-        course: student.course,
-      });
-
-      id++;
-      di++;
-    }
-  }
-  return payments;
-}
-
-// ─── Details breakdown (method bo'yicha) ─────────────────────────────────────
-
-const DETAIL_METHODS = ["Bank account", "Cash", "Click", "UZCARD", "Payme", "Uzum", "Humo"] as const;
-
-function calcDetails(payments: Payment[]) {
-  const map: Record<string, number> = {
-    "Bank account": 0, Cash: 0, Click: 0,
-    UZCARD: 0, Payme: 0, Uzum: 0, Humo: 0,
-  };
-  for (const p of payments) {
-    if (p.methodPay === "Bank")   map["Bank account"] += p.sum;
-    else if (p.methodPay in map)  map[p.methodPay]    += p.sum;
-    else                          map["Cash"]          += p.sum;
-  }
-  return map;
-}
-
-// ─── Chart data ───────────────────────────────────────────────────────────────
-
-const CHART_DATA = [
-  { label: "Sep 23", value: 5000000 },
-  { label: "Oct 23", value: 18000000 },
-  { label: "Dec 23", value: 22000000 },
-  { label: "Jan 24", value: 85000000 },
-  { label: "Feb 24", value: 80000000 },
-  { label: "Mar 24", value: 88000000 },
-  { label: "Apr 24", value: 75000000 },
-  { label: "May 24", value: 82000000 },
-  { label: "Jun 24", value: 78000000 },
-  { label: "Jul 24", value: 80000000 },
-  { label: "Aug 24", value: 85000000 },
-  { label: "Sep 24", value: 88000000 },
-  { label: "Oct 24", value: 90000000 },
-  { label: "Nov 24", value: 85000000 },
-  { label: "Dec 24", value: 92000000 },
-  { label: "Jan 25", value: 88000000 },
-  { label: "Feb 25", value: 95000000 },
-  { label: "Mar 25", value: 155000000 },
-  { label: "Apr 25", value: 100000000 },
-  { label: "May 25", value: 75000000 },
-  { label: "Jun 25", value: 68000000 },
-  { label: "Jul 25", value: 72000000 },
-  { label: "Aug 25", value: 78000000 },
-  { label: "Sep 25", value: 82000000 },
-  { label: "Oct 25", value: 110000000 },
-  { label: "Nov 25", value: 115000000 },
-  { label: "Dec 25", value: 120000000 },
-  { label: "Jan 26", value: 125000000 },
-  { label: "Feb 26", value: 130000000 },
-  { label: "Mar 26", value: 140000000 },
-  { label: "Apr 26", value: 155000000 },
-  { label: "May 26", value: 30000000 },
-];
+import {
+  useFinanceChartQuery,
+  usePaymentsListQuery,
+  usePaymentsTotalQuery,
+  useLazyPaymentsExcelQuery,
+  useDeletePaymentMutation,
+  usePaymentMethodsQuery,
+  useFinanceStatsQuery,
+} from "../../../../app/api/financeApi";
+import { useToast } from "../../../../Context/ToastContext";
+import type { RootState } from "../../../../app/store";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const fmt     = (n: number) => n.toLocaleString("ru-RU");
-const fmtDate = (d: string) => d.split("-").reverse().join(".");
+const fmt = (n: number) => n.toLocaleString("ru-RU");
+const fmtDate = (d: string | null) => (d ? d.split("-").reverse().join(".") : "—");
 
 // ─── Reusable UI ─────────────────────────────────────────────────────────────
 
 const Label = ({ text }: { text: string }) => (
-  <label className="mb-1 block text-[12px] font-semibold text-gray-600">{text}</label>
+  <label className="mb-1 block text-[12px] font-semibold text-gray-600 dark:text-gray-400">{text}</label>
 );
 
-const Input = ({ value, onChange, placeholder }: {
-  value: string; onChange: (v: string) => void; placeholder?: string;
+const Input = ({ value, onChange, placeholder, type = "text" }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
 }) => (
   <input
+    type={type}
     value={value}
     onChange={(e) => onChange(e.target.value)}
     placeholder={placeholder}
-    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-[15px] text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-[#003366]"
+    className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-[15px] text-gray-700 dark:text-gray-200 bg-white dark:bg-[var(--color-surface)] focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-[#003366]"
   />
-);
-
-const Select = ({ value, onChange, options, placeholder }: {
-  value: string; onChange: (v: string) => void; options: string[]; placeholder?: string;
-}) => {
-  const { t } = useTranslation();
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-[15px] text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-[#003366] cursor-pointer"
-    >
-      <option value="">{placeholder ?? t("finance.allPayments.filters.selectPlaceholder")}</option>
-      {options.map((o) => <option key={o} value={o}>{o}</option>)}
-    </select>
-  );
-};
-
-const SortIcon = ({ active, dir }: { active: boolean; dir: "asc" | "desc" }) => (
-  <span className={`ml-1 text-[12px] ${active ? "text-[#003366]" : "text-gray-300"}`}>
-    {active ? (dir === "asc" ? "▲" : "▼") : "⇅"}
-  </span>
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+const PAGE_LIMIT = 20;
+
 export const AllPayments = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const toast = useToast();
+  const branchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
-  // Same student source/structure as the Students page
-  const students = useMemo(() => buildFlatStudents(), []);
-  const ALL_PAYMENTS = useMemo(() => generatePayments(students), [students]);
+  // Draft inputs — only committed to the request on "Filter" click
+  const [draftSearch, setDraftSearch] = useState("");
+  const [draftStartDate, setDraftStartDate] = useState("");
+  const [draftEndDate, setDraftEndDate] = useState("");
+  const [draftPaymentMethodId, setDraftPaymentMethodId] = useState("");
 
-  const ALL_TEACHERS = useMemo(() => [...new Set(students.map((s) => s.teacher))], [students]);
-  const ALL_GROUPS   = useMemo(() => [...new Set(students.map((s) => s.groupName))], [students]);
-  const ALL_COURSES  = useMemo(() => [...new Set(students.map((s) => s.course))], [students]);
+  const [applied, setApplied] = useState({
+    search: "", startDate: "", endDate: "", paymentMethodId: "", page: 1,
+  });
 
-  // Filter
-  const [dateFrom,    setDateFrom]    = useState("01.05.2026");
-  const [dateTo,      setDateTo]      = useState("31.05.2026");
-  const [namePhone,   setNamePhone]   = useState("");
-  const [group,       setGroup]       = useState("");
-  const [course,      setCourse]      = useState("");
-  const [teacher,     setTeacher]     = useState("");
-  const [methodPay,   setMethodPay]   = useState("");
-  const [sum,         setSum]         = useState("");
-  const [staffName,   setStaffName]   = useState("");
-  const [fromCreated, setFromCreated] = useState("");
-  const [toCreated,   setToCreated]   = useState("");
-
-  // UI state
   const [showFilters, setShowFilters] = useState(true);
-  const [showDetails, setShowDetails] = useState(false);
-  const [page,        setPage]        = useState(1);
 
-  // Sort
-  const [sortKey, setSortKey] = useState<SortKey>("date");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const { data: paymentMethodsData } = usePaymentMethodsQuery();
+  const paymentMethods = paymentMethodsData ?? [];
 
-  const totalRevenue = ALL_PAYMENTS.reduce((a, p) => a + p.sum, 0);
-  const details      = calcDetails(ALL_PAYMENTS);
+  const queryArgs = useMemo(
+    () => ({
+      search: applied.search || undefined,
+      startDate: applied.startDate || undefined,
+      endDate: applied.endDate || undefined,
+      paymentMethodId: applied.paymentMethodId || undefined,
+      branchId: branchId ?? undefined,
+      page: applied.page,
+      limit: PAGE_LIMIT,
+    }),
+    [applied, branchId]
+  );
 
-  // Filtered + sorted list
-  const filtered = useMemo(() => {
-    return ALL_PAYMENTS
-      .filter((p) => {
-        if (namePhone && !p.name.toLowerCase().includes(namePhone.toLowerCase())) return false;
-        if (group     && p.groupName !== group)    return false;
-        if (course    && p.course    !== course)   return false;
-        if (teacher   && p.teacher   !== teacher)  return false;
-        if (methodPay && p.methodPay !== methodPay) return false;
-        if (sum       && String(p.sum) !== sum)    return false;
-        return true;
-      })
-      .sort((a, b) => {
-        const cmp = String(a[sortKey]).localeCompare(String(b[sortKey]), undefined, { numeric: true });
-        return sortDir === "asc" ? cmp : -cmp;
-      });
-  }, [ALL_PAYMENTS, namePhone, group, course, teacher, methodPay, sum, sortKey, sortDir]);
+  const {
+    data: paymentsData, isLoading: paymentsLoading, isFetching: paymentsFetching,
+    isError: paymentsError, refetch: refetchPayments,
+  } = usePaymentsListQuery(queryArgs);
+  // Aggregate sum matching the current filters (GET /finance/payments/total).
+  const { data: filteredTotalData, isFetching: isFilteredTotalFetching } = usePaymentsTotalQuery(queryArgs);
+  const [fetchPaymentsExcel, { isFetching: isExporting }] = useLazyPaymentsExcelQuery();
+  // Current-month summary (GET /finance/stats).
+  const { data: monthStats } = useFinanceStatsQuery();
+  const [deletePayment, { isLoading: isRefunding }] = useDeletePaymentMutation();
+  const [refundTarget, setRefundTarget] = useState<string | null>(null);
+  const [refundError, setRefundError] = useState<string | null>(null);
 
-  // Pagination
-  const totalPages  = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const filteredTotal = filtered.reduce((a, p) => a + p.sum, 0);
+  const rows = paymentsData?.rows ?? [];
+  const meta = paymentsData?.meta;
+  const total = meta?.total ?? 0;
+  const totalPages = Math.max(1, meta?.totalPages ?? 1);
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("asc"); }
+  const handleExportExcel = async () => {
+    try {
+      const blob = await fetchPaymentsExcel(queryArgs).unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `payments-${applied.page}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("finance.allPayments.exportError"));
+    }
+  };
+
+  // DELETE /finance/payments/{id} — a refund/cancel, not a hard delete
+  // (backend marks the payment REFUNDED and logs it).
+  const confirmRefund = async () => {
+    if (!refundTarget) return;
+    setRefundError(null);
+    try {
+      await deletePayment(refundTarget).unwrap();
+      toast.success(t("finance.allPayments.toast.refunded"));
+      setRefundTarget(null);
+    } catch {
+      setRefundError(t("finance.allPayments.refundConfirm.error"));
+    }
+  };
+
+  const applyFilters = () => {
+    setApplied({
+      search: draftSearch, startDate: draftStartDate, endDate: draftEndDate,
+      paymentMethodId: draftPaymentMethodId, page: 1,
+    });
   };
 
   const resetFilters = () => {
-    setNamePhone(""); setGroup(""); setCourse(""); setTeacher("");
-    setMethodPay(""); setSum(""); setStaffName(""); setFromCreated(""); setToCreated("");
-    setPage(1);
+    setDraftSearch(""); setDraftStartDate(""); setDraftEndDate(""); setDraftPaymentMethodId("");
+    setApplied({ search: "", startDate: "", endDate: "", paymentMethodId: "", page: 1 });
   };
 
-  const goToStudent = (uid: string) => navigate(`/students/${uid}`);
+  const goToPage = (page: number) => setApplied((prev) => ({ ...prev, page }));
+
+  // ── Chart: real data from GET /finance/chart ──────────────────────────────
+  const currentYear = new Date().getFullYear();
+  const YEARS = useMemo(() => Array.from({ length: 5 }, (_, i) => currentYear - i), [currentYear]);
+  const [year, setYear] = useState(currentYear);
+  const {
+    data: chartMonths, isLoading: chartLoading, isError: chartError, refetch: refetchChart,
+  } = useFinanceChartQuery({ year, branchId: branchId ?? undefined });
+
+  const totalPaymentsThisYear = (chartMonths ?? []).reduce((a, m) => a + m.totalPayments, 0);
+  const totalNetProfitThisYear = (chartMonths ?? []).reduce((a, m) => a + m.netProfit, 0);
+
+  const goToStudent = (studentId: string | null) => {
+    if (studentId) navigate(`/students/${studentId}`);
+  };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-[var(--color-bg-page)] min-h-screen">
 
       {/* ── Title ── */}
-      <h1 className="text-2xl font-semibold text-gray-900 mb-5">{t("finance.allPayments.title")}</h1>
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{t("finance.allPayments.title")}</h1>
+        <div className="flex items-center gap-2">
+          <MuiTooltip title={t("finance.allPayments.exportExcel")} placement="top" arrow>
+            <span>
+              <IconButton size="small" onClick={handleExportExcel} disabled={isExporting}>
+                {isExporting ? <CircularProgress size={16} /> : <FiDownload />}
+              </IconButton>
+            </span>
+          </MuiTooltip>
+          <select
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-[var(--color-surface)] text-gray-700 dark:text-gray-200"
+          >
+            {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+      </div>
 
-      {/* ── Stats + Chart ── */}
+      {/* ── Current-month summary (real data: GET /finance/stats) ── */}
+      {monthStats && (
+        <>
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{t("finance.allPayments.stats.thisMonth.title")}</p>
+        <div className="grid grid-cols-4 gap-3 mb-5">
+          {[
+            { label: t("finance.allPayments.stats.thisMonth.income"), value: monthStats.totalIncomeThisMonth },
+            { label: t("finance.allPayments.stats.thisMonth.expenses"), value: monthStats.totalExpensesThisMonth },
+            { label: t("finance.allPayments.stats.thisMonth.salaries"), value: monthStats.totalSalariesThisMonth },
+            { label: t("finance.allPayments.stats.thisMonth.netProfit"), value: monthStats.netProfitThisMonth },
+          ].map((s) => (
+            <div key={s.label} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] px-4 py-3 shadow-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{s.label}</p>
+              <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{fmt(s.value)} <span className="text-xs font-normal text-gray-400">UZS</span></p>
+            </div>
+          ))}
+        </div>
+        </>
+      )}
+
+      {/* ── Stats + Chart (real data: GET /finance/chart) ── */}
       <div className="grid grid-cols-5 gap-4 mb-5">
 
         {/* Left: stat cards */}
         <div className="col-span-2 flex flex-col gap-4">
 
-          {/* Total Revenue */}
-          <div className="flex items-center justify-between rounded-2xl border border-gray-200 border-l-[5px] border-l-[#003366] bg-white px-6 py-6 shadow-sm">
+          {/* Total Revenue (year to date) */}
+          <div className="flex items-center justify-between rounded-2xl border border-gray-200 dark:border-gray-700 border-l-[5px] border-l-[#003366] bg-white dark:bg-[var(--color-surface)] px-6 py-6 shadow-sm">
             <div>
-              <p className="mb-2 text-[15px] font-semibold text-gray-500">{t("finance.allPayments.stats.totalRevenue")}</p>
-              <p className="text-3xl font-bold tracking-tight text-gray-900">
-                {fmt(totalRevenue)}
-                <span className="text-lg font-semibold text-gray-500 ml-2">UZS</span>
+              <p className="mb-2 text-[15px] font-semibold text-gray-500 dark:text-gray-400">{t("finance.allPayments.stats.totalRevenue")}</p>
+              <p className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                {chartLoading ? "…" : fmt(totalPaymentsThisYear)}
+                <span className="text-lg font-semibold text-gray-500 dark:text-gray-400 ml-2">UZS</span>
               </p>
-              <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                📅 {dateFrom} — {dateTo}
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
+                📅 {year}
               </p>
             </div>
-            <BsCash size={40} className="text-[#003366] opacity-80 shrink-0 ml-4" />
+            <BsCash size={40} className="text-[#003366] dark:text-[var(--color-nav-active)] opacity-80 shrink-0 ml-4" />
           </div>
 
-          {/* Total Net Profit */}
-          <div className="rounded-2xl border border-gray-200 border-l-[5px] border-l-[#003366] bg-white px-6 py-6 shadow-sm">
+          {/* Total Net Profit (year to date) */}
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 border-l-[5px] border-l-[#003366] bg-white dark:bg-[var(--color-surface)] px-6 py-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <p className="mb-2 text-[15px] font-semibold text-gray-500">{t("finance.allPayments.stats.totalNetProfit")}</p>
-                <p className="text-3xl font-bold tracking-tight text-gray-900">
-                  {fmt(totalRevenue)}
-                  <span className="text-lg font-semibold text-gray-500 ml-2">UZS</span>
+                <p className="mb-2 text-[15px] font-semibold text-gray-500 dark:text-gray-400">{t("finance.allPayments.stats.totalNetProfit")}</p>
+                <p className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                  {chartLoading ? "…" : fmt(totalNetProfitThisYear)}
+                  <span className="text-lg font-semibold text-gray-500 dark:text-gray-400 ml-2">UZS</span>
                 </p>
-                <p className="mt-2 flex items-center gap-1 text-[13px] text-gray-400">
-                  📅 {dateFrom} — {dateTo}
+                <p className="mt-2 flex items-center gap-1 text-[13px] text-gray-400 dark:text-gray-500">
+                  📅 {year}
                 </p>
               </div>
-              <BsGraphUp size={38} className="text-[#003366] opacity-80 shrink-0 ml-4" />
+              <BsGraphUp size={38} className="text-[#003366] dark:text-[var(--color-nav-active)] opacity-80 shrink-0 ml-4" />
             </div>
-
-            {/* Details toggle */}
-            <button
-              onClick={() => setShowDetails((v) => !v)}
-              className="group mt-4 flex items-center gap-1.5 text-[13px] text-gray-500 transition-colors hover:text-[#003366]"
-            >
-              <FiInfo size={13} className="group-hover:text-[#003366]" />
-              <span>{t("finance.allPayments.stats.details")}</span>
-              {showDetails
-                ? <FiChevronUp size={13} />
-                : <FiChevronDown size={13} />}
-            </button>
-
-            {/* Details list */}
-            <Collapse in={showDetails}>
-              <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
-                {DETAIL_METHODS.map((method) => (
-                  <div key={method} className="flex items-center gap-2 text-[15px] text-gray-700">
-                    <span className="text-gray-400 text-base leading-none">•</span>
-                    <span>
-                      <span className="font-medium">{method}:</span>{" "}
-                      <span className="font-semibold text-gray-800">
-                        {fmt(details[method] ?? 0)}
-                      </span>{" "}
-                      <span className="text-[13px] text-gray-400">UZS</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Collapse>
           </div>
         </div>
 
         {/* Right: Chart */}
-        <div className="col-span-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={CHART_DATA} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 8, fill: "#9ca3af" }}
-                interval={1}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 8, fill: "#9ca3af" }}
-                tickFormatter={(v) => `${Math.round(v / 1000000)}M`}
-                tickLine={false}
-                axisLine={false}
-                width={44}
-              />
-              <Tooltip
-                formatter={(v) => v !== undefined ? [`${fmt(v as number)} UZS`, "Revenue"] : null}
-                contentStyle={{ fontSize: 11, borderRadius: 6, border: "1px solid #e5e9f0" }}
-              />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#e07020"
-                strokeWidth={2}
-                dot={<Dot r={3} fill="#e07020" stroke="#fff" strokeWidth={1.5} />}
-                activeDot={{ r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+        <div className="col-span-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] p-5 shadow-sm">
+          {chartLoading ? (
+            <div className="h-[220px] flex items-center justify-center"><CircularProgress size={22} /></div>
+          ) : chartError ? (
+            <div className="h-[220px] flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
+              <FiAlertCircle size={20} className="text-red-400" />
+              <span className="text-sm">{t("finance.allPayments.chart.loadError")}</span>
+              <button onClick={() => refetchChart()} className="px-4 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                {t("finance.allPayments.chart.retry")}
+              </button>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={chartMonths ?? []} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 9, fill: "var(--color-text-muted)" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 9, fill: "var(--color-text-muted)" }}
+                  tickFormatter={(v) => `${Math.round(v / 1000000)}M`}
+                  tickLine={false}
+                  axisLine={false}
+                  width={44}
+                />
+                <Tooltip
+                  formatter={(v, name) => v !== undefined ? [`${fmt(v as number)} UZS`, name] : null}
+                  contentStyle={{ fontSize: 11, borderRadius: 6, border: "1px solid var(--color-border)", background: "var(--color-surface)" }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Line type="monotone" dataKey="totalPayments" name={t("finance.allPayments.chart.payments")} stroke="#22c55e" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="totalExpenses" name={t("finance.allPayments.chart.expenses")} stroke="#ef4444" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="netProfit" name={t("finance.allPayments.chart.netProfit")} stroke="#e07020" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
-      {/* ── Filter Panel ── */}
-      <div className="mb-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      {/* ── Filter Panel — only fields GET /finance/payments actually accepts ── */}
+      <div className="mb-4 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] shadow-sm">
         <button
           onClick={() => setShowFilters((v) => !v)}
-          className="flex w-full items-center justify-between px-5 py-3.5 text-[15px] font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+          className="flex w-full items-center justify-between px-5 py-3.5 text-[15px] font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
         >
           <span className="flex items-center gap-2">
             <FiFilter size={14} /> {t("finance.allPayments.filters.title")}
@@ -390,43 +302,36 @@ export const AllPayments = () => {
         </button>
 
         <Collapse in={showFilters}>
-          <div className="px-5 pb-4 border-t border-gray-100">
-            {/* Row 1 */}
-            <div className="grid grid-cols-8 gap-3 mt-4">
+          <div className="px-5 pb-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="grid grid-cols-5 gap-3 mt-4 items-end">
               <div><Label text={t("finance.allPayments.filters.dateFrom")} />
-                <Input value={dateFrom} onChange={setDateFrom} placeholder="01.05.2026" /></div>
+                <Input type="date" value={draftStartDate} onChange={setDraftStartDate} /></div>
               <div><Label text={t("finance.allPayments.filters.dateTo")} />
-                <Input value={dateTo} onChange={setDateTo} placeholder="31.05.2026" /></div>
+                <Input type="date" value={draftEndDate} onChange={setDraftEndDate} /></div>
               <div><Label text={t("finance.allPayments.filters.namePhone")} />
-                <Input value={namePhone} onChange={setNamePhone} placeholder={t("finance.allPayments.filters.searchPlaceholder")} /></div>
-              <div><Label text={t("finance.allPayments.filters.group")} />
-                <Select value={group} onChange={setGroup} options={ALL_GROUPS} /></div>
-              <div><Label text={t("finance.allPayments.filters.course")} />
-                <Select value={course} onChange={setCourse} options={ALL_COURSES} /></div>
-              <div><Label text={t("finance.allPayments.filters.teacher")} />
-                <Select value={teacher} onChange={setTeacher} options={ALL_TEACHERS} /></div>
-              <div><Label text={t("finance.allPayments.filters.methodPay")} />
-                <Select value={methodPay} onChange={setMethodPay} options={[...METHOD_PAY]} /></div>
-              <div><Label text={t("finance.allPayments.filters.sum")} />
-                <Input value={sum} onChange={setSum} placeholder={t("finance.allPayments.filters.amountPlaceholder")} /></div>
-            </div>
-
-            {/* Row 2 */}
-            <div className="grid grid-cols-8 gap-3 mt-3 items-end">
-              <div><Label text={t("finance.allPayments.filters.staffName")} />
-                <Select value={staffName} onChange={setStaffName} options={[CREATOR]} /></div>
-              <div><Label text={t("finance.allPayments.filters.fromCreatedDate")} />
-                <Input value={fromCreated} onChange={setFromCreated} placeholder={t("finance.allPayments.filters.noDateSelected")} /></div>
-              <div><Label text={t("finance.allPayments.filters.toCreatedDate")} />
-                <Input value={toCreated} onChange={setToCreated} placeholder={t("finance.allPayments.filters.noDateSelected")} /></div>
+                <Input value={draftSearch} onChange={setDraftSearch} placeholder={t("finance.allPayments.filters.searchPlaceholder")} /></div>
+              <div>
+                <Label text={t("finance.allPayments.filters.methodPay")} />
+                <select
+                  value={draftPaymentMethodId}
+                  onChange={(e) => setDraftPaymentMethodId(e.target.value)}
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-[15px] text-gray-700 dark:text-gray-200 bg-white dark:bg-[var(--color-surface)] focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-[#003366] cursor-pointer"
+                >
+                  <option value="">{t("finance.allPayments.filters.selectPlaceholder")}</option>
+                  {paymentMethods.map((pm) => (
+                    <option key={pm.id} value={pm.id}>{pm.name}</option>
+                  ))}
+                </select>
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={resetFilters}
-                  className="flex-1 rounded-lg border border-gray-200 py-2.5 text-[14px] text-gray-500 transition-colors hover:bg-gray-50"
+                  className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 py-2.5 text-[14px] text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   {t("finance.allPayments.filters.reset")}
                 </button>
                 <button
+                  onClick={applyFilters}
                   className="flex-1 rounded-lg bg-[#003366] py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#002244]"
                 >
                   {t("finance.allPayments.filters.filter")}
@@ -437,132 +342,180 @@ export const AllPayments = () => {
         </Collapse>
       </div>
 
-      {/* ── Table ── */}
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      {/* Filtered total (GET /finance/payments/total) */}
+      <div className="flex items-center justify-end px-1 mb-2">
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          {t("finance.allPayments.stats.filteredTotal")}{" "}
+          <strong className="text-gray-800 dark:text-gray-200">{isFilteredTotalFetching ? "…" : fmt(filteredTotalData?.total ?? 0)} UZS</strong>
+        </span>
+      </div>
+
+      {/* ── Table (real data: GET /finance/payments) ── */}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] shadow-sm">
         <TableContainer>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ backgroundColor: "#f9fafb" }}>
-                {(
-                  [
-                    { key: "date",      label: t("finance.allPayments.table.date") },
-                    { key: "name",      label: t("finance.allPayments.table.name") },
-                    { key: "sum",       label: t("finance.allPayments.table.sum") },
-                    { key: "methodPay", label: t("finance.allPayments.table.methodPay") },
-                    { key: "teacher",   label: t("finance.allPayments.table.teacher") },
-                    { key: null,        label: t("finance.allPayments.table.comment") },
-                    { key: "creator",   label: t("finance.allPayments.table.creator") },
-                  ] as { key: SortKey | null; label: string }[]
-                ).map(({ key, label }) => (
+              <TableRow sx={{ backgroundColor: "var(--color-surface-alt)" }}>
+                {[
+                  t("finance.allPayments.table.date"),
+                  t("finance.allPayments.table.name"),
+                  t("finance.allPayments.table.sum"),
+                  t("finance.allPayments.table.methodPay"),
+                  t("finance.allPayments.table.comment"),
+                  t("finance.allPayments.table.creator"),
+                  "",
+                ].map((label, i) => (
                   <TableCell
-                    key={label}
-                    onClick={() => key && handleSort(key)}
+                    key={label || `col-${i}`}
                     sx={{
                       fontWeight: 700,
                       fontSize: 13,
-                      color: "#374151",
-                      cursor: key ? "pointer" : "default",
+                      color: "var(--color-text-secondary)",
                       whiteSpace: "nowrap",
-                      borderBottom: "2px solid #e5e9f0",
+                      borderBottom: "2px solid var(--color-border)",
                       py: 1.6,
-                      userSelect: "none",
                     }}
                   >
                     {label}
-                    {key && <SortIcon active={sortKey === key} dir={sortDir} />}
                   </TableCell>
                 ))}
               </TableRow>
             </TableHead>
 
             <TableBody>
-              {paginated.map((p, i) => {
-                const rowNum = (page - 1) * PAGE_SIZE + i + 1;
-                return (
-                  <TableRow
-                    key={p.id}
-                    hover
-                    onClick={() => goToStudent(p.studentUid)}
-                    sx={{
-                      cursor: "pointer",
-                      "&:hover": { backgroundColor: "#f0f6ff !important" },
-                      backgroundColor: i % 2 === 0 ? "#fff" : "#fafbfc",
-                    }}
-                  >
-                    <TableCell sx={{ fontSize: 13, py: 1.3, whiteSpace: "nowrap", fontWeight: 600, color: "#374151" }}>
-                      {rowNum}. {fmtDate(p.date)}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12, py: 1.2, color: "#374151" }}>
-                      {p.name}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 13, py: 1.3, whiteSpace: "nowrap" }}>
-                      <span className="font-semibold text-gray-900">{fmt(p.sum)}</span>
-                      <span className="ml-1 text-[12px] text-gray-400">UZS</span>
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12, py: 1.2, color: "#374151" }}>
-                      {p.methodPay}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12, py: 1.2, color: "#374151" }}>
-                      {p.teacher}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12, py: 1.2 }}>
-                      <span className="whitespace-nowrap rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-[12px] text-gray-700">
-                        {p.comment}
-                      </span>
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12, py: 1.2 }}>
-                      <span className="text-[13px] text-gray-700">{p.creator}</span>
-                      <br />
-                      <span className="text-[12px] text-gray-400">{p.createdAt}</span>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-
-              {paginated.length === 0 && (
+              {paymentsLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: "#9ca3af", fontSize: 14 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                    <CircularProgress size={22} />
+                  </TableCell>
+                </TableRow>
+              ) : paymentsError ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                    <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
+                      <FiAlertCircle size={20} className="text-red-400" />
+                      <span className="text-sm">{t("finance.allPayments.table.loadError")}</span>
+                      <button onClick={() => refetchPayments()} className="px-4 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                        {t("finance.allPayments.table.retry")}
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: "var(--color-text-muted)", fontSize: 14 }}>
                     {t("finance.allPayments.table.empty")}
                   </TableCell>
                 </TableRow>
+              ) : (
+                rows.map((p, i) => {
+                  const rowNum = (applied.page - 1) * PAGE_LIMIT + i + 1;
+                  return (
+                    <TableRow
+                      key={p.id}
+                      hover
+                      onClick={() => goToStudent(p.studentId)}
+                      sx={{
+                        cursor: p.studentId ? "pointer" : "default",
+                        "&:hover": { backgroundColor: "var(--color-primary-surface) !important" },
+                        backgroundColor: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-alt)",
+                        opacity: paymentsFetching ? 0.6 : 1,
+                      }}
+                    >
+                      <TableCell sx={{ fontSize: 13, py: 1.3, whiteSpace: "nowrap", fontWeight: 600, color: "var(--color-text-secondary)" }}>
+                        {rowNum}. {fmtDate(p.date)}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: 12, py: 1.2, color: "var(--color-text-secondary)" }}>
+                        {p.studentName || "—"}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: 13, py: 1.3, whiteSpace: "nowrap" }}>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">{fmt(p.amount)}</span>
+                        <span className="ml-1 text-[12px] text-gray-400 dark:text-gray-500">UZS</span>
+                      </TableCell>
+                      <TableCell sx={{ fontSize: 12, py: 1.2, color: "var(--color-text-secondary)" }}>
+                        {p.paymentMethodName || "—"}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: 12, py: 1.2 }}>
+                        {p.notes ? (
+                          <span className="whitespace-nowrap rounded-full border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-[12px] text-gray-700 dark:text-gray-300">
+                            {p.notes}
+                          </span>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: 12, py: 1.2 }}>
+                        <span className="text-[13px] text-gray-700 dark:text-gray-300">{p.createdBy || "—"}</span>
+                        {p.createdAt && (
+                          <>
+                            <br />
+                            <span className="text-[12px] text-gray-400 dark:text-gray-500">{fmtDate(p.createdAt.slice(0, 10))}</span>
+                          </>
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ py: 1.2 }} onClick={(e) => e.stopPropagation()}>
+                        <MuiTooltip title={t("finance.allPayments.table.refund")} placement="top" arrow>
+                          <IconButton size="small" onClick={() => { setRefundError(null); setRefundTarget(p.id); }}>
+                            <FiRotateCcw size={13} />
+                          </IconButton>
+                        </MuiTooltip>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </TableContainer>
 
         {/* Footer: total + pagination */}
-        <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100">
-          <span className="text-[13px] text-gray-500">
-            {t("finance.allPayments.footer.showing")}{" "}
-            <strong className="text-gray-700">
-              {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)}
-            </strong>{" "}
-            {t("finance.allPayments.footer.of")} <strong className="text-gray-700">{filtered.length}</strong> {t("finance.allPayments.footer.payments")}
-            {" · "}
-            <span className="font-semibold text-[#003366]">{fmt(filteredTotal)} UZS</span>
-          </span>
+        {!paymentsLoading && !paymentsError && total > 0 && (
+          <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100 dark:border-gray-800">
+            <span className="text-[13px] text-gray-500 dark:text-gray-400">
+              {t("finance.allPayments.footer.showing")}{" "}
+              <strong className="text-gray-700 dark:text-gray-300">
+                {(applied.page - 1) * PAGE_LIMIT + 1}–{Math.min(applied.page * PAGE_LIMIT, total)}
+              </strong>{" "}
+              {t("finance.allPayments.footer.of")} <strong className="text-gray-700 dark:text-gray-300">{total}</strong> {t("finance.allPayments.footer.payments")}
+            </span>
 
-          {totalPages > 1 && (
-            <Pagination
-              count={totalPages}
-              page={page}
-              onChange={(_, v) => setPage(v)}
-              size="small"
-              shape="rounded"
-              sx={{
-                "& .MuiPaginationItem-root": {
-                  fontSize: 12,
-                  color: "#374151",
-                },
-                "& .Mui-selected": {
-                  backgroundColor: "#003366 !important",
-                  color: "#fff !important",
-                },
-              }}
-            />
-          )}
-        </div>
+            {totalPages > 1 && (
+              <Pagination
+                count={totalPages}
+                page={applied.page}
+                onChange={(_, v) => goToPage(v)}
+                size="small"
+                shape="rounded"
+                sx={{
+                  "& .MuiPaginationItem-root": {
+                    fontSize: 12,
+                    color: "var(--color-text-secondary)",
+                    borderColor: "var(--color-border)",
+                  },
+                  "& .Mui-selected": {
+                    backgroundColor: "#003366 !important",
+                    color: "#fff !important",
+                  },
+                }}
+              />
+            )}
+          </div>
+        )}
       </div>
+
+      <Dialog open={!!refundTarget} onClose={() => setRefundTarget(null)} PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}>
+        <DialogTitle sx={{ fontWeight: 600 }}>{t("finance.allPayments.refundConfirm.title")}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{t("finance.allPayments.refundConfirm.message")}</DialogContentText>
+          {refundError && <div className="mt-3 text-sm text-red-500">{refundError}</div>}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setRefundTarget(null)} disabled={isRefunding} sx={{ textTransform: "none" }}>
+            {t("finance.allPayments.refundConfirm.cancel")}
+          </Button>
+          <Button onClick={confirmRefund} disabled={isRefunding} color="error" variant="contained" sx={{ textTransform: "none" }}>
+            {isRefunding ? "…" : t("finance.allPayments.refundConfirm.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

@@ -473,7 +473,7 @@ export const FromWhere = ({ onOpenColumnSettings, onOpenSourceSettings }: FromWh
     : "Date from – Date to";
 
   return (
-    <Box sx={{ backgroundColor: "#fff", borderBottom: "0.5px solid", borderColor: "divider" }}>
+    <Box sx={{ backgroundColor: "background.paper", borderBottom: "0.5px solid", borderColor: "divider" }}>
       <Box sx={{ px: 1.5, py: 1, display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
 
         {/* Search */}

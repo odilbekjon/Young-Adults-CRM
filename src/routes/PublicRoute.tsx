@@ -8,11 +8,12 @@ import { useAuth } from "../hooks/useAuth";
 // a just-logged-in user lands — the login form itself only dispatches the
 // credential update and lets this reactive guard redirect.
 export const PublicRoute = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isStudent } = useAuth();
   const location = useLocation();
 
   if (isAuthenticated) {
-    const redirectTo = (location.state as { from?: Location })?.from?.pathname || "/dashboard";
+    const redirectTo =
+      (location.state as { from?: Location })?.from?.pathname || (isStudent ? "/portal" : "/dashboard");
     return <Navigate to={redirectTo} replace />;
   }
 

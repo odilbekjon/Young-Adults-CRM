@@ -36,7 +36,9 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdDownload, MdCalendarToday, MdClose } from "react-icons/md";
 import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { useBranch } from "../../Context/BranchContext";
+import type { RootState } from "../../app/store";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../Context/ToastContext";
@@ -48,20 +50,14 @@ import {
   useToggleTeacherStatusMutation,
 } from "../../app/api/teachersApi";
 import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
-import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useAllGroupsQuery } from "../../app/api/groupsApi";
 
 const EMPTY_FORM = {
   name: "",
   phone: "",
-  email: "",
   password: "",
-  specialization: "",
-  experience: "",
-  salary: "",
   dob: "",
   gender: "" as "" | TeacherGender,
-  branchIds: [] as string[],
   photo: null as File | null,
 };
 
@@ -69,9 +65,9 @@ const EMPTY_FORM = {
 const inputSx = {
   "& .MuiOutlinedInput-root": {
     borderRadius: "10px",
-    bgcolor: "#f9fafb",
-    "& fieldset": { borderColor: "#e5e7eb" },
-    "&:hover fieldset": { borderColor: "#9ca3af" },
+    bgcolor: "var(--color-surface-alt)",
+    "& fieldset": { borderColor: "var(--color-border)" },
+    "&:hover fieldset": { borderColor: "var(--color-text-muted)" },
     "&.Mui-focused fieldset": { borderColor: "#5b8def" },
   },
   "& .MuiInputBase-input": { fontSize: 14 },
@@ -82,9 +78,9 @@ export const Teachers = () => {
   const { t } = useTranslation();
   const toast = useToast();
   const { branchLabel } = useBranch();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const { data: teachersData, isLoading: teachersLoading } = useAllTeachersQuery({ page: 1, limit: 100 });
-  const { data: branchesData } = useAllBranchesQuery();
   const { data: allGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
   const [createTeacher, { isLoading: isCreating }] = useCreateTeacherMutation();
   const [updateTeacher, { isLoading: isUpdating }] = useUpdateTeacherMutation();
@@ -92,7 +88,6 @@ export const Teachers = () => {
   const [toggleTeacherStatus] = useToggleTeacherStatusMutation();
 
   const teachers: Teacher[] = teachersData?.data ?? [];
-  const branches = branchesData?.data ?? [];
 
   // Real teacher endpointi guruhlar sonini qaytarmaydi — bu son mavjud
   // groupsApi ma'lumotidan (har bir guruhning teachers[] massivi) hisoblanadi,
@@ -146,14 +141,9 @@ export const Teachers = () => {
       setForm({
         name: teacher.name,
         phone: teacher.phone ?? "",
-        email: teacher.email ?? "",
         password: "",
-        specialization: teacher.specialization ?? "",
-        experience: teacher.experience != null ? String(teacher.experience) : "",
-        salary: teacher.salary != null ? String(teacher.salary) : "",
         dob: teacher.birthdate ?? "",
         gender: teacher.gender ?? "",
-        branchIds: teacher.branches?.map((b) => b.id) ?? [],
         photo: null,
       });
       setPhotoPreview(null);
@@ -175,38 +165,31 @@ export const Teachers = () => {
     if (file) { setForm((prev) => ({ ...prev, photo: file })); setPhotoPreview(URL.createObjectURL(file)); }
   };
 
-  const toggleBranch = (id: string) => {
-    setForm((prev) => ({
-      ...prev,
-      branchIds: prev.branchIds.includes(id)
-        ? prev.branchIds.filter((b) => b !== id)
-        : [...prev.branchIds, id],
-    }));
-  };
-
   /* ── validate ── */
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.name.trim())                   e.name  = t("teachers.validation.nameRequired");
-    if (!form.phone.trim() && !form.email.trim()) e.phone = t("teachers.validation.phoneOrEmailRequired");
+    if (!form.name.trim())  e.name  = t("teachers.validation.nameRequired");
+    if (!form.phone.trim()) e.phone = t("teachers.validation.phoneRequired");
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   /* ── submit ── */
   const handleSubmit = async () => {
+    // No branch field in this form — the teacher is created under whichever
+    // branch is active in the header, so that must be a real branch, not
+    // "All branches", before a new teacher can be created.
+    if (!isEdit && !selectedBranchId) {
+      toast.error(t("teachers.validation.branchRequired"));
+      return;
+    }
     if (!validate()) return;
     const payload = {
       name: form.name,
       phone: form.phone || undefined,
-      email: form.email || undefined,
       password: form.password || undefined,
-      specialization: form.specialization || undefined,
-      experience: form.experience ? Number(form.experience) : undefined,
-      salary: form.salary ? Number(form.salary) : undefined,
       birthdate: form.dob || undefined,
       gender: form.gender || undefined,
-      branchIds: form.branchIds,
       photo: form.photo ?? undefined,
     };
     try {
@@ -214,7 +197,9 @@ export const Teachers = () => {
         await updateTeacher({ id: selectedTeacherId, ...payload }).unwrap();
         toast.success(t("teachers.toast.updated"));
       } else {
-        await createTeacher(payload).unwrap();
+        // Without branchIds, the backend enrolled the new teacher in every
+        // branch instead of just the one currently active in the header.
+        await createTeacher({ ...payload, branchIds: selectedBranchId ? [selectedBranchId] : undefined }).unwrap();
         toast.success(t("teachers.toast.created"));
       }
       setErrors({});
@@ -259,7 +244,7 @@ export const Teachers = () => {
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
         <Stack direction="row" alignItems="baseline" spacing={1}>
           <span style={{ fontSize: 22, fontWeight: 500 }}>{t("teachers.title")}</span>
-          <span style={{ fontSize: 14, color: "#888" }}>{branchLabel} — {filteredTeachers.length} {t("teachers.countSuffix")}</span>
+          <span style={{ fontSize: 14, color: "var(--color-text-muted)" }}>{branchLabel} — {filteredTeachers.length} {t("teachers.countSuffix")}</span>
         </Stack>
         <Stack direction="row" spacing={1}>
           <Button variant="contained" startIcon={<GoPlus />} onClick={openAdd}
@@ -267,26 +252,26 @@ export const Teachers = () => {
             {t("teachers.actions.addNew")}
           </Button>
           <Button variant="outlined" startIcon={<MdDownload />}
-            sx={{ borderRadius: "20px", textTransform: "none", color: "inherit", borderColor: "#ccc" }}>
+            sx={{ borderRadius: "20px", textTransform: "none", color: "inherit", borderColor: "var(--color-border)" }}>
             {t("teachers.actions.import")}
           </Button>
         </Stack>
       </Stack>
 
       {/* Alert */}
-      <div style={{ background: "#f0f9f4", border: "1px solid #b6dfc8", borderRadius: 8,
+      <div style={{ background: "var(--color-success-surface)", border: "1px solid var(--color-success-border)", borderRadius: 8,
         padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1d9e75",
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#fff", fontSize: 13 }}>✓</div>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#0f6e56" }}>{t("teachers.alert.title")}</div>
-          <div style={{ fontSize: 12, color: "#1d9e75" }}>{t("teachers.alert.description")}</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-success-text)" }}>{t("teachers.alert.title")}</div>
+          <div style={{ fontSize: 12, color: "var(--color-success-text)" }}>{t("teachers.alert.description")}</div>
         </div>
       </div>
 
       {/* Search */}
       <Stack direction="row" sx={{ pb: 2 }}>
-        <Paper sx={{ p: "2px 4px", display: "flex", alignItems: "center", width: 320, boxShadow: "none", border: "1px solid #e0e0e0" }}>
+        <Paper sx={{ p: "2px 4px", display: "flex", alignItems: "center", width: 320, boxShadow: "none", border: "1px solid var(--color-border)" }}>
           <InputBase value={searchValue} onChange={(e) => setSearchValue(e.target.value)} sx={{ ml: 1, flex: 1 }} placeholder={t("teachers.search.placeholder")} />
           <IconButton sx={{ p: "8px" }}><IoSearchOutline size={18} /></IconButton>
         </Paper>
@@ -296,22 +281,22 @@ export const Teachers = () => {
       {teachersLoading ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress /></Box>
       ) : (
-        <TableContainer sx={{ borderRadius: "10px", border: "1px solid #e0e0e0" }}>
-          <Table sx={{ bgcolor: "#fff" }}>
+        <TableContainer sx={{ borderRadius: "10px", border: "1px solid var(--color-border)" }}>
+          <Table sx={{ bgcolor: "var(--color-surface)" }}>
             <TableBody sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", padding: "12px" }}>
               {filteredTeachers.map((teacher) => (
                 <TableRow key={teacher.id} onClick={() => navigate(`/teachers/${teacher.id}`)}
                   sx={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-                    border: "1px solid #e8e8e8", borderRadius: "10px", cursor: "pointer",
-                    "&:hover": { bgcolor: "#f9f9f9" }, "& td": { border: 0 } }}>
+                    border: "1px solid var(--color-border)", borderRadius: "10px", cursor: "pointer",
+                    "&:hover": { bgcolor: "var(--color-surface-hover)" }, "& td": { border: 0 } }}>
                   <TableCell sx={{ fontWeight: 500, fontSize: 14, flex: 1, py: 1.8, display: "flex", alignItems: "center", gap: 1 }}>
                     {teacher.name}
                     {teacher.status === "INACTIVE" && (
                       <Chip label={t("teachers.table.inactive")} size="small" sx={{ height: 18, fontSize: 10 }} />
                     )}
                   </TableCell>
-                  <TableCell sx={{ color: "#185FA5", fontSize: 14, mr: 12 }}>{teacher.phone || teacher.email || "—"}</TableCell>
-                  <TableCell sx={{ fontSize: 14, color: "#888", minWidth: 90, textAlign: "center", py: 1.8 }}>{groupCountByTeacherId.get(teacher.id) ?? 0} {t("teachers.table.groupsCount")}</TableCell>
+                  <TableCell sx={{ color: "var(--color-primary)", fontSize: 14, mr: 12 }}>{teacher.phone || teacher.email || "—"}</TableCell>
+                  <TableCell sx={{ fontSize: 14, color: "var(--color-text-muted)", minWidth: 90, textAlign: "center", py: 1.8 }}>{groupCountByTeacherId.get(teacher.id) ?? 0} {t("teachers.table.groupsCount")}</TableCell>
                   <TableCell align="center" sx={{ py: 1.8 }} onClick={(e) => e.stopPropagation()}>
                     <IconButton size="small" onClick={(e) => handleMenuOpen(e, teacher.id)}>
                       <BsThreeDotsVertical size={16} />
@@ -329,7 +314,7 @@ export const Teachers = () => {
               ))}
               {filteredTeachers.length === 0 && (
                 <TableRow sx={{ "& td": { border: 0 } }}>
-                  <TableCell colSpan={4} align="center" sx={{ color: "#aaa", py: 4 }}>{t("teachers.table.noData")}</TableCell>
+                  <TableCell colSpan={4} align="center" sx={{ color: "var(--color-text-muted)", py: 4 }}>{t("teachers.table.noData")}</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -349,15 +334,15 @@ export const Teachers = () => {
           DRAWER
       ══════════════════════════════════════════════════════ */}
       <Drawer anchor="right" open={open} onClose={() => setOpen(false)}
-        PaperProps={{ sx: { width: 460, display: "flex", flexDirection: "column", bgcolor: "#fff" } }}>
+        PaperProps={{ sx: { width: 460, display: "flex", flexDirection: "column", bgcolor: "var(--color-surface)" } }}>
 
         {/* header */}
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-          px: 3, py: 2.5, borderBottom: "1px solid #f0f0f0" }}>
-          <Typography fontWeight={700} fontSize={17} color="#1a1a2e">
+          px: 3, py: 2.5, borderBottom: "1px solid var(--color-border)" }}>
+          <Typography fontWeight={700} fontSize={17} color="var(--color-text-primary)">
             {isEdit ? t("teachers.drawer.editTitle") : t("teachers.drawer.addTitle")}
           </Typography>
-          <IconButton onClick={() => setOpen(false)} size="small" sx={{ color: "#9ca3af" }}>
+          <IconButton onClick={() => setOpen(false)} size="small" sx={{ color: "var(--color-text-muted)" }}>
             <MdClose size={20} />
           </IconButton>
         </Box>
@@ -368,7 +353,7 @@ export const Teachers = () => {
 
             {/* Phone */}
             <Box>
-              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.phone")}</Typography>
+              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("teachers.form.phone")}</Typography>
               <TextField name="phone" value={form.phone} onChange={handleChange}
                 fullWidth size="small" placeholder={t("teachers.form.phonePlaceholder")}
                 error={Boolean(errors.phone)} helperText={errors.phone}
@@ -376,8 +361,8 @@ export const Teachers = () => {
                   startAdornment: (
                     <InputAdornment position="start">
                       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5,
-                        borderRight: "1px solid #e5e7eb", pr: 1.2, mr: 0.5,
-                        fontSize: 13, color: "#374151", fontWeight: 500, whiteSpace: "nowrap" }}>
+                        borderRight: "1px solid var(--color-border)", pr: 1.2, mr: 0.5,
+                        fontSize: 13, color: "var(--color-text-secondary)", fontWeight: 500, whiteSpace: "nowrap" }}>
                         🇺🇿 +998
                       </Box>
                     </InputAdornment>
@@ -387,48 +372,24 @@ export const Teachers = () => {
               />
             </Box>
 
-            {/* Email */}
-            <Box>
-              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.email")}</Typography>
-              <TextField name="email" value={form.email} onChange={handleChange}
-                fullWidth size="small" placeholder={t("teachers.form.emailPlaceholder")} sx={inputSx} />
-            </Box>
-
             {/* Name */}
             <Box>
-              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.name")}</Typography>
+              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("teachers.form.name")}</Typography>
               <TextField name="name" value={form.name} onChange={handleChange}
                 fullWidth size="small" placeholder={t("teachers.form.namePlaceholder")}
                 error={Boolean(errors.name)} helperText={errors.name}
                 sx={inputSx} />
             </Box>
 
-            {/* Branches */}
-            <Box>
-              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.branch")}</Typography>
-              <Stack direction="row" flexWrap="wrap" gap={1}>
-                {branches.map((b) => (
-                  <Chip
-                    key={b.id}
-                    label={b.name}
-                    size="small"
-                    color={form.branchIds.includes(b.id) ? "primary" : "default"}
-                    onClick={() => toggleBranch(b.id)}
-                    sx={{ cursor: "pointer" }}
-                  />
-                ))}
-              </Stack>
-            </Box>
-
             {/* Date of birth */}
             <Box>
-              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.dob")}</Typography>
+              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("teachers.form.dob")}</Typography>
               <TextField name="dob" type="date" value={form.dob} onChange={handleChange}
                 fullWidth size="small" InputLabelProps={{ shrink: true }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <MdCalendarToday size={15} color="#9ca3af" />
+                      <MdCalendarToday size={15} color="var(--color-text-muted)" />
                     </InputAdornment>
                   ),
                 }}
@@ -443,55 +404,34 @@ export const Teachers = () => {
 
             {/* Gender */}
             <Box>
-              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.gender")}</Typography>
+              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("teachers.form.gender")}</Typography>
               <FormControl>
                 <RadioGroup row name="gender" value={form.gender} onChange={handleChange}>
                   <FormControlLabel value="MALE"
-                    control={<Radio size="small" sx={{ color: "#9ca3af", "&.Mui-checked": { color: "#5b8def" } }} />}
+                    control={<Radio size="small" sx={{ color: "var(--color-text-muted)", "&.Mui-checked": { color: "#5b8def" } }} />}
                     label={<Typography fontSize={14}>{t("teachers.form.genderMale")}</Typography>} />
                   <FormControlLabel value="FEMALE"
-                    control={<Radio size="small" sx={{ color: "#9ca3af", "&.Mui-checked": { color: "#5b8def" } }} />}
+                    control={<Radio size="small" sx={{ color: "var(--color-text-muted)", "&.Mui-checked": { color: "#5b8def" } }} />}
                     label={<Typography fontSize={14}>{t("teachers.form.genderFemale")}</Typography>} />
                 </RadioGroup>
               </FormControl>
             </Box>
 
-            {/* Specialization */}
-            <Box>
-              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.specialization")}</Typography>
-              <TextField name="specialization" value={form.specialization} onChange={handleChange}
-                fullWidth size="small" placeholder={t("teachers.form.specializationPlaceholder")} sx={inputSx} />
-            </Box>
-
-            {/* Experience */}
-            <Box>
-              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.experience")}</Typography>
-              <TextField name="experience" type="number" value={form.experience} onChange={handleChange}
-                fullWidth size="small" sx={inputSx} />
-            </Box>
-
-            {/* Salary */}
-            <Box>
-              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.salary")}</Typography>
-              <TextField name="salary" type="number" value={form.salary} onChange={handleChange}
-                fullWidth size="small" sx={inputSx} />
-            </Box>
-
             {/* Photo */}
             <Box>
-              <Typography fontSize={13} fontWeight={500} color="#374151" mb={0.8}>{t("teachers.form.photo")}</Typography>
+              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("teachers.form.photo")}</Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                 {photoPreview && (
                   <Box component="img" src={photoPreview} alt={t("teachers.form.photoPreviewAlt")}
-                    sx={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: "2px solid #e5e7eb", flexShrink: 0 }} />
+                    sx={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--color-border)", flexShrink: 0 }} />
                 )}
                 <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between",
-                  border: "1px solid #e5e7eb", borderRadius: "10px", bgcolor: "#f9fafb", px: 1.5, py: 0.9 }}>
-                  <Typography fontSize={13} color="#9ca3af" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  border: "1px solid var(--color-border)", borderRadius: "10px", bgcolor: "var(--color-surface-alt)", px: 1.5, py: 0.9 }}>
+                  <Typography fontSize={13} color="var(--color-text-muted)" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {form.photo ? form.photo.name : t("teachers.form.noFileChosen")}
                   </Typography>
                   <Button size="small" variant="outlined" onClick={() => fileInputRef.current?.click()}
-                    sx={{ fontSize: 12, borderRadius: "8px", borderColor: "#d1d5db", color: "#374151",
+                    sx={{ fontSize: 12, borderRadius: "8px", borderColor: "var(--color-border)", color: "var(--color-text-secondary)",
                       textTransform: "none", py: 0.3, px: 1.5, minWidth: 0, flexShrink: 0 }}>
                     {t("teachers.form.browse")}
                   </Button>
@@ -517,7 +457,7 @@ export const Teachers = () => {
         </Box>
 
         {/* footer */}
-        <Box sx={{ px: 3, py: 2.5, borderTop: "1px solid #f0f0f0" }}>
+        <Box sx={{ px: 3, py: 2.5, borderTop: "1px solid var(--color-border)" }}>
           <Button fullWidth variant="contained" onClick={handleSubmit} disabled={isCreating || isUpdating}
             sx={{
               borderRadius: "24px", py: 1.3, fontSize: 15, fontWeight: 600,
@@ -539,7 +479,7 @@ export const Teachers = () => {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 2, pb: 2 }}>
-          <Button onClick={() => setDeleteOpen(false)} disabled={isDeleting} sx={{ textTransform: "none", color: "#667085" }}>{t("teachers.deleteDialog.cancel")}</Button>
+          <Button onClick={() => setDeleteOpen(false)} disabled={isDeleting} sx={{ textTransform: "none", color: "var(--color-text-secondary)" }}>{t("teachers.deleteDialog.cancel")}</Button>
           <Button variant="contained" color="error" onClick={handleConfirmDel} disabled={isDeleting} sx={{ borderRadius: 2, textTransform: "none" }}>
             {isDeleting ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : t("teachers.deleteDialog.confirm")}
           </Button>

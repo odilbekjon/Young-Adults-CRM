@@ -5,12 +5,17 @@
   },
   "header": {
     "search": "Qidiruv",
+    "searching": "Qidirilmoqda...",
+    "searchNoResults": "O'quvchilar topilmadi",
+    "searchError": "Qidiruvda xatolik yuz berdi. Qayta urinib ko'ring.",
     "notifications": "Bildirishnomalar",
     "viewAll": "Barchasini ko'rish",
     "recentPages": "So'nggi sahifalar",
     "help": "Yordam",
     "fullscreen": "To'liq ekran",
     "exitFullscreen": "To'liq ekrandan chiqish",
+    "darkMode": "Tungi rejim",
+    "lightMode": "Kunduzgi rejim",
     "account": "Hisob",
     "signOut": "Chiqish",
     "hamburgerMenu": "Menyu"
@@ -47,6 +52,7 @@
       "name": "Ism kiritilishi shart",
       "password": "Parol kiritilishi shart",
       "contact": "Telefon yoki email kiritilishi shart",
+      "branch": "O'quvchi qo'shishdan oldin headerda filialni tanlang",
       "save": "O'quvchini saqlashda xatolik yuz berdi"
     },
     "additional": {
@@ -63,48 +69,70 @@
   "addPayment": {
     "title": "To'lov qo'shish",
     "student": "O'quvchi",
-    "selectStudent": "O'quvchini tanlang",
+    "selectStudent": "Foydalanuvchini tanlang",
     "studentLoading": "O'quvchilar yuklanmoqda...",
     "studentError": "O'quvchilarni yuklab bo'lmadi",
     "balance": "Balans",
-    "branch": "Filial",
-    "selectBranch": "Filialni tanlang",
-    "branchLoading": "Filiallar yuklanmoqda...",
-    "branchError": "Filiallarni yuklab bo'lmadi",
-    "group": "Guruh",
-    "selectGroup": "Guruhni tanlang (ixtiyoriy)",
-    "noGroupsForStudent": "Bu o'quvchi hech qanday guruhga biriktirilmagan",
     "methodPay": "To'lov usuli",
-    "methods": {
-      "cash": "Naqd",
-      "click": "Click",
-      "card": "Karta",
-      "uzum": "Uzum",
-      "bankAccount": "Bank hisobi",
-      "humo": "Humo",
-      "payme": "Payme"
-    },
-    "paymentMethodId": "To'lov usuli ID (backend)",
-    "paymentMethodIdPlaceholder": "PaymentMethod ID kiriting",
-    "paymentMethodIdHelper": "Bu ID backenddagi to'lov usullari ro'yxatidan olinadi",
+    "paymentMethodId": "To'lov usuli",
+    "selectPaymentMethod": "To'lov usulini tanlang",
+    "paymentMethodLoading": "To'lov usullari yuklanmoqda...",
+    "paymentMethodError": "To'lov usullarini yuklab bo'lmadi",
     "amount": "Summa",
     "date": "Sana",
     "comment": "Izoh",
-    "receipt": "Chek rasmi",
-    "receiptPlaceholder": "Fayl tanlang",
-    "advanced": "+ Qo'shimcha (tranzaksiya ID)",
-    "transactionId": "Tranzaksiya ID",
     "submit": "Yuborish",
     "saving": "Saqlanmoqda...",
     "errors": {
-      "student": "O'quvchini tanlang",
-      "branch": "Filialni tanlang",
+      "student": "Foydalanuvchini tanlang",
+      "branch": "Filial tanlanmagan — avval uni yuqoridagi paneldan tanlang",
       "amount": "To'g'ri summa kiriting",
-      "paymentMethodId": "To'lov usuli ID kiritilishi shart",
+      "paymentMethodId": "To'lov usulini tanlang",
       "save": "To'lovni saqlashda xatolik yuz berdi"
     },
     "toast": {
       "created": "To'lov muvaffaqiyatli qo'shildi"
+    }
+  },
+  "paymentReceipt": {
+    "title": "Chek",
+    "print": "Chop etish",
+    "loading": "Yuklanmoqda...",
+    "loadError": "Chekni yuklab bo'lmadi"
+  },
+  "debtorReceipt": {
+    "title": "Qarzdorlik cheki",
+    "print": "Chop etish",
+    "loadError": "Chekni yuklab bo'lmadi",
+    "name": "Ism",
+    "phone": "Telefon",
+    "group": "Guruh",
+    "branch": "Filial",
+    "balance": "Qarz summasi"
+  },
+  "addWithdrawal": {
+    "title": "Yechib olish qo'shish",
+    "recipientName": "Qabul qiluvchi ismi",
+    "recipientNamePlaceholder": "To'liq ism",
+    "branch": "Filial",
+    "selectBranch": "Filialni tanlang",
+    "branchLoading": "Filiallar yuklanmoqda...",
+    "branchError": "Filiallarni yuklab bo'lmadi",
+    "paymentMethodId": "To'lov usuli",
+    "amount": "Summa",
+    "date": "Sana",
+    "reason": "Sabab",
+    "submit": "Yuborish",
+    "saving": "Saqlanmoqda...",
+    "errors": {
+      "recipientName": "Qabul qiluvchi ismini kiriting",
+      "branch": "Filialni tanlang",
+      "amount": "To'g'ri summa kiriting",
+      "paymentMethodId": "To'lov usulini tanlang",
+      "save": "Yechib olishni saqlashda xatolik yuz berdi"
+    },
+    "toast": {
+      "created": "Yechib olish muvaffaqiyatli qo'shildi"
     }
   },
   "login": {
@@ -164,6 +192,7 @@
       "officeHolidays": "Bayramlar",
       "officeArchive": "Arxiv",
       "officeStudentsLeft": "Guruhni tark etgan o'quvchilar",
+      "officeStudentFreezes": "Talabalarni muzlatish",
       "forms": "Formalar",
       "formsList": "Formalar",
       "blog": "Blog",
@@ -232,6 +261,20 @@
     "filters": {
       "searchPlaceholder": "Ism yoki telefon bo'yicha qidirish",
       "byTeacher": "O'qituvchi bo'yicha",
+      "byCourses": "Kurslar bo'yicha",
+      "allCourses": "Barcha kurslar",
+      "status": "Status",
+      "statusOptions": { "active": "Faol", "inactive": "Faol emas" },
+      "financialSituation": "Moliyaviy holat",
+      "financialOptions": { "positive": "Musbat balans", "negative": "Manfiy balans", "zero": "Nol balans" },
+      "byTags": "Teglar bo'yicha",
+      "tagsUnavailable": "Teglar hali mavjud emas",
+      "externalId": "Tashqi ID",
+      "externalIdUnavailable": "Tashqi ID hali mavjud emas",
+      "groupCount": "Guruhlar soni",
+      "fromCreated": "Yaratilgan sana (dan)",
+      "toCreatedDate": "Yaratilgan sana (gacha)",
+      "advancedFilters": "Qo'shimcha filtrlar",
       "clearAll": "Barchasini tozalash"
     },
     "table": {
@@ -266,7 +309,13 @@
       "studentsSelected_one": "{{count}} ta o'quvchi tanlandi",
       "studentsSelected_other": "{{count}} ta o'quvchi tanlandi",
       "selectGroup": "Guruhni tanlang",
-      "submit": "O'quvchini guruhga qo'shish"
+      "submit": "O'quvchini guruhga qo'shish",
+      "submitting": "Qo'shilmoqda...",
+      "toast": {
+        "success": "O'quvchi(lar) guruhga qo'shildi",
+        "error": "O'quvchi(lar)ni guruhga qo'shib bo'lmadi",
+        "alreadyInGroup": "Tanlangan o'quvchi(lar) bu guruhda allaqachon bor"
+      }
     },
     "editDrawer": {
       "title": "O'quvchini tahrirlash",
@@ -370,7 +419,8 @@
       "phoneOrEmailRequired": "Telefon yoki email kiritilishi shart",
       "nameRequired": "Ism kiritilishi shart",
       "dobRequired": "Tug'ilgan sana kiritilishi shart",
-      "genderRequired": "Jinsi kiritilishi shart"
+      "genderRequired": "Jinsi kiritilishi shart",
+      "branchRequired": "O'qituvchi qo'shishdan oldin headerda filialni tanlang"
     },
     "toast": {
       "created": "O'qituvchi qo'shildi",
@@ -478,6 +528,8 @@
       "menuLabel": "Sinov darsiga biriktirish",
       "title": "Sinov darsiga biriktirish",
       "selectGroup": "Guruhni tanlang",
+      "trialDate": "Sinov darsi sanasi",
+      "notes": "Izoh",
       "submit": "Biriktirish",
       "toast": {
         "success": "Lid sinov darsiga biriktirildi",
@@ -491,9 +543,14 @@
     "actions": {
       "addNew": "Qo'shish",
       "exportExcel": "Excelga eksport",
+      "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qayta urinib ko'ring.",
       "edit": "Tahrirlash",
+      "sms": "SMS",
       "delete": "O'chirish",
       "submit": "Yuborish"
+    },
+    "sms": {
+      "recipientLabel": "o'quvchi"
     },
     "filters": {
       "status": "Holat",
@@ -599,10 +656,27 @@
   "finance": {
     "allPayments": {
       "title": "Barcha to'lovlar",
+      "exportExcel": "Excelga eksport",
+      "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring.",
+      "chart": {
+        "payments": "To'lovlar",
+        "expenses": "Xarajatlar",
+        "netProfit": "Sof foyda",
+        "loadError": "Grafik ma'lumotlarini yuklab bo'lmadi.",
+        "retry": "Qayta urinish"
+      },
       "stats": {
         "totalRevenue": "Umumiy daromad:",
         "totalNetProfit": "Umumiy sof foyda:",
-        "details": "Batafsil"
+        "filteredTotal": "Tanlangan filtr bo'yicha jami:",
+        "details": "Batafsil",
+        "thisMonth": {
+          "title": "Joriy oy",
+          "income": "Daromad",
+          "expenses": "Xarajatlar",
+          "salaries": "Maoshlar",
+          "netProfit": "Sof foyda"
+        }
       },
       "filters": {
         "title": "Filtrlar",
@@ -632,7 +706,20 @@
         "teacher": "O'qituvchi",
         "comment": "Izoh",
         "creator": "Yaratuvchi",
-        "empty": "To'lovlar topilmadi"
+        "empty": "To'lovlar topilmadi",
+        "loadError": "To'lovlarni yuklab bo'lmadi",
+        "retry": "Qayta urinish",
+        "refund": "Bekor qilish"
+      },
+      "refundConfirm": {
+        "title": "To'lovni bekor qilish",
+        "message": "Bu to'lovni bekor qilmoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi.",
+        "confirm": "Bekor qilish",
+        "cancel": "Yopish",
+        "error": "To'lovni bekor qilishda xatolik yuz berdi"
+      },
+      "toast": {
+        "refunded": "To'lov bekor qilindi"
       },
       "footer": {
         "showing": "Ko'rsatilmoqda",
@@ -643,12 +730,15 @@
     "debtors": {
       "title": "Qarzdorlar",
       "quantity": "Soni — {{count}}",
+      "exportExcel": "Excelga eksport",
+      "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring.",
       "summary": {
         "total": "Jami:",
         "totalOnPeriod": "Davr uchun jami:"
       },
       "filters": {
         "search": "Qidirish",
+        "searchPlaceholder": "Ism yoki telefon",
         "searchBy": "Qidirish (bo'yicha)",
         "status": "Holat",
         "group": "Guruh",
@@ -674,7 +764,10 @@
         "status": "Holat",
         "sendSmsSelected": "Tanlanganlarga SMS yuborish",
         "selectToSendSms": "SMS yuborish uchun o'quvchilarni tanlang",
-        "noData": "Ma'lumot yo'q"
+        "noData": "Ma'lumot yo'q",
+        "loadError": "Qarzdorlar ro'yxatini yuklab bo'lmadi.",
+        "retry": "Qayta urinish",
+        "receipt": "Chek"
       },
       "pagination": {
         "of": "/"
@@ -708,12 +801,82 @@
         "delete": "O'chirish"
       },
       "calculate": "Hisoblash",
-      "showInTeacherProfile": "O'qituvchi profilida ko'rsatish"
+      "showInTeacherProfile": "O'qituvchi profilida ko'rsatish",
+      "loadError": "Maosh sozlamalarini yuklab bo'lmadi.",
+      "deleteConfirm": "Ushbu maosh sozlamasi o'chirilsinmi?",
+      "createNotSupported": "Joriy API shartnomasida maosh stavkasini yaratish mavjud emas.",
+      "toast": {
+        "deleted": "Sozlama o'chirildi",
+        "deleteError": "Sozlamani o'chirib bo'lmadi. Qaytadan urinib ko'ring.",
+        "calculated": "Vedomostlar hisoblandi",
+        "calculateError": "Vedomostlarni hisoblab bo'lmadi. Qaytadan urinib ko'ring.",
+        "published": "Vedomost e'lon qilindi",
+        "publishError": "Vedomostni e'lon qilib bo'lmadi. Qaytadan urinib ko'ring.",
+        "paid": "Vedomost to'langan deb belgilandi",
+        "payError": "To'lovni yozib bo'lmadi. Qaytadan urinib ko'ring."
+      },
+      "payrolls": {
+        "title": "Vedomostlar",
+        "exportExcel": "Excelga eksport",
+        "exportError": "Vedomostlarni eksport qilib bo'lmadi. Qaytadan urinib ko'ring.",
+        "loadError": "Vedomostlarni yuklab bo'lmadi.",
+        "noData": "Vedomostlar topilmadi",
+        "filters": {
+          "period": "Davr",
+          "status": "Holat",
+          "allStatuses": "Barcha holatlar",
+          "reset": "Tozalash"
+        },
+        "status": {
+          "draft": "Qoralama",
+          "published": "E'lon qilingan",
+          "paid": "To'langan"
+        },
+        "table": {
+          "teacher": "O'qituvchi",
+          "period": "Davr",
+          "status": "Holat",
+          "total": "Hisoblangan",
+          "paid": "To'langan",
+          "actions": "Amallar"
+        },
+        "detail": {
+          "title": "Vedomost tafsilotlari",
+          "noItems": "Tafsilot qaytmadi",
+          "close": "Yopish",
+          "group": "Guruh / Kurs",
+          "student": "Talaba",
+          "lessons": "Darslar",
+          "attended": "Qatnashgan",
+          "missed": "Qoldirgan",
+          "rate": "Sozlama summasi",
+          "amount": "Hisoblangan summa",
+          "calcSetting": "Hisoblash sozlamasi",
+          "salaryType": "Maosh turi"
+        },
+        "actions": {
+          "details": "Tafsilot",
+          "publish": "E'lon qilish",
+          "pay": "To'lash"
+        },
+        "pay": {
+          "title": "To'lovni yozish",
+          "paymentMethod": "To'lov usuli",
+          "selectMethod": "To'lov usulini tanlang",
+          "amount": "To'langan summa",
+          "amountHint": "Jami hisoblangan summani to'lash uchun bo'sh qoldiring",
+          "confirm": "Tasdiqlash",
+          "cancel": "Bekor qilish"
+        }
+      }
     },
     "totalExpenses": {
       "title": "Umumiy xarajatlar",
+      "exportExcel": "Excelga eksport",
+      "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring.",
       "summary": {
-        "totalExpenses": "Umumiy xarajatlar:"
+        "totalExpenses": "Umumiy xarajatlar:",
+        "filteredTotal": "Tanlangan filtr bo'yicha jami:"
       },
       "chart": {
         "totalExpensesLabel": "Umumiy xarajatlar"
@@ -730,21 +893,85 @@
         "filter": "Filtr"
       },
       "selectPlaceholder": "Tanlang",
+      "table": {
+        "empty": "Xarajatlar topilmadi",
+        "loadError": "Xarajatlarni yuklab bo'lmadi",
+        "retry": "Qayta urinish",
+        "delete": "O'chirish"
+      },
       "form": {
         "title": "Yangi xarajat",
         "description": "Tavsif",
         "date": "Sana",
         "category": "Kategoriya",
+        "branch": "Filial",
         "payee": "Qabul qiluvchi",
         "sum": "Summa",
         "methodPay": "To'lov usuli",
-        "submit": "Yuborish"
+        "receipt": "Chek rasmi",
+        "receiptPlaceholder": "Fayl tanlang",
+        "submit": "Yuborish",
+        "saving": "Saqlanmoqda...",
+        "errors": {
+          "title": "Tavsif kiriting",
+          "category": "Kategoriyani tanlang",
+          "branch": "Filialni tanlang",
+          "amount": "To'g'ri summa kiriting",
+          "methodPay": "To'lov usulini tanlang",
+          "save": "Xarajatni saqlashda xatolik yuz berdi"
+        },
+        "toast": {
+          "created": "Xarajat muvaffaqiyatli qo'shildi",
+          "deleted": "Xarajat o'chirildi"
+        }
+      },
+      "categoryModal": {
+        "addCategory": "Kategoriya qo'shish",
+        "manageTitle": "Xarajat kategoriyalari",
+        "title": "Yangi kategoriya qo'shish",
+        "existingTitle": "Mavjud kategoriyalar",
+        "noCategories": "Kategoriyalar yo'q",
+        "name": "Nomi",
+        "branch": "Filial (ixtiyoriy)",
+        "save": "Saqlash",
+        "edit": "Tahrirlash",
+        "delete": "O'chirish",
+        "cancel": "Bekor qilish",
+        "statusActive": "Faol",
+        "statusInactive": "Nofaol",
+        "deleteConfirm": {
+          "title": "Kategoriyani o'chirish",
+          "message": "\"{{name}}\" kategoriyasini o'chirmoqchimisiz?",
+          "confirm": "O'chirish"
+        },
+        "errors": {
+          "name": "Kategoriya nomini kiriting",
+          "branch": "Filialni tanlang",
+          "save": "Kategoriyani saqlashda xatolik yuz berdi",
+          "update": "Kategoriyani yangilashda xatolik yuz berdi",
+          "delete": "Kategoriyani o'chirishda xatolik yuz berdi"
+        },
+        "toast": {
+          "created": "Kategoriya muvaffaqiyatli qo'shildi",
+          "updated": "Kategoriya muvaffaqiyatli yangilandi",
+          "deleted": "Kategoriya o'chirildi"
+        }
+      },
+      "deleteConfirm": {
+        "title": "Xarajatni o'chirish",
+        "message": "Bu xarajat yozuvini o'chirmoqchimisiz?",
+        "confirm": "O'chirish",
+        "cancel": "Bekor qilish",
+        "error": "Xarajatni o'chirishda xatolik yuz berdi"
       }
     },
     "withdraw": {
       "title": "Yechib olish",
+      "exportExcel": "Excelga eksport",
+      "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring.",
       "stats": {
-        "totalWithdrawals": "Jami yechib olingan:"
+        "totalWithdrawals": "Jami yechib olingan:",
+        "filteredTotal": "Tanlangan filtr bo'yicha jami:"
       },
       "filters": {
         "dateFrom": "Sanadan",
@@ -764,7 +991,19 @@
         "actions": "Amallar",
         "notAssigned": "belgilanmagan",
         "deleteTitle": "O'chirish",
-        "empty": "Yechib olishlar topilmadi"
+        "empty": "Yechib olishlar topilmadi",
+        "loadError": "Yechib olishlarni yuklab bo'lmadi",
+        "retry": "Qayta urinish"
+      },
+      "deleteConfirm": {
+        "title": "Yechib olishni o'chirish",
+        "message": "Bu yozuvni o'chirmoqchimisiz?",
+        "confirm": "O'chirish",
+        "cancel": "Bekor qilish",
+        "error": "O'chirishda xatolik yuz berdi"
+      },
+      "toast": {
+        "deleted": "Yozuv o'chirildi"
       },
       "footer": {
         "showing": "Ko'rsatilmoqda",
@@ -774,6 +1013,12 @@
     }
   },
   "reports": {
+    "common": {
+      "loadError": "Hisobotni yuklab bo'lmadi.",
+      "noData": "Tanlangan filtrlar bo'yicha ma'lumot yo'q",
+      "exportExcel": "Excelga eksport",
+      "exportError": "Hisobotni eksport qilib bo'lmadi. Qaytadan urinib ko'ring."
+    },
     "attendance": {
       "title": "Davomat hisobotlari",
       "summary": {
@@ -932,6 +1177,10 @@
   },
   "singleGroup": {
     "notFound": "Guruh topilmadi.",
+    "header": {
+      "branch": "Filial",
+      "groupId": "ID"
+    },
     "leftPanel": {
       "course": "Kurs",
       "teacher": "O'qituvchi",
@@ -949,6 +1198,9 @@
       "rooms": "Xonalar",
       "roomCapacity": "Xona sig'imi",
       "trainingDates": "Dars sanalari",
+      "trainingStart": "Boshlanishi",
+      "trainingEnd": "Tugashi",
+      "notScheduled": "Sanalar belgilanmagan",
       "idLabel": "id",
       "branches": "Filiallar",
       "sortAZ": "A-Z bo'yicha",
@@ -957,6 +1209,7 @@
       "showArchivedStudents": "Arxivdagi o'quvchilarni ko'rsatish",
       "hideArchivedStudents": "Arxivdagi o'quvchilarni yashirish",
       "exportToExcel": "Excelga eksport",
+      "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qayta urinib ko'ring.",
       "export": {
         "name": "Ism",
         "phone": "Telefon",
@@ -979,12 +1232,24 @@
         "current": "Joriy",
         "name": "Ism",
         "months": {
-          "jan": "Yan", "feb": "Fev", "mar": "Mar", "apr": "Apr", "may": "May", "jun": "Iyun",
-          "jul": "Iyul", "aug": "Avg", "sep": "Sen", "oct": "Okt", "nov": "Noy", "dec": "Dek"
+          "jan": "Yan",
+          "feb": "Fev",
+          "mar": "Mar",
+          "apr": "Apr",
+          "may": "May",
+          "jun": "Iyun",
+          "jul": "Iyul",
+          "aug": "Avg",
+          "sep": "Sen",
+          "oct": "Okt",
+          "nov": "Noy",
+          "dec": "Dek"
         },
         "was": "Keldi",
         "notPresent": "Yo'q",
-        "saveError": "Davomatni saqlab bo'lmadi. Qaytadan urinib ko'ring."
+        "saveError": "Davomatni saqlab bo'lmadi. Qaytadan urinib ko'ring.",
+        "exportExcel": "Excelga eksport qilish",
+        "exportError": "Davomatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring."
       },
       "grade": {
         "tabLabel": "Baho",
@@ -1047,12 +1312,27 @@
     },
     "calendar": {
       "weekdays": {
-        "sun": "Yak", "mon": "Dush", "tue": "Sesh", "wed": "Chor", "thu": "Pay", "fri": "Jum", "sat": "Shan"
+        "sun": "Yak",
+        "mon": "Dush",
+        "tue": "Sesh",
+        "wed": "Chor",
+        "thu": "Pay",
+        "fri": "Jum",
+        "sat": "Shan"
       },
       "months": {
-        "january": "Yanvar", "february": "Fevral", "march": "Mart", "april": "Aprel",
-        "may": "May", "june": "Iyun", "july": "Iyul", "august": "Avgust",
-        "september": "Sentabr", "october": "Oktabr", "november": "Noyabr", "december": "Dekabr"
+        "january": "Yanvar",
+        "february": "Fevral",
+        "march": "Mart",
+        "april": "Aprel",
+        "may": "May",
+        "june": "Iyun",
+        "july": "Iyul",
+        "august": "Avgust",
+        "september": "Sentabr",
+        "october": "Oktabr",
+        "november": "Noyabr",
+        "december": "Dekabr"
       }
     },
     "datePickerField": {
@@ -1060,7 +1340,13 @@
     },
     "activateModal": {
       "title": "Faollashtirish sanasini tanlang",
-      "submit": "Yuborish"
+      "submit": "Yuborish",
+      "saving": "Faollashtirilmoqda...",
+      "toast": {
+        "success": "O'quvchi faollashtirildi",
+        "error": "O'quvchini faollashtirib bo'lmadi",
+        "notFound": "Bu o'quvchi uchun aktiv muzlatish yozuvi topilmadi"
+      }
     },
     "addNoteModal": {
       "title": "Yangi eslatma qo'shish",
@@ -1078,7 +1364,18 @@
       "amount": "Summa",
       "date": "Sana",
       "comment": "Izoh",
-      "submit": "Yuborish"
+      "submit": "Yuborish",
+      "saving": "Saqlanmoqda...",
+      "errors": {
+        "student": "O'quvchida backend id yo'q",
+        "branch": "Filial tanlanmagan — avval uni yuqoridagi paneldan tanlang",
+        "amount": "To'g'ri summa kiriting",
+        "paymentMethodId": "To'lov usulini tanlang",
+        "save": "To'lovni saqlashda xatolik yuz berdi"
+      },
+      "toast": {
+        "created": "To'lov muvaffaqiyatli qo'shildi"
+      }
     },
     "addStudentDrawer": {
       "title": "O'quvchi qo'shish",
@@ -1143,9 +1440,18 @@
       "title": "Sababni ko'rsating",
       "student": "O'quvchi",
       "dateFrom": "Sanadan",
+      "dateTo": "Sanagacha",
       "recalculateBalance": "Balansni qayta hisoblash",
       "cancel": "Bekor qilish",
-      "confirm": "Muzlatish"
+      "confirm": "Yuborish",
+      "saving": "Yuborilmoqda...",
+      "errors": {
+        "dates": "Boshlanish sanasini tanlang"
+      },
+      "toast": {
+        "success": "O'quvchi muzlatildi",
+        "error": "O'quvchini muzlatib bo'lmadi"
+      }
     },
     "moveStudentDialog": {
       "title": "Ko'chirish",
@@ -1192,7 +1498,12 @@
       "moveToBranchModal": {
         "title": "O'quvchini filialga ko'chirish",
         "selectBranch": "Filialni tanlang",
-        "submit": "Filialga ko'chirish"
+        "submit": "Filialga ko'chirish",
+        "moving": "Ko'chirilmoqda...",
+        "toast": {
+          "success": "O'quvchi filialga ko'chirildi",
+          "error": "O'quvchini filialga ko'chirib bo'lmadi. Qaytadan urinib ko'ring."
+        }
       },
       "activate": "Faollashtirish",
       "backToTrialLesson": "Sinov darsiga qaytarish",
@@ -1202,7 +1513,12 @@
       "moveStudentToGroup": "O'quvchini guruhga ko'chirish",
       "moveStudentToBranch": "O'quvchini filialga ko'chirish",
       "removeFromGroup": "Guruhdan o'chirish",
-      "reminders": "Eslatmalar"
+      "reminders": "Eslatmalar",
+      "toast": {
+        "activated": "O'quvchi faollashtirildi",
+        "backToTrial": "O'quvchi sinov darsiga qaytarildi",
+        "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."
+      }
     },
     "studentHoverCard": {
       "activeLearns": "Faol (o'qimoqda)",
@@ -1216,6 +1532,7 @@
       "phone": "Telefon",
       "addedAt": "Qo'shilgan",
       "activatedAt": "Faollashtirilgan",
+      "allCoins": "Barcha tangalar",
       "goToProfile": "Profilga o'tish →"
     }
   },
@@ -1247,15 +1564,35 @@
       "variablesWarningPrefix": "Diqqat! O'zgaruvchilardan foydalanish quyidagilar uchun ishlaydi:",
       "variablesWarningSuffix": ". Bu o'zgaruvchilar SMS shablonlar orqali qo'lda yuborilgan SMS larga ta'sir qilmaydi.",
       "addNew": "Qo'shish",
+      "loadError": "Yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+      "saving": "Saqlanmoqda...",
+      "toast": {
+        "settingSaved": "Avto-SMS sozlamasi saqlandi",
+        "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring.",
+        "templateCreated": "Shablon yaratildi",
+        "templateUpdated": "Shablon yangilandi",
+        "templateDeleted": "Shablon o'chirildi"
+      },
       "table": {
         "templatesHeader": "SMS shablonlari",
         "actions": "Amallar",
-        "empty": "Hozircha shablonlar yo'q. Yaratish uchun \"Qo'shish\" tugmasini bosing."
+        "empty": "Hozircha shablonlar yo'q. Yaratish uchun \"Qo'shish\" tugmasini bosing.",
+        "edit": "Tahrirlash",
+        "delete": "O'chirish"
       },
       "drawer": {
         "title": "SMS shabloni qo'shish",
+        "editTitle": "SMS shablonini tahrirlash",
+        "titleLabel": "Sarlavha",
+        "titlePlaceholder": "Shablon sarlavhasi",
         "label": "SMS shabloni",
         "submit": "Yuborish"
+      },
+      "confirmDelete": {
+        "title": "Shablon o'chirilsinmi?",
+        "message": "Bu amalni bekor qilib bo'lmaydi.",
+        "confirm": "O'chirish",
+        "cancel": "Bekor qilish"
       },
       "types": {
         "advancePayment": { "label": "Avans to'lovi haqida xabar", "description": "Avans to'lovi haqida xabar berish kerak bo'lganda xabar yuboriladi." },
@@ -1323,7 +1660,17 @@
         "edit": "Tahrirlash",
         "emptyActive": "Faol filiallar yo'q",
         "emptyArchived": "Arxivlangan filiallar yo'q",
-        "form": { "editTitle": "Filialni tahrirlash", "name": "Filial nomi", "namePlaceholder": "Masalan: Educoin", "phone": "Telefon raqami", "address": "Manzil", "addressPlaceholder": "Masalan: Jarqo'rg'on tumani hokimiyati yonida", "cancel": "Bekor qilish", "save": "Saqlash", "errors": { "name": "Filial nomini kiriting", "phone": "Telefon raqamini to'liq kiriting", "address": "Manzilni kiriting", "save": "Nimadir xato ketdi. Qaytadan urinib ko'ring." } },
+        "form": {
+          "editTitle": "Filialni tahrirlash",
+          "name": "Filial nomi",
+          "namePlaceholder": "Masalan: Educoin",
+          "phone": "Telefon raqami",
+          "address": "Manzil",
+          "addressPlaceholder": "Masalan: Jarqo'rg'on tumani hokimiyati yonida",
+          "cancel": "Bekor qilish",
+          "save": "Saqlash",
+          "errors": { "name": "Filial nomini kiriting", "phone": "Telefon raqamini to'liq kiriting", "address": "Manzilni kiriting", "save": "Nimadir xato ketdi. Qaytadan urinib ko'ring." }
+        },
         "close": "Yopish",
         "loadError": "Filiallarni yuklab bo'lmadi.",
         "deleteConfirm": {
@@ -1420,13 +1767,30 @@
       },
       "staff": {
         "title": "Xodimlar",
+        "countSuffix": "xodim",
         "addNew": "QO'SHISH",
         "import": "Import",
-        "table": { "id": "id", "name": "Ism", "role": "Rol", "jobTitle": "Lavozim", "phone": "Telefon", "actions": "Amallar" },
-        "form": { "title": "Yangi xodim qo'shish", "name": "Ism", "phone": "Telefon", "password": "Parol", "jobTitle": "Lavozim", "role": "Rol", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi", "photo": "Rasm", "noFileChosen": "Fayl tanlanmagan", "browse": "Tanlash", "submit": "Yuborish" },
+        "search": { "placeholder": "Xodimni qidirish" },
+        "filters": { "status": "Status", "allStatuses": "Barcha statuslar", "active": "Faol", "inactive": "Faol emas" },
+        "table": { "id": "#", "name": "Ism", "role": "Rol", "jobTitle": "Lavozim", "phone": "Telefon", "status": "Status", "actions": "Amallar", "noData": "Xodimlar topilmadi", "loading": "Yuklanmoqda...", "loadError": "Xodimlar ro'yxatini yuklab bo'lmadi" },
+        "menu": { "edit": "Tahrirlash", "sms": "SMS", "toggleStatus": "Statusni o'zgartirish", "delete": "O'chirish" },
+        "sms": { "recipientLabel": "xodim" },
+        "drawer": { "addTitle": "Yangi xodim qo'shish", "editTitle": "Xodimni tahrirlash" },
+        "form": {
+          "title": "Yangi xodim qo'shish", "name": "Ism", "phone": "Telefon", "email": "Email", "emailPlaceholder": "email@example.com",
+          "password": "Parol", "passwordPlaceholder": "Parolni kiriting", "setPasswordToggle": "+ Parol o'rnatish", "hidePasswordToggle": "− Parolni yashirish",
+          "role": "Rol", "roleHelp": "Ixtiyoriy (masalan ADMIN, SUPERADMIN) — Swagger qat'iy qiymatlar ro'yxatini hujjatlashtirmagan.",
+          "rolePermissionId": "Lavozim (RolePermission ID)",
+          "rolePermissionIdHelp": "Majburiy — Lavozimlar modulidagi yozuvning IDsi. Buning ro'yxatini olish uchun endpoint hali mavjud emas, shu sabab qo'lda kiritiladi.",
+          "branches": "Filiallar", "jobTitle": "Lavozim", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi",
+          "photo": "Rasm", "noFileChosen": "Fayl tanlanmagan", "browse": "Tanlash", "submit": "Yuborish"
+        },
         "roles": { "ceo": "CEO", "branchDirector": "Filial direktori", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Cheklangan administrator", "teacher": "O'qituvchi", "marketer": "Marketolog", "cashier": "Kassir" },
         "gender": { "male": "Erkak", "female": "Ayol" },
-        "sms": { "recipientLabel": "xodim" }
+        "validation": { "nameRequired": "Ism kiritilishi shart", "rolePermissionIdRequired": "Lavozim (RolePermission ID) kiritilishi shart", "contactRequired": "Email yoki telefon raqamini kiriting" },
+        "deleteDialog": { "title": "Xodimni o'chirish", "message": "Rostdan ham bu xodimni o'chirmoqchimisiz? Bu amalni qaytarib bo'lmaydi.", "cancel": "Bekor qilish", "confirm": "O'chirish" },
+        "toast": { "created": "Xodim qo'shildi", "updated": "Xodim ma'lumotlari yangilandi", "deleted": "Xodim o'chirildi", "statusToggled": "Status yangilandi", "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring.", "deleteConflict": "Bu xodim hali filialga biriktirilgan, shuning uchun o'chirib bo'lmaydi." },
+        "pagination": { "prev": "Orqaga", "next": "Oldinga" }
       },
       "general": {
         "accrual": {
@@ -1470,10 +1834,18 @@
           "animation": "Animatsiya",
           "logo": "Logotip",
           "uploadLogo": "Logotip yuklash",
+          "noLogo": "Logotip yo'q",
+          "logoUrlPlaceholder": "Logotip URL",
           "selectThemeColor": "Mavzu rangini tanlang",
           "companyOferta": "Kompaniya ofertasi",
           "selectFile": "Faylni tanlang",
-          "save": "Saqlash"
+          "offerUrlPlaceholder": "Oferta URL",
+          "save": "Saqlash",
+          "loadError": "Sozlamalarni yuklab bo'lmadi.",
+          "toast": {
+            "saved": "Sozlamalar saqlandi",
+            "error": "Sozlamalarni saqlab bo'lmadi. Qaytadan urinib ko'ring."
+          }
         },
         "integrations": {
           "notConnected": "Ulanmagan",
@@ -1523,7 +1895,20 @@
           "cancel": "Bekor qilish",
           "logoAlt": "Young Adults logotipi",
           "preview": {
-            "checkNumber": "Chek raqami:", "company": "Kompaniya:", "branch": "Filial:", "student": "O'quvchi:", "phone": "Telefon:", "balance": "Balans:", "group": "Guruh:", "coursePrice": "Kurs narxi:", "teacher": "O'qituvchi:", "type": "Turi:", "paymentAmount": "To'lov summasi:", "date": "Sana:", "creator": "Yaratuvchi:", "time": "Vaqt:"
+            "checkNumber": "Chek raqami:",
+            "company": "Kompaniya:",
+            "branch": "Filial:",
+            "student": "O'quvchi:",
+            "phone": "Telefon:",
+            "balance": "Balans:",
+            "group": "Guruh:",
+            "coursePrice": "Kurs narxi:",
+            "teacher": "O'qituvchi:",
+            "type": "Turi:",
+            "paymentAmount": "To'lov summasi:",
+            "date": "Sana:",
+            "creator": "Yaratuvchi:",
+            "time": "Vaqt:"
           }
         },
         "landingPage": {
@@ -1599,6 +1984,7 @@
         "reasonsForArchiving": "Arxivlash sabablari",
         "balance": "Balans",
         "noData": "Ma'lumot yo'q",
+        "loadError": "Arxivni yuklab bo'lmadi.",
         "filters": { "namePhone": "Ism yoki telefon", "filterByRole": "Rol bo'yicha filtr", "student": "O'quvchi", "teacher": "O'qituvchi", "filterByReason": "Sabab bo'yicha filtr", "startDate": "Boshlanish sanasi" },
         "actions": { "delete": "O'chirish", "reestablish": "Qayta tiklash" },
         "table": { "name": "Ism", "phone": "Telefon", "roles": "Rollar", "reasonsForRemoval": "O'chirish sabablari", "comment": "Izoh", "archived": "Arxivda", "actions": "Amallar" },
@@ -1608,7 +1994,34 @@
           "table": { "id": "id", "name": "Nomi", "actions": "Amallar" },
           "form": { "name": "Nomi" },
           "submit": "Yuborish",
-          "save": "Saqlash"
+          "save": "Saqlash",
+          "edit": "Tahrirlash",
+          "delete": "O'chirish",
+          "noData": "Sabablar topilmadi",
+          "loadError": "Sabablarni yuklab bo'lmadi.",
+          "status": {
+            "active": "Faol",
+            "inactive": "Nofaol",
+            "toggle": "Holatni o'zgartirish"
+          },
+          "errors": {
+            "name": "Sabab nomini kiriting",
+            "branchRequired": "Avval aniq filialni tanlang — sabab bitta filial uchun yaratiladi.",
+            "save": "Nimadir xato ketdi. Qaytadan urinib ko'ring.",
+            "toggle": "Holatni o'zgartirib bo'lmadi. Qaytadan urinib ko'ring."
+          },
+          "deleteConfirm": {
+            "title": "Sababni o'chirish",
+            "message": "\"{{name}}\" sababini o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
+            "cancel": "Bekor qilish",
+            "error": "Sababni o'chirib bo'lmadi. Qaytadan urinib ko'ring."
+          },
+          "toast": {
+            "created": "Sabab muvaffaqiyatli qo'shildi",
+            "updated": "Sabab muvaffaqiyatli yangilandi",
+            "deleted": "Sabab muvaffaqiyatli o'chirildi",
+            "statusToggled": "Sabab holati yangilandi"
+          }
         }
       },
       "courses": {
@@ -1655,12 +2068,38 @@
         "title": "Bayramlar",
         "addNew": "Qo'shish",
         "addHoliday": "Bayram qo'shish",
+        "editHoliday": "Bayramni tahrirlash",
         "noData": "Ma'lumot yo'q",
         "yes": "Ha",
         "no": "Yo'q",
+        "edit": "Tahrirlash",
+        "delete": "O'chirish",
+        "loadError": "Bayramlarni yuklab bo'lmadi.",
         "tabs": { "upcoming": "Kelayotgan", "past": "O'tgan" },
         "table": { "name": "Nomi", "dateOfHoliday": "Bayram sanasi", "createdAt": "Yaratilgan sana", "affectsPayment": "To'lovga ta'sir qiladi", "actions": "Amallar" },
-        "form": { "name": "Nomi", "date": "Sana", "noDateSelected": "Sana tanlanmagan", "affectsPaymentLabel": "O'quvchi to'lovi va o'qituvchi maoshi", "submit": "Yuborish" }
+        "form": {
+          "name": "Nomi",
+          "date": "Sana",
+          "noDateSelected": "Sana tanlanmagan",
+          "affectsPaymentLabel": "O'quvchi to'lovi va o'qituvchi maoshi",
+          "submit": "Yuborish",
+          "errors": {
+            "name": "Bayram nomini kiriting",
+            "date": "Bayram sanasini tanlang",
+            "save": "Nimadir xato ketdi. Qaytadan urinib ko'ring."
+          }
+        },
+        "deleteConfirm": {
+          "title": "Bayramni o'chirish",
+          "message": "\"{{name}}\" bayramini o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
+          "cancel": "Bekor qilish",
+          "error": "Bayramni o'chirib bo'lmadi. Qaytadan urinib ko'ring."
+        },
+        "toast": {
+          "created": "Bayram muvaffaqiyatli qo'shildi",
+          "updated": "Bayram muvaffaqiyatli yangilandi",
+          "deleted": "Bayram muvaffaqiyatli o'chirildi"
+        }
       },
       "rooms": {
         "title": "Xonalar",
@@ -1757,6 +2196,85 @@
         "prompts": { "enterUrl": "URL kiriting:", "imageUrl": "Rasm URL:" },
         "actions": { "save": "Saqlash" }
       }
+    }
+  },
+  "studentPortal": {
+    "appTitle": "O'quvchi portali",
+    "toggleTheme": "Mavzuni almashtirish",
+    "signOut": "Chiqish",
+    "nav": {
+      "student": "O'quvchi",
+      "dashboard": "Bosh sahifa",
+      "attendance": "Davomat",
+      "balance": "Balans",
+      "payments": "To'lovlar",
+      "groups": "Mening guruhlarim",
+      "schedule": "Dars jadvali",
+      "profile": "Profil"
+    },
+    "dashboard": {
+      "title": "Bosh sahifa",
+      "loadError": "Ma'lumotlarni yuklab bo'lmadi",
+      "attendancePercentage": "Davomat foizi",
+      "activeCourses": "Aktiv kurslar"
+    },
+    "attendance": {
+      "title": "Davomat",
+      "date": "Sana",
+      "group": "Guruh",
+      "status": "Status",
+      "reason": "Sabab",
+      "loadError": "Davomat tarixini yuklab bo'lmadi",
+      "empty": "Hozircha davomat yozuvlari yo'q",
+      "statuses": { "present": "Keldi", "absent": "Kelmadi", "late": "Kechikdi", "excused": "Sababli" }
+    },
+    "balance": {
+      "title": "Balans",
+      "loadError": "Balansni yuklab bo'lmadi",
+      "balance": "Joriy balans",
+      "paidAmount": "Jami to'langan",
+      "debt": "Qarzdorlik"
+    },
+    "payments": {
+      "title": "To'lovlar",
+      "date": "Sana",
+      "amount": "Summa",
+      "method": "Usul",
+      "comment": "Izoh",
+      "loadError": "To'lovlar tarixini yuklab bo'lmadi",
+      "empty": "Hozircha to'lovlar yo'q"
+    },
+    "groups": {
+      "title": "Mening guruhlarim",
+      "loadError": "Guruhlarni yuklab bo'lmadi",
+      "empty": "Siz hali hech qanday guruhga a'zo emassiz",
+      "noTeacher": "O'qituvchi biriktirilmagan"
+    },
+    "profile": {
+      "title": "Profil",
+      "loadError": "Profilni yuklab bo'lmadi",
+      "phone": "Telefon",
+      "email": "Email",
+      "branch": "Filial",
+      "comments": "Izohlar",
+      "noComments": "Hozircha izohlar yo'q"
+    },
+    "schedule": {
+      "title": "Dars jadvali",
+      "loadError": "Jadvalni yuklab bo'lmadi",
+      "empty": "Hozircha jadval yo'q",
+      "days": {
+        "monday": "Dushanba", "tuesday": "Seshanba", "wednesday": "Chorshanba",
+        "thursday": "Payshanba", "friday": "Juma", "saturday": "Shanba", "sunday": "Yakshanba"
+      }
+    }
+  },
+  "layout": {
+    "footer": {
+      "support": "Yordam",
+      "videoTutorials": "Video darsliklar",
+      "paymentMode": "To'lov rejimi: Oylik (kalendar oyi bo'yicha)",
+      "brand": "CRM"
     }
   }
 }

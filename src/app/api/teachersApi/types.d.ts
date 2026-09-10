@@ -32,6 +32,20 @@ export interface teachersRequest {
   branchId?: string;
 }
 
+// GET /teachers/select — simplified dropdown list used when opening a new
+// group and choosing its teacher(s), distinct from GET /teachers (which
+// returns the full paginated Teacher shape for the management page).
+// Swagger documents branchId as a required query param here (unlike the
+// optional one on GET /teachers) — same "UUID or 'all'" convention.
+export interface TeacherSelectOption {
+  id: string;
+  name: string;
+}
+
+export interface TeachersSelectRequest {
+  branchId: string;
+}
+
 // Backend ba'zan ro'yxatni tekis massiv, ba'zan {data: [...], meta} ko'rinishida
 // qaytarishi mumkin — groupsResponse/studentsResponse bilan bir xil shakl.
 export interface teachersResponse {

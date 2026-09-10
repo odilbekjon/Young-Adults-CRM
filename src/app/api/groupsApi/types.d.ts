@@ -266,6 +266,17 @@ export interface StudentGroupRecord {
   discountReason: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  // GET /student-groups' Responses section isn't expanded in Swagger (same
+  // situation as the rest of this file), so these are modeled defensively —
+  // same approach archivesApi/types.d.ts takes for ArchiveRecord. reason/
+  // reasonId mirror the field names UpdateStudentGroupStatusRequest already
+  // sends when a membership is moved to INACTIVE/DELETED, which is the
+  // strongest evidence available for what the read side calls them; verify
+  // against a real response and adjust once the schema is confirmed.
+  reason: string | null;
+  reasonId: string | null;
+  comment: string | null;
+  processedBy: string | null;
 }
 
 export interface StudentGroupsRequest {

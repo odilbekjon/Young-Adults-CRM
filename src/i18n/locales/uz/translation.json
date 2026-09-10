@@ -2148,7 +2148,10 @@
         "tabs": { "new": "Yangi", "old": "Eski" },
         "filters": { "searchByNameOrPhone": "Ism yoki telefon bo'yicha qidirish", "course": "Kurs", "group": "Guruh", "teachers": "O'qituvchilar", "staff": "Xodim", "reasonsForArchiving": "Arxivlash sabablari", "status": "Holat", "filter": "Filtr" },
         "toolbar": { "filters": "Filtrlar", "columns": "Ustunlar" },
-        "table": { "number": "#", "student": "O'quvchi", "phone": "Telefon", "course": "Kurs", "group": "Guruh", "teacher": "O'qituvchi", "status": "Holat", "reasonsForRemoval": "O'chirish sabablari", "comment": "Izoh", "staff": "Xodim" }
+        "table": { "number": "#", "student": "O'quvchi", "phone": "Telefon", "course": "Kurs", "group": "Guruh", "teacher": "O'qituvchi", "status": "Holat", "reasonsForRemoval": "O'chirish sabablari", "comment": "Izoh", "staff": "Xodim" },
+        "statusLabels": { "INACTIVE": "Chetlashtirilgan", "DELETED": "O'chirilgan" },
+        "loadError": "Guruhni tark etgan o'quvchilarni yuklab bo'lmadi.",
+        "oldTableUnavailable": "18.02.2025 sanasidan oldingi ma'lumotlar bu tizim orqali mavjud emas."
       }
     },
     "forms": {

@@ -2148,7 +2148,10 @@
         "tabs": { "new": "New", "old": "Old" },
         "filters": { "searchByNameOrPhone": "Search by name or phone", "course": "Course", "group": "Group", "teachers": "Teachers", "staff": "Staff", "reasonsForArchiving": "Reasons for archiving", "status": "Status", "filter": "Filter" },
         "toolbar": { "filters": "Filters", "columns": "Columns" },
-        "table": { "number": "#", "student": "Student", "phone": "Phone", "course": "Course", "group": "Group", "teacher": "Teacher", "status": "Status", "reasonsForRemoval": "Reasons for removal", "comment": "Comment", "staff": "Staff" }
+        "table": { "number": "#", "student": "Student", "phone": "Phone", "course": "Course", "group": "Group", "teacher": "Teacher", "status": "Status", "reasonsForRemoval": "Reasons for removal", "comment": "Comment", "staff": "Staff" },
+        "statusLabels": { "INACTIVE": "Removed", "DELETED": "Deleted" },
+        "loadError": "Failed to load left students.",
+        "oldTableUnavailable": "Historical data before 18.02.2025 is not available through this system."
       }
     },
     "forms": {

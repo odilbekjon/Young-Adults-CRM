@@ -156,6 +156,10 @@ const normalizeStudentGroupRecord = (r: Record<string, unknown>, i: number): Stu
         discountReason: (r.discountReason as string | undefined) ?? null,
         createdAt: (r.createdAt as string | undefined) ?? null,
         updatedAt: (r.updatedAt as string | undefined) ?? null,
+        reason: asString(r.reason ?? r.reasonName),
+        reasonId: asId(r.reasonId ?? r.reason),
+        comment: (r.comment as string | undefined) ?? (r.note as string | undefined) ?? null,
+        processedBy: asString(r.processedBy ?? r.modifiedBy ?? r.updatedBy ?? r.staff ?? r.actor),
     };
 };
 

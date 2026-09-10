@@ -17,6 +17,7 @@ import { HiChevronDown }                 from "react-icons/hi";
 import { useMemo, useRef, useState }     from "react";
 import { useNavigate }                   from "react-router-dom";
 import { useTranslation }                from "react-i18next";
+import { useSelector }                   from "react-redux";
 
 import {
   useAllGroupsQuery, useCreateGroupMutation, useUpdateGroupMutation, useDeleteGroupMutation,
@@ -26,7 +27,8 @@ import type { Group, GroupDay } from "../../app/api/groupsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
 import { useAllRoomsQuery } from "../../app/api/roomsApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
-import { useAllTeachersQuery } from "../../app/api/teachersApi";
+import { useTeachersSelectQuery } from "../../app/api/teachersApi";
+import type { RootState } from "../../app/store";
 import { useBranch } from "../../Context/BranchContext";
 import { useToast } from "../../Context/ToastContext";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
@@ -284,12 +286,19 @@ export const Groups = () => {
   const toast = useToast();
 
   const { branch: selectedBranch, branchLabel } = useBranch();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const { data: groupsData, isLoading: groupsLoading, isError: groupsError } = useAllGroupsQuery({ page: 1, limit: 100 });
   const { data: coursesData } = useAllCoursesQuery();
   const { data: roomsData } = useAllRoomsQuery();
   const { data: branchesData } = useAllBranchesQuery();
-  const { data: teachersData } = useAllTeachersQuery({ page: 1, limit: 100 });
+  // GET /teachers/select — the dropdown-specific endpoint for group create/
+  // edit's teacher picker (requires branchId; "all" when no branch is
+  // active), distinct from GET /teachers used by the Teachers management
+  // page. Using the management list here previously left the picker empty
+  // because its client-side branch-name filter depended on a `branches`
+  // shape that endpoint doesn't reliably return.
+  const { data: teacherOptions } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" });
 
   const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [updateGroup, { isLoading: isUpdating }] = useUpdateGroupMutation();
@@ -357,9 +366,7 @@ export const Groups = () => {
   const activeRooms = (roomsData?.data ?? [])
     .filter((r) => r.status === "ACTIVE")
     .filter((r) => selectedBranch === "all" || r.branch?.name === selectedBranch);
-  const activeTeachers = (teachersData?.data ?? [])
-    .filter((tc) => tc.status === "ACTIVE")
-    .filter((tc) => selectedBranch === "all" || (tc.branches ?? []).some((b) => b.name === selectedBranch));
+  const activeTeachers = teacherOptions ?? [];
 
   const COURSES  = [...new Set(allGroups.map((g) => g.course).filter(Boolean))];
   const TEACHERS = [...new Set(allGroups.flatMap((g) => g.teacherNames))];

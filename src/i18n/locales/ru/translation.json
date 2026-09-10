@@ -2152,7 +2152,10 @@
         "tabs": { "new": "Новая", "old": "Старая" },
         "filters": { "searchByNameOrPhone": "Поиск по имени или телефону", "course": "Курс", "group": "Группа", "teachers": "Учителя", "staff": "Сотрудник", "reasonsForArchiving": "Причины архивации", "status": "Статус", "filter": "Фильтр" },
         "toolbar": { "filters": "Фильтры", "columns": "Столбцы" },
-        "table": { "number": "#", "student": "Студент", "phone": "Телефон", "course": "Курс", "group": "Группа", "teacher": "Учитель", "status": "Статус", "reasonsForRemoval": "Причины удаления", "comment": "Комментарий", "staff": "Сотрудник" }
+        "table": { "number": "#", "student": "Студент", "phone": "Телефон", "course": "Курс", "group": "Группа", "teacher": "Учитель", "status": "Статус", "reasonsForRemoval": "Причины удаления", "comment": "Комментарий", "staff": "Сотрудник" },
+        "statusLabels": { "INACTIVE": "Удалён", "DELETED": "Удалён навсегда" },
+        "loadError": "Не удалось загрузить список покинувших студентов.",
+        "oldTableUnavailable": "Данные до 18.02.2025 недоступны через эту систему."
       }
     },
     "forms": {

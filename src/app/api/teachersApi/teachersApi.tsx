@@ -11,6 +11,8 @@ import {
     DeleteTeacherResponse,
     ToggleTeacherStatusResponse,
     TeacherHistoryEntry,
+    TeacherSelectOption,
+    TeachersSelectRequest,
 } from "./types";
 
 // Backend ba'zan ro'yxatni tekis massiv, ba'zan {data: [...], meta} ko'rinishida
@@ -88,6 +90,18 @@ export const teachersApi = baseApi.injectEndpoints({
             }),
             providesTags: ["teacher"],
         }),
+        // GET /teachers/select — used specifically by the group create/edit
+        // form's teacher picker (see groupsApi's groupsSelect for the same
+        // pattern). branchId is required by Swagger; callers pass the
+        // selected branch id, or "all" when no specific branch is active.
+        teachersSelect: builder.query<TeacherSelectOption[], TeachersSelectRequest>({
+            query: ({ branchId }) => ({
+                url: `${PATHS.TEACHERS}/select?branchId=${encodeURIComponent(branchId)}`,
+                method: "GET",
+            }),
+            transformResponse: (response: { data: unknown }) => normalizeList<TeacherSelectOption>(response?.data),
+            providesTags: ["teacher"],
+        }),
         teacherById: builder.query<teacherByIdResponse, string>({
             query: (id) => ({
                 url: `${PATHS.TEACHERS}/${id}`,
@@ -153,6 +167,7 @@ export const teachersApi = baseApi.injectEndpoints({
 
 export const {
     useAllTeachersQuery,
+    useTeachersSelectQuery,
     useTeacherByIdQuery,
     useTeacherForEditQuery,
     useTeacherHistoryQuery,

@@ -358,14 +358,14 @@ export const groupsApi = baseApi.injectEndpoints({
             invalidatesTags: ["group", "studentGroup"],
         }),
         transferStudent: builder.mutation<TransferStudentResponse, TransferStudentRequest>({
-            // `reason` is optional — sending it as an empty string (rather than
-            // omitting it) previously tripped backend validation on this
-            // endpoint, so it's only included when actually provided (same
-            // convention as every other optional field in this file).
+            // reason is required by the live backend (confirmed: omitting it
+            // 400s with "reason should not be empty" + "reason must be a
+            // string" — both class-validator's messages for a missing field,
+            // not an empty-string one), so it's always sent.
             query: ({ id, studentId, newGroupId, reason }) => ({
                 url: `${PATHS.GROUPS}/${id}/students/transfer`,
                 method: "POST",
-                body: reason ? { studentId, newGroupId, reason } : { studentId, newGroupId },
+                body: { studentId, newGroupId, reason },
             }),
             invalidatesTags: ["group", "studentGroup"],
         }),

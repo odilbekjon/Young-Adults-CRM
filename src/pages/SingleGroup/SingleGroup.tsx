@@ -208,6 +208,17 @@ export const SingleGroup = () => {
     return map;
   }, [studentGroupsData]);
 
+  // GroupDetail.students has no balance field (see toRealStudents above,
+  // which defaults everyone to 0) — GET /students does carry the real
+  // balance, and allStudentsData is already fetched for addStudentCandidates
+  // below, so it's reused here rather than firing a second request. Without
+  // this overlay the roster's debt dot (bgcolor keyed off s.balance) always
+  // read the placeholder 0 and rendered green even for actual debtors.
+  const balanceByStudentId = useMemo(
+    () => new Map((allStudentsData?.data ?? []).map((s) => [s.id, s.balance])),
+    [allStudentsData]
+  );
+
   // Overlays each student's real membership status/id (from
   // membershipByStudentId) on top of the neutral GroupDetail-derived
   // defaults — active/archived only change for students a matching
@@ -215,18 +226,20 @@ export const SingleGroup = () => {
   // prior placeholder rather than being guessed at.
   const combinedStudents = useMemo(() => {
     const base = [...students, ...archivedStudents];
-    if (membershipByStudentId.size === 0) return base;
     return base.map((s) => {
       const membership = membershipByStudentId.get(s.realId);
-      if (!membership) return s;
+      const realBalance = balanceByStudentId.get(s.realId);
       return {
         ...s,
-        studentGroupId: membership.id,
-        active: membership.status === "ACTIVE" || membership.status === "PROBATION",
-        archived: membership.status === "INACTIVE" || membership.status === "DELETED",
+        ...(membership && {
+          studentGroupId: membership.id,
+          active: membership.status === "ACTIVE" || membership.status === "PROBATION",
+          archived: membership.status === "INACTIVE" || membership.status === "DELETED",
+        }),
+        ...(realBalance !== undefined && { balance: realBalance }),
       };
     });
-  }, [students, archivedStudents, membershipByStudentId]);
+  }, [students, archivedStudents, membershipByStudentId, balanceByStudentId]);
 
   const addStudentCandidates: AddStudentOption[] = useMemo(() => {
     const existingIds = new Set(combinedStudents.map((s) => s.realId));
@@ -310,7 +323,14 @@ export const SingleGroup = () => {
   const groupCourse = allCoursesData?.data.find((c) => c.id === groupDetailData.data.courseId);
   const branchName = groupCourse?.branch?.name;
 
-  const branchOptions = (allBranchesData?.data ?? []).map((b) => ({ id: b.id, name: b.name }));
+  // GET /branches returns every branch regardless of status, including
+  // soft-deleted ones (status: "DELETED") and deactivated ones (status:
+  // "INACTIVE") — Header's own branch dropdown already filters to ACTIVE
+  // only for this exact reason; this picker didn't, so staff could transfer
+  // a student into a branch that no longer exists.
+  const branchOptions = (allBranchesData?.data ?? [])
+    .filter((b) => b.status === "ACTIVE")
+    .map((b) => ({ id: b.id, name: b.name }));
 
   const handleOpenMenu = (e: React.MouseEvent<HTMLElement>, student: RealGroupStudent) => {
     e.stopPropagation();
@@ -575,10 +595,10 @@ export const SingleGroup = () => {
     }
   };
 
-  const handleMoveStudent = async (newGroupId: string) => {
+  const handleMoveStudent = async (newGroupId: string, reason: string) => {
     if (!selectedStudent || !id) return;
     try {
-      await transferStudent({ id, studentId: selectedStudent.realId, newGroupId }).unwrap();
+      await transferStudent({ id, studentId: selectedStudent.realId, newGroupId, reason }).unwrap();
       toast.success(t("singleGroup.moveStudentDialog.toast.success"));
       setMoveOpen(false);
     } catch (err) {
@@ -868,7 +888,13 @@ export const SingleGroup = () => {
           </List>
 
           <Box sx={{ mt: 2, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1.5 }}>
-            {archivedStudents.length > 0 && (
+            {/* archivedStudents alone (history-log derived) misses a student
+                whose /student-groups membership was set straight to INACTIVE/
+                DELETED without a matching "leave" history entry — check
+                combinedStudents' own archived flag too, or the toggle never
+                renders and that student stays permanently hidden with no way
+                to reveal them. */}
+            {combinedStudents.some((s) => s.archived) && (
               <Button
                 variant="contained"
                 size="small"
@@ -945,10 +971,15 @@ export const SingleGroup = () => {
               ))}
             </Tabs>
             <Box sx={{ p: 3, maxHeight: "calc(100vh - 220px)", overflowY: "auto", overflowX: "visible" }}>
-              {tabIndex === 0 && <Attendance groupId={id ?? ""} students={combinedStudents} />}
-              {tabIndex === 1 && <Grade students={combinedStudents} />}
+              {/* visibleStudents (not combinedStudents) — a student removed
+                  from the group (archived) shouldn't still be markable for
+                  attendance/grades/discounts; this is the same filter the
+                  roster panel itself already applies (plus its "show
+                  archived" toggle) so both stay consistent. */}
+              {tabIndex === 0 && <Attendance groupId={id ?? ""} students={visibleStudents} />}
+              {tabIndex === 1 && <Grade students={visibleStudents} />}
               {tabIndex === 2 && <OnlineLessons />}
-              {tabIndex === 3 && <DiscountPrices students={combinedStudents} />}
+              {tabIndex === 3 && <DiscountPrices students={visibleStudents} />}
               {tabIndex === 4 && <Exams />}
               {tabIndex === 5 && (
                 <History

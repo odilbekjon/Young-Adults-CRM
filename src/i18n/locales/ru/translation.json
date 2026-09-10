@@ -1460,6 +1460,7 @@
     "moveStudentDialog": {
       "title": "Переместить",
       "selectGroup": "Выберите группу",
+      "reasonPlaceholder": "Причина перемещения (обязательно)",
       "move": "Переместить",
       "cancel": "Отмена",
       "toast": {

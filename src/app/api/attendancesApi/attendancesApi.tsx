@@ -26,15 +26,20 @@ const asId = (raw: unknown): string => {
   return raw === undefined || raw === null ? "" : String(raw);
 };
 
-// Backend's exact envelope for "group attendance" isn't documented beyond a
-// 200 status. The endpoint description ("students AND their attendance")
-// suggests the likely shape is per-student objects with a nested attendance
-// array, e.g. [{ studentId, attendances: [{ date, status }] }] — but a flat
-// [{ studentId, date, status }] array is also plausible, so both are handled.
+// Confirmed live (2026-09): GET /attendances/group/{id} returns
+// { dates: string[], table: [{ studentId, studentName, ..., attendances:
+// [{ date, status, reason, attendance }] }] } — the `table` field wasn't in
+// any of the previously-guessed candidates below, so every response parsed
+// to an empty list and a freshly-saved mark would vanish from the grid on
+// reload even though it was genuinely persisted server-side (confirmed via
+// a direct GET right after save). The other candidates are kept as a
+// fallback in case the shape varies by endpoint version.
 const normalizeRecords = (raw: unknown): AttendanceRecord[] => {
   const container = (raw ?? {}) as Record<string, unknown>;
   const list: unknown[] = Array.isArray(raw)
     ? raw
+    : Array.isArray(container.table)
+    ? container.table
     : Array.isArray(container.students)
     ? container.students
     : Array.isArray(container.records)
@@ -173,11 +178,7 @@ export const attendancesApi = baseApi.injectEndpoints({
         url: `${PATHS.ATTENDANCES}/group/${groupId}/dates?month=${month}`,
         method: "GET",
       }),
-      transformResponse: (response: { data: unknown }) => {
-        // TEMP DEBUG — remove once the real response shape is confirmed.
-        if (import.meta.env.DEV) console.log("[attendancesApi] dates raw response:", response);
-        return normalizeDates(response?.data);
-      },
+      transformResponse: (response: { data: unknown }) => normalizeDates(response?.data),
       providesTags: ["attendance"],
     }),
     groupAttendance: builder.query<AttendanceRecord[], GroupAttendanceQueryArgs>({
@@ -185,11 +186,7 @@ export const attendancesApi = baseApi.injectEndpoints({
         url: `${PATHS.ATTENDANCES}/group/${groupId}?month=${month}`,
         method: "GET",
       }),
-      transformResponse: (response: { data: unknown }) => {
-        // TEMP DEBUG — remove once the real response shape is confirmed.
-        if (import.meta.env.DEV) console.log("[attendancesApi] attendance raw response:", response);
-        return normalizeRecords(response?.data);
-      },
+      transformResponse: (response: { data: unknown }) => normalizeRecords(response?.data),
       providesTags: ["attendance"],
     }),
     attendanceReport: builder.query<AttendanceReportResult, AttendanceReportQueryArgs>({
@@ -235,11 +232,6 @@ export const attendancesApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      transformResponse: (response: SaveAttendanceResponse) => {
-        // TEMP DEBUG — remove once the real response shape is confirmed.
-        if (import.meta.env.DEV) console.log("[attendancesApi] save response:", response);
-        return response;
-      },
       invalidatesTags: ["attendance"],
     }),
     // GET /attendances/group/{id}/excel — confirmed via Swagger: downloads the

@@ -32,7 +32,7 @@ import type { RootState } from "../../app/store";
 import { useBranch } from "../../Context/BranchContext";
 import { useToast } from "../../Context/ToastContext";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
-import { extractApiError } from "../../utils";
+import { extractApiError, formatTrainingDate } from "../../utils";
 
 /* ─── types ─────────────────────────────────────────────── */
 type SortKey = keyof GroupRow | "";
@@ -115,13 +115,6 @@ const inputSx = {
 };
 
 /* ─── helpers ────────────────────────────────────────────── */
-const formatDate = (d: string) => {
-  if (!d) return "—";
-  const [y, m, day] = d.split("-");
-  if (!y || !m || !day) return d;
-  return `${day}.${m}.${y}`;
-};
-
 // GroupRow.days holds a display string ("Even days"/"Odd days") or the raw
 // daysType value itself (MIXED/OTHER) — map it back to the backend's
 // daysType enum for the GET /groups/excel filter. Unrecognized values are
@@ -261,7 +254,7 @@ const DateFilter = ({ label, value, onChange, onClear }: DateFilterProps) => {
     >
       {value ? (
         <Stack direction="row" alignItems="center" gap={0.5}>
-          <span>{formatDate(value)}</span>
+          <span>{formatTrainingDate(value)}</span>
           <IoClose
             size={14}
             onClick={(e) => { e.stopPropagation(); onClear(); }}
@@ -281,7 +274,7 @@ const DateFilter = ({ label, value, onChange, onClear }: DateFilterProps) => {
 
 /* ─── Groups ─────────────────────────────────────────────── */
 export const Groups = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -774,8 +767,8 @@ export const Groups = () => {
                   )}
                   {col("training")     && (
                     <TableCell>
-                      <Box>{formatDate(g.startDate)} —</Box>
-                      <Box>{formatDate(g.endDate)}</Box>
+                      <Box>{formatTrainingDate(g.startDate, i18n.language)} —</Box>
+                      <Box>{formatTrainingDate(g.endDate, i18n.language)}</Box>
                     </TableCell>
                   )}
                   {col("week")         && <TableCell>{g.weekOfStudy || "—"}</TableCell>}

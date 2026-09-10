@@ -17,21 +17,24 @@ export const MoveStudentDialog = ({
   onClose: () => void;
   student: GroupStudent | null;
   groups: GroupOption[];
-  onMove: (groupId: string) => void;
+  onMove: (groupId: string, reason: string) => void;
   isSubmitting?: boolean;
 }) => {
   const { t } = useTranslation();
   const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [reason, setReason] = useState("");
 
   useEffect(() => {
-    if (!open) setSelectedGroupId("");
+    if (!open) { setSelectedGroupId(""); setReason(""); }
   }, [open]);
 
   if (!open) return null;
 
+  const canSubmit = selectedGroupId && reason.trim() && !isSubmitting;
+
   const handleSubmit = () => {
-    if (!selectedGroupId || isSubmitting) return;
-    onMove(selectedGroupId);
+    if (!canSubmit) return;
+    onMove(selectedGroupId, reason.trim());
   };
 
   return (
@@ -58,11 +61,18 @@ export const MoveStudentDialog = ({
             <option key={g.id} value={g.id}>{g.name}</option>
           ))}
         </select>
+        <input
+          style={inputStyle}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder={t("singleGroup.moveStudentDialog.reasonPlaceholder")}
+          disabled={isSubmitting}
+        />
         <div style={{ display: "flex", gap: 10 }}>
           <button
-            style={{ ...submitBtn, opacity: selectedGroupId && !isSubmitting ? 1 : 0.5 }}
+            style={{ ...submitBtn, opacity: canSubmit ? 1 : 0.5 }}
             onClick={handleSubmit}
-            disabled={!selectedGroupId || isSubmitting}
+            disabled={!canSubmit}
           >
             {isSubmitting ? "…" : t("singleGroup.moveStudentDialog.move")}
           </button>

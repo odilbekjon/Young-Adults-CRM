@@ -35,8 +35,12 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const teachers =
     branch === "all" ? allTeachers : allTeachers.filter((t) => t.branch === branch);
 
-  const branchLabel =
-    BRANCH_OPTIONS.find((o) => o.value === branch)?.label ?? "All branches";
+  // `branch` already holds the real branch name once the Header's dropdown
+  // (populated from GET /branches) sets it — BRANCH_OPTIONS above is a
+  // leftover mock list whose values (e.g. "YA IELTS Campus") never match a
+  // real branch name, so looking `branch` up in it always missed and fell
+  // back to "All branches" regardless of what was actually selected.
+  const branchLabel = branch === "all" ? "All branches" : branch;
 
   return (
     <BranchContext.Provider value={{ branch, setBranch, branchLabel, groups, teachers }}>

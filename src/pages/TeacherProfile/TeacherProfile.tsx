@@ -555,7 +555,10 @@ export const TeacherProfile = () => {
   const [updateTeacher, { isLoading: isSaving }] = useUpdateTeacherMutation();
 
   const teacher = teacherData?.data;
-  const branches = branchesData?.data ?? [];
+  // GET /branches includes soft-deleted/deactivated branches — this list
+  // feeds the edit drawer's branch-assignment picker, so it's filtered to
+  // ACTIVE only (same convention as Header's own branch dropdown).
+  const branches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
 
   // Backend `GET /teachers/{id}` javobida guruhlar ro'yxati yo'q — bu
   // ro'yxat mavjud groupsApi ma'lumotidan (guruhning teachers[] massivi

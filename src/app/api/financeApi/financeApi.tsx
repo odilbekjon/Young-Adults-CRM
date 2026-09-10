@@ -107,6 +107,21 @@ const asId = (raw: unknown): string => {
     return raw === undefined || raw === null ? "" : String(raw);
 };
 
+// Confirmed live (2026-09): money fields on this backend (payment.amount,
+// course.price, ...) aren't always plain numbers — some come back as a
+// serialized decimal object ({s: sign, e: exponent, d: [digits]}, matching
+// decimal.js's internal shape), which `Number(...)` on its own turns into
+// NaN and silently coerces to 0. GroupCourse.price already established
+// `.d[0]` as the actual amount for this exact shape (see groupsApi's
+// GroupCoursePrice) — every payment/expense/withdrawal row in "All
+// payments" showed "0 UZS" before this because of it.
+const asMoney = (raw: unknown): number => {
+    if (raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).d)) {
+        return Number((raw as { d: unknown[] }).d[0]) || 0;
+    }
+    return Number(raw) || 0;
+};
+
 // Backend's exact row shape isn't documented beyond the endpoint
 // description, so each field is read from a few plausible name variants
 // (flat or nested under student/group objects) — same defensive approach
@@ -115,15 +130,23 @@ const normalizeDebtorRow = (raw: unknown, index: number): DebtorRow => {
     const obj = (raw ?? {}) as Record<string, unknown>;
     const student = (obj.student ?? {}) as Record<string, unknown>;
     const group = (obj.group ?? {}) as Record<string, unknown>;
+    // Confirmed live (2026-09): GET /finance/debtors actually returns a
+    // plural `groups: [{id, name, courseName, status}]` array (a debtor can
+    // be enrolled in more than one), not the singular group/groupName this
+    // was originally guessed as — so groupId/groupName always came back
+    // empty and every row showed "—" regardless of real enrollment.
+    const groupsArray = Array.isArray(obj.groups) ? (obj.groups as Record<string, unknown>[]) : [];
 
     return {
         id: asString(obj.id ?? obj.studentId ?? student.id ?? `row-${index}`),
         studentId: asId(obj.studentId ?? student.id ?? obj.id) || null,
         name: asString(obj.name ?? student.name ?? obj.studentName),
         phone: asString(obj.phone ?? student.phone ?? obj.studentPhone),
-        groupId: asId(obj.groupId ?? group.id ?? (typeof obj.group === "string" ? obj.group : undefined)) || null,
-        groupName: asString(obj.groupName ?? group.name ?? (typeof obj.group === "string" ? obj.group : "")),
-        balance: Number(obj.balance ?? obj.debt ?? obj.amount ?? 0) || 0,
+        groupId: asId(obj.groupId ?? group.id ?? groupsArray[0]?.id ?? (typeof obj.group === "string" ? obj.group : undefined)) || null,
+        groupName: asString(
+            obj.groupName ?? group.name ?? (typeof obj.group === "string" ? obj.group : "")
+        ) || groupsArray.map((g) => asString(g.name)).filter(Boolean).join(", "),
+        balance: asMoney(obj.balance ?? obj.debt ?? obj.amount),
         status: obj.status ? asString(obj.status) : null,
     };
 };
@@ -180,7 +203,7 @@ const normalizeExpenseRow = (raw: unknown, index: number): ExpenseRow => {
 
     return {
         id: asString(obj.id ?? `row-${index}`),
-        amount: Number(obj.amount ?? 0) || 0,
+        amount: asMoney(obj.amount),
         categoryId: asId(obj.categoryId ?? category.id) || null,
         categoryName: asString(obj.categoryName ?? category.name),
         paymentMethodId: asId(obj.paymentMethodId ?? method.id) || null,
@@ -214,7 +237,7 @@ const normalizePaymentRow = (raw: unknown, index: number): PaymentRow => {
 
     return {
         id: asString(obj.id ?? `row-${index}`),
-        amount: Number(obj.amount ?? 0) || 0,
+        amount: asMoney(obj.amount),
         studentId: asId(obj.studentId ?? student.id) || null,
         studentName: asString(obj.studentName ?? student.name),
         studentPhone: asString(obj.studentPhone ?? student.phone),
@@ -257,7 +280,7 @@ const normalizeWithdrawalRow = (raw: unknown, index: number): WithdrawalRow => {
 
     return {
         id: asString(obj.id ?? `row-${index}`),
-        amount: Number(obj.amount ?? 0) || 0,
+        amount: asMoney(obj.amount),
         branchId: asId(obj.branchId) || null,
         date: obj.date ? asString(obj.date).slice(0, 10) : null,
         comment: asString(obj.comment ?? obj.notes ?? obj.description),
@@ -274,7 +297,7 @@ const normalizeWithdrawalRows = (raw: unknown): WithdrawalRow[] => {
 const normalizeFinanceTotal = (raw: unknown): FinanceTotalResult => {
     const obj = (raw ?? {}) as Record<string, unknown>;
     if (typeof raw === "number") return { total: raw };
-    return { total: Number(obj.total ?? obj.sum ?? obj.amount ?? 0) || 0 };
+    return { total: asMoney(obj.total ?? obj.sum ?? obj.amount) };
 };
 
 const normalizeDebtorReceipt = (raw: unknown): DebtorReceipt => {
@@ -288,7 +311,7 @@ const normalizeDebtorReceipt = (raw: unknown): DebtorReceipt => {
         name: asString(obj.name ?? student.name ?? obj.studentName),
         phone: asString(obj.phone ?? student.phone ?? obj.studentPhone),
         groupName: asString(obj.groupName ?? group.name ?? (typeof obj.group === "string" ? obj.group : "")),
-        balance: Number(obj.balance ?? obj.debt ?? obj.amount ?? 0) || 0,
+        balance: asMoney(obj.balance ?? obj.debt ?? obj.amount),
         branchName: asString(obj.branchName ?? branch.name) || null,
         createdAt: obj.createdAt ? asString(obj.createdAt) : undefined,
     };
@@ -297,10 +320,10 @@ const normalizeDebtorReceipt = (raw: unknown): DebtorReceipt => {
 const normalizeFinanceStats = (raw: unknown): FinanceStats => {
     const obj = (raw ?? {}) as Record<string, unknown>;
     return {
-        totalIncomeThisMonth: Number(obj.totalIncomeThisMonth ?? 0) || 0,
-        totalExpensesThisMonth: Number(obj.totalExpensesThisMonth ?? 0) || 0,
-        totalSalariesThisMonth: Number(obj.totalSalariesThisMonth ?? 0) || 0,
-        netProfitThisMonth: Number(obj.netProfitThisMonth ?? 0) || 0,
+        totalIncomeThisMonth: asMoney(obj.totalIncomeThisMonth),
+        totalExpensesThisMonth: asMoney(obj.totalExpensesThisMonth),
+        totalSalariesThisMonth: asMoney(obj.totalSalariesThisMonth),
+        netProfitThisMonth: asMoney(obj.netProfitThisMonth),
     };
 };
 

@@ -1456,6 +1456,7 @@
     "moveStudentDialog": {
       "title": "Move",
       "selectGroup": "Select group",
+      "reasonPlaceholder": "Reason for moving (required)",
       "move": "Move",
       "cancel": "Cancel",
       "toast": {

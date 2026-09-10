@@ -1421,8 +1421,12 @@ export const StudentProfile = () => {
   );
 
   const { data: branchesData } = useAllBranchesQuery();
+  // GET /branches includes soft-deleted (status: "DELETED") and deactivated
+  // (status: "INACTIVE") branches — filter to ACTIVE only, same as Header's
+  // own branch dropdown, so this picker can't transfer a student into a
+  // branch that no longer exists.
   const branchOptions = useMemo(
-    () => (branchesData?.data ?? []).map((b) => ({ id: b.id, name: b.name })),
+    () => (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE").map((b) => ({ id: b.id, name: b.name })),
     [branchesData]
   );
   const currentBranchIds = useMemo(() => (data?.data.branch ?? []).map((b) => b.id), [data]);

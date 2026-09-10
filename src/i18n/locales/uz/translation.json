@@ -1456,6 +1456,7 @@
     "moveStudentDialog": {
       "title": "Ko'chirish",
       "selectGroup": "Guruhni tanlang",
+      "reasonPlaceholder": "Ko'chirish sababi (majburiy)",
       "move": "Ko'chirish",
       "cancel": "Bekor qilish",
       "toast": {

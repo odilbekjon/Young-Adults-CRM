@@ -178,7 +178,7 @@ export const AttendanceReports = () => {
   const { data: groupsData } = useGroupsSelectQuery();
 
   const branchOptions: Option[] = useMemo(
-    () => (branchesData?.data ?? []).map((b) => ({ value: b.id, label: b.name })),
+    () => (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE").map((b) => ({ value: b.id, label: b.name })),
     [branchesData]
   );
   const groupOptions: Option[] = useMemo(

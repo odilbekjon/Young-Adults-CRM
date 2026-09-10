@@ -4,6 +4,7 @@ import { Header } from "../Header/Header";
 import { SidebarProvider, useSidebar } from "../../Context/SidebarContext";
 import { Sidebar, SIDEBAR_WIDTH, SUBMENU_WIDTH, HEADER_HEIGHT } from "../Sidebar/Sidebar";
 import { ReactNode } from "react";
+import { useBranchDetailRedirect } from "../../hooks/useBranchDetailRedirect";
 
 // ─── Page footer ──────────────────────────────────────────────────────────────
 // Sits at the bottom of each page's scrollable content (not fixed to the
@@ -41,6 +42,7 @@ interface Props {
 
 const LayoutInner = ({ children }: Props) => {
   const { openSubmenu } = useSidebar();
+  useBranchDetailRedirect();
 
   const contentLeft = SIDEBAR_WIDTH + (openSubmenu ? SUBMENU_WIDTH : 0);
 

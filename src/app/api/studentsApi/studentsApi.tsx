@@ -91,7 +91,13 @@ export const studentsApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: reason ? { newBranchId, reason } : { newBranchId },
             }),
-            invalidatesTags: ["student"],
+            // Per this endpoint's own doc comment above (TransferStudentBranchRequest
+            // in types.d.ts), the backend ends the student's group memberships in
+            // the old branch as part of this call — invalidating only "student"
+            // left SingleGroup's own roster (useGroupByIdQuery/useStudentGroupsQuery,
+            // tagged "group"/"studentGroup") stale, so the student kept showing in
+            // their old group's page until an unrelated refetch happened to occur.
+            invalidatesTags: ["student", "group", "studentGroup"],
         }),
     })
 })

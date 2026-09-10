@@ -100,7 +100,10 @@ function LeadFormEditor({
 }: LeadFormEditorProps) {
   const { t } = useTranslation();
   const { data: branchesData } = useAllBranchesQuery();
-  const branches = branchesData?.data ?? [];
+  // GET /branches includes soft-deleted/deactivated branches — filtered to
+  // ACTIVE only for this branch-select picker, same convention as Header's
+  // own branch dropdown.
+  const branches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
 
   const addBlock = () => setBlocks((prev) => [...prev, { ...defaultBlock(t), id: Date.now() }]);
   const removeBlock = (id: number) => setBlocks((prev) => prev.filter((b) => b.id !== id));

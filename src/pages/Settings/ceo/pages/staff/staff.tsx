@@ -128,7 +128,12 @@ export const Staff = () => {
 
   const rows = data?.rows ?? [];
   const totalPages = data?.meta.totalPages ?? 1;
-  const branchOptions = (branchesData?.data ?? []).map((b) => ({ id: b.id, name: b.name }));
+  // GET /branches includes soft-deleted/deactivated branches — filtered to
+  // ACTIVE only, same convention as Header's own branch dropdown, so a
+  // staff member can't be assigned to a branch that no longer exists.
+  const branchOptions = (branchesData?.data ?? [])
+    .filter((b) => b.status === "ACTIVE")
+    .map((b) => ({ id: b.id, name: b.name }));
 
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);

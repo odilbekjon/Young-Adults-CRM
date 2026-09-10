@@ -167,11 +167,16 @@ export interface RemoveStudentFromGroupResponse {
   message?: string;
 }
 
+// POST /groups/{id}/students/transfer — Swagger's example body lists
+// {studentId, newGroupId, reason} together, and the live backend rejects a
+// request that omits reason with "reason should not be empty" + "reason
+// must be a string" (both class-validator messages for a missing/undefined
+// field), so it's required here, not optional.
 export interface TransferStudentRequest {
   id: string;
   studentId: string;
   newGroupId: string;
-  reason?: string;
+  reason: string;
 }
 
 export interface TransferStudentResponse {

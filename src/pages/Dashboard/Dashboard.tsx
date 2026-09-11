@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { Box, Paper, Typography, Tooltip, CircularProgress, Chip } from "@mui/material";
 import {
@@ -9,6 +10,7 @@ import {
 import { MdViewColumn, MdViewStream } from "react-icons/md";
 
 import { ScheduleTab, ScheduleOrientation, ScheduleEvent } from "../../types/dashboardTypes";
+import type { RootState } from "../../app/store";
 import {
   useDashboardStatsQuery,
   useDashboardScheduleQuery,
@@ -17,11 +19,21 @@ import {
   useDashboardTeacherPerformanceQuery,
 } from "../../app/api/dashboardApi/dashboardApi";
 import type { ScheduleItem } from "../../app/api/dashboardApi/types";
+import { useAllLeadsQuery } from "../../app/api/leadsApi";
+import { useStudentGroupsQuery } from "../../app/api/groupsApi";
+import { useDebtorsQuery, usePaymentsListQuery, useFinanceChartQuery } from "../../app/api/financeApi";
+import { useReportLeftStudentsQuery } from "../../app/api/reportsApi";
 import {
-  MONTHLY_REVENUE, SCHEDULE_COLORS, DEFAULT_LESSON_DURATION,
+  SCHEDULE_COLORS, DEFAULT_LESSON_DURATION,
   SCHEDULE_TIME_START, SCHEDULE_TIME_END,
 } from "../../constants/DashboardData";
 import { STATS } from "../../constants/DashboardStats";
+
+// "This month" as [firstOfMonth, today] in the plain YYYY-MM-DD format every
+// finance list endpoint expects (same format the date-range filters on the
+// Finance pages already send).
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const toISODate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
 const parseTimeToMinutes = (time: string | null | undefined) => {
   if (!time) return 0;
@@ -50,13 +62,6 @@ const toScheduleEvents = (items: ScheduleItem[]): ScheduleEvent[] =>
     color: SCHEDULE_COLORS[i % SCHEDULE_COLORS.length],
     days: [mapDaysType(item.daysType)],
   }));
-
-// Peak point for the chart's ReferenceDot — computed from the data itself,
-// so it always matches whichever month actually has the highest value.
-const PEAK_POINT = MONTHLY_REVENUE.reduce(
-  (max, point) => (point.value > max.value ? point : max),
-  MONTHLY_REVENUE[0],
-);
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
@@ -108,15 +113,83 @@ export const Dashboard = () => {
   const [tab,         setTab        ] = useState<ScheduleTab>("odd");
   const [orientation, setOrientation] = useState<ScheduleOrientation>("horizontal");
 
+  // Branch-scoped everywhere below, same as Students/Groups/Teachers/Finance —
+  // baseApi already attaches this as the `x-branch-id` header on every
+  // request, and switching branches resets the whole RTK Query cache
+  // (changeSelectedBranch → baseApi.util.resetApiState()), but the list/report
+  // endpoints below also accept `branchId` explicitly (matching how the other
+  // pages that already call them pass it), and reports/left-students in
+  // particular documents branchId as a distinct filter from the header.
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const branchId = selectedBranchId ?? undefined;
+
   const { data: statsData } = useDashboardStatsQuery();
   const { data: scheduleData, isLoading: scheduleLoading, isError: scheduleError } = useDashboardScheduleQuery();
   const { data: attendanceData, isLoading: attendanceLoading, isError: attendanceError } = useDashboardAttendanceStatsQuery();
   const { data: activitiesData, isLoading: activitiesLoading, isError: activitiesError } = useDashboardRecentActivitiesQuery();
   const { data: teacherPerfData, isLoading: teacherPerfLoading, isError: teacherPerfError } = useDashboardTeacherPerformanceQuery();
 
-  const liveStatValues: Record<string, number | undefined> = {
-    students: statsData?.data.activeStudentsCount,
-    groups: statsData?.data.activeGroupsCount,
+  // "Active leads" — GET /leads?status=ACTIVE (leadsApi's own definition of
+  // an active lead, same enum the Leads Kanban board and Reports use).
+  const { data: activeLeadsData, isFetching: activeLeadsLoading } =
+    useAllLeadsQuery({ status: "ACTIVE", page: 1, limit: 500, branchId });
+
+  // "Left after trial period" — there's no dedicated backend flag for this,
+  // but the lead pipeline itself models it: a lead only leaves leadsApi's
+  // domain by either being CANCELLED or CONVERTED (a CONVERTED lead becomes
+  // a real Student, tracked separately from here on via studentsApi/
+  // groupsApi). A CANCELLED lead is therefore, by construction, someone who
+  // never made it past the lead/trial stage — the closest real, non-invented
+  // proxy for "left after trial period" the API actually supports.
+  const { data: cancelledLeadsData, isFetching: leftTrialLoading } =
+    useAllLeadsQuery({ status: "CANCELLED", page: 1, limit: 500, branchId });
+
+  // "Debtors" — same GET /finance/debtors list the Debtors page itself reads
+  // its count from (meta.total), not the separate /finance/debtors/total
+  // (which is a currency sum, not a row count).
+  const { data: debtorsData, isFetching: debtorsLoading } =
+    useDebtorsQuery({ page: 1, limit: 1, branchId });
+
+  // "In a trial lesson" — a PROBATION student-group membership is exactly
+  // what graduate-trial (PROBATION → ACTIVE) confirms trial students are
+  // modeled as.
+  const { data: trialGroupsData, isFetching: trialLoading } =
+    useStudentGroupsQuery({ status: "PROBATION", page: 1, limit: 1, branchId });
+
+  // "Paid during the month" — count of payments recorded this month (GET
+  // /finance/payments date-filtered), matching what the card originally
+  // showed (a small integer, not a currency sum like finance/stats' income).
+  const now = new Date();
+  const monthStart = toISODate(new Date(now.getFullYear(), now.getMonth(), 1));
+  const monthEnd = toISODate(now);
+  const { data: paymentsThisMonthData, isFetching: paidLoading } =
+    usePaymentsListQuery({ startDate: monthStart, endDate: monthEnd, page: 1, limit: 1, branchId });
+
+  // "Left active group" — the backend's own left-students report, which is
+  // exactly students who had an actual (non-trial) group membership end.
+  const { data: leftStudentsData, isFetching: leftActiveLoading } =
+    useReportLeftStudentsQuery({ branchId });
+
+  // Revenue chart — GET /finance/chart for the current year, the same
+  // endpoint AllPayments' own chart already uses.
+  const currentYear = now.getFullYear();
+  const { data: chartMonths, isLoading: chartLoading, isError: chartIsError } =
+    useFinanceChartQuery({ year: currentYear, branchId });
+
+  const peakPoint = useMemo(() => {
+    if (!chartMonths || chartMonths.length === 0) return null;
+    return chartMonths.reduce((max, point) => (point.totalPayments > max.totalPayments ? point : max), chartMonths[0]);
+  }, [chartMonths]);
+
+  const liveStatValues: Record<string, { value: number; loading: boolean }> = {
+    leads:      { value: activeLeadsData?.meta?.total ?? activeLeadsData?.data.length ?? 0, loading: activeLeadsLoading },
+    students:   { value: statsData?.data.activeStudentsCount ?? 0, loading: !statsData },
+    groups:     { value: statsData?.data.activeGroupsCount ?? 0, loading: !statsData },
+    debtors:    { value: debtorsData?.meta.total ?? 0, loading: debtorsLoading },
+    trial:      { value: trialGroupsData?.meta.total ?? 0, loading: trialLoading },
+    paid:       { value: paymentsThisMonthData?.meta.total ?? 0, loading: paidLoading },
+    leftActive: { value: leftStudentsData?.total ?? 0, loading: leftActiveLoading },
+    leftTrial:  { value: cancelledLeadsData?.meta?.total ?? cancelledLeadsData?.data.length ?? 0, loading: leftTrialLoading },
   };
 
   const attendance = attendanceData?.data;
@@ -170,7 +243,9 @@ export const Dashboard = () => {
         "@media(max-width:1280px)": { gridTemplateColumns: "repeat(4,1fr)" },
         "@media(max-width:640px)":  { gridTemplateColumns: "repeat(2,1fr)" },
       }}>
-        {STATS.map(({ key, labelKey, value, route, filter, icon }) => (
+        {STATS.map(({ key, labelKey, route, filter, icon }) => {
+          const stat = liveStatValues[key];
+          return (
           <Tooltip key={key} title={t("dashboard.stats.goToPage", { label: t(labelKey) })} placement="top" arrow>
             <Paper
               elevation={0}
@@ -205,53 +280,75 @@ export const Dashboard = () => {
                 {t(labelKey)}
               </Typography>
               <Typography sx={{ fontSize: 32,  color: "var(--color-primary)", lineHeight: 1 }}>
-                {liveStatValues[key] ?? value}
+                {stat.loading ? <CircularProgress size={20} /> : stat.value}
               </Typography>
             </Paper>
           </Tooltip>
-        ))}
+          );
+        })}
       </Box>
 
       {/* ═══════════════════════════════════════════════════════════════
-          CHART — monthly revenue, always the same regardless of which
-          schedule tab (Odd/Even/Other) is selected below
+          CHART — monthly revenue (current year), always the same
+          regardless of which schedule tab (Odd/Even/Other) is selected
+          below. Same GET /finance/chart data AllPayments' own chart uses.
       ════════════════════════════════════════════════════════════════ */}
       <Paper elevation={0} sx={{
         borderRadius: "16px", border: "1px solid var(--color-border)",
         p: 3, mb: 3, background: "var(--color-surface)",
       }}>
-        <Box height={230}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={MONTHLY_REVENUE} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-              <XAxis
-                dataKey="month"
-                tick={{ fontSize: 11, fill: "var(--color-text-secondary)" }}
-                axisLine={false} tickLine={false}
-                interval={0}
-              />
-              <YAxis
-                tick={{ fontSize: 12, fill: "var(--color-text-secondary)" }}
-                axisLine={false} tickLine={false}
-                tickFormatter={(v) => formatChartValue(v as number, t("dashboard.chart.currency"))}
-                width={130}
-              />
-              <RTooltip content={<ChartTooltip />} />
-              <Line
-                type="monotone" dataKey="value"
-                stroke="#f97316" strokeWidth={2.5}
-                dot={{ r: 4, fill: "var(--color-surface)", stroke: "#f97316", strokeWidth: 2 }}
-                activeDot={{ r: 6, fill: "#f97316" }}
-                isAnimationActive
-              />
-              <ReferenceDot
-                x={PEAK_POINT.month}
-                y={PEAK_POINT.value}
-                r={5} fill="#f97316" stroke="var(--color-surface)" strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </Box>
+        {chartLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+            <CircularProgress size={28} />
+          </Box>
+        ) : chartIsError ? (
+          <Box sx={{ py: 6, textAlign: "center" }}>
+            <Typography sx={{ color: "var(--color-danger)", fontSize: 13 }}>
+              {t("dashboard.loadError")}
+            </Typography>
+          </Box>
+        ) : !chartMonths || chartMonths.length === 0 ? (
+          <Box sx={{ py: 6, textAlign: "center" }}>
+            <Typography sx={{ color: "var(--color-text-muted)", fontSize: 14 }}>
+              {t("dashboard.chart.emptyState")}
+            </Typography>
+          </Box>
+        ) : (
+          <Box height={230}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartMonths} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 11, fill: "var(--color-text-secondary)" }}
+                  axisLine={false} tickLine={false}
+                  interval={0}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: "var(--color-text-secondary)" }}
+                  axisLine={false} tickLine={false}
+                  tickFormatter={(v) => formatChartValue(v as number, t("dashboard.chart.currency"))}
+                  width={130}
+                />
+                <RTooltip content={<ChartTooltip />} />
+                <Line
+                  type="monotone" dataKey="totalPayments"
+                  stroke="#f97316" strokeWidth={2.5}
+                  dot={{ r: 4, fill: "var(--color-surface)", stroke: "#f97316", strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: "#f97316" }}
+                  isAnimationActive
+                />
+                {peakPoint && (
+                  <ReferenceDot
+                    x={peakPoint.month}
+                    y={peakPoint.totalPayments}
+                    r={5} fill="#f97316" stroke="var(--color-surface)" strokeWidth={2}
+                  />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          </Box>
+        )}
       </Paper>
 
       {/* ═══════════════════════════════════════════════════════════════

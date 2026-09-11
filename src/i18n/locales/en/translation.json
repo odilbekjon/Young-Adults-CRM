@@ -229,7 +229,8 @@
       "emptyState": "No schedule available for this day type"
     },
     "chart": {
-      "currency": "UZS"
+      "currency": "UZS",
+      "emptyState": "No revenue data yet"
     },
     "attendance": {
       "title": "Attendance",

@@ -229,7 +229,8 @@
       "emptyState": "Bu kun turi uchun jadval mavjud emas"
     },
     "chart": {
-      "currency": "UZS"
+      "currency": "UZS",
+      "emptyState": "Hozircha daromad ma'lumotlari yo'q"
     },
     "attendance": {
       "title": "Davomat",

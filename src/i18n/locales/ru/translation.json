@@ -229,7 +229,8 @@
       "emptyState": "Для этого типа дня расписание отсутствует"
     },
     "chart": {
-      "currency": "UZS"
+      "currency": "UZS",
+      "emptyState": "Пока нет данных о доходах"
     },
     "attendance": {
       "title": "Посещаемость",

@@ -1,4 +1,5 @@
 import { Box, Button, TextField, Typography, Alert, InputAdornment, IconButton, CircularProgress } from "@mui/material";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
@@ -15,6 +16,12 @@ const LANGUAGE_OPTIONS: { code: "en" | "ru" | "uz"; label: string }[] = [
   { code: "ru", label: "RU" },
   { code: "uz", label: "UZ" },
 ];
+
+// The card below always renders on hardcoded light/navy backgrounds, so it
+// must stay on the light MUI palette regardless of the app-wide dark mode
+// (which follows the OS by default) — otherwise text colors flip to the
+// dark palette's white/light-gray and become invisible on the white card.
+const loginLightTheme = createTheme({ palette: { mode: "light" } });
 
 const LoginPage = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -60,6 +67,7 @@ const LoginPage = () => {
   };
 
   return (
+    <ThemeProvider theme={loginLightTheme}>
     <Box
       sx={{
         display: "flex",
@@ -212,6 +220,7 @@ const LoginPage = () => {
         </Box>
       </Box>
     </Box>
+    </ThemeProvider>
   );
 };
 

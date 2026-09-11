@@ -10,8 +10,15 @@ import {
   Divider,
   IconButton,
 } from "@mui/material";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { FiPhone, FiMail } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+
+// This page's outer background is a hardcoded light color, so it must stay
+// on the light MUI palette regardless of the app-wide dark mode (which
+// follows the OS by default) — otherwise default text colors flip to the
+// dark palette's near-white and become low-contrast on the light background.
+const signUpLightTheme = createTheme({ palette: { mode: "light" } });
 interface FormData {
   name: string;
   surname: string;
@@ -46,7 +53,7 @@ const SignUp = () => {
   };
 
   return (
-    <>
+    <ThemeProvider theme={signUpLightTheme}>
     <Header />
     <Box sx={{ minHeight: "100vh", bgcolor: "#f5f7fa", p: 6, pt: 15 }}>
       <Grid container spacing={6}>
@@ -173,7 +180,7 @@ const SignUp = () => {
         </Grid>
       </Grid>
     </Box>
-    </>
+    </ThemeProvider>
   );
 };
 

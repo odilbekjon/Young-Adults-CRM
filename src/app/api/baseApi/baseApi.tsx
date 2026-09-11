@@ -38,6 +38,13 @@ const fetchQuery = fetchBaseQuery({
 // Retry only those transport-level failures (FETCH_ERROR/TIMEOUT_ERROR);
 // real HTTP responses (400/401/404/500) bail out immediately so app-level
 // error handling (e.g. the 401 refresh flow below) isn't delayed.
+//
+// Render's free-tier cold start commonly takes 30-60s to finish waking the
+// server, but RTK Query's default backoff (maxRetries: 4, capped ~2s/step)
+// gives up after only a few seconds — nowhere near long enough, which is
+// what was surfacing as "Network error" on the very first request after a
+// period of inactivity (e.g. the first login of the day). Retry steadily
+// for up to ~70s instead so that first request survives the wake-up.
 const rawBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = retry(
   async (args, api, extraOptions) => {
     const result = await fetchQuery(args, api, extraOptions);
@@ -49,7 +56,13 @@ const rawBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError
     retry.fail(result.error);
     return result;
   },
-  { maxRetries: 4 }
+  {
+    maxRetries: 12,
+    backoff: async (attempt) => {
+      const delayMs = Math.min(2000 * attempt, 7000);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    },
+  }
 );
 
 // POST /auth/refresh — confirmed via Swagger as multipart/form-data with a

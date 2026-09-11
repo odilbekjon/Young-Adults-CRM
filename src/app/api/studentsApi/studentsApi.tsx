@@ -4,6 +4,7 @@ import {
     studentByIdResponse,
     studentsRequest,
     studentsResponse,
+    StudentsExcelQueryArgs,
     CreateStudentRequest,
     UpdateStudentRequest,
     StudentResponse,
@@ -46,6 +47,26 @@ export const studentsApi = baseApi.injectEndpoints({
                 };
             },
             providesTags: ["student"],
+        }),
+        // GET /students/excel — downloads the (optionally filtered) students
+        // list as a file. Same lazy-Blob approach as teachersApi's
+        // teachersExcel / groupsApi's groupsExcel / financeApi's *Excel
+        // endpoints — query params confirmed against Swagger (search,
+        // status, page, limit, branchId).
+        studentsExcel: builder.query<Blob, StudentsExcelQueryArgs | void>({
+            query: ({ page, limit, search, status, branchId } = {}) => {
+                const params = new URLSearchParams();
+                if (page) params.set("page", String(page));
+                if (limit) params.set("limit", String(limit));
+                if (search) params.set("search", search);
+                if (status) params.set("status", status);
+                if (branchId) params.set("branchId", branchId);
+                return {
+                    url: `${PATHS.STUDENTS}/excel?${params.toString()}`,
+                    method: "GET",
+                    responseHandler: (response) => response.blob(),
+                };
+            },
         }),
         studentById: builder.query<studentByIdResponse, string>({
             query: (id) => ({
@@ -104,6 +125,7 @@ export const studentsApi = baseApi.injectEndpoints({
 
 export const {
     useAllStudentsQuery,
+    useLazyStudentsExcelQuery,
     useStudentByIdQuery,
     useLazyStudentByIdQuery,
     useCreateStudentMutation,

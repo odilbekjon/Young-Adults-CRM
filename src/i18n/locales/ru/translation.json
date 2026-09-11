@@ -305,7 +305,9 @@
     "actions": {
       "editStudent": "Редактировать студента",
       "addPayment": "Добавить платёж",
-      "remove": "Удалить"
+      "remove": "Удалить",
+      "exportExcel": "Экспорт в Excel",
+      "exportError": "Не удалось экспортировать список. Попробуйте снова."
     },
     "addToGroup": {
       "title": "Добавить студента в группу",
@@ -360,7 +362,9 @@
     "countSuffix": "учителей",
     "actions": {
       "addNew": "ДОБАВИТЬ",
-      "import": "Импорт"
+      "import": "Импорт",
+      "exportExcel": "Экспорт в Excel",
+      "exportError": "Не удалось экспортировать список. Попробуйте снова."
     },
     "alert": {
       "title": "Внимание!",

@@ -303,7 +303,9 @@
     "actions": {
       "editStudent": "O'quvchini tahrirlash",
       "addPayment": "To'lov qo'shish",
-      "remove": "O'chirish"
+      "remove": "O'chirish",
+      "exportExcel": "Excelga eksport",
+      "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring."
     },
     "addToGroup": {
       "title": "O'quvchini guruhga qo'shish",
@@ -356,7 +358,9 @@
     "countSuffix": "ta",
     "actions": {
       "addNew": "QO'SHISH",
-      "import": "Import"
+      "import": "Import",
+      "exportExcel": "Excelga eksport",
+      "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring."
     },
     "alert": {
       "title": "Diqqat!",

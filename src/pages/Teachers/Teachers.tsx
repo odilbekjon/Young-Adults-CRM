@@ -33,6 +33,7 @@ import {
 import { IoSearchOutline } from "react-icons/io5";
 import { GoPlus } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { PiMicrosoftExcelLogoFill } from "react-icons/pi";
 import { MdDownload, MdCalendarToday, MdClose } from "react-icons/md";
 import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -48,6 +49,7 @@ import {
   useUpdateTeacherMutation,
   useDeleteTeacherMutation,
   useToggleTeacherStatusMutation,
+  useLazyTeachersExcelQuery,
 } from "../../app/api/teachersApi";
 import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
 import { useAllGroupsQuery } from "../../app/api/groupsApi";
@@ -86,6 +88,7 @@ export const Teachers = () => {
   const [updateTeacher, { isLoading: isUpdating }] = useUpdateTeacherMutation();
   const [deleteTeacher, { isLoading: isDeleting }] = useDeleteTeacherMutation();
   const [toggleTeacherStatus] = useToggleTeacherStatusMutation();
+  const [fetchTeachersExcel, { isFetching: isExportingExcel }] = useLazyTeachersExcelQuery();
 
   const teachers: Teacher[] = teachersData?.data ?? [];
 
@@ -225,6 +228,24 @@ export const Teachers = () => {
     }
   };
   const handleSmsOpen    = () => { setSmsOpen(true); handleCloseMenu(); };
+  const handleExportExcel = async () => {
+    try {
+      const blob = await fetchTeachersExcel({
+        search: searchValue || undefined,
+        branchId: selectedBranchId ?? undefined,
+        page: 1,
+        limit: Math.max(teachersData?.meta?.total ?? teachers.length, 1),
+      }).unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "teachers.xlsx";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("teachers.actions.exportError"));
+    }
+  };
   const handleToggleStatus = async () => {
     if (!selectedTeacherId) return;
     try {
@@ -254,6 +275,14 @@ export const Teachers = () => {
           <Button variant="outlined" startIcon={<MdDownload />}
             sx={{ borderRadius: "20px", textTransform: "none", color: "inherit", borderColor: "var(--color-border)" }}>
             {t("teachers.actions.import")}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleExportExcel}
+            disabled={isExportingExcel}
+            startIcon={isExportingExcel ? <CircularProgress size={16} /> : <PiMicrosoftExcelLogoFill size={18} />}
+            sx={{ borderRadius: "20px", textTransform: "none", color: "inherit", borderColor: "var(--color-border)" }}>
+            {t("teachers.actions.exportExcel")}
           </Button>
         </Stack>
       </Stack>

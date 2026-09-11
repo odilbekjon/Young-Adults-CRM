@@ -116,6 +116,26 @@ export const teachersApi = baseApi.injectEndpoints({
             }),
             providesTags: ["teacher"],
         }),
+        // GET /teachers/excel — downloads the (optionally filtered) teachers
+        // list as a file. Same lazy-Blob approach as financeApi's
+        // debtors/expenses/payments/withdrawals excel and groupsApi's
+        // groupsExcel — query params confirmed against Swagger (search,
+        // status, page, limit, branchId), same set allTeachers already sends.
+        teachersExcel: builder.query<Blob, teachersRequest | void>({
+            query: ({ page, limit, search, status, branchId } = {}) => {
+                const params = new URLSearchParams();
+                if (page) params.set("page", String(page));
+                if (limit) params.set("limit", String(limit));
+                if (search) params.set("search", search);
+                if (status) params.set("status", status);
+                if (branchId) params.set("branchId", branchId);
+                return {
+                    url: `${PATHS.TEACHERS}/excel?${params.toString()}`,
+                    method: "GET",
+                    responseHandler: (response) => response.blob(),
+                };
+            },
+        }),
         teacherHistory: builder.query<TeacherHistoryEntry[], string>({
             query: (id) => ({
                 url: `${PATHS.TEACHERS}/${id}/history`,
@@ -170,6 +190,7 @@ export const {
     useTeachersSelectQuery,
     useTeacherByIdQuery,
     useTeacherForEditQuery,
+    useLazyTeachersExcelQuery,
     useTeacherHistoryQuery,
     useCreateTeacherMutation,
     useUpdateTeacherMutation,

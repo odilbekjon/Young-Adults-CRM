@@ -70,6 +70,21 @@ export interface studentsRequest {
   branchId?: string;
 }
 
+// GET /students/excel query params — confirmed against Swagger: search,
+// status (ACTIVE/INACTIVE), page, limit, branchId. `status` isn't part of
+// studentsRequest above since GET /students itself doesn't document it, but
+// the excel endpoint does, so it's its own type rather than reusing/widening
+// studentsRequest.
+export type StudentExcelStatus = "ACTIVE" | "INACTIVE";
+
+export interface StudentsExcelQueryArgs {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: StudentExcelStatus;
+  branchId?: string;
+}
+
 // Backend `data` ni to'g'ridan-to'g'ri massiv qilib qaytaradi (RoomsResponse/CoursesResponse
 // bilan bir xil shakl); sahifalash meta'si hozircha kelmayapti, shu sabab optional.
 export interface studentsResponse {

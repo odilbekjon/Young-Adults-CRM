@@ -427,6 +427,7 @@ export const Groups = () => {
     try {
       const blob = await fetchGroupsExcel({
         status: filters.status === "ACTIVE" ? filters.status : undefined,
+        branchId: selectedBranchId ?? undefined,
         courseId,
         teacherId,
         daysType: filters.days ? toDaysType(filters.days) : undefined,

@@ -227,6 +227,7 @@ const buildGroupsExcelQueryString = (args: GroupsExcelQueryArgs = {}): string =>
     if (args.status) qs.set("status", args.status);
     if (args.page) qs.set("page", String(args.page));
     if (args.limit) qs.set("limit", String(args.limit));
+    if (args.branchId) qs.set("branchId", args.branchId);
     if (args.courseId) qs.set("courseId", args.courseId);
     if (args.teacherId) qs.set("teacherId", args.teacherId);
     if (args.daysType) qs.set("daysType", args.daysType);

@@ -8,6 +8,7 @@ import {
   Button,
   Checkbox,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -39,6 +40,7 @@ import { TbAdjustmentsHorizontal, TbColumns3 } from "react-icons/tb";
 import { HiChevronDown } from "react-icons/hi";
 import { IoClose, IoSearchOutline } from "react-icons/io5";
 import { FiUser } from "react-icons/fi";
+import { PiMicrosoftExcelLogoFill } from "react-icons/pi";
 
 import { FlatStudent, mapApiStudentToFlat, formatDate } from "../../constants/FlatStudents";
 import { ALL_COLUMNS, CONTACT_ICONS, BADGE_COLORS } from "../../constants/StudentsTable";
@@ -46,7 +48,7 @@ import { useNavigate } from "react-router-dom";
 
 import { AddStudent } from "../../components/AddStudent";
 import { AddPayment } from "../../components/AddPayment";
-import { useAllStudentsQuery, useUpdateStudentMutation, useDeleteStudentMutation } from "../../app/api/studentsApi";
+import { useAllStudentsQuery, useUpdateStudentMutation, useDeleteStudentMutation, useLazyStudentsExcelQuery } from "../../app/api/studentsApi";
 import { useAllGroupsQuery, useAddStudentToGroupMutation } from "../../app/api/groupsApi";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils/extractApiError";
@@ -519,6 +521,7 @@ export const Students = () => {
   });
   const [updateStudent, { isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
   const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
+  const [fetchStudentsExcel, { isFetching: isExportingExcel }] = useLazyStudentsExcelQuery();
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
   const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
 
@@ -704,6 +707,26 @@ export const Students = () => {
     }
   };
 
+  const handleExportExcel = async () => {
+    try {
+      const blob = await fetchStudentsExcel({
+        search: filters.search || undefined,
+        status: filters.status === "active" ? "ACTIVE" : filters.status === "inactive" ? "INACTIVE" : undefined,
+        branchId: selectedBranchId ?? undefined,
+        page: 1,
+        limit: Math.max(pageMeta.total || filtered.length, 1),
+      }).unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "students.xlsx";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("students.actions.exportError"));
+    }
+  };
+
   const openActionMenu = (e: React.MouseEvent<HTMLButtonElement>, uid: string) => {
     e.stopPropagation();
     const student = students.find((s) => s.uid === uid) || null;
@@ -739,6 +762,18 @@ export const Students = () => {
             onAddStudent={() => setAddStudentOpen(true)}
             onAddPayment={() => setAddPaymentOpen(true)}
           />
+          <Button
+            variant="outlined"
+            onClick={handleExportExcel}
+            disabled={isExportingExcel}
+            startIcon={isExportingExcel ? <CircularProgress size={16} /> : <PiMicrosoftExcelLogoFill size={18} />}
+            sx={{
+              borderRadius: "8px", px: 2, py: 1.1, fontWeight: 700, fontSize: 13,
+              textTransform: "none", borderColor: "var(--color-border)", color: "var(--color-text-secondary)",
+            }}
+          >
+            {t("students.actions.exportExcel")}
+          </Button>
           <Button
             variant="contained"
             onClick={() => setAddStudentOpen(true)}

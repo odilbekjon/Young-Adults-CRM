@@ -303,7 +303,9 @@
     "actions": {
       "editStudent": "Edit Student",
       "addPayment": "Add payment",
-      "remove": "Remove"
+      "remove": "Remove",
+      "exportExcel": "Export to Excel",
+      "exportError": "Failed to export the list. Please try again."
     },
     "addToGroup": {
       "title": "Add student to group",
@@ -356,7 +358,9 @@
     "countSuffix": "teachers",
     "actions": {
       "addNew": "ADD NEW",
-      "import": "Import"
+      "import": "Import",
+      "exportExcel": "Export to Excel",
+      "exportError": "Failed to export the list. Please try again."
     },
     "alert": {
       "title": "Attention!",

@@ -372,15 +372,18 @@ export interface GroupSelectOption {
   name: string;
 }
 
-// GET /groups/excel query params (Swagger reference: search, status, page,
-// limit, branchId, courseId, teacherId, daysType, startDate, endDate).
-// branchId isn't included here — it's already sent on every request via the
-// centralized x-branch-id header (see baseApi), so it isn't duplicated here.
+// GET /groups/excel query params — confirmed against Swagger: search, status,
+// page, limit, branchId, courseId, teacherId, daysType, startDate, endDate.
+// branchId is also sent centrally via the x-branch-id header (baseApi), but
+// Swagger documents it as its own explicit query param on this endpoint too
+// (same "UUID or 'all'" convention as teachersApi/groupsSelect), so it's
+// included here and sent explicitly, not just relied on via the header.
 export interface GroupsExcelQueryArgs {
   search?: string;
   status?: string;
   page?: number;
   limit?: number;
+  branchId?: string;
   courseId?: string;
   teacherId?: string;
   daysType?: string;

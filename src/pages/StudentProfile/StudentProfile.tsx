@@ -15,15 +15,15 @@ import {
 } from "@mui/material";
 
 import { FlatStudent, mapApiStudentToFlat, formatDate, formatLongDate } from "../../constants/FlatStudents";
-import { TEACHERS_DATA } from "../../constants/Teachers";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useStudentByIdQuery,
+  useStudentGroupMembershipsQuery,
   useUpdateStudentMutation,
   useDeleteStudentMutation,
   useTransferStudentBranchMutation,
 } from "../../app/api/studentsApi";
-import type { StudentGender } from "../../app/api/studentsApi/types";
+import type { StudentGender, StudentGroupMembership } from "../../app/api/studentsApi/types";
 import { useAllGroupsQuery, useAddStudentToGroupMutation } from "../../app/api/groupsApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { usePaymentsListQuery } from "../../app/api/financeApi";
@@ -1099,14 +1099,23 @@ const SideCard = ({
 );
 
 /* ─── GROUP CARD ─────────────────────────────────────── */
-const GroupCard = ({ student }: { student: FlatStudent }) => {
-  const teacher = TEACHERS_DATA.find((t) => t.id === student.teacherId);
-  const badgeColors: Record<string, { bg: string; color: string }> = {
-    blue: { bg: "#dbeafe", color: "#1d4ed8" },
-    green: { bg: "#dcfce7", color: "#15803d" },
-    amber: { bg: "#fef3c7", color: "#92400e" },
-  };
-  const bc = badgeColors[student.groupBadgeColor] ?? badgeColors.blue;
+// `membership` comes from GET /students/{id}/groups — real per-membership
+// data (status, dates, teachers, course), not the mock TEACHERS_DATA lookup
+// this card used to fall back to (which meant Course/Room/Price/Teacher
+// always showed placeholder values regardless of the student's real groups).
+const GROUP_STATUS_BADGE: Record<string, { label: string; bg: string; color: string }> = {
+  ACTIVE:    { label: "Active",    bg: "#dcfce7", color: "#15803d" },
+  PROBATION: { label: "Trial",     bg: "#fef3c7", color: "#92400e" },
+  FROZEN:    { label: "Frozen",    bg: "#dbeafe", color: "#1d4ed8" },
+  INACTIVE:  { label: "Inactive",  bg: "#f3f4f6", color: "#6b7280" },
+  DELETED:   { label: "Removed",   bg: "#f3f4f6", color: "#6b7280" },
+};
+
+const formatMembershipDate = (iso: string | null) => (iso ? formatDate(iso.slice(0, 10)) : "—");
+
+const GroupCard = ({ membership }: { membership: StudentGroupMembership }) => {
+  const badge = GROUP_STATUS_BADGE[membership.status] ?? { label: membership.status, bg: "#f3f4f6", color: "#6b7280" };
+  const teacherNames = membership.teachers.map((t) => t.name).join(", ") || "—";
 
   return (
     <div
@@ -1115,6 +1124,7 @@ const GroupCard = ({ student }: { student: FlatStudent }) => {
         border: "1px solid #eaecf0",
         borderRadius: 12,
         padding: 16,
+        marginBottom: 12,
       }}
     >
       <div
@@ -1127,28 +1137,27 @@ const GroupCard = ({ student }: { student: FlatStudent }) => {
       >
         <div style={{ flex: 1 }}>
           <Chip
-            label={student.groupBadge}
+            label={badge.label}
             size="small"
             sx={{
               fontSize: 11,
               height: 20,
-              bgcolor: bc.bg,
-              color: bc.color,
+              bgcolor: badge.bg,
+              color: badge.color,
               fontWeight: 600,
               mb: 0.5,
             }}
           />
           <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>
-            {student.groupName}
+            {membership.name}
           </div>
           <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-            {student.teacher}
+            {teacherNames}
           </div>
         </div>
         <div style={{ fontSize: 12, color: "#6b7280", textAlign: "right" }}>
-          <div>{formatDate(student.startDate)} —</div>
-          <div>{formatDate(student.endDate)}</div>
-          <div style={{ marginTop: 4 }}>{student.groupSchedule}</div>
+          <div>{formatMembershipDate(membership.trainingStart)} —</div>
+          <div>{formatMembershipDate(membership.trainingEnd)}</div>
         </div>
       </div>
 
@@ -1163,11 +1172,10 @@ const GroupCard = ({ student }: { student: FlatStudent }) => {
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {[
-            ["Status", student.active ? "Active (Learns)" : "Inactive"],
-            ["Course", student.course],
-            ["Room", student.room],
-            ["Price", `${(student.price ?? 0).toLocaleString("ru-RU")} UZS`],
-            ["Teacher UID", teacher?.uid ?? "—"],
+            ["Status", badge.label],
+            ["Course", membership.courseName ?? "—"],
+            ["Joined", formatMembershipDate(membership.joinedAt)],
+            ["Payment start date", formatMembershipDate(membership.paymentStartDate)],
           ].map(([label, val]) => (
             <div key={label} style={{ fontSize: 12, color: "#6b7280" }}>
               {label}: <strong style={{ color: "#111827" }}>{val}</strong>
@@ -1408,6 +1416,7 @@ export const StudentProfile = () => {
   // ✅ uid (string) — real API id orqali topiladi, navigate('/students/:id') bilan mos
   const { data, isLoading } = useStudentByIdQuery(id ?? "", { skip: !id });
   const student = data ? mapApiStudentToFlat(data.data) : undefined;
+  const { data: groupMemberships } = useStudentGroupMembershipsQuery(id ?? "", { skip: !id });
 
   const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
   const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
@@ -1638,7 +1647,13 @@ export const StudentProfile = () => {
             <Box sx={{ p: 2.5 }}>
               {activeTab === 0 ? (
                 <>
-                  <GroupCard student={student} />
+                  {(groupMemberships ?? []).length > 0 ? (
+                    (groupMemberships ?? []).map((m) => <GroupCard key={m.id} membership={m} />)
+                  ) : (
+                    <div style={{ fontSize: 13, color: "#9ca3af", padding: "8px 0 16px" }}>
+                      No groups yet
+                    </div>
+                  )}
                   <MonthlyBalance balance={student.balance ?? 0} />
                   <PaymentsTable payments={payments} isLoading={isPaymentsLoading} isError={isPaymentsError} />
                 </>

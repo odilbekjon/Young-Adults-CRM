@@ -599,9 +599,6 @@ export const Students = () => {
   const [page, setPage] = useState(1);
   const limit = 20;
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
-  const { data: studentsData, isLoading: studentsLoading } = useAllStudentsQuery({
-    page, limit, branchId: selectedBranchId ?? undefined,
-  });
   const [updateStudent, { isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
   const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
   const [toggleStudentStatus, { isLoading: isArchivingStudent }] = useToggleStudentStatusMutation();
@@ -611,10 +608,6 @@ export const Students = () => {
 
   const [students, setStudents] = useState<FlatStudent[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (studentsData) setStudents(studentsData.data.map(mapApiStudentToFlat));
-  }, [studentsData]);
 
   const [selected,          setSelected]          = useState<string[]>([]);
   const [sortKey,           setSortKey]           = useState<SortKey>("");
@@ -637,6 +630,30 @@ export const Students = () => {
   };
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [advancedAnchor, setAdvancedAnchor] = useState<null | HTMLElement>(null);
+
+  // GET /students only returns ACTIVE students unless `status` is sent
+  // explicitly (Swagger: status query param, ACTIVE/INACTIVE) — an archived
+  // student (toggleStudentStatus -> INACTIVE) otherwise disappears from every
+  // list request, filtered or not. The Status filter below is the only UI
+  // that can ask for INACTIVE, so it's sent straight through to the query
+  // instead of being applied client-side (list rows carry no status field to
+  // filter by locally in the first place).
+  const { data: studentsData, isLoading: studentsLoading } = useAllStudentsQuery({
+    page, limit,
+    branchId: selectedBranchId ?? undefined,
+    status: filters.status === "active" ? "ACTIVE" : filters.status === "inactive" ? "INACTIVE" : undefined,
+  });
+
+  useEffect(() => {
+    if (studentsData) setStudents(studentsData.data.map(mapApiStudentToFlat));
+  }, [studentsData]);
+
+  // Changing the status filter re-queries the backend with a different
+  // result set (see above) — reset to page 1 so the user isn't stranded on a
+  // page number that no longer exists for the new filter.
+  useEffect(() => {
+    setPage(1);
+  }, [filters.status]);
 
   const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) =>
     setFilters((p) => ({ ...p, [key]: val }));
@@ -692,9 +709,12 @@ export const Students = () => {
           (filters.financial === "positive" && balance > 0) ||
           (filters.financial === "negative" && balance < 0) ||
           (filters.financial === "zero" && balance === 0);
-        const statusMatch =
-          !filters.status ||
-          (filters.status === "active" ? s.active : !s.active);
+        // Status is already applied server-side (see useAllStudentsQuery
+        // above) — list rows carry no reliable status field to re-filter by
+        // here (mapApiStudentToFlat defaults `active` to true for every list
+        // item, since GET /students' list shape doesn't include it), so
+        // filtering again client-side would incorrectly hide real INACTIVE
+        // results the backend already returned.
         const groupCountMatch =
           !filters.groupCount || String(s.groupsCount ?? 0) === filters.groupCount.trim();
         const createdAt = s.createdAt ? s.createdAt.slice(0, 10) : "";
@@ -704,7 +724,7 @@ export const Students = () => {
           (!search || s.name.toLowerCase().includes(search) || s.phone.includes(search)) &&
           (!filters.teacher || s.teacher === filters.teacher) &&
           (!filters.course || s.course === filters.course) &&
-          statusMatch && financialMatch && groupCountMatch && fromMatch && toMatch
+          financialMatch && groupCountMatch && fromMatch && toMatch
         );
       })
       .sort((a, b) => {

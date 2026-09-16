@@ -12,6 +12,8 @@ import {
     ToggleStudentStatusResponse,
     TransferStudentBranchRequest,
     TransferStudentBranchResponse,
+    StudentGroupMembership,
+    StudentGroupMembershipsResponse,
 } from "./types";
 
 const appendStudentFormData = (formData: FormData, data: Partial<CreateStudentRequest>) => {
@@ -26,7 +28,7 @@ const appendStudentFormData = (formData: FormData, data: Partial<CreateStudentRe
 export const studentsApi = baseApi.injectEndpoints({
     endpoints: (builder) =>  ({
         allStudents: builder.query<studentsResponse, studentsRequest>({
-            query: ({ page = 1, limit = 10, search, branchId }) => {
+            query: ({ page = 1, limit = 10, search, branchId, status }) => {
                 const params = new URLSearchParams();
                 params.set("page", String(page));
                 params.set("limit", String(limit));
@@ -42,6 +44,11 @@ export const studentsApi = baseApi.injectEndpoints({
                 // (guruh a'zoligi orqali filialga bog'langan studentlar GET
                 // /students javobida chiqmayapti edi).
                 if (branchId) params.set("branchId", branchId);
+                // Swagger: GET /students' own `status` query param (ACTIVE/
+                // INACTIVE) — without it the endpoint only returns ACTIVE
+                // students, so this must be sent explicitly whenever the caller
+                // wants archived (INACTIVE) students to show up at all.
+                if (status) params.set("status", status);
                 return {
                     url: `${PATHS.STUDENTS}?${params.toString()}`,
                     method: "GET"
@@ -75,6 +82,20 @@ export const studentsApi = baseApi.injectEndpoints({
                 method: "GET"
             }),
             providesTags: ["student"],
+        }),
+        // GET /students/{id}/groups — every group membership the student has
+        // (currently studying, frozen, or trial), used by Student Profile's
+        // Groups tab. This is distinct from GET /students (list) and GET
+        // /students/{id} (StudentDetail), neither of which include per-group
+        // status/course/teacher/dates — those pages previously fell back to
+        // unrelated mock data for this.
+        studentGroupMemberships: builder.query<StudentGroupMembership[], string>({
+            query: (id) => ({
+                url: `${PATHS.STUDENTS}/${id}/groups`,
+                method: "GET",
+            }),
+            transformResponse: (response: StudentGroupMembershipsResponse) => response?.data ?? [],
+            providesTags: ["student", "studentGroup"],
         }),
         createStudent: builder.mutation<StudentResponse, CreateStudentRequest>({
             query: (data) => {
@@ -142,6 +163,7 @@ export const {
     useLazyStudentsExcelQuery,
     useStudentByIdQuery,
     useLazyStudentByIdQuery,
+    useStudentGroupMembershipsQuery,
     useCreateStudentMutation,
     useUpdateStudentMutation,
     useDeleteStudentMutation,

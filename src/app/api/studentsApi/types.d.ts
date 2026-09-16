@@ -63,11 +63,18 @@ export interface StudentDetail extends StudentExtraFields {
 // document an *additional*, explicit branchId query param alongside that
 // header — teachersApi already sends both. This field lets callers do the
 // same for /students once a caller supplies it (see studentsApi.tsx).
+//
+// `status` (Swagger: "Status bo'yicha filter (ACTIVE/INACTIVE)") is confirmed
+// on GET /students itself, distinct from studentsExcel's own StudentExcelStatus
+// below — without it the endpoint only returns ACTIVE students, so an
+// archived (INACTIVE, via toggleStudentStatus) student silently disappears
+// from every list request unless this is explicitly set to "INACTIVE".
 export interface studentsRequest {
   page?: number;
   limit?: number;
   search?: string;
   branchId?: string;
+  status?: StudentExcelStatus;
 }
 
 // GET /students/excel query params — confirmed against Swagger: search,
@@ -169,4 +176,36 @@ export interface TransferStudentBranchResponse {
   success?: boolean;
   message?: string;
   data?: unknown;
+}
+
+// GET /students/{id}/groups — "Talabaning hozirda o'qiyotgan, muzlatilgan va
+// faol barcha guruhlar ro'yxati" (every group membership the student has,
+// regardless of status). Response envelope/fields confirmed directly against
+// the live API (Swagger documents only a bare 200, no schema): {success,
+// data: [{id, name, courseName, status, paymentStartDate, joinedAt, exitedAt,
+// customPrice, trainingStart, trainingEnd, teachers: [{id, name}]}]}. `id`
+// here is the student-group membership id (same resource PATCH
+// /student-groups/{id} etc. key off), not the group's own id.
+export interface StudentGroupMembershipTeacher {
+  id: string;
+  name: string;
+}
+
+export interface StudentGroupMembership {
+  id: string;
+  name: string;
+  courseName: string | null;
+  status: string;
+  paymentStartDate: string | null;
+  joinedAt: string | null;
+  exitedAt: string | null;
+  customPrice: number | null;
+  trainingStart: string | null;
+  trainingEnd: string | null;
+  teachers: StudentGroupMembershipTeacher[];
+}
+
+export interface StudentGroupMembershipsResponse {
+  success: boolean;
+  data: StudentGroupMembership[];
 }

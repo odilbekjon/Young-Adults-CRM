@@ -568,6 +568,8 @@
       "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qayta urinib ko'ring.",
       "edit": "Tahrirlash",
       "sms": "SMS",
+      "archive": "Arxivlash",
+      "activate": "Faollashtirish",
       "delete": "O'chirish",
       "submit": "Yuborish"
     },
@@ -655,7 +657,9 @@
     "toast": {
       "created": "Guruh muvaffaqiyatli qo'shildi",
       "updated": "Guruh muvaffaqiyatli yangilandi",
-      "deleted": "Guruh muvaffaqiyatli o'chirildi"
+      "deleted": "Guruh muvaffaqiyatli o'chirildi",
+      "statusToggled": "Guruh holati o'zgartirildi",
+      "statusToggleError": "Guruh holatini o'zgartirib bo'lmadi"
     },
     "loadError": "Guruhlarni yuklab bo'lmadi.",
     "weekdays": {
@@ -669,10 +673,10 @@
     },
     "deleteDialog": {
       "title": "Guruhni o'chirish",
-      "body": "Ushbu guruhni o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
+      "body": "Ushbu guruhni o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi. Agar guruhda talabalar, o'qituvchilar yoki davomat mavjud bo'lsa, o'chirish rad etiladi — bunday holda uni butunlay o'chirish o'rniga arxivlashingiz mumkin.",
       "cancel": "Bekor qilish",
       "confirm": "O'chirish",
-      "error": "Guruhni o'chirib bo'lmadi. Agar guruhda talabalar/o'qituvchilar yoki davomat mavjud bo'lsa, o'chirish rad etiladi."
+      "error": "Guruhni o'chirib bo'lmadi. Agar guruhda talabalar/o'qituvchilar yoki davomat mavjud bo'lsa, o'chirish rad etiladi. Buning o'rniga guruhni arxivlashingiz mumkin."
     }
   },
   "finance": {

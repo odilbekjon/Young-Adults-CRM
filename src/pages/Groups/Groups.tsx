@@ -8,7 +8,7 @@ import {
   TextField, Tooltip, Typography, Drawer,
 } from "@mui/material";
 import { GoPlus }                        from "react-icons/go";
-import { MdEdit, MdDelete, MdSms }       from "react-icons/md";
+import { MdEdit, MdDelete, MdSms, MdArchive, MdUnarchive } from "react-icons/md";
 import { BsThreeDotsVertical }           from "react-icons/bs";
 import { PiMicrosoftExcelLogoFill }      from "react-icons/pi";
 import { IoClose }                       from "react-icons/io5";
@@ -21,7 +21,7 @@ import { useSelector }                   from "react-redux";
 
 import {
   useAllGroupsQuery, useCreateGroupMutation, useUpdateGroupMutation, useDeleteGroupMutation,
-  useLazyGroupsExcelQuery,
+  useToggleGroupStatusMutation, useLazyGroupsExcelQuery,
 } from "../../app/api/groupsApi";
 import type { Group, GroupDay } from "../../app/api/groupsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
@@ -296,6 +296,7 @@ export const Groups = () => {
   const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [updateGroup, { isLoading: isUpdating }] = useUpdateGroupMutation();
   const [deleteGroup, { isLoading: isDeleting }] = useDeleteGroupMutation();
+  const [toggleGroupStatus] = useToggleGroupStatusMutation();
   const [fetchGroupsExcel, { isFetching: isExportingExcel }] = useLazyGroupsExcelQuery();
 
   const WEEKDAY_LABELS: Record<GroupDay, string> = {
@@ -529,6 +530,24 @@ export const Groups = () => {
       console.error("Group delete failed:", err);
       const message = detail ? `${t("groups.deleteDialog.error")}: ${detail}` : t("groups.deleteDialog.error");
       setDeleteError(message);
+      toast.error(message);
+    }
+  };
+
+  // Archive is a separate action from permanent delete: PATCH
+  // /groups/{id}/toggle-status (Swagger, same endpoint SingleGroup's own
+  // "toggle status" button already uses) flips the group between ACTIVE and
+  // ARCHIVE without touching its students/teachers/attendance, unlike
+  // deleteGroup above (DELETE /groups/{id}), which the backend rejects
+  // outright while any of those still reference the group.
+  const handleToggleStatus = async (id: string) => {
+    setActionMenuAnchor(null);
+    try {
+      await toggleGroupStatus(id).unwrap();
+      toast.success(t("groups.toast.statusToggled"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const message = detail ? `${t("groups.toast.statusToggleError")}: ${detail}` : t("groups.toast.statusToggleError");
       toast.error(message);
     }
   };
@@ -820,6 +839,15 @@ export const Groups = () => {
                         sx={{ fontSize: 13, gap: 1 }}
                       >
                         <MdSms size={15} /> {t("groups.actions.sms")}
+                      </MenuItem>
+                      <Divider sx={{ my: 0.5 }} />
+                      <MenuItem
+                        onClick={() => handleToggleStatus(g.id)}
+                        sx={{ fontSize: 13, gap: 1 }}
+                      >
+                        {g.status === "ACTIVE"
+                          ? <><MdArchive size={15} /> {t("groups.actions.archive")}</>
+                          : <><MdUnarchive size={15} /> {t("groups.actions.activate")}</>}
                       </MenuItem>
                       <Divider sx={{ my: 0.5 }} />
                       <MenuItem

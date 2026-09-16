@@ -568,6 +568,8 @@
       "exportError": "Failed to export the list. Please try again.",
       "edit": "Edit",
       "sms": "SMS",
+      "archive": "Archive",
+      "activate": "Activate",
       "delete": "Delete",
       "submit": "Submit"
     },
@@ -655,7 +657,9 @@
     "toast": {
       "created": "Group created successfully",
       "updated": "Group updated successfully",
-      "deleted": "Group deleted successfully"
+      "deleted": "Group deleted successfully",
+      "statusToggled": "Group status updated",
+      "statusToggleError": "Failed to change the group status"
     },
     "loadError": "Failed to load groups.",
     "weekdays": {
@@ -669,10 +673,10 @@
     },
     "deleteDialog": {
       "title": "Delete Group",
-      "body": "Are you sure you want to delete this group? This action cannot be undone.",
+      "body": "Are you sure you want to delete this group? This action cannot be undone. If it has students, teachers, or attendance records, deletion will be rejected — you can archive the group instead of deleting it.",
       "cancel": "Cancel",
       "confirm": "Delete",
-      "error": "Failed to delete the group. If it has students, teachers, or attendance records, deletion is not allowed."
+      "error": "Failed to delete the group. If it has students, teachers, or attendance records, deletion is not allowed. You can archive the group instead."
     }
   },
   "finance": {

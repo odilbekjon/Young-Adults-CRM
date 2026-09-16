@@ -252,7 +252,8 @@
   "students": {
     "toast": {
       "updated": "O'quvchi muvaffaqiyatli yangilandi",
-      "deleted": "O'quvchi muvaffaqiyatli o'chirildi"
+      "deleted": "O'quvchi butunlay o'chirildi",
+      "archived": "O'quvchi arxivga o'tkazildi"
     },
     "header": {
       "title": "O'quvchilar",
@@ -303,9 +304,17 @@
     "actions": {
       "editStudent": "O'quvchini tahrirlash",
       "addPayment": "To'lov qo'shish",
-      "remove": "O'chirish",
+      "archive": "Arxivlash",
+      "remove": "Butunlay o'chirish",
       "exportExcel": "Excelga eksport",
       "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring."
+    },
+    "archiveDialog": {
+      "title": "O'quvchini arxivlash",
+      "message": "Ushbu o'quvchini arxivga o'tkazishni xohlaysizmi? U ma'lumotlar bazasida saqlanib qoladi, faqat holati \"Faol emas\" (INACTIVE) bo'ladi — istalgan payt qayta faollashtirish mumkin.",
+      "cancel": "Bekor qilish",
+      "confirm": "Arxivlash",
+      "error": "O'quvchini arxivlashda xatolik yuz berdi"
     },
     "addToGroup": {
       "title": "O'quvchini guruhga qo'shish",
@@ -354,10 +363,10 @@
       "card": "Karta"
     },
     "deleteDialog": {
-      "title": "O'quvchini o'chirish",
-      "message": "Ushbu o'quvchini o'chirishni xohlaysizmi?",
+      "title": "O'quvchini butunlay o'chirish",
+      "message": "Ushbu o'quvchini ma'lumotlar bazasidan butunlay o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi. Agar o'quvchining faol guruhlari mavjud bo'lsa, o'chirish rad etiladi — bunday holda avval uni guruh(lar)dan chiqaring yoki arxivlang.",
       "cancel": "Bekor qilish",
-      "confirm": "O'chirish",
+      "confirm": "Butunlay o'chirish",
       "error": "O'quvchini o'chirishda xatolik yuz berdi"
     }
   },

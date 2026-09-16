@@ -252,7 +252,8 @@
   "students": {
     "toast": {
       "updated": "Student updated successfully",
-      "deleted": "Student deleted successfully"
+      "deleted": "Student permanently deleted",
+      "archived": "Student moved to archive"
     },
     "header": {
       "title": "Students",
@@ -303,9 +304,17 @@
     "actions": {
       "editStudent": "Edit Student",
       "addPayment": "Add payment",
-      "remove": "Remove",
+      "archive": "Archive",
+      "remove": "Delete permanently",
       "exportExcel": "Export to Excel",
       "exportError": "Failed to export the list. Please try again."
+    },
+    "archiveDialog": {
+      "title": "Archive student",
+      "message": "Move this student to the archive? They will stay in the database, only their status becomes \"Inactive\" (INACTIVE) — they can be reactivated at any time.",
+      "cancel": "Cancel",
+      "confirm": "Archive",
+      "error": "Failed to archive the student"
     },
     "addToGroup": {
       "title": "Add student to group",
@@ -354,10 +363,10 @@
       "card": "Card"
     },
     "deleteDialog": {
-      "title": "Delete Student",
-      "message": "Are you sure you want to remove this student?",
+      "title": "Permanently delete student",
+      "message": "Are you sure you want to permanently delete this student from the database? This action cannot be undone. If the student still has active groups, deletion will be rejected — remove them from the group(s) or archive them first.",
       "cancel": "Cancel",
-      "confirm": "Delete",
+      "confirm": "Delete permanently",
       "error": "Failed to delete the student"
     }
   },

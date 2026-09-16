@@ -34,7 +34,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { MdDelete, MdMail, MdEdit, MdPayment, MdAdd, MdCalendarToday } from "react-icons/md";
+import { MdDelete, MdMail, MdEdit, MdPayment, MdAdd, MdCalendarToday, MdArchive } from "react-icons/md";
 import { BsThreeDotsVertical, BsPersonPlus } from "react-icons/bs";
 import { TbAdjustmentsHorizontal, TbColumns3 } from "react-icons/tb";
 import { HiChevronDown } from "react-icons/hi";
@@ -48,7 +48,7 @@ import { useNavigate } from "react-router-dom";
 
 import { AddStudent } from "../../components/AddStudent";
 import { AddPayment } from "../../components/AddPayment";
-import { useAllStudentsQuery, useUpdateStudentMutation, useDeleteStudentMutation, useLazyStudentsExcelQuery } from "../../app/api/studentsApi";
+import { useAllStudentsQuery, useUpdateStudentMutation, useDeleteStudentMutation, useToggleStudentStatusMutation, useLazyStudentsExcelQuery } from "../../app/api/studentsApi";
 import { useAllGroupsQuery, useAddStudentToGroupMutation } from "../../app/api/groupsApi";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils/extractApiError";
@@ -604,6 +604,7 @@ export const Students = () => {
   });
   const [updateStudent, { isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
   const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
+  const [toggleStudentStatus, { isLoading: isArchivingStudent }] = useToggleStudentStatusMutation();
   const [fetchStudentsExcel, { isFetching: isExportingExcel }] = useLazyStudentsExcelQuery();
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
   const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
@@ -622,7 +623,8 @@ export const Students = () => {
   const [columnsAnchor,     setColumnsAnchor]     = useState<null | HTMLElement>(null);
   const [actionMenu,        setActionMenu]        = useState<{ el: HTMLElement; uid: string } | null>(null);
   const [deleteUid,         setDeleteUid]         = useState<string | null>(null);
- 
+  const [archiveUid,        setArchiveUid]        = useState<string | null>(null);
+
   const [editDrawerOpen,    setEditDrawerOpen]    = useState(false);
   const [activeStudent,     setActiveStudent]     = useState<FlatStudent | null>(null);
   const [addToGroupOpen,    setAddToGroupOpen]    = useState(false);
@@ -734,6 +736,26 @@ export const Students = () => {
     } catch (err) {
       const detail = extractApiError(err);
       const message = detail ? `${t("students.deleteDialog.error")}: ${detail}` : t("students.deleteDialog.error");
+      setActionError(message);
+      toast.error(message);
+    }
+  };
+
+  // Archive is a distinct action from permanent delete: PATCH
+  // /students/{id}/toggle-status flips the student's status to INACTIVE
+  // (or back to ACTIVE) without removing the record, unlike deleteStudent
+  // above (DELETE /students/{id}), which the backend itself refuses while
+  // the student still has active group memberships.
+  const handleArchiveConfirm = async () => {
+    if (!archiveUid) return;
+    setActionError(null);
+    try {
+      await toggleStudentStatus(archiveUid).unwrap();
+      setArchiveUid(null);
+      toast.success(t("students.toast.archived"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const message = detail ? `${t("students.archiveDialog.error")}: ${detail}` : t("students.archiveDialog.error");
       setActionError(message);
       toast.error(message);
     }
@@ -1171,7 +1193,11 @@ export const Students = () => {
                           <MdPayment size={16} color="var(--color-success)" /> {t("students.actions.addPayment")}
                         </MenuItem>
                         <Divider sx={{ my: 0.5 }} />
-                        <MenuItem onClick={() => { setActionMenu(null); setDeleteUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-danger)" }}>
+                        <MenuItem onClick={() => { setActionMenu(null); setActionError(null); setArchiveUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-text-secondary)" }}>
+                          <MdArchive size={16} color="var(--color-text-secondary)" /> {t("students.actions.archive")}
+                        </MenuItem>
+                        <Divider sx={{ my: 0.5 }} />
+                        <MenuItem onClick={() => { setActionMenu(null); setActionError(null); setDeleteUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-danger)" }}>
                           <MdDelete size={16} /> {t("students.actions.remove")}
                         </MenuItem>
                       </Menu>
@@ -1270,6 +1296,22 @@ export const Students = () => {
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteUid(null)} disabled={isDeletingStudent} sx={{ color: "var(--color-text-secondary)" }}>{t("students.deleteDialog.cancel")}</Button>
           <Button variant="contained" color="error" disabled={isDeletingStudent} onClick={handleDeleteConfirm} sx={{ borderRadius: 2 }}>{t("students.deleteDialog.confirm")}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Archive dialog — PATCH /students/{id}/toggle-status (status -> INACTIVE),
+          a separate action from permanent delete above. */}
+      <Dialog open={Boolean(archiveUid)} onClose={() => setArchiveUid(null)} PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>{t("students.archiveDialog.title")}</DialogTitle>
+        <DialogContent>
+          <Typography fontSize={14} color="text.secondary">{t("students.archiveDialog.message")}</Typography>
+          {actionError && (
+            <Typography fontSize={13} color="error" mt={1.5}>{actionError}</Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setArchiveUid(null)} disabled={isArchivingStudent} sx={{ color: "var(--color-text-secondary)" }}>{t("students.archiveDialog.cancel")}</Button>
+          <Button variant="contained" disabled={isArchivingStudent} onClick={handleArchiveConfirm} sx={{ borderRadius: 2, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" } }}>{t("students.archiveDialog.confirm")}</Button>
         </DialogActions>
       </Dialog>
     </Box>

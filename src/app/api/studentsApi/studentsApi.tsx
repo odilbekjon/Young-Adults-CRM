@@ -9,6 +9,7 @@ import {
     UpdateStudentRequest,
     StudentResponse,
     DeleteStudentResponse,
+    ToggleStudentStatusResponse,
     TransferStudentBranchRequest,
     TransferStudentBranchResponse,
 } from "./types";
@@ -99,10 +100,23 @@ export const studentsApi = baseApi.injectEndpoints({
             },
             invalidatesTags: ["student"],
         }),
+        // DELETE /students/{id} — Swagger: "Talabani tizimdan xavfsiz tarzda
+        // butunlay o'chiradi. Agar talabaning faol guruhlari mavjud bo'lsa
+        // xatolik qaytaradi." i.e. permanent delete; the backend itself
+        // rejects it while the student still has active group memberships.
+        // Distinct from toggleStudentStatus below, which archives (INACTIVE)
+        // without deleting anything.
         deleteStudent: builder.mutation<DeleteStudentResponse, string>({
             query: (id) => ({
                 url: `${PATHS.STUDENTS}/${id}`,
                 method: "DELETE",
+            }),
+            invalidatesTags: ["student"],
+        }),
+        toggleStudentStatus: builder.mutation<ToggleStudentStatusResponse, string>({
+            query: (id) => ({
+                url: `${PATHS.STUDENTS}/${id}/toggle-status`,
+                method: "PATCH",
             }),
             invalidatesTags: ["student"],
         }),
@@ -131,5 +145,6 @@ export const {
     useCreateStudentMutation,
     useUpdateStudentMutation,
     useDeleteStudentMutation,
+    useToggleStudentStatusMutation,
     useTransferStudentBranchMutation,
 } = studentsApi;

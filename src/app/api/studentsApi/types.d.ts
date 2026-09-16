@@ -142,6 +142,18 @@ export interface DeleteStudentResponse {
   message: string;
 }
 
+// PATCH /students/{id}/toggle-status — Swagger: "Talaba holatini (status)
+// ACTIVE va INACTIVE oralig'ida tezkor o'zgartirish", no request body (just
+// the {id} path param). This is the dedicated "archive" action: it flips
+// status to INACTIVE (or back to ACTIVE if already archived) WITHOUT
+// removing the student, distinct from DELETE /students/{id} below which
+// permanently deletes the record.
+export interface ToggleStudentStatusResponse {
+  success?: boolean;
+  message?: string;
+  data?: StudentDetail;
+}
+
 // POST /students/{id}/transfer-branch — Swagger: application/json body
 // {newBranchId, reason}. Unlike sending branchIds through updateStudent
 // (which overwrites the branch list), this dedicated endpoint properly

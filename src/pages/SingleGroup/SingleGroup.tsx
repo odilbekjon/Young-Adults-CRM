@@ -33,6 +33,7 @@ import {
   useFreezeStudentGroupMutation,
   useUnfreezeStudentGroupMutation,
   useUpdateStudentGroupStatusMutation,
+  useUpdateStudentGroupMutation,
 } from "../../app/api/groupsApi";
 import type { GroupDetail, GroupHistoryEntry, StudentGroupRecord, UpdateGroupRequest } from "../../app/api/groupsApi/types";
 import {
@@ -64,6 +65,7 @@ import { StudentHoverCard } from "./StudentHoverCard";
 import { StudentActionsMenu } from "./StudentActionsMenu";
 import { FreezeModal } from "./FreezeModal";
 import { ActivateModal } from "./ActivateModal";
+import { GraduateTrialModal } from "./GraduateTrialModal";
 import { EditGroupDrawer } from "./EditGroupDrawer";
 import { DeleteDropdown } from "./DeleteDropdown";
 import { SmsDrawer } from "../../components/SmsDrawer";
@@ -85,7 +87,7 @@ const TAB_KEYS = [
 // that overlay, since it's the /student-groups row's own id, required by
 // freeze/unfreeze/status-change calls (distinct from realId, the student's
 // own id).
-type RealGroupStudent = GroupStudent & { realId: string; studentGroupId?: string };
+type RealGroupStudent = GroupStudent & { realId: string; studentGroupId?: string; isTrial?: boolean };
 
 const toLegacyGroup = (d: GroupDetail): LegacyGroup => ({
   id: 0,
@@ -185,6 +187,7 @@ export const SingleGroup = () => {
   const [freezeStudentGroup, { isLoading: isFreezing }] = useFreezeStudentGroupMutation();
   const [unfreezeStudentGroup, { isLoading: isUnfreezing }] = useUnfreezeStudentGroupMutation();
   const [updateStudentGroupStatus, { isLoading: isChangingMembershipStatus }] = useUpdateStudentGroupStatusMutation();
+  const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [fetchStudentDetail] = useLazyStudentByIdQuery();
   const [fetchGroupExcel, { isFetching: isExportingExcel }] = useLazyGroupExcelQuery();
@@ -235,6 +238,7 @@ export const SingleGroup = () => {
           studentGroupId: membership.id,
           active: membership.status === "ACTIVE" || membership.status === "PROBATION",
           archived: membership.status === "INACTIVE" || membership.status === "DELETED",
+          isTrial: membership.status === "PROBATION",
         }),
         ...(realBalance !== undefined && { balance: realBalance }),
       };
@@ -289,6 +293,7 @@ export const SingleGroup = () => {
   // Student action states
   const [freezeOpen, setFreezeOpen] = useState(false);
   const [activateOpen, setActivateOpen] = useState(false);
+  const [graduateTrialOpen, setGraduateTrialOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
@@ -490,6 +495,7 @@ export const SingleGroup = () => {
 
   const isSelectedArchived = Boolean(selectedStudent?.archived);
   const isSelectedFrozen = selectedStudent ? !selectedStudent.active && !selectedStudent.archived : false;
+  const isSelectedTrial = Boolean(selectedStudent?.isTrial) && !isSelectedArchived && !isSelectedFrozen;
 
   // Both actions below use PATCH /student-groups/{id}/status (Swagger:
   // status is required) to bring an archived (INACTIVE/DELETED) membership
@@ -526,6 +532,31 @@ export const SingleGroup = () => {
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("singleGroup.studentActionsMenu.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
+    }
+  };
+
+  // Promotes a currently-active PROBATION (trial-lesson) membership to
+  // ACTIVE so payment starts being calculated. Two documented calls in
+  // sequence: PATCH /student-groups/{id}/status (status is the only field
+  // that endpoint accepts) sets ACTIVE, then PATCH /student-groups/{id}
+  // (which does accept paymentStartDate) records when billing should start —
+  // same two resources handleActivateArchived/handleFreezeConfirm already
+  // use elsewhere in this file, just composed together here.
+  const handleGraduateTrialConfirm = async (paymentStartDate: string) => {
+    const target = selectedStudent;
+    setGraduateTrialOpen(false);
+    if (!target?.studentGroupId) {
+      toast.error(t("singleGroup.graduateTrialModal.toast.error"));
+      return;
+    }
+    try {
+      await updateStudentGroupStatus({ id: target.studentGroupId, status: "ACTIVE" }).unwrap();
+      await updateStudentGroup({ id: target.studentGroupId, paymentStartDate }).unwrap();
+      toast.success(t("singleGroup.graduateTrialModal.toast.success"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.graduateTrialModal.toast.error");
       toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
@@ -1011,8 +1042,10 @@ export const SingleGroup = () => {
         onClose={handleCloseMenu}
         isArchived={isSelectedArchived}
         isFrozen={isSelectedFrozen}
+        isTrial={isSelectedTrial}
         onActivateArchived={handleActivateArchived}
         onBackToTrialLesson={handleBackToTrialLesson}
+        onGraduateTrial={() => { handleCloseMenu(); setGraduateTrialOpen(true); }}
         onActivate={() => { handleCloseMenu(); setActivateOpen(true); }}
         onMakeFrozen={() => { handleCloseMenu(); setFreezeOpen(true); }}
         onAddPayment={() => { handleCloseMenu(); setPaymentOpen(true); }}
@@ -1039,6 +1072,13 @@ export const SingleGroup = () => {
         onClose={() => setActivateOpen(false)}
         onConfirm={handleActivateConfirm}
         isSaving={isUnfreezing}
+      />
+
+      <GraduateTrialModal
+        open={graduateTrialOpen}
+        onClose={() => setGraduateTrialOpen(false)}
+        onConfirm={handleGraduateTrialConfirm}
+        isSaving={isChangingMembershipStatus || isSavingMembershipDates}
       />
 
       {/* ══ EDIT GROUP DRAWER ══ */}

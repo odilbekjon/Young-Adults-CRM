@@ -312,6 +312,14 @@
       "studentsSelected_one": "{{count}} student selected",
       "studentsSelected_other": "{{count}} students selected",
       "selectGroup": "Select group",
+      "status": "Status",
+      "statusOptions": {
+        "probation": "Trial lesson",
+        "active": "Active",
+        "probationHint": "Trial lesson — payment is not calculated",
+        "activeHint": "Active — payment is calculated from the selected date"
+      },
+      "paymentStartDate": "Payment start date",
       "submit": "Add student to group",
       "submitting": "Adding...",
       "toast": {
@@ -1353,6 +1361,16 @@
         "notFound": "No active freeze record found for this student"
       }
     },
+    "graduateTrialModal": {
+      "title": "Finish trial lesson",
+      "description": "The student will be moved to ACTIVE status, and payment will start being calculated from the selected date.",
+      "submit": "Activate",
+      "saving": "Activating...",
+      "toast": {
+        "success": "Student activated, payment calculation started",
+        "error": "Failed to activate the student"
+      }
+    },
     "addNoteModal": {
       "title": "Add new note",
       "student": "Student",
@@ -1513,6 +1531,7 @@
       },
       "activate": "Activate",
       "backToTrialLesson": "Back to trial lesson",
+      "graduateTrial": "Start billing (ACTIVE)",
       "makeFrozen": "Make Frozen",
       "addPayment": "Add payment",
       "addNewNote": "Add new note",

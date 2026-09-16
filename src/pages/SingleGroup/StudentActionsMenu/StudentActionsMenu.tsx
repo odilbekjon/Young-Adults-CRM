@@ -10,7 +10,7 @@ import {
   Button,
 } from "@mui/material";
 import {
-  TbColumns, TbWallet, TbFlag, TbInbox, TbTrash, TbClock, TbPlayerPlay,
+  TbColumns, TbWallet, TbFlag, TbInbox, TbTrash, TbClock, TbPlayerPlay, TbRocket,
 } from "react-icons/tb";
 import { HiBuildingLibrary } from "react-icons/hi2";
 import { FiX } from "react-icons/fi";
@@ -26,8 +26,10 @@ interface StudentActionsMenuProps {
   onClose: () => void;
   isArchived: boolean;
   isFrozen: boolean;
+  isTrial?: boolean;
   onActivateArchived: () => void;
   onBackToTrialLesson: () => void;
+  onGraduateTrial?: () => void;
   onActivate: () => void;
   onMakeFrozen: () => void;
   onAddPayment: () => void;
@@ -150,8 +152,10 @@ export const StudentActionsMenu = ({
   onClose,
   isArchived,
   isFrozen,
+  isTrial,
   onActivateArchived,
   onBackToTrialLesson,
+  onGraduateTrial,
   onActivate,
   onMakeFrozen,
   onAddPayment,
@@ -209,6 +213,12 @@ export const StudentActionsMenu = ({
               <MenuItem onClick={onMakeFrozen} sx={itemSx}>
                 <TbColumns size={18} color={iconColor} />
                 {t("singleGroup.studentActionsMenu.makeFrozen")}
+              </MenuItem>
+            )}
+            {isTrial && onGraduateTrial && (
+              <MenuItem onClick={onGraduateTrial} sx={itemSx}>
+                <TbRocket size={18} color={iconColor} />
+                {t("singleGroup.studentActionsMenu.graduateTrial")}
               </MenuItem>
             )}
             <MenuItem onClick={onAddPayment} sx={itemSx}>

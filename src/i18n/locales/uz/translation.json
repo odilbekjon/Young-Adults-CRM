@@ -312,6 +312,14 @@
       "studentsSelected_one": "{{count}} ta o'quvchi tanlandi",
       "studentsSelected_other": "{{count}} ta o'quvchi tanlandi",
       "selectGroup": "Guruhni tanlang",
+      "status": "Holati",
+      "statusOptions": {
+        "probation": "Sinov darsi",
+        "active": "Faol",
+        "probationHint": "Sinov darsi — to'lov hisoblanmaydi",
+        "activeHint": "Faol — ko'rsatilgan sanadan boshlab to'lov hisoblanadi"
+      },
+      "paymentStartDate": "To'lov hisoblana boshlash sanasi",
       "submit": "O'quvchini guruhga qo'shish",
       "submitting": "Qo'shilmoqda...",
       "toast": {
@@ -1353,6 +1361,16 @@
         "notFound": "Bu o'quvchi uchun aktiv muzlatish yozuvi topilmadi"
       }
     },
+    "graduateTrialModal": {
+      "title": "Sinov darsini yakunlash",
+      "description": "O'quvchi ACTIVE holatiga o'tkaziladi va tanlangan sanadan boshlab to'lov hisoblanadi.",
+      "submit": "Faollashtirish",
+      "saving": "Faollashtirilmoqda...",
+      "toast": {
+        "success": "O'quvchi faollashtirildi, to'lov hisoblana boshladi",
+        "error": "O'quvchini faollashtirib bo'lmadi"
+      }
+    },
     "addNoteModal": {
       "title": "Yangi eslatma qo'shish",
       "student": "O'quvchi",
@@ -1513,6 +1531,7 @@
       },
       "activate": "Faollashtirish",
       "backToTrialLesson": "Sinov darsiga qaytarish",
+      "graduateTrial": "To'lovni faollashtirish (ACTIVE)",
       "makeFrozen": "Muzlatish",
       "addPayment": "To'lov qo'shish",
       "addNewNote": "Yangi eslatma qo'shish",

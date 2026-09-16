@@ -229,6 +229,20 @@ const DateFilterInput = ({ placeholder, value, onChange }: { placeholder: string
 );
 
 /* ─── ADD TO GROUP MODAL ─────────────────────────────── */
+// Status (Swagger: POST /student-groups accepts an optional `status` — PROBATION
+// or ACTIVE) decides whether the membership starts as a trial lesson (no
+// billing) or immediately active, in which case `paymentStartDate` is also
+// sent so the backend knows when to start calculating payment.
+type AddToGroupStatus = "PROBATION" | "ACTIVE";
+
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
+export interface AddToGroupPayload {
+  groupId: string;
+  status: AddToGroupStatus;
+  paymentStartDate?: string;
+}
+
 const AddToGroupModal = ({
   open,
   onClose,
@@ -239,16 +253,22 @@ const AddToGroupModal = ({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (groupId: string) => Promise<boolean>;
+  onSubmit: (payload: AddToGroupPayload) => Promise<boolean>;
   groups: { id: string; name: string }[];
   selectedCount: number;
   isSubmitting?: boolean;
 }) => {
   const { t } = useTranslation();
   const [groupId, setGroupId] = useState("");
+  const [status, setStatus] = useState<AddToGroupStatus>("PROBATION");
+  const [paymentStartDate, setPaymentStartDate] = useState(todayIso());
 
   useEffect(() => {
-    if (!open) setGroupId("");
+    if (!open) {
+      setGroupId("");
+      setStatus("PROBATION");
+      setPaymentStartDate(todayIso());
+    }
   }, [open]);
 
   const handleClose = () => {
@@ -258,8 +278,12 @@ const AddToGroupModal = ({
 
   const handleSubmit = async () => {
     if (!groupId || isSubmitting) return;
-    const success = await onSubmit(groupId);
-    if (success) setGroupId("");
+    const success = await onSubmit({
+      groupId,
+      status,
+      paymentStartDate: status === "ACTIVE" ? paymentStartDate || undefined : undefined,
+    });
+    if (success) { setGroupId(""); setStatus("PROBATION"); setPaymentStartDate(todayIso()); }
   };
 
   return (
@@ -320,6 +344,65 @@ const AddToGroupModal = ({
             </MenuItem>
           ))}
         </TextField>
+
+        <Box mt={2.5}>
+          <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>
+            {t("students.addToGroup.status")}
+          </Typography>
+          <RadioGroup
+            row
+            value={status}
+            onChange={(e) => setStatus(e.target.value as AddToGroupStatus)}
+            sx={{ gap: 3 }}
+          >
+            <FormControlLabel
+              value="PROBATION"
+              disabled={isSubmitting}
+              control={<Radio size="small" sx={{ color: "var(--color-border)", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
+              label={<Typography fontSize={13} color="var(--color-text-secondary)">{t("students.addToGroup.statusOptions.probation")}</Typography>}
+              sx={{ m: 0, gap: 0.5 }}
+            />
+            <FormControlLabel
+              value="ACTIVE"
+              disabled={isSubmitting}
+              control={<Radio size="small" sx={{ color: "var(--color-border)", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
+              label={<Typography fontSize={13} color="var(--color-text-secondary)">{t("students.addToGroup.statusOptions.active")}</Typography>}
+              sx={{ m: 0, gap: 0.5 }}
+            />
+          </RadioGroup>
+          <Typography fontSize={12} color="var(--color-text-muted)" mt={0.5}>
+            {status === "PROBATION"
+              ? t("students.addToGroup.statusOptions.probationHint")
+              : t("students.addToGroup.statusOptions.activeHint")}
+          </Typography>
+        </Box>
+
+        {status === "ACTIVE" && (
+          <Box mt={2.5}>
+            <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>
+              {t("students.addToGroup.paymentStartDate")}
+            </Typography>
+            <TextField
+              fullWidth
+              size="small"
+              type="date"
+              value={paymentStartDate}
+              onChange={(e) => setPaymentStartDate(e.target.value)}
+              disabled={isSubmitting}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "8px",
+                  fontSize: 14,
+                  bgcolor: "var(--color-surface)",
+                  "& fieldset": { borderColor: "var(--color-border)" },
+                  "&:hover fieldset": { borderColor: "var(--color-text-muted)" },
+                  "&.Mui-focused fieldset": { borderColor: "#5c7fa3" },
+                },
+              }}
+            />
+          </Box>
+        )}
 
         <Box mt={3}>
           <Button
@@ -648,9 +731,11 @@ export const Students = () => {
       setSelected((p) => p.filter((x) => x !== deleteUid));
       setDeleteUid(null);
       toast.success(t("students.toast.deleted"));
-    } catch {
-      setActionError(t("students.deleteDialog.error"));
-      toast.error(t("students.deleteDialog.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const message = detail ? `${t("students.deleteDialog.error")}: ${detail}` : t("students.deleteDialog.error");
+      setActionError(message);
+      toast.error(message);
     }
   };
 
@@ -661,9 +746,11 @@ export const Students = () => {
       await Promise.all(selected.map((uid) => deleteStudent(uid).unwrap()));
       setSelected([]);
       toast.success(t("students.toast.deleted"));
-    } catch {
-      setActionError(t("students.deleteDialog.error"));
-      toast.error(t("students.deleteDialog.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const message = detail ? `${t("students.deleteDialog.error")}: ${detail}` : t("students.deleteDialog.error");
+      setActionError(message);
+      toast.error(message);
     }
   };
 
@@ -680,7 +767,7 @@ export const Students = () => {
     }
   };
 
-  const handleAddToGroup = async (groupId: string): Promise<boolean> => {
+  const handleAddToGroup = async ({ groupId, status, paymentStartDate }: AddToGroupPayload): Promise<boolean> => {
     setActionError(null);
     // Backend student-groups' allaqachon a'zo bo'lgan studentni qayta
     // qo'shishga ruxsat bermasligi mumkin — shu sabab tanlanganlar orasidan
@@ -694,7 +781,11 @@ export const Students = () => {
       return false;
     }
     try {
-      await Promise.all(eligibleUids.map((uid) => addStudentToGroup({ studentId: uid, groupId }).unwrap()));
+      await Promise.all(
+        eligibleUids.map((uid) =>
+          addStudentToGroup({ studentId: uid, groupId, status, paymentStartDate }).unwrap()
+        )
+      );
       toast.success(t("students.addToGroup.toast.success"));
       setSelected([]);
       setAddToGroupOpen(false);

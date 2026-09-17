@@ -36,3 +36,9 @@ export interface DeleteBranchResponse {
   success: boolean;
   message: string;
 }
+
+export interface ToggleBranchStatusResponse {
+  success: boolean;
+  message: string;
+  data?: Branch;
+}

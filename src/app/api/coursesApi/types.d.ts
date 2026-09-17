@@ -59,3 +59,9 @@ export interface DeleteCourseResponse {
   success: boolean;
   message: string;
 }
+
+export interface ToggleCourseStatusResponse {
+  success: boolean;
+  message: string;
+  data?: Course;
+}

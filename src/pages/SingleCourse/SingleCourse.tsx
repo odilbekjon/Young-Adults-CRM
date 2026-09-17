@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Typography,
@@ -8,12 +9,19 @@ import {
   Tab,
   Paper,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
 } from "@mui/material";
-import { MdEdit, MdDeleteOutline, MdArrowBack } from "react-icons/md";
+import { MdEdit, MdArchive, MdArrowBack } from "react-icons/md";
 import {
   useAllCoursesQuery,
-  useDeleteCourseMutation,
+  useToggleCourseStatusMutation,
 } from "../../app/api/coursesApi/coursesApi";
+import { useToast } from "../../Context/ToastContext";
 import { CARD_COLORS } from "../../constants/CardColors";
 
 const fmt = (n: number) =>
@@ -27,20 +35,32 @@ const colorForId = (id: string) => {
 export const SingleCourse = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const toast = useToast();
   const [tab, setTab] = useState(0);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
 
   const { data, isLoading } = useAllCoursesQuery();
-  const [deleteCourse, { isLoading: isDeleting }] = useDeleteCourseMutation();
+  const [toggleCourseStatus, { isLoading: isToggling }] = useToggleCourseStatusMutation();
 
   const course = data?.data.find((c) => c.id === id);
 
-  const handleDelete = async () => {
+  // Archive (PATCH toggle-status -> INACTIVE), not a permanent delete — this
+  // page has no confirmation-free destructive action; permanent delete lives
+  // only in the Archived tab of the Courses list, matching that page's
+  // Active-vs-Archived split.
+  const handleArchive = async () => {
     if (!course) return;
+    setArchiveError(null);
     try {
-      await deleteCourse(course.id).unwrap();
+      await toggleCourseStatus(course.id).unwrap();
+      toast.success(t("settings.office.courses.toast.archived"));
+      setArchiveOpen(false);
       navigate("/settings/office/courses");
     } catch {
-      // stay on the page — the banner icon can be retried
+      setArchiveError(t("settings.office.courses.archiveConfirm.error"));
+      toast.error(t("settings.office.courses.archiveConfirm.error"));
     }
   };
 
@@ -133,14 +153,14 @@ export const SingleCourse = () => {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    cursor: isDeleting ? "default" : "pointer",
+                    cursor: "pointer",
                     bgcolor: "rgba(255,255,255,0.15)",
-                    opacity: isDeleting ? 0.6 : 1,
-                    "&:hover": { bgcolor: isDeleting ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.3)" },
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.3)" },
                   }}
-                  onClick={isDeleting ? undefined : handleDelete}
+                  onClick={() => { setArchiveError(null); setArchiveOpen(true); }}
+                  title={t("settings.office.courses.archive")}
                 >
-                  {isDeleting ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : <MdDeleteOutline size={16} color="#fff" />}
+                  <MdArchive size={16} color="#fff" />
                 </Box>
               </Box>
 
@@ -197,6 +217,44 @@ export const SingleCourse = () => {
           )}
         </Box>
       </Box>
+
+      {/* Archive confirmation */}
+      <Dialog
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.office.courses.archiveConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.office.courses.archiveConfirm.message", { name: course.name })}
+          </DialogContentText>
+          {archiveError && (
+            <Typography fontSize={13} color="error" mt={1.5}>{archiveError}</Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setArchiveOpen(false)}
+            variant="outlined"
+            disabled={isToggling}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.courses.form.cancel")}
+          </Button>
+          <Button
+            onClick={handleArchive}
+            variant="contained"
+            disabled={isToggling}
+            startIcon={isToggling ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none", bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" } }}
+          >
+            {t("settings.office.courses.archive")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

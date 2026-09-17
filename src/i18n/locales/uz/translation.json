@@ -1711,15 +1711,29 @@
         },
         "close": "Yopish",
         "loadError": "Filiallarni yuklab bo'lmadi.",
+        "archive": "Arxivlash",
+        "restore": "Tiklash",
         "deleteConfirm": {
           "title": "Filialni o'chirish",
           "message": "\"{{name}}\" filialini o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
           "error": "Filialni o'chirib bo'lmadi. Qaytadan urinib ko'ring."
         },
+        "archiveConfirm": {
+          "title": "Filialni arxivlash",
+          "message": "\"{{name}}\"ni arxivga o'tkazishni xohlaysizmi? Filial bazada qoladi, faqat holati \"Faol emas\"ga o'zgaradi — uni istalgan vaqtda qayta faollashtirish mumkin.",
+          "error": "Filialni arxivlab bo'lmadi. Qaytadan urinib ko'ring."
+        },
+        "restoreConfirm": {
+          "title": "Filialni tiklash",
+          "message": "\"{{name}}\"ni tiklab, faol ro'yxatga qaytarishni xohlaysizmi?",
+          "error": "Filialni tiklab bo'lmadi. Qaytadan urinib ko'ring."
+        },
         "toast": {
           "created": "Filial muvaffaqiyatli qo'shildi",
           "updated": "Filial muvaffaqiyatli yangilandi",
-          "deleted": "Filial muvaffaqiyatli o'chirildi"
+          "deleted": "Filial muvaffaqiyatli o'chirildi",
+          "archived": "Filial arxivga o'tkazildi",
+          "restored": "Filial muvaffaqiyatli tiklandi"
         }
       },
       "roadmap": {
@@ -2060,6 +2074,22 @@
             "deleted": "Sabab muvaffaqiyatli o'chirildi",
             "statusToggled": "Sabab holati yangilandi"
           }
+        },
+        "restoreConfirm": {
+          "title": "Arxivdan tiklash",
+          "message": "\"{{name}}\"ni tiklab, faol ro'yxatga qaytarishni xohlaysizmi?",
+          "error": "Tiklab bo'lmadi. Qaytadan urinib ko'ring.",
+          "unsupportedRole": "Bu yozuvning roli bu yerda tiklanmaydi."
+        },
+        "permanentDeleteConfirm": {
+          "title": "Butunlay o'chirish",
+          "message": "\"{{name}}\"ni bazadan butunlay o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
+          "error": "Butunlay o'chirib bo'lmadi. Qaytadan urinib ko'ring.",
+          "unsupportedRole": "Bu yozuvning roli bu yerda butunlay o'chirilmaydi."
+        },
+        "toast": {
+          "restored": "Muvaffaqiyatli tiklandi",
+          "permanentlyDeleted": "Butunlay o'chirildi"
         }
       },
       "courses": {
@@ -2091,15 +2121,31 @@
           }
         },
         "durationOptions": { "min45": "45 daqiqa", "min60": "60 daqiqa", "min90": "90 daqiqa", "min120": "120 daqiqa", "min150": "150 daqiqa" },
+        "tabs": { "active": "Faol", "archived": "Arxiv" },
+        "emptyArchived": "Arxivlangan kurslar yo'q",
+        "archive": "Arxivlash",
+        "restore": "Tiklash",
         "deleteConfirm": {
           "title": "Kursni o'chirish",
           "message": "\"{{name}}\" kursini o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
           "error": "Kursni o'chirib bo'lmadi. Qaytadan urinib ko'ring."
         },
+        "archiveConfirm": {
+          "title": "Kursni arxivlash",
+          "message": "\"{{name}}\"ni arxivga o'tkazishni xohlaysizmi? Kurs bazada qoladi, faqat holati \"Faol emas\"ga o'zgaradi — uni istalgan vaqtda qayta faollashtirish mumkin.",
+          "error": "Kursni arxivlab bo'lmadi. Qaytadan urinib ko'ring."
+        },
+        "restoreConfirm": {
+          "title": "Kursni tiklash",
+          "message": "\"{{name}}\"ni tiklab, faol ro'yxatga qaytarishni xohlaysizmi?",
+          "error": "Kursni tiklab bo'lmadi. Qaytadan urinib ko'ring."
+        },
         "toast": {
           "created": "Kurs muvaffaqiyatli qo'shildi",
           "updated": "Kurs muvaffaqiyatli yangilandi",
-          "deleted": "Kurs muvaffaqiyatli o'chirildi"
+          "deleted": "Kurs muvaffaqiyatli o'chirildi",
+          "archived": "Kurs arxivga o'tkazildi",
+          "restored": "Kurs muvaffaqiyatli tiklandi"
         }
       },
       "holidays": {
@@ -2164,15 +2210,31 @@
             "save": "Nimadir xato ketdi. Qaytadan urinib ko'ring."
           }
         },
+        "tabs": { "active": "Faol", "archived": "Arxiv" },
+        "emptyArchived": "Arxivlangan xonalar yo'q",
+        "archive": "Arxivlash",
+        "restore": "Tiklash",
         "deleteConfirm": {
           "title": "Xonani o'chirish",
           "message": "\"{{name}}\" xonasini o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
           "error": "Xonani o'chirib bo'lmadi. Qaytadan urinib ko'ring."
         },
+        "archiveConfirm": {
+          "title": "Xonani arxivlash",
+          "message": "\"{{name}}\"ni arxivga o'tkazishni xohlaysizmi? Xona bazada qoladi, faqat holati \"Faol emas\"ga o'zgaradi — uni istalgan vaqtda qayta faollashtirish mumkin.",
+          "error": "Xonani arxivlab bo'lmadi. Qaytadan urinib ko'ring."
+        },
+        "restoreConfirm": {
+          "title": "Xonani tiklash",
+          "message": "\"{{name}}\"ni tiklab, faol ro'yxatga qaytarishni xohlaysizmi?",
+          "error": "Xonani tiklab bo'lmadi. Qaytadan urinib ko'ring."
+        },
         "toast": {
           "created": "Xona muvaffaqiyatli qo'shildi",
           "updated": "Xona muvaffaqiyatli yangilandi",
-          "deleted": "Xona muvaffaqiyatli o'chirildi"
+          "deleted": "Xona muvaffaqiyatli o'chirildi",
+          "archived": "Xona arxivga o'tkazildi",
+          "restored": "Xona muvaffaqiyatli tiklandi"
         }
       },
       "studentLeft": {

@@ -25,11 +25,12 @@ import {
   DialogContentText,
   DialogActions,
 } from "@mui/material";
-import { MdClose, MdOutlineEdit, MdDeleteOutline, MdRefresh } from "react-icons/md";
+import { MdClose, MdOutlineEdit, MdDeleteOutline, MdRefresh, MdArchive, MdUnarchive } from "react-icons/md";
 import {
   useAllRoomsQuery,
   useCreateRoomMutation,
   useUpdateRoomMutation,
+  useToggleRoomStatusMutation,
   useDeleteRoomMutation,
 } from "../../../../../app/api/roomsApi/roomsApi";
 import type { Room } from "../../../../../app/api/roomsApi/types";
@@ -57,10 +58,13 @@ export const Rooms = () => {
   const { data: branchesData } = useAllBranchesQuery();
   const [createRoom, { isLoading: isCreating }] = useCreateRoomMutation();
   const [updateRoom, { isLoading: isUpdating }] = useUpdateRoomMutation();
+  const [toggleRoomStatus, { isLoading: isToggling }] = useToggleRoomStatusMutation();
   const [deleteRoom, { isLoading: isDeleting }] = useDeleteRoomMutation();
 
+  const [tab, setTab] = useState<"faol" | "arxiv">("faol");
+
   const rooms = (data?.data ?? [])
-    .filter((r) => r.status === "ACTIVE")
+    .filter((r) => (tab === "faol" ? r.status === "ACTIVE" : r.status !== "ACTIVE"))
     .filter((r) => selectedBranch === "all" || r.branch?.name === selectedBranch);
   const activeBranches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
 
@@ -72,6 +76,10 @@ export const Rooms = () => {
 
   const [deleteTarget, setDeleteTarget] = useState<Room | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<Room | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<Room | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
   const openAddDrawer = () => {
     setEditingRoom(null);
@@ -103,6 +111,8 @@ export const Rooms = () => {
     setDeleteError(null);
   };
 
+  // Permanent delete — reserved for an already-archived (INACTIVE) room; the
+  // backend itself rejects it (409) while the room still has groups assigned.
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -112,6 +122,50 @@ export const Rooms = () => {
     } catch {
       setDeleteError(t("settings.office.rooms.deleteConfirm.error"));
       toast.error(t("settings.office.rooms.deleteConfirm.error"));
+    }
+  };
+
+  const openArchiveConfirm = (room: Room) => {
+    setArchiveError(null);
+    setArchiveTarget(room);
+  };
+
+  const closeArchiveConfirm = () => {
+    setArchiveTarget(null);
+    setArchiveError(null);
+  };
+
+  const confirmArchive = async () => {
+    if (!archiveTarget) return;
+    try {
+      await toggleRoomStatus(archiveTarget.id).unwrap();
+      setArchiveTarget(null);
+      toast.success(t("settings.office.rooms.toast.archived"));
+    } catch {
+      setArchiveError(t("settings.office.rooms.archiveConfirm.error"));
+      toast.error(t("settings.office.rooms.archiveConfirm.error"));
+    }
+  };
+
+  const openRestoreConfirm = (room: Room) => {
+    setRestoreError(null);
+    setRestoreTarget(room);
+  };
+
+  const closeRestoreConfirm = () => {
+    setRestoreTarget(null);
+    setRestoreError(null);
+  };
+
+  const confirmRestore = async () => {
+    if (!restoreTarget) return;
+    try {
+      await toggleRoomStatus(restoreTarget.id).unwrap();
+      setRestoreTarget(null);
+      toast.success(t("settings.office.rooms.toast.restored"));
+    } catch {
+      setRestoreError(t("settings.office.rooms.restoreConfirm.error"));
+      toast.error(t("settings.office.rooms.restoreConfirm.error"));
     }
   };
 
@@ -183,6 +237,36 @@ export const Rooms = () => {
         </Button>
       </Box>
 
+      {/* Tabs */}
+      <Box sx={{ display: "inline-flex", borderRadius: "10px", bgcolor: "#eef2f6", p: 0.5, mb: 2 }}>
+        <Box
+          component="button"
+          type="button"
+          onClick={() => setTab("faol")}
+          sx={{
+            border: "none", cursor: "pointer", borderRadius: "8px", px: 2, py: 0.7, fontSize: 13, fontWeight: 600,
+            bgcolor: tab === "faol" ? "#fff" : "transparent",
+            color: tab === "faol" ? "#1a3f6f" : "#667085",
+            boxShadow: tab === "faol" ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+          }}
+        >
+          {t("settings.office.rooms.tabs.active")}
+        </Box>
+        <Box
+          component="button"
+          type="button"
+          onClick={() => setTab("arxiv")}
+          sx={{
+            border: "none", cursor: "pointer", borderRadius: "8px", px: 2, py: 0.7, fontSize: 13, fontWeight: 600,
+            bgcolor: tab === "arxiv" ? "#fff" : "transparent",
+            color: tab === "arxiv" ? "#1a3f6f" : "#667085",
+            boxShadow: tab === "arxiv" ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+          }}
+        >
+          {t("settings.office.rooms.tabs.archived")}
+        </Box>
+      </Box>
+
       {/* Loading state */}
       {isLoading && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
@@ -229,14 +313,38 @@ export const Rooms = () => {
                       >
                         <MdOutlineEdit size={18} />
                       </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => openDeleteConfirm(room)}
-                        sx={{ color: "#e53935" }}
-                        aria-label={t("settings.office.rooms.delete")}
-                      >
-                        <MdDeleteOutline size={18} />
-                      </IconButton>
+                      {tab === "faol" ? (
+                        <IconButton
+                          size="small"
+                          onClick={() => openArchiveConfirm(room)}
+                          sx={{ color: "#b98900" }}
+                          aria-label={t("settings.office.rooms.archive")}
+                          title={t("settings.office.rooms.archive")}
+                        >
+                          <MdArchive size={18} />
+                        </IconButton>
+                      ) : (
+                        <>
+                          <IconButton
+                            size="small"
+                            onClick={() => openRestoreConfirm(room)}
+                            sx={{ color: "#2e7d32" }}
+                            aria-label={t("settings.office.rooms.restore")}
+                            title={t("settings.office.rooms.restore")}
+                          >
+                            <MdUnarchive size={18} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => openDeleteConfirm(room)}
+                            sx={{ color: "#e53935" }}
+                            aria-label={t("settings.office.rooms.delete")}
+                            title={t("settings.office.rooms.delete")}
+                          >
+                            <MdDeleteOutline size={18} />
+                          </IconButton>
+                        </>
+                      )}
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -245,7 +353,7 @@ export const Rooms = () => {
               {rooms.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} sx={{ textAlign: "center", color: "#9ca3af", fontSize: 13, py: 4 }}>
-                    {t("settings.office.rooms.emptyState")}
+                    {tab === "faol" ? t("settings.office.rooms.emptyState") : t("settings.office.rooms.emptyArchived")}
                   </TableCell>
                 </TableRow>
               )}
@@ -386,6 +494,83 @@ export const Rooms = () => {
             sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
           >
             {t("settings.office.rooms.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Archive confirmation */}
+      <Dialog
+        open={!!archiveTarget}
+        onClose={closeArchiveConfirm}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.office.rooms.archiveConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.office.rooms.archiveConfirm.message", { name: archiveTarget?.name ?? "" })}
+          </DialogContentText>
+          {archiveError && (
+            <Typography fontSize={13} color="error" mt={1.5}>{archiveError}</Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={closeArchiveConfirm}
+            variant="outlined"
+            disabled={isToggling}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.rooms.form.cancel")}
+          </Button>
+          <Button
+            onClick={confirmArchive}
+            variant="contained"
+            disabled={isToggling}
+            startIcon={isToggling ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none", bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" } }}
+          >
+            {t("settings.office.rooms.archive")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Restore confirmation */}
+      <Dialog
+        open={!!restoreTarget}
+        onClose={closeRestoreConfirm}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.office.rooms.restoreConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.office.rooms.restoreConfirm.message", { name: restoreTarget?.name ?? "" })}
+          </DialogContentText>
+          {restoreError && (
+            <Typography fontSize={13} color="error" mt={1.5}>{restoreError}</Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={closeRestoreConfirm}
+            variant="outlined"
+            disabled={isToggling}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.rooms.form.cancel")}
+          </Button>
+          <Button
+            onClick={confirmRestore}
+            variant="contained"
+            color="success"
+            disabled={isToggling}
+            startIcon={isToggling ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
+          >
+            {t("settings.office.rooms.restore")}
           </Button>
         </DialogActions>
       </Dialog>

@@ -16,6 +16,8 @@ import {
   FiEdit2,
   FiMapPin,
   FiRefreshCw,
+  FiRotateCcw,
+  FiArchive,
   FiX,
 } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
@@ -23,6 +25,7 @@ import {
   useAllBranchesQuery,
   useCreateBranchMutation,
   useUpdateBranchMutation,
+  useToggleBranchStatusMutation,
   useDeleteBranchMutation,
 } from "../../../../../app/api/branchesApi/branchesApi";
 import type { Branch } from "../../../../../app/api/branchesApi/types";
@@ -36,6 +39,7 @@ export const Branches = () => {
   const { data, isLoading, isError, refetch, isFetching } = useAllBranchesQuery();
   const [createBranch, { isLoading: isCreating }] = useCreateBranchMutation();
   const [updateBranch, { isLoading: isUpdating }] = useUpdateBranchMutation();
+  const [toggleBranchStatus, { isLoading: isToggling }] = useToggleBranchStatusMutation();
   const [deleteBranch, { isLoading: isDeleting }] = useDeleteBranchMutation();
 
   const branches = data?.data ?? [];
@@ -51,6 +55,10 @@ export const Branches = () => {
 
   const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<Branch | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<Branch | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
   const openCreateModal = () => {
     setEditingId(null);
@@ -82,6 +90,10 @@ export const Branches = () => {
     setDeleteError(null);
   };
 
+  // Permanent delete — reserved for an already-archived (INACTIVE) branch;
+  // the backend itself rejects it (409) while the branch still has rooms,
+  // courses or users. Distinct from archiving below (PATCH toggle-status),
+  // which only flips the status and keeps the record.
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -93,6 +105,56 @@ export const Branches = () => {
       const generic = t("settings.ceo.branches.deleteConfirm.error");
       const message = detail ? `${generic}: ${detail}` : generic;
       setDeleteError(message);
+      toast.error(message);
+    }
+  };
+
+  const openArchiveConfirm = (branch: Branch) => {
+    setArchiveError(null);
+    setArchiveTarget(branch);
+  };
+
+  const closeArchiveConfirm = () => {
+    setArchiveTarget(null);
+    setArchiveError(null);
+  };
+
+  const confirmArchive = async () => {
+    if (!archiveTarget) return;
+    try {
+      await toggleBranchStatus(archiveTarget.id).unwrap();
+      setArchiveTarget(null);
+      toast.success(t("settings.ceo.branches.toast.archived"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.ceo.branches.archiveConfirm.error");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setArchiveError(message);
+      toast.error(message);
+    }
+  };
+
+  const openRestoreConfirm = (branch: Branch) => {
+    setRestoreError(null);
+    setRestoreTarget(branch);
+  };
+
+  const closeRestoreConfirm = () => {
+    setRestoreTarget(null);
+    setRestoreError(null);
+  };
+
+  const confirmRestore = async () => {
+    if (!restoreTarget) return;
+    try {
+      await toggleBranchStatus(restoreTarget.id).unwrap();
+      setRestoreTarget(null);
+      toast.success(t("settings.ceo.branches.toast.restored"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.ceo.branches.restoreConfirm.error");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setRestoreError(message);
       toast.error(message);
     }
   };
@@ -223,14 +285,38 @@ export const Branches = () => {
                   {branch.name}
                 </span>
                 <div className="flex items-center gap-3 text-gray-400">
-                  <button
-                    type="button"
-                    onClick={() => openDeleteConfirm(branch)}
-                    className="hover:text-red-500 transition-colors"
-                    aria-label={t("settings.ceo.branches.delete")}
-                  >
-                    <FiTrash2 size={16} />
-                  </button>
+                  {tab === "faol" ? (
+                    <button
+                      type="button"
+                      onClick={() => openArchiveConfirm(branch)}
+                      className="hover:text-amber-600 transition-colors"
+                      aria-label={t("settings.ceo.branches.archive")}
+                      title={t("settings.ceo.branches.archive")}
+                    >
+                      <FiArchive size={16} />
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openRestoreConfirm(branch)}
+                        className="hover:text-green-600 transition-colors"
+                        aria-label={t("settings.ceo.branches.restore")}
+                        title={t("settings.ceo.branches.restore")}
+                      >
+                        <FiRotateCcw size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openDeleteConfirm(branch)}
+                        className="hover:text-red-500 transition-colors"
+                        aria-label={t("settings.ceo.branches.delete")}
+                        title={t("settings.ceo.branches.delete")}
+                      >
+                        <FiTrash2 size={16} />
+                      </button>
+                    </>
+                  )}
                   <button
                     type="button"
                     onClick={() => openEditModal(branch)}
@@ -420,6 +506,111 @@ export const Branches = () => {
             }}
           >
             {t("settings.ceo.branches.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Archive confirmation */}
+      <Dialog
+        open={!!archiveTarget}
+        onClose={closeArchiveConfirm}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.ceo.branches.archiveConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.ceo.branches.archiveConfirm.message", { name: archiveTarget?.name ?? "" })}
+          </DialogContentText>
+          {archiveError && (
+            <div className="mt-3 text-sm text-red-500">{archiveError}</div>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={closeArchiveConfirm}
+            variant="outlined"
+            disabled={isToggling}
+            sx={{
+              textTransform: "none",
+              borderRadius: "10px",
+              borderColor: "#E5E7EB",
+              color: "#374151",
+              paddingX: "18px",
+              "&:hover": { borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" },
+            }}
+          >
+            {t("settings.ceo.branches.form.cancel")}
+          </Button>
+          <Button
+            onClick={confirmArchive}
+            variant="contained"
+            disabled={isToggling}
+            startIcon={isToggling ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{
+              textTransform: "none",
+              borderRadius: "10px",
+              paddingX: "18px",
+              fontWeight: 600,
+              boxShadow: "none",
+              bgcolor: "#5c7fa3",
+              "&:hover": { bgcolor: "#4a6a8a" },
+            }}
+          >
+            {t("settings.ceo.branches.archive")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Restore confirmation */}
+      <Dialog
+        open={!!restoreTarget}
+        onClose={closeRestoreConfirm}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.ceo.branches.restoreConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.ceo.branches.restoreConfirm.message", { name: restoreTarget?.name ?? "" })}
+          </DialogContentText>
+          {restoreError && (
+            <div className="mt-3 text-sm text-red-500">{restoreError}</div>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={closeRestoreConfirm}
+            variant="outlined"
+            disabled={isToggling}
+            sx={{
+              textTransform: "none",
+              borderRadius: "10px",
+              borderColor: "#E5E7EB",
+              color: "#374151",
+              paddingX: "18px",
+              "&:hover": { borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" },
+            }}
+          >
+            {t("settings.ceo.branches.form.cancel")}
+          </Button>
+          <Button
+            onClick={confirmRestore}
+            variant="contained"
+            color="success"
+            disabled={isToggling}
+            startIcon={isToggling ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{
+              textTransform: "none",
+              borderRadius: "10px",
+              paddingX: "18px",
+              fontWeight: 600,
+              boxShadow: "none",
+            }}
+          >
+            {t("settings.ceo.branches.restore")}
           </Button>
         </DialogActions>
       </Dialog>

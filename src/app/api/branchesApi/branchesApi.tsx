@@ -6,6 +6,7 @@ import {
     CreateBranchRequest,
     UpdateBranchRequest,
     DeleteBranchResponse,
+    ToggleBranchStatusResponse,
 } from "./types";
 
 // Backend ba'zan ro'yxatni tekis massiv, ba'zan {data: [...], meta} ko'rinishida
@@ -57,6 +58,21 @@ export const branchesApi = baseApi.injectEndpoints({
             },
             invalidatesTags: ["branch"],
         }),
+        // PATCH /branches/{id}/toggle-status (Swagger) — flips the branch
+        // between ACTIVE and INACTIVE (archive) without touching its rooms,
+        // courses or users, unlike deleteBranch below (DELETE /branches/{id}),
+        // which the backend rejects outright while any of those still
+        // reference the branch.
+        toggleBranchStatus: builder.mutation<ToggleBranchStatusResponse, string>({
+            query: (id) => ({
+                url: `${PATHS.BRANCHES}/${id}/toggle-status`,
+                method: "PATCH",
+            }),
+            invalidatesTags: ["branch"],
+        }),
+        // DELETE /branches/{id} — Swagger: hard delete, rejected (409) if the
+        // branch still has rooms, courses or users. Reserved for permanently
+        // removing an already-archived (INACTIVE) branch.
         deleteBranch: builder.mutation<DeleteBranchResponse, string>({
             query: (id) => ({
                 url: `${PATHS.BRANCHES}/${id}`,
@@ -71,5 +87,6 @@ export const {
     useAllBranchesQuery,
     useCreateBranchMutation,
     useUpdateBranchMutation,
+    useToggleBranchStatusMutation,
     useDeleteBranchMutation,
 } = branchesApi;

@@ -173,14 +173,18 @@ export const teachersApi = baseApi.injectEndpoints({
                 url: `${PATHS.TEACHERS}/${id}/toggle-status`,
                 method: "PATCH",
             }),
-            invalidatesTags: ["teacher"],
+            // Flipping status moves the teacher between the Teachers list and
+            // the Archive page — both must refetch, not just "teacher".
+            invalidatesTags: ["teacher", "archive"],
         }),
         deleteTeacher: builder.mutation<DeleteTeacherResponse, string>({
             query: (id) => ({
                 url: `${PATHS.TEACHERS}/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["teacher"],
+            // Also drops the teacher out of the Archive page (GET /archives)
+            // whenever a permanent delete is issued directly from there.
+            invalidatesTags: ["teacher", "archive"],
         }),
     })
 })

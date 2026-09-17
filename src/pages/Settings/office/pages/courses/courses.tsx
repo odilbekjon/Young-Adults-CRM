@@ -19,12 +19,13 @@ import {
   DialogContentText,
   DialogActions,
 } from "@mui/material";
-import { MdClose, MdOutlineEdit, MdDeleteOutline, MdRefresh } from "react-icons/md";
+import { MdClose, MdOutlineEdit, MdDeleteOutline, MdRefresh, MdArchive, MdUnarchive } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import {
   useAllCoursesQuery,
   useCreateCourseMutation,
   useUpdateCourseMutation,
+  useToggleCourseStatusMutation,
   useDeleteCourseMutation,
 } from "../../../../../app/api/coursesApi/coursesApi";
 import type { Course } from "../../../../../app/api/coursesApi/types";
@@ -68,10 +69,13 @@ export const Courses = () => {
   const { data: branchesData } = useAllBranchesQuery();
   const [createCourse, { isLoading: isCreating }] = useCreateCourseMutation();
   const [updateCourse, { isLoading: isUpdating }] = useUpdateCourseMutation();
+  const [toggleCourseStatus, { isLoading: isToggling }] = useToggleCourseStatusMutation();
   const [deleteCourse, { isLoading: isDeleting }] = useDeleteCourseMutation();
 
+  const [tab, setTab] = useState<"faol" | "arxiv">("faol");
+
   const courses = (data?.data ?? [])
-    .filter((c) => c.status === "ACTIVE")
+    .filter((c) => (tab === "faol" ? c.status === "ACTIVE" : c.status !== "ACTIVE"))
     .filter((c) => selectedBranch === "all" || c.branch?.name === selectedBranch);
   const activeBranches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
 
@@ -83,6 +87,10 @@ export const Courses = () => {
 
   const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<Course | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<Course | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
   const openAddDrawer = () => {
     setEditingCourse(null);
@@ -118,6 +126,8 @@ export const Courses = () => {
     setDeleteError(null);
   };
 
+  // Permanent delete — reserved for an already-archived (INACTIVE) course;
+  // the backend itself rejects it (409) while the course still has groups.
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -127,6 +137,50 @@ export const Courses = () => {
     } catch {
       setDeleteError(t("settings.office.courses.deleteConfirm.error"));
       toast.error(t("settings.office.courses.deleteConfirm.error"));
+    }
+  };
+
+  const openArchiveConfirm = (course: Course) => {
+    setArchiveError(null);
+    setArchiveTarget(course);
+  };
+
+  const closeArchiveConfirm = () => {
+    setArchiveTarget(null);
+    setArchiveError(null);
+  };
+
+  const confirmArchive = async () => {
+    if (!archiveTarget) return;
+    try {
+      await toggleCourseStatus(archiveTarget.id).unwrap();
+      setArchiveTarget(null);
+      toast.success(t("settings.office.courses.toast.archived"));
+    } catch {
+      setArchiveError(t("settings.office.courses.archiveConfirm.error"));
+      toast.error(t("settings.office.courses.archiveConfirm.error"));
+    }
+  };
+
+  const openRestoreConfirm = (course: Course) => {
+    setRestoreError(null);
+    setRestoreTarget(course);
+  };
+
+  const closeRestoreConfirm = () => {
+    setRestoreTarget(null);
+    setRestoreError(null);
+  };
+
+  const confirmRestore = async () => {
+    if (!restoreTarget) return;
+    try {
+      await toggleCourseStatus(restoreTarget.id).unwrap();
+      setRestoreTarget(null);
+      toast.success(t("settings.office.courses.toast.restored"));
+    } catch {
+      setRestoreError(t("settings.office.courses.restoreConfirm.error"));
+      toast.error(t("settings.office.courses.restoreConfirm.error"));
     }
   };
 
@@ -195,7 +249,37 @@ export const Courses = () => {
         </Button>
       </Box>
 
-      <Divider sx={{ mb: 3 }} />
+      <Divider sx={{ mb: 2 }} />
+
+      {/* Tabs */}
+      <Box sx={{ display: "inline-flex", borderRadius: "10px", bgcolor: "#eef2f6", p: 0.5, mb: 2 }}>
+        <Box
+          component="button"
+          type="button"
+          onClick={() => setTab("faol")}
+          sx={{
+            border: "none", cursor: "pointer", borderRadius: "8px", px: 2, py: 0.7, fontSize: 13, fontWeight: 600,
+            bgcolor: tab === "faol" ? "#fff" : "transparent",
+            color: tab === "faol" ? "#1a3f6f" : "#667085",
+            boxShadow: tab === "faol" ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+          }}
+        >
+          {t("settings.office.courses.tabs.active")}
+        </Box>
+        <Box
+          component="button"
+          type="button"
+          onClick={() => setTab("arxiv")}
+          sx={{
+            border: "none", cursor: "pointer", borderRadius: "8px", px: 2, py: 0.7, fontSize: 13, fontWeight: 600,
+            bgcolor: tab === "arxiv" ? "#fff" : "transparent",
+            color: tab === "arxiv" ? "#1a3f6f" : "#667085",
+            boxShadow: tab === "arxiv" ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+          }}
+        >
+          {t("settings.office.courses.tabs.archived")}
+        </Box>
+      </Box>
 
       {/* Loading state */}
       {isLoading && (
@@ -249,14 +333,38 @@ export const Courses = () => {
                   >
                     <MdOutlineEdit size={14} />
                   </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => { e.stopPropagation(); openDeleteConfirm(course); }}
-                    aria-label={t("settings.office.courses.delete")}
-                    sx={{ bgcolor: "rgba(255,255,255,0.85)", color: "#e53935", "&:hover": { bgcolor: "#fff" }, width: 28, height: 28 }}
-                  >
-                    <MdDeleteOutline size={14} />
-                  </IconButton>
+                  {tab === "faol" ? (
+                    <IconButton
+                      size="small"
+                      onClick={(e) => { e.stopPropagation(); openArchiveConfirm(course); }}
+                      aria-label={t("settings.office.courses.archive")}
+                      title={t("settings.office.courses.archive")}
+                      sx={{ bgcolor: "rgba(255,255,255,0.85)", color: "#b98900", "&:hover": { bgcolor: "#fff" }, width: 28, height: 28 }}
+                    >
+                      <MdArchive size={14} />
+                    </IconButton>
+                  ) : (
+                    <>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => { e.stopPropagation(); openRestoreConfirm(course); }}
+                        aria-label={t("settings.office.courses.restore")}
+                        title={t("settings.office.courses.restore")}
+                        sx={{ bgcolor: "rgba(255,255,255,0.85)", color: "#2e7d32", "&:hover": { bgcolor: "#fff" }, width: 28, height: 28 }}
+                      >
+                        <MdUnarchive size={14} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => { e.stopPropagation(); openDeleteConfirm(course); }}
+                        aria-label={t("settings.office.courses.delete")}
+                        title={t("settings.office.courses.delete")}
+                        sx={{ bgcolor: "rgba(255,255,255,0.85)", color: "#e53935", "&:hover": { bgcolor: "#fff" }, width: 28, height: 28 }}
+                      >
+                        <MdDeleteOutline size={14} />
+                      </IconButton>
+                    </>
+                  )}
                 </Box>
                 <Typography
                   fontWeight={700}
@@ -281,7 +389,7 @@ export const Courses = () => {
 
           {courses.length === 0 && (
             <Box sx={{ gridColumn: "1 / -1", textAlign: "center", color: "#9ca3af", fontSize: 13, py: 6 }}>
-              {t("settings.office.courses.emptyState")}
+              {tab === "faol" ? t("settings.office.courses.emptyState") : t("settings.office.courses.emptyArchived")}
             </Box>
           )}
         </Box>
@@ -400,6 +508,83 @@ export const Courses = () => {
             sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
           >
             {t("settings.office.courses.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Archive confirmation */}
+      <Dialog
+        open={!!archiveTarget}
+        onClose={closeArchiveConfirm}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.office.courses.archiveConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.office.courses.archiveConfirm.message", { name: archiveTarget?.name ?? "" })}
+          </DialogContentText>
+          {archiveError && (
+            <Typography fontSize={13} color="error" mt={1.5}>{archiveError}</Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={closeArchiveConfirm}
+            variant="outlined"
+            disabled={isToggling}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.courses.form.cancel")}
+          </Button>
+          <Button
+            onClick={confirmArchive}
+            variant="contained"
+            disabled={isToggling}
+            startIcon={isToggling ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none", bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" } }}
+          >
+            {t("settings.office.courses.archive")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Restore confirmation */}
+      <Dialog
+        open={!!restoreTarget}
+        onClose={closeRestoreConfirm}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.office.courses.restoreConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.office.courses.restoreConfirm.message", { name: restoreTarget?.name ?? "" })}
+          </DialogContentText>
+          {restoreError && (
+            <Typography fontSize={13} color="error" mt={1.5}>{restoreError}</Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={closeRestoreConfirm}
+            variant="outlined"
+            disabled={isToggling}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.courses.form.cancel")}
+          </Button>
+          <Button
+            onClick={confirmRestore}
+            variant="contained"
+            color="success"
+            disabled={isToggling}
+            startIcon={isToggling ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
+          >
+            {t("settings.office.courses.restore")}
           </Button>
         </DialogActions>
       </Dialog>

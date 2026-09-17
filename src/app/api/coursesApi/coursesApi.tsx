@@ -6,6 +6,7 @@ import {
     CreateCourseRequest,
     UpdateCourseRequest,
     DeleteCourseResponse,
+    ToggleCourseStatusResponse,
 } from "./types";
 
 // Backend ba'zan ro'yxatni tekis massiv, ba'zan {data: [...], meta} ko'rinishida
@@ -59,6 +60,20 @@ export const coursesApi = baseApi.injectEndpoints({
             },
             invalidatesTags: ["course"],
         }),
+        // PATCH /courses/{id}/toggle-status (Swagger) — flips the course
+        // between ACTIVE and INACTIVE (archive) without touching its groups,
+        // unlike deleteCourse below (DELETE /courses/{id}), which the backend
+        // rejects outright while any group still references the course.
+        toggleCourseStatus: builder.mutation<ToggleCourseStatusResponse, string>({
+            query: (id) => ({
+                url: `${PATHS.COURSES}/${id}/toggle-status`,
+                method: "PATCH",
+            }),
+            invalidatesTags: ["course"],
+        }),
+        // DELETE /courses/{id} — Swagger: hard delete, rejected (409) if the
+        // course still has groups. Reserved for permanently removing an
+        // already-archived (INACTIVE) course.
         deleteCourse: builder.mutation<DeleteCourseResponse, string>({
             query: (id) => ({
                 url: `${PATHS.COURSES}/${id}`,
@@ -73,5 +88,6 @@ export const {
     useAllCoursesQuery,
     useCreateCourseMutation,
     useUpdateCourseMutation,
+    useToggleCourseStatusMutation,
     useDeleteCourseMutation,
 } = coursesApi;

@@ -21,6 +21,7 @@ import {
   useStudentGroupMembershipsQuery,
   useUpdateStudentMutation,
   useDeleteStudentMutation,
+  useToggleStudentStatusMutation,
   useTransferStudentBranchMutation,
 } from "../../app/api/studentsApi";
 import type { StudentGender, StudentGroupMembership } from "../../app/api/studentsApi/types";
@@ -844,6 +845,7 @@ const MoveToBranchModal = ({
 const SideCard = ({
   student,
   onEdit,
+  onArchive,
   onDelete,
   onSms,
   onAddToGroup,
@@ -853,6 +855,7 @@ const SideCard = ({
 }: {
   student: FlatStudent;
   onEdit: () => void;
+  onArchive: () => void;
   onDelete: () => void;
   onSms: () => void;
   onAddToGroup: () => void;
@@ -887,6 +890,15 @@ const SideCard = ({
           sx={{ border: "1.5px solid #f59e0b", color: "#f59e0b" }}
         >
           <FiMail size={14} />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Archive">
+        <IconButton
+          size="small"
+          onClick={onArchive}
+          sx={{ border: "1.5px solid #5c7fa3", color: "#5c7fa3" }}
+        >
+          <FiArchive size={14} />
         </IconButton>
       </Tooltip>
       <Tooltip title="Delete">
@@ -1420,6 +1432,7 @@ export const StudentProfile = () => {
 
   const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
   const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
+  const [toggleStudentStatus, { isLoading: isArchivingStudent }] = useToggleStudentStatusMutation();
   const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
 
@@ -1453,11 +1466,13 @@ export const StudentProfile = () => {
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
   const toast = useToast();
 
   const [activeTab, setActiveTab] = useState(0);
   const [editOpen, setEditOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [addToGroupOpen, setAddToGroupOpen] = useState(false);
   const [moveBranchOpen, setMoveBranchOpen] = useState(false);
@@ -1543,6 +1558,26 @@ export const StudentProfile = () => {
     }
   };
 
+  // Archive is a separate action from permanent delete: PATCH
+  // /students/{id}/toggle-status flips the student's status to INACTIVE
+  // without removing the record, unlike deleteStudent above (DELETE
+  // /students/{id}) — same distinction Students.tsx's list page already
+  // makes between its own Archive and Delete actions.
+  const handleArchive = async () => {
+    setArchiveError(null);
+    try {
+      await toggleStudentStatus(student.uid).unwrap();
+      toast.success("Student moved to archive");
+      setArchiveOpen(false);
+      navigate(-1);
+    } catch (err) {
+      const detail = extractApiError(err);
+      const message = detail ? `Failed to archive the student: ${detail}` : "Failed to archive the student";
+      setArchiveError(message);
+      toast.error(message);
+    }
+  };
+
   // GET /students/{id} (StudentDetail) doesn't return the student's current
   // group id, unlike the students-list shape used on the Students page, so
   // there's no client-side "already in this group" check here — the backend
@@ -1601,6 +1636,7 @@ export const StudentProfile = () => {
           <SideCard
             student={student}
             onEdit={() => setEditOpen(true)}
+            onArchive={() => { setArchiveError(null); setArchiveOpen(true); }}
             onDelete={() => setDeleteOpen(true)}
             onSms={() => setSmsOpen(true)}
             onAddToGroup={() => setAddToGroupOpen(true)}
@@ -1696,6 +1732,35 @@ export const StudentProfile = () => {
         onConfirm={handleDelete}
         studentName={student.name}
       />
+
+      <Dialog
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Archive student</DialogTitle>
+        <DialogContent>
+          <div style={{ fontSize: 14, color: "#6b7280" }}>
+            Move {student.name} to the archive? They will stay in the database, only their status becomes "Inactive" — they can be reactivated at any time.
+          </div>
+          {archiveError && (
+            <div style={{ marginTop: 12, fontSize: 13, color: "#ef4444" }}>{archiveError}</div>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setArchiveOpen(false)} disabled={isArchivingStudent} sx={{ color: "#6b7280" }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            disabled={isArchivingStudent}
+            onClick={handleArchive}
+            sx={{ borderRadius: 2, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" } }}
+          >
+            Archive
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <AddToGroupModal
         open={addToGroupOpen}

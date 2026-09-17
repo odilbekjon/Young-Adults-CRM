@@ -27,7 +27,7 @@ import {
   MdArrowBack,
 } from "react-icons/md";
 import { useAllArchivesQuery } from "../../../../../app/api/archivesApi/archivesApi";
-import type { ArchiveRole } from "../../../../../app/api/archivesApi/types";
+import type { ArchiveRecord, ArchiveRole } from "../../../../../app/api/archivesApi/types";
 import {
   useAllReasonsQuery,
   useReasonsSelectQuery,
@@ -38,6 +38,9 @@ import {
   useDeleteReasonMutation,
 } from "../../../../../app/api/reasonsApi";
 import type { Reason } from "../../../../../app/api/reasonsApi/types";
+import { useToggleStudentStatusMutation, useDeleteStudentMutation } from "../../../../../app/api/studentsApi";
+import { useToggleTeacherStatusMutation, useDeleteTeacherMutation } from "../../../../../app/api/teachersApi";
+import { useToggleStaffUserStatusMutation, useDeleteStaffUserMutation } from "../../../../../app/api/usersApi";
 import { useToast } from "../../../../../Context/ToastContext";
 import { extractApiError } from "../../../../../utils";
 import type { RootState } from "../../../../../app/store";
@@ -80,6 +83,15 @@ export const Archive = () => {
   const [deleteTarget, setDeleteTarget] = useState<Reason | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Restore / permanent-delete for archived records (students, teachers,
+  // staff). Distinct from the reasons CRUD above.
+  const [restoreTarget, setRestoreTarget] = useState<ArchiveRecord | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [permDeleteTarget, setPermDeleteTarget] = useState<ArchiveRecord | null>(null);
+  const [permDeleteError, setPermDeleteError] = useState<string | null>(null);
+  const [bulkActionError, setBulkActionError] = useState<string | null>(null);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+
   // ── Server-side query ───────────────────────────────────────────────────────
   // Debounced the same way as Header's student search bar (350ms) so we don't
   // fire a request on every keystroke.
@@ -120,6 +132,129 @@ export const Archive = () => {
   const [deleteReason, { isLoading: isDeletingReason }] = useDeleteReasonMutation();
 
   const reasons = reasonsData?.data ?? [];
+
+  // ── Restore / permanent delete for archived records ─────────────────────────
+  // An archive row can be a student, a teacher, or staff (ADMIN/SUPERADMIN) —
+  // each has its own toggle-status (restore) and DELETE (permanent) endpoint
+  // (studentsApi/teachersApi/usersApi), so the right mutation is picked by role
+  // rather than inventing a single generic "archive" endpoint the backend
+  // doesn't expose.
+  const [toggleStudentStatus, { isLoading: isRestoringStudent }] = useToggleStudentStatusMutation();
+  const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
+  const [toggleTeacherStatus, { isLoading: isRestoringTeacher }] = useToggleTeacherStatusMutation();
+  const [deleteTeacher, { isLoading: isDeletingTeacher }] = useDeleteTeacherMutation();
+  const [toggleStaffUserStatus, { isLoading: isRestoringStaff }] = useToggleStaffUserStatusMutation();
+  const [deleteStaffUser, { isLoading: isDeletingStaffUser }] = useDeleteStaffUserMutation();
+
+  const isRestoring = isRestoringStudent || isRestoringTeacher || isRestoringStaff || isBulkProcessing;
+  const isPermDeleting = isDeletingStudent || isDeletingTeacher || isDeletingStaffUser || isBulkProcessing;
+
+  const roleActionsFor = (role?: string | null) => {
+    switch ((role ?? "").toUpperCase()) {
+      case "STUDENT":
+        return { restore: toggleStudentStatus, permanentDelete: deleteStudent };
+      case "TEACHER":
+        return { restore: toggleTeacherStatus, permanentDelete: deleteTeacher };
+      case "ADMIN":
+      case "SUPERADMIN":
+        return { restore: toggleStaffUserStatus, permanentDelete: deleteStaffUser };
+      default:
+        return null;
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!restoreTarget) return;
+    const actions = roleActionsFor(restoreTarget.role);
+    if (!actions) {
+      setRestoreError(t("settings.office.archive.restoreConfirm.unsupportedRole"));
+      return;
+    }
+    setRestoreError(null);
+    try {
+      await actions.restore(restoreTarget.id).unwrap();
+      toast.success(t("settings.office.archive.toast.restored"));
+      setRestoreTarget(null);
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.office.archive.restoreConfirm.error");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setRestoreError(message);
+      toast.error(message);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!permDeleteTarget) return;
+    const actions = roleActionsFor(permDeleteTarget.role);
+    if (!actions) {
+      setPermDeleteError(t("settings.office.archive.permanentDeleteConfirm.unsupportedRole"));
+      return;
+    }
+    setPermDeleteError(null);
+    try {
+      await actions.permanentDelete(permDeleteTarget.id).unwrap();
+      toast.success(t("settings.office.archive.toast.permanentlyDeleted"));
+      setPermDeleteTarget(null);
+      setSelected((s) => s.filter((id) => id !== permDeleteTarget.id));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.office.archive.permanentDeleteConfirm.error");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setPermDeleteError(message);
+      toast.error(message);
+    }
+  };
+
+  const handleBulkRestore = async () => {
+    if (selected.length === 0 || isBulkProcessing) return;
+    setBulkActionError(null);
+    setIsBulkProcessing(true);
+    try {
+      const targets = pageData.filter((r) => selected.includes(r.id));
+      await Promise.all(
+        targets.map((r) => {
+          const actions = roleActionsFor(r.role);
+          return actions ? actions.restore(r.id).unwrap() : Promise.resolve();
+        })
+      );
+      toast.success(t("settings.office.archive.toast.restored"));
+      setSelected([]);
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.office.archive.restoreConfirm.error");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setBulkActionError(message);
+      toast.error(message);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkPermanentDelete = async () => {
+    if (selected.length === 0 || isBulkProcessing) return;
+    setBulkActionError(null);
+    setIsBulkProcessing(true);
+    try {
+      const targets = pageData.filter((r) => selected.includes(r.id));
+      await Promise.all(
+        targets.map((r) => {
+          const actions = roleActionsFor(r.role);
+          return actions ? actions.permanentDelete(r.id).unwrap() : Promise.resolve();
+        })
+      );
+      toast.success(t("settings.office.archive.toast.permanentlyDeleted"));
+      setSelected([]);
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.office.archive.permanentDeleteConfirm.error");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setBulkActionError(message);
+      toast.error(message);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
 
   // ── Selection ───────────────────────────────────────────────────────────────
   const allSelected = pageData.length > 0 && pageData.every((r) => selected.includes(r.id));
@@ -600,10 +735,20 @@ export const Archive = () => {
         />
 
         <div className="flex items-center gap-3 ml-2">
-          <button className="flex items-center gap-1 text-red-500 hover:text-red-600 text-sm font-medium transition-colors">
+          <button
+            type="button"
+            onClick={handleBulkPermanentDelete}
+            disabled={selected.length === 0 || isPermDeleting}
+            className="flex items-center gap-1 text-red-500 hover:text-red-600 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <MdDelete size={18} /> {t("settings.office.archive.actions.delete")}
           </button>
-          <button className="flex items-center gap-1 text-green-600 hover:text-green-700 text-sm font-medium transition-colors">
+          <button
+            type="button"
+            onClick={handleBulkRestore}
+            disabled={selected.length === 0 || isRestoring}
+            className="flex items-center gap-1 text-green-600 hover:text-green-700 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <MdRefresh size={18} /> {t("settings.office.archive.actions.reestablish")}
           </button>
           <button className="flex items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors">
@@ -611,6 +756,10 @@ export const Archive = () => {
           </button>
         </div>
       </div>
+
+      {bulkActionError && (
+        <div className="mb-3 text-sm text-red-500">{bulkActionError}</div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
@@ -690,8 +839,21 @@ export const Archive = () => {
                     <div className="text-gray-400 text-xs">{r.archivedAt}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <IconButton size="small" sx={{ color: "#4ade80" }}>
+                    <IconButton
+                      size="small"
+                      sx={{ color: "#4ade80" }}
+                      onClick={() => { setRestoreError(null); setRestoreTarget(r); }}
+                      aria-label={t("settings.office.archive.actions.reestablish")}
+                    >
                       <MdRefresh size={18} />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      sx={{ color: "#ef5350" }}
+                      onClick={() => { setPermDeleteError(null); setPermDeleteTarget(r); }}
+                      aria-label={t("settings.office.archive.actions.delete")}
+                    >
+                      <MdDelete size={18} />
                     </IconButton>
                   </td>
                 </tr>
@@ -722,6 +884,88 @@ export const Archive = () => {
           </div>
         )}
       </div>
+
+      {/* Restore confirmation */}
+      <Dialog
+        open={!!restoreTarget}
+        onClose={() => { setRestoreTarget(null); setRestoreError(null); }}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.office.archive.restoreConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.office.archive.restoreConfirm.message", { name: restoreTarget?.name ?? "" })}
+          </DialogContentText>
+          {restoreError && (
+            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
+              {restoreError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => { setRestoreTarget(null); setRestoreError(null); }}
+            variant="outlined"
+            disabled={isRestoring}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.archive.reasons.deleteConfirm.cancel")}
+          </Button>
+          <Button
+            onClick={handleRestore}
+            variant="contained"
+            color="success"
+            disabled={isRestoring}
+            startIcon={isRestoring ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
+          >
+            {t("settings.office.archive.actions.reestablish")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Permanent delete confirmation */}
+      <Dialog
+        open={!!permDeleteTarget}
+        onClose={() => { setPermDeleteTarget(null); setPermDeleteError(null); }}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.office.archive.permanentDeleteConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.office.archive.permanentDeleteConfirm.message", { name: permDeleteTarget?.name ?? "" })}
+          </DialogContentText>
+          {permDeleteError && (
+            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
+              {permDeleteError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => { setPermDeleteTarget(null); setPermDeleteError(null); }}
+            variant="outlined"
+            disabled={isPermDeleting}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.archive.reasons.deleteConfirm.cancel")}
+          </Button>
+          <Button
+            onClick={handlePermanentDelete}
+            variant="contained"
+            color="error"
+            disabled={isPermDeleting}
+            startIcon={isPermDeleting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
+          >
+            {t("settings.office.archive.actions.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

@@ -179,7 +179,9 @@ export const usersApi = baseApi.injectEndpoints({
                 url: `${PATHS.USERS}/${id}/toggle-status`,
                 method: "PATCH",
             }),
-            invalidatesTags: ["staff"],
+            // Flipping status moves the user between the Staff list and the
+            // Archive page — both must refetch, not just "staff".
+            invalidatesTags: ["staff", "archive"],
         }),
         // DELETE /users/{id} — Swagger: hard delete; rejected with 409 if the
         // user is still assigned to a branch. Left for the caller to surface
@@ -189,7 +191,9 @@ export const usersApi = baseApi.injectEndpoints({
                 url: `${PATHS.USERS}/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["staff"],
+            // Also drops the user out of the Archive page (GET /archives)
+            // whenever a permanent delete is issued directly from there.
+            invalidatesTags: ["staff", "archive"],
         }),
     }),
 });

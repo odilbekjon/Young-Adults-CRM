@@ -51,3 +51,9 @@ export interface DeleteRoomResponse {
   success: boolean;
   message: string;
 }
+
+export interface ToggleRoomStatusResponse {
+  success: boolean;
+  message: string;
+  data?: Room;
+}

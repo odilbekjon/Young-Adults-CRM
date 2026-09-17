@@ -1711,15 +1711,29 @@
         },
         "close": "Close",
         "loadError": "Failed to load branches.",
+        "archive": "Archive",
+        "restore": "Restore",
         "deleteConfirm": {
           "title": "Delete branch",
           "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
           "error": "Failed to delete the branch. Please try again."
         },
+        "archiveConfirm": {
+          "title": "Archive branch",
+          "message": "Move \"{{name}}\" to the archive? It stays in the database, only its status becomes \"Inactive\" — it can be reactivated at any time.",
+          "error": "Failed to archive the branch. Please try again."
+        },
+        "restoreConfirm": {
+          "title": "Restore branch",
+          "message": "Restore \"{{name}}\" and move it back to the active list?",
+          "error": "Failed to restore the branch. Please try again."
+        },
         "toast": {
           "created": "Branch added successfully",
           "updated": "Branch updated successfully",
-          "deleted": "Branch deleted successfully"
+          "deleted": "Branch deleted successfully",
+          "archived": "Branch moved to archive",
+          "restored": "Branch restored successfully"
         }
       },
       "roadmap": {
@@ -2060,6 +2074,22 @@
             "deleted": "Reason deleted successfully",
             "statusToggled": "Reason status updated"
           }
+        },
+        "restoreConfirm": {
+          "title": "Restore from archive",
+          "message": "Restore \"{{name}}\" and move them back to the active list?",
+          "error": "Failed to restore. Please try again.",
+          "unsupportedRole": "This record's role can't be restored here."
+        },
+        "permanentDeleteConfirm": {
+          "title": "Permanently delete",
+          "message": "Are you sure you want to permanently delete \"{{name}}\" from the database? This action cannot be undone.",
+          "error": "Failed to permanently delete. Please try again.",
+          "unsupportedRole": "This record's role can't be permanently deleted here."
+        },
+        "toast": {
+          "restored": "Restored successfully",
+          "permanentlyDeleted": "Permanently deleted"
         }
       },
       "courses": {
@@ -2091,15 +2121,31 @@
           }
         },
         "durationOptions": { "min45": "45 minutes", "min60": "60 minutes", "min90": "90 minutes", "min120": "120 minutes", "min150": "150 minutes" },
+        "tabs": { "active": "Active", "archived": "Archived" },
+        "emptyArchived": "No archived courses",
+        "archive": "Archive",
+        "restore": "Restore",
         "deleteConfirm": {
           "title": "Delete course",
           "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
           "error": "Failed to delete the course. Please try again."
         },
+        "archiveConfirm": {
+          "title": "Archive course",
+          "message": "Move \"{{name}}\" to the archive? It stays in the database, only its status becomes \"Inactive\" — it can be reactivated at any time.",
+          "error": "Failed to archive the course. Please try again."
+        },
+        "restoreConfirm": {
+          "title": "Restore course",
+          "message": "Restore \"{{name}}\" and move it back to the active list?",
+          "error": "Failed to restore the course. Please try again."
+        },
         "toast": {
           "created": "Course added successfully",
           "updated": "Course updated successfully",
-          "deleted": "Course deleted successfully"
+          "deleted": "Course deleted successfully",
+          "archived": "Course moved to archive",
+          "restored": "Course restored successfully"
         }
       },
       "holidays": {
@@ -2164,15 +2210,31 @@
             "save": "Something went wrong. Please try again."
           }
         },
+        "tabs": { "active": "Active", "archived": "Archived" },
+        "emptyArchived": "No archived rooms",
+        "archive": "Archive",
+        "restore": "Restore",
         "deleteConfirm": {
           "title": "Delete room",
           "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
           "error": "Failed to delete the room. Please try again."
         },
+        "archiveConfirm": {
+          "title": "Archive room",
+          "message": "Move \"{{name}}\" to the archive? It stays in the database, only its status becomes \"Inactive\" — it can be reactivated at any time.",
+          "error": "Failed to archive the room. Please try again."
+        },
+        "restoreConfirm": {
+          "title": "Restore room",
+          "message": "Restore \"{{name}}\" and move it back to the active list?",
+          "error": "Failed to restore the room. Please try again."
+        },
         "toast": {
           "created": "Room added successfully",
           "updated": "Room updated successfully",
-          "deleted": "Room deleted successfully"
+          "deleted": "Room deleted successfully",
+          "archived": "Room moved to archive",
+          "restored": "Room restored successfully"
         }
       },
       "studentLeft": {

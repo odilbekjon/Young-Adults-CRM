@@ -132,14 +132,18 @@ export const studentsApi = baseApi.injectEndpoints({
                 url: `${PATHS.STUDENTS}/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["student"],
+            // Also drops the student out of the Archive page (GET /archives)
+            // whenever a permanent delete is issued directly from there.
+            invalidatesTags: ["student", "archive"],
         }),
         toggleStudentStatus: builder.mutation<ToggleStudentStatusResponse, string>({
             query: (id) => ({
                 url: `${PATHS.STUDENTS}/${id}/toggle-status`,
                 method: "PATCH",
             }),
-            invalidatesTags: ["student"],
+            // Flipping status moves the student between the Students list and
+            // the Archive page — both must refetch, not just "student".
+            invalidatesTags: ["student", "archive"],
         }),
         transferStudentBranch: builder.mutation<TransferStudentBranchResponse, TransferStudentBranchRequest>({
             query: ({ id, newBranchId, reason }) => ({

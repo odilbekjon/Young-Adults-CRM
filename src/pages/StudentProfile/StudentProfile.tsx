@@ -1,7 +1,7 @@
 // src/pages/StudentProfile.tsx
 import { useState, useEffect, useMemo } from "react";
 import {
-  FiEdit2, FiMail, FiTrash2, FiFlag, FiPrinter,
+  FiEdit2, FiMail, FiFlag, FiPrinter,
   FiChevronDown, FiUsers, FiDollarSign, FiPhone,
   FiCalendar, FiGitBranch, FiPause, FiUser, FiX,
   FiMessageSquare, FiArchive,
@@ -10,7 +10,7 @@ import { IoArrowBack } from "react-icons/io5";
 import {
   Avatar, Chip, Tab, Tabs, Button, IconButton, Tooltip, Box,
   Drawer, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Radio, RadioGroup, FormControlLabel, Switch, Checkbox,
+  TextField, Radio, RadioGroup, FormControlLabel,
   InputAdornment, Menu, MenuItem,
 } from "@mui/material";
 
@@ -20,14 +20,14 @@ import {
   useStudentByIdQuery,
   useStudentGroupMembershipsQuery,
   useUpdateStudentMutation,
-  useDeleteStudentMutation,
   useToggleStudentStatusMutation,
   useTransferStudentBranchMutation,
 } from "../../app/api/studentsApi";
 import type { StudentGender, StudentGroupMembership } from "../../app/api/studentsApi/types";
-import { useAllGroupsQuery, useAddStudentToGroupMutation } from "../../app/api/groupsApi";
+import { useAllGroupsQuery, useAddStudentToGroupMutation, useStudentGroupsQuery } from "../../app/api/groupsApi";
+import type { Group } from "../../app/api/groupsApi/types";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
-import { usePaymentsListQuery } from "../../app/api/financeApi";
+import { usePaymentsListQuery, useDeletePaymentMutation } from "../../app/api/financeApi";
 import type { PaymentRow } from "../../app/api/financeApi/types";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils/extractApiError";
@@ -536,124 +536,6 @@ const SendSmsDrawer = ({
 };
 
 /* ─── DELETE CONFIRM DIALOG ──────────────────────────── */
-const DeleteConfirmDialog = ({
-  open,
-  onClose,
-  onConfirm,
-  studentName,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: (deleteMode: boolean) => void;
-  studentName: string;
-}) => {
-  const [deleteMode, setDeleteMode] = useState(false);
-  const [reason, setReason] = useState("");
-  const [comment, setComment] = useState("");
-  const [recalculate, setRecalculate] = useState(false);
-  const [scope, setScope] = useState<"current" | "all">("current");
-
-  const handleClose = () => {
-    setDeleteMode(false);
-    setReason("");
-    setComment("");
-    setRecalculate(false);
-    setScope("current");
-    onClose();
-  };
-
-  const handleYes = () => {
-    onConfirm(deleteMode);
-    handleClose();
-  };
-
-  return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      PaperProps={{
-        sx: {
-          borderRadius: "12px",
-          width: 620,
-          maxWidth: "95vw",
-          overflow: "hidden",
-        },
-      }}
-    >
-      <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid #ececec" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 32, transform: "scale(0.42)", transformOrigin: "left center", whiteSpace: "nowrap", color: "#2e2e2e" }}>
-            Do you realy want to delete it?
-          </span>
-          <IconButton size="small" onClick={handleClose} sx={{ color: "#9ca3af" }}>
-            <FiX size={20} />
-          </IconButton>
-        </div>
-      </DialogTitle>
-
-      <DialogContent sx={{ px: 4, py: 3 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 18 }}>
-          <span style={{ fontSize: 14, color: deleteMode ? "#7d7d7d" : "#5f9bb8" }}>Remove from group</span>
-          <Switch checked={deleteMode} onChange={(e) => setDeleteMode(e.target.checked)} />
-          <span style={{ fontSize: 14, color: deleteMode ? "#2f2f2f" : "#7d7d7d" }}>Delete student</span>
-        </div>
-
-        <select
-          style={{ width: "100%", border: "1px solid #e0e0e0", borderRadius: 8, height: 46, padding: "0 12px", fontSize: 14, color: reason ? "#1a1a1a" : "#9ca3af", marginBottom: 12 }}
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        >
-          <option value="">Reasons for removal</option>
-          <option value="No attendance">No attendance</option>
-          <option value="Parent request">Parent request</option>
-          <option value="Low results">Low results</option>
-          <option value="Other">Other</option>
-        </select>
-
-        <textarea
-          style={{ width: "100%", border: "1px solid #e0e0e0", borderRadius: 8, minHeight: 84, padding: "10px 12px", fontSize: 14, color: "#555", resize: "vertical", boxSizing: "border-box", marginBottom: 10 }}
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder="Comment"
-        />
-
-        <FormControlLabel
-          control={<Checkbox size="small" checked={recalculate} onChange={(e) => setRecalculate(e.target.checked)} />}
-          label={<span style={{ fontSize: 14, color: "#3f3f3f" }}>Recalculate the balance</span>}
-          sx={{ m: 0, mb: 1 }}
-        />
-
-        <RadioGroup row value={scope} onChange={(e) => setScope(e.target.value as "current" | "all")} sx={{ gap: 1.5 }}>
-          <FormControlLabel value="current" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>Current group</span>} />
-          <FormControlLabel value="all" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>All groups</span>} />
-        </RadioGroup>
-        <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>
-          Student: {studentName}
-        </div>
-      </DialogContent>
-
-      <DialogActions sx={{ justifyContent: "center", pb: 3, gap: 2 }}>
-        <Button
-          variant="contained"
-          onClick={handleYes}
-          sx={{
-            textTransform: "none",
-            borderRadius: 999,
-            bgcolor: "#d93f4f",
-            px: 4,
-            "&:hover": { bgcolor: "#c53343" },
-          }}
-        >
-          Yes
-        </Button>
-        <Button onClick={handleClose} sx={{ textTransform: "none", color: "#8a8a8a" }}>
-          Cancel
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
 const AddToGroupModal = ({
   open,
   onClose,
@@ -846,7 +728,6 @@ const SideCard = ({
   student,
   onEdit,
   onArchive,
-  onDelete,
   onSms,
   onAddToGroup,
   onOpenAddToGroupMenu,
@@ -856,7 +737,6 @@ const SideCard = ({
   student: FlatStudent;
   onEdit: () => void;
   onArchive: () => void;
-  onDelete: () => void;
   onSms: () => void;
   onAddToGroup: () => void;
   onOpenAddToGroupMenu: (event: React.MouseEvent<HTMLElement>) => void;
@@ -896,18 +776,9 @@ const SideCard = ({
         <IconButton
           size="small"
           onClick={onArchive}
-          sx={{ border: "1.5px solid #5c7fa3", color: "#5c7fa3" }}
-        >
-          <FiArchive size={14} />
-        </IconButton>
-      </Tooltip>
-      <Tooltip title="Delete">
-        <IconButton
-          size="small"
-          onClick={onDelete}
           sx={{ border: "1.5px solid #ef4444", color: "#ef4444" }}
         >
-          <FiTrash2 size={14} />
+          <FiArchive size={14} />
         </IconButton>
       </Tooltip>
     </div>
@@ -1125,19 +996,41 @@ const GROUP_STATUS_BADGE: Record<string, { label: string; bg: string; color: str
 
 const formatMembershipDate = (iso: string | null) => (iso ? formatDate(iso.slice(0, 10)) : "—");
 
-const GroupCard = ({ membership }: { membership: StudentGroupMembership }) => {
+// Same EVEN/ODD -> "Even days"/"Odd days" convention Groups.tsx already uses
+// for this field, so the wording matches the rest of the app.
+const formatDaysType = (daysType: string | undefined | null) =>
+  daysType === "EVEN" ? "Even days" : daysType === "ODD" ? "Odd days" : (daysType || "—");
+
+const GroupCard = ({
+  membership, group, onOpenGroup,
+}: {
+  membership: StudentGroupMembership;
+  // The group's schedule/room aren't returned by GET /students/{id}/groups
+  // (only status/dates/teachers/price are) — this comes from GET /groups
+  // (already fetched for the "Add to group" picker), matched by real group
+  // id via GET /student-groups?studentId=. It's undefined only if that
+  // cross-reference fails to find the group (e.g. it was deleted), in which
+  // case the schedule/room/open-group link are simply omitted.
+  group?: Group;
+  onOpenGroup?: () => void;
+}) => {
   const badge = GROUP_STATUS_BADGE[membership.status] ?? { label: membership.status, bg: "#f3f4f6", color: "#6b7280" };
   const teacherNames = membership.teachers.map((t) => t.name).join(", ") || "—";
+  const schedule = group ? `${formatDaysType(group.daysType)}${group.time ? ` • ${group.time}` : ""}` : null;
 
   return (
     <div
+      onClick={onOpenGroup}
       style={{
         background: "white",
         border: "1px solid #eaecf0",
         borderRadius: 12,
         padding: 16,
         marginBottom: 12,
+        cursor: onOpenGroup ? "pointer" : "default",
       }}
+      onMouseEnter={(e) => { if (onOpenGroup) e.currentTarget.style.borderColor = "#93c5fd"; }}
+      onMouseLeave={(e) => { if (onOpenGroup) e.currentTarget.style.borderColor = "#eaecf0"; }}
     >
       <div
         style={{
@@ -1166,6 +1059,11 @@ const GroupCard = ({ membership }: { membership: StudentGroupMembership }) => {
           <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
             {teacherNames}
           </div>
+          {schedule && (
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+              {schedule}{group?.room?.name ? ` • ${group.room.name}` : ""}
+            </div>
+          )}
         </div>
         <div style={{ fontSize: 12, color: "#6b7280", textAlign: "right" }}>
           <div>{formatMembershipDate(membership.trainingStart)} —</div>
@@ -1196,6 +1094,7 @@ const GroupCard = ({ membership }: { membership: StudentGroupMembership }) => {
         </div>
         <div
           style={{ display: "flex", flexDirection: "column", gap: 8, marginLeft: 16 }}
+          onClick={(e) => e.stopPropagation()}
         >
           <Tooltip title="Pause">
             <IconButton
@@ -1230,43 +1129,111 @@ const GroupCard = ({ membership }: { membership: StudentGroupMembership }) => {
 };
 
 /* ─── MONTHLY BALANCE ────────────────────────────────── */
-const MonthlyBalance = ({ balance }: { balance: number }) => {
+// No backend endpoint returns a per-month balance history (confirmed: no
+// such field/endpoint exists anywhere in financeApi/studentsApi) — this is
+// derived client-side from two sources that ARE real: each group
+// membership's `customPrice` (the monthly tuition owed while enrolled,
+// between `joinedAt` and `exitedAt`) as the expected charge, and the
+// student's actual payments (GET /finance/payments, already fetched for the
+// table below) summed by calendar month as what was actually paid.
+type MonthlyBalanceEntry = { key: string; label: string; amount: number; color: "green" | "red" | "yellow" };
+
+const buildMonthlyBalance = (
+  memberships: StudentGroupMembership[],
+  payments: PaymentRow[],
+): MonthlyBalanceEntry[] => {
   const now = new Date();
-  const label = `${now.getFullYear()} M${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const starts = memberships
+    .map((m) => m.joinedAt ?? m.trainingStart ?? m.paymentStartDate)
+    .filter((d): d is string => Boolean(d))
+    .map((d) => new Date(d));
+  // No enrollment history at all -> just show the trailing 12 months rather
+  // than nothing.
+  const earliest = starts.length > 0
+    ? starts.reduce((a, b) => (a < b ? a : b))
+    : new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const floor = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+
+  const entries: MonthlyBalanceEntry[] = [];
+  let cursor = new Date(now.getFullYear(), now.getMonth(), 1);
+  let guard = 0;
+  // Cap how far back this renders so a long-enrolled student doesn't
+  // produce an unbounded row of boxes.
+  while (cursor >= floor && guard < 24) {
+    const year = cursor.getFullYear();
+    const month = cursor.getMonth();
+    const monthStart = cursor;
+    const monthEnd = new Date(year, month + 1, 0);
+
+    const expected = memberships.reduce((sum, m) => {
+      const joined = m.joinedAt ? new Date(m.joinedAt) : null;
+      const exited = m.exitedAt ? new Date(m.exitedAt) : null;
+      const startedInTime = !joined || joined <= monthEnd;
+      const stillEnrolled = !exited || exited >= monthStart;
+      return startedInTime && stillEnrolled ? sum + (m.customPrice ?? 0) : sum;
+    }, 0);
+
+    const paid = payments.reduce((sum, p) => {
+      if (!p.date) return sum;
+      const d = new Date(p.date);
+      return d.getFullYear() === year && d.getMonth() === month ? sum + p.amount : sum;
+    }, 0);
+
+    entries.push({
+      key: `${year}-${month}`,
+      label: `${year} M${String(month + 1).padStart(2, "0")}`,
+      amount: paid - expected,
+      color: expected === 0 ? "yellow" : paid >= expected ? "green" : "red",
+    });
+
+    cursor = new Date(year, month - 1, 1);
+    guard += 1;
+  }
+  return entries;
+};
+
+const MONTH_BALANCE_COLORS: Record<MonthlyBalanceEntry["color"], { border: string; text: string }> = {
+  green:  { border: "#34d399", text: "#16a34a" },
+  red:    { border: "#f87171", text: "#ef4444" },
+  yellow: { border: "#fbbf24", text: "#b45309" },
+};
+
+const MonthlyBalance = ({
+  memberships, payments,
+}: {
+  memberships: StudentGroupMembership[];
+  payments: PaymentRow[];
+}) => {
+  const entries = useMemo(() => buildMonthlyBalance(memberships, payments), [memberships, payments]);
+
   return (
     <div>
       <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: "20px 0 12px" }}>
         Monthly balance status
       </div>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <div
-          style={{
-            border: `2px solid ${balance < 0 ? "#f87171" : "#34d399"}`,
-            borderRadius: 12,
-            padding: "12px 20px",
-            minWidth: 120,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 11,
-              color: balance < 0 ? "#f87171" : "#34d399",
-              fontWeight: 500,
-              marginBottom: 4,
-            }}
-          >
-            {label}
-          </div>
-          <div
-            style={{
-              fontSize: 20,
-              fontWeight: 700,
-              color: balance < 0 ? "#ef4444" : "#16a34a",
-            }}
-          >
-            {balance.toLocaleString("ru-RU")}
-          </div>
-        </div>
+      <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 6 }}>
+        {entries.map((entry) => {
+          const c = MONTH_BALANCE_COLORS[entry.color];
+          return (
+            <div
+              key={entry.key}
+              style={{
+                border: `2px solid ${c.border}`,
+                borderRadius: 12,
+                padding: "12px 20px",
+                minWidth: 120,
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ fontSize: 11, color: c.border, fontWeight: 500, marginBottom: 4 }}>
+                {entry.label}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: c.text }}>
+                {entry.amount.toLocaleString("ru-RU")}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1282,7 +1249,31 @@ const PaymentsTable = ({
   isLoading?: boolean;
   isError?: boolean;
 }) => {
+  const toast = useToast();
   const [receiptId, setReceiptId] = useState<string | null>(null);
+  const [menuFor, setMenuFor] = useState<{ el: HTMLElement; id: string } | null>(null);
+  // DELETE /finance/payments/{id} — the backend marks the payment REFUNDED
+  // (not a hard delete, per financeApi's own comment on this mutation), so
+  // "Refund" and "Remove" both just call it: there's no separate hard-delete
+  // endpoint for a payment record.
+  const [deletePayment, { isLoading: isRefunding }] = useDeletePaymentMutation();
+  const [refundTarget, setRefundTarget] = useState<string | null>(null);
+  const [refundError, setRefundError] = useState<string | null>(null);
+
+  const confirmRefund = async () => {
+    if (!refundTarget) return;
+    setRefundError(null);
+    try {
+      await deletePayment(refundTarget).unwrap();
+      toast.success("Payment refunded");
+      setRefundTarget(null);
+    } catch (err) {
+      const detail = extractApiError(err);
+      const message = detail ? `Failed to refund the payment: ${detail}` : "Failed to refund the payment";
+      setRefundError(message);
+      toast.error(message);
+    }
+  };
 
   return (
   <div>
@@ -1369,7 +1360,7 @@ const PaymentsTable = ({
                   <div style={{ fontSize: 12, color: "#9ca3af" }}>{formatDate(p.createdAt.slice(0, 10))}</div>
                 )}
               </td>
-              <td style={{ padding: "14px 16px" }}>
+              <td style={{ padding: "14px 16px", whiteSpace: "nowrap" }}>
                 <Button
                   size="small"
                   variant="outlined"
@@ -1380,10 +1371,29 @@ const PaymentsTable = ({
                     fontSize: 12,
                     borderColor: "#d1d5db",
                     color: "#374151",
+                    borderTopRightRadius: 0,
+                    borderBottomRightRadius: 0,
+                    borderRight: "none",
                   }}
                 >
                   Print out
                 </Button>
+                <IconButton
+                  size="small"
+                  onClick={(e) => setMenuFor({ el: e.currentTarget, id: p.id })}
+                  sx={{
+                    border: "1px solid #d1d5db",
+                    borderLeft: "none",
+                    borderTopLeftRadius: 0,
+                    borderBottomLeftRadius: 0,
+                    borderTopRightRadius: "4px",
+                    borderBottomRightRadius: "4px",
+                    width: 30,
+                    height: 30,
+                  }}
+                >
+                  <FiChevronDown size={14} />
+                </IconButton>
               </td>
             </tr>
           ))}
@@ -1416,6 +1426,45 @@ const PaymentsTable = ({
     </div>
 
     <PaymentReceiptModal open={Boolean(receiptId)} onClose={() => setReceiptId(null)} paymentId={receiptId} />
+
+    <Menu
+      anchorEl={menuFor?.el ?? null}
+      open={Boolean(menuFor)}
+      onClose={() => setMenuFor(null)}
+      transformOrigin={{ horizontal: "right", vertical: "top" }}
+      anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+    >
+      <MenuItem
+        onClick={() => { if (menuFor) { setRefundError(null); setRefundTarget(menuFor.id); } setMenuFor(null); }}
+        sx={{ fontSize: 13 }}
+      >
+        Refund
+      </MenuItem>
+      <MenuItem
+        onClick={() => { if (menuFor) { setRefundError(null); setRefundTarget(menuFor.id); } setMenuFor(null); }}
+        sx={{ fontSize: 13, color: "#ef4444" }}
+      >
+        Remove
+      </MenuItem>
+    </Menu>
+
+    <Dialog open={Boolean(refundTarget)} onClose={() => setRefundTarget(null)} PaperProps={{ sx: { borderRadius: 3, width: 380 } }}>
+      <DialogTitle sx={{ fontWeight: 600 }}>Refund payment</DialogTitle>
+      <DialogContent>
+        <div style={{ fontSize: 14, color: "#6b7280" }}>
+          Are you sure you want to refund this payment? It will be marked as refunded and removed from the student's balance.
+        </div>
+        {refundError && <div style={{ marginTop: 12, fontSize: 13, color: "#ef4444" }}>{refundError}</div>}
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={() => setRefundTarget(null)} disabled={isRefunding} sx={{ color: "#6b7280", textTransform: "none" }}>
+          Cancel
+        </Button>
+        <Button variant="contained" color="error" disabled={isRefunding} onClick={confirmRefund} sx={{ borderRadius: 2, textTransform: "none" }}>
+          {isRefunding ? "…" : "Refund"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   </div>
   );
 };
@@ -1429,14 +1478,30 @@ export const StudentProfile = () => {
   const { data, isLoading } = useStudentByIdQuery(id ?? "", { skip: !id });
   const student = data ? mapApiStudentToFlat(data.data) : undefined;
   const { data: groupMemberships } = useStudentGroupMembershipsQuery(id ?? "", { skip: !id });
+  // /students/{id}/groups (above) doesn't return the group's own id, only
+  // the membership id — /student-groups?studentId= (groupsApi) is the same
+  // underlying membership resource keyed by that same id, but does carry
+  // groupId, so it's used here purely to map membership -> real group id
+  // (for the "open group" link and to look up schedule/room from groupsData
+  // below, neither of which /students/{id}/groups exposes either).
+  const { data: studentGroupRecords } = useStudentGroupsQuery({ studentId: id ?? "" }, { skip: !id });
+  const groupIdByMembershipId = useMemo(() => {
+    const map = new Map<string, string>();
+    (studentGroupRecords?.rows ?? []).forEach((r) => map.set(r.id, r.groupId));
+    return map;
+  }, [studentGroupRecords]);
 
   const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
-  const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
   const [toggleStudentStatus, { isLoading: isArchivingStudent }] = useToggleStudentStatusMutation();
   const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
 
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
+  const groupsById = useMemo(() => {
+    const map = new Map<string, Group>();
+    (groupsData?.data ?? []).forEach((g) => map.set(g.id, g));
+    return map;
+  }, [groupsData]);
   const groupOptions = useMemo(
     () => (groupsData?.data ?? []).map((g) => ({ id: g.id, name: g.name })),
     [groupsData]
@@ -1465,7 +1530,6 @@ export const StudentProfile = () => {
   const payments = (paymentsData?.rows ?? []).filter((p) => p.studentId === student?.uid);
 
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const toast = useToast();
 
@@ -1473,7 +1537,6 @@ export const StudentProfile = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [addToGroupOpen, setAddToGroupOpen] = useState(false);
   const [moveBranchOpen, setMoveBranchOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
@@ -1541,28 +1604,11 @@ export const StudentProfile = () => {
     }
   };
 
-  const handleDelete = async (deleteMode: boolean) => {
-    if (!deleteMode) {
-      // Guruhdan chiqarish uchun backend endpointi hozircha mavjud emas.
-      navigate(-1);
-      return;
-    }
-    setDeleteError(null);
-    try {
-      await deleteStudent(student.uid).unwrap();
-      toast.success("Student deleted successfully");
-      navigate(-1);
-    } catch {
-      setDeleteError("Failed to delete the student");
-      toast.error("Failed to delete the student");
-    }
-  };
-
-  // Archive is a separate action from permanent delete: PATCH
-  // /students/{id}/toggle-status flips the student's status to INACTIVE
-  // without removing the record, unlike deleteStudent above (DELETE
-  // /students/{id}) — same distinction Students.tsx's list page already
-  // makes between its own Archive and Delete actions.
+  // The only "remove student" action on this page: PATCH
+  // /students/{id}/toggle-status flips the status to INACTIVE without
+  // deleting the record. A real DELETE /students/{id} isn't exposed here —
+  // it's the Archive page's permanent-delete action, since the backend
+  // rejects it outright while the student still has group memberships.
   const handleArchive = async () => {
     setArchiveError(null);
     try {
@@ -1624,12 +1670,6 @@ export const StudentProfile = () => {
         Back to Students
       </Button>
 
-      {(deleteError || isDeletingStudent) && (
-        <div style={{ maxWidth: 1200, marginBottom: 12, fontSize: 13, color: deleteError ? "#ef4444" : "#6b7280" }}>
-          {deleteError ?? "Deleting..."}
-        </div>
-      )}
-
       <Box sx={{ maxWidth: 1200, display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: 3, alignItems: "flex-start" }}>
         {/* Left sidebar */}
         <Box sx={{ width: { xs: "100%", lg: 320 }, flexShrink: 0 }}>
@@ -1637,7 +1677,6 @@ export const StudentProfile = () => {
             student={student}
             onEdit={() => setEditOpen(true)}
             onArchive={() => { setArchiveError(null); setArchiveOpen(true); }}
-            onDelete={() => setDeleteOpen(true)}
             onSms={() => setSmsOpen(true)}
             onAddToGroup={() => setAddToGroupOpen(true)}
             onOpenAddToGroupMenu={(e) => setGroupMenuAnchor(e.currentTarget)}
@@ -1684,13 +1723,23 @@ export const StudentProfile = () => {
               {activeTab === 0 ? (
                 <>
                   {(groupMemberships ?? []).length > 0 ? (
-                    (groupMemberships ?? []).map((m) => <GroupCard key={m.id} membership={m} />)
+                    (groupMemberships ?? []).map((m) => {
+                      const groupId = groupIdByMembershipId.get(m.id);
+                      return (
+                        <GroupCard
+                          key={m.id}
+                          membership={m}
+                          group={groupId ? groupsById.get(groupId) : undefined}
+                          onOpenGroup={groupId ? () => navigate(`/groups/${groupId}`) : undefined}
+                        />
+                      );
+                    })
                   ) : (
                     <div style={{ fontSize: 13, color: "#9ca3af", padding: "8px 0 16px" }}>
                       No groups yet
                     </div>
                   )}
-                  <MonthlyBalance balance={student.balance ?? 0} />
+                  <MonthlyBalance memberships={groupMemberships ?? []} payments={payments} />
                   <PaymentsTable payments={payments} isLoading={isPaymentsLoading} isError={isPaymentsError} />
                 </>
               ) : (
@@ -1726,12 +1775,6 @@ export const StudentProfile = () => {
         student={student}
       />
 
-      <DeleteConfirmDialog
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDelete}
-        studentName={student.name}
-      />
 
       <Dialog
         open={archiveOpen}

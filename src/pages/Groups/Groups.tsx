@@ -2,13 +2,13 @@
 // Branch filtering useBranch() orqali avtomatik ishlaydi
 
 import {
-  Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
+  Box, Button, Chip, CircularProgress,
   Divider, IconButton, Menu, MenuItem, Paper, Stack, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
   TextField, Tooltip, Typography, Drawer,
 } from "@mui/material";
 import { GoPlus }                        from "react-icons/go";
-import { MdEdit, MdDelete, MdSms, MdArchive, MdUnarchive } from "react-icons/md";
+import { MdEdit, MdSms, MdArchive, MdUnarchive } from "react-icons/md";
 import { BsThreeDotsVertical }           from "react-icons/bs";
 import { PiMicrosoftExcelLogoFill }      from "react-icons/pi";
 import { IoClose }                       from "react-icons/io5";
@@ -20,7 +20,7 @@ import { useTranslation }                from "react-i18next";
 import { useSelector }                   from "react-redux";
 
 import {
-  useAllGroupsQuery, useCreateGroupMutation, useUpdateGroupMutation, useDeleteGroupMutation,
+  useAllGroupsQuery, useCreateGroupMutation, useUpdateGroupMutation,
   useToggleGroupStatusMutation, useLazyGroupsExcelQuery,
 } from "../../app/api/groupsApi";
 import type { Group, GroupDay } from "../../app/api/groupsApi/types";
@@ -274,7 +274,7 @@ const DateFilter = ({ label, value, onChange, onClear }: DateFilterProps) => {
 
 /* ─── Groups ─────────────────────────────────────────────── */
 export const Groups = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -295,7 +295,6 @@ export const Groups = () => {
 
   const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [updateGroup, { isLoading: isUpdating }] = useUpdateGroupMutation();
-  const [deleteGroup, { isLoading: isDeleting }] = useDeleteGroupMutation();
   const [toggleGroupStatus] = useToggleGroupStatusMutation();
   const [fetchGroupsExcel, { isFetching: isExportingExcel }] = useLazyGroupsExcelQuery();
 
@@ -378,8 +377,6 @@ export const Groups = () => {
   const [form,              setForm]              = useState<FormState>(EMPTY_FORM);
   const [formErrors,        setFormErrors]        = useState<{ name?: string; course?: string }>({});
   const [saveError,         setSaveError]         = useState<string | null>(null);
-  const [deleteId,          setDeleteId]          = useState<string | null>(null);
-  const [deleteError,       setDeleteError]       = useState<string | null>(null);
   const [actionMenuAnchor,  setActionMenuAnchor]  = useState<{ el: HTMLElement; id: string } | null>(null);
   const [smsGroupId,        setSmsGroupId]        = useState<string | null>(null);
   const [sortKey,           setSortKey]           = useState<SortKey>("");
@@ -518,28 +515,13 @@ export const Groups = () => {
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteId) return;
-    setDeleteError(null);
-    try {
-      await deleteGroup(deleteId).unwrap();
-      setDeleteId(null);
-      toast.success(t("groups.toast.deleted"));
-    } catch (err) {
-      const detail = extractApiError(err);
-      console.error("Group delete failed:", err);
-      const message = detail ? `${t("groups.deleteDialog.error")}: ${detail}` : t("groups.deleteDialog.error");
-      setDeleteError(message);
-      toast.error(message);
-    }
-  };
-
-  // Archive is a separate action from permanent delete: PATCH
+  // The active list's "Delete" is really an archive: PATCH
   // /groups/{id}/toggle-status (Swagger, same endpoint SingleGroup's own
   // "toggle status" button already uses) flips the group between ACTIVE and
-  // ARCHIVE without touching its students/teachers/attendance, unlike
-  // deleteGroup above (DELETE /groups/{id}), which the backend rejects
-  // outright while any of those still reference the group.
+  // ARCHIVE without touching its students/teachers/attendance. A real DELETE
+  // /groups/{id} is not exposed from here — the backend rejects it outright
+  // while any of those still reference the group, which is true for nearly
+  // every real group.
   const handleToggleStatus = async (id: string) => {
     setActionMenuAnchor(null);
     try {
@@ -787,8 +769,8 @@ export const Groups = () => {
                   )}
                   {col("training")     && (
                     <TableCell>
-                      <Box>{formatTrainingDate(g.startDate, i18n.language)} —</Box>
-                      <Box>{formatTrainingDate(g.endDate, i18n.language)}</Box>
+                      <Box>{formatTrainingDate(g.startDate)} —</Box>
+                      <Box>{formatTrainingDate(g.endDate)}</Box>
                     </TableCell>
                   )}
                   {col("week")         && <TableCell>{g.weekOfStudy || "—"}</TableCell>}
@@ -848,13 +830,6 @@ export const Groups = () => {
                         {g.status === "ACTIVE"
                           ? <><MdArchive size={15} /> {t("groups.actions.archive")}</>
                           : <><MdUnarchive size={15} /> {t("groups.actions.activate")}</>}
-                      </MenuItem>
-                      <Divider sx={{ my: 0.5 }} />
-                      <MenuItem
-                        onClick={() => { setDeleteId(g.id); setDeleteError(null); setActionMenuAnchor(null); }}
-                        sx={{ fontSize: 13, gap: 1, color: "#ef4444" }}
-                      >
-                        <MdDelete size={15} /> {t("groups.actions.delete")}
                       </MenuItem>
                     </Menu>
                   </TableCell>
@@ -1108,36 +1083,6 @@ export const Groups = () => {
           </Button>
         </Box>
       </Drawer>
-
-      {/* DELETE DIALOG */}
-      <Dialog
-        open={deleteId !== null}
-        onClose={() => setDeleteId(null)}
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>{t("groups.deleteDialog.title")}</DialogTitle>
-        <DialogContent>
-          <Typography fontSize={14} color="text.secondary">
-            {t("groups.deleteDialog.body")}
-          </Typography>
-          {deleteError && (
-            <Typography fontSize={13} color="error" mt={1.5}>{deleteError}</Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteId(null)} disabled={isDeleting} sx={{ color: "#667085" }}>{t("groups.deleteDialog.cancel")}</Button>
-          <Button
-            variant="contained"
-            color="error"
-            disabled={isDeleting}
-            startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : undefined}
-            onClick={handleDeleteConfirm}
-            sx={{ borderRadius: 2 }}
-          >
-            {t("groups.deleteDialog.confirm")}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* SMS DRAWER */}
       <SendSmsModal

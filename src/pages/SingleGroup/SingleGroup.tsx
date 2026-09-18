@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
-import { MdEdit, MdDelete, MdEmail, MdDownload, MdSwapHoriz, MdCalendarToday } from "react-icons/md";
+import { MdEdit, MdEmail, MdDownload, MdSwapHoriz, MdCalendarToday } from "react-icons/md";
 import { GoPlus } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
@@ -21,11 +21,9 @@ import {
   useGroupByIdQuery,
   useLazyGroupForEditQuery,
   useGroupsSelectQuery,
-  useGroupHistoryQuery,
   useAssignStudentsToGroupMutation,
   useTransferStudentMutation,
   useUpdateGroupMutation,
-  useDeleteGroupMutation,
   useRemoveTeacherFromGroupMutation,
   useToggleGroupStatusMutation,
   useLazyGroupExcelQuery,
@@ -35,7 +33,7 @@ import {
   useUpdateStudentGroupStatusMutation,
   useUpdateStudentGroupMutation,
 } from "../../app/api/groupsApi";
-import type { GroupDetail, GroupHistoryEntry, StudentGroupRecord, UpdateGroupRequest } from "../../app/api/groupsApi/types";
+import type { GroupDetail, StudentGroupRecord, UpdateGroupRequest } from "../../app/api/groupsApi/types";
 import {
   useAllStudentsQuery,
   useTransferStudentBranchMutation,
@@ -67,7 +65,6 @@ import { FreezeModal } from "./FreezeModal";
 import { ActivateModal } from "./ActivateModal";
 import { GraduateTrialModal } from "./GraduateTrialModal";
 import { EditGroupDrawer } from "./EditGroupDrawer";
-import { DeleteDropdown } from "./DeleteDropdown";
 import { SmsDrawer } from "../../components/SmsDrawer";
 import { AddNoteModal } from "./AddNoteModal";
 import { ReminderDrawer } from "./ReminderDrawer";
@@ -121,43 +118,31 @@ const toRealStudents = (d: GroupDetail): RealGroupStudent[] =>
     balance: 0,
   }));
 
-// Backend has no dedicated "archived students" list for a group — the only
-// documented source is /groups/{id}/history (join/leave/teacher-change log),
-// so a student is treated as archived here if their most recent group-history
-// event looks like a removal/transfer-out and they're not currently an
-// active member (i.e. they haven't rejoined since).
-const isLeaveEvent = (type: string) =>
-  type.includes("REMOVE") || type.includes("LEFT") || type.includes("ARCHIV") ||
-  type.includes("TRANSFER_OUT") || type.includes("DELETE");
-
-const deriveArchivedFromHistory = (
-  entries: GroupHistoryEntry[],
+// A student is archived-in-this-group if their /student-groups membership
+// row (studentGroupsData below — fetched with no status filter, so it
+// covers every status: PROBATION/ACTIVE/FROZEN/INACTIVE/DELETED) is
+// INACTIVE or DELETED and they're not among GroupDetail's currently-active
+// students. This is the authoritative per-group membership status, unlike
+// the group history log (join/leave events), which only lets you infer
+// "probably left" indirectly and can miss/misdate entries.
+const deriveArchivedFromMemberships = (
+  records: StudentGroupRecord[],
   activeStudentIds: Set<string>
-): RealGroupStudent[] => {
-  const latestLeaveByStudent = new Map<string, GroupHistoryEntry>();
-  entries.forEach((entry) => {
-    if (!entry.studentId || !isLeaveEvent(entry.type)) return;
-    const existing = latestLeaveByStudent.get(entry.studentId);
-    if (!existing || entry.createdAt > existing.createdAt) {
-      latestLeaveByStudent.set(entry.studentId, entry);
-    }
-  });
-
-  return Array.from(latestLeaveByStudent.values())
-    .filter((entry) => !activeStudentIds.has(entry.studentId as string))
-    .map((entry, i) => ({
+): RealGroupStudent[] =>
+  records
+    .filter((r) => (r.status === "INACTIVE" || r.status === "DELETED") && !activeStudentIds.has(r.studentId))
+    .map((r, i) => ({
       id: -(i + 1),
-      realId: entry.studentId as string,
-      name: entry.studentName ?? "—",
-      phone: entry.studentPhone ?? "",
+      realId: r.studentId,
+      name: r.studentName || "—",
+      phone: r.studentPhone || "",
       active: false,
       archived: true,
       balance: 0,
     }));
-};
 
 export const SingleGroup = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -167,7 +152,6 @@ export const SingleGroup = () => {
 
   const { data: groupDetailData, isLoading: groupLoading } = useGroupByIdQuery(id ?? "", { skip: !id });
   const [fetchGroupForEdit, { data: groupForEditData }] = useLazyGroupForEditQuery();
-  const { data: historyData } = useGroupHistoryQuery(id ?? "", { skip: !id });
   const { data: groupsSelectData } = useGroupsSelectQuery();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { data: allStudentsData } = useAllStudentsQuery({ page: 1, limit: 100, branchId: selectedBranchId ?? undefined });
@@ -181,7 +165,6 @@ export const SingleGroup = () => {
   const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
   const [transferStudent, { isLoading: isTransferring }] = useTransferStudentMutation();
   const [updateGroup, { isLoading: isSavingGroup }] = useUpdateGroupMutation();
-  const [deleteGroup, { isLoading: isDeletingGroup }] = useDeleteGroupMutation();
   const [removeTeacherFromGroup, { isLoading: isRemovingTeacher }] = useRemoveTeacherFromGroupMutation();
   const [toggleGroupStatus] = useToggleGroupStatusMutation();
   const [freezeStudentGroup, { isLoading: isFreezing }] = useFreezeStudentGroupMutation();
@@ -202,8 +185,8 @@ export const SingleGroup = () => {
 
   const archivedStudents = useMemo(() => {
     const activeIds = new Set(students.map((s) => s.realId));
-    return deriveArchivedFromHistory(historyData ?? [], activeIds);
-  }, [historyData, students]);
+    return deriveArchivedFromMemberships(studentGroupsData?.rows ?? [], activeIds);
+  }, [studentGroupsData, students]);
 
   const membershipByStudentId = useMemo(() => {
     const map = new Map<string, StudentGroupRecord>();
@@ -285,10 +268,6 @@ export const SingleGroup = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
   const [addStudentOpen, setAddStudentOpen] = useState(false);
-
-  // Delete dropdown
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const deleteAnchorRef = useRef<HTMLButtonElement>(null);
 
   // Student action states
   const [freezeOpen, setFreezeOpen] = useState(false);
@@ -678,20 +657,6 @@ export const SingleGroup = () => {
     }
   };
 
-  const handleDeleteGroup = async () => {
-    if (!id) return;
-    try {
-      await deleteGroup(id).unwrap();
-      toast.success(t("singleGroup.deleteDropdown.toast.success"));
-      setDeleteOpen(false);
-      navigate(-1);
-    } catch (err) {
-      const detail = extractApiError(err);
-      const generic = t("singleGroup.deleteDropdown.toast.error");
-      toast.error(detail ? `${generic}: ${detail}` : generic);
-    }
-  };
-
   const handleToggleGroupStatus = async () => {
     if (!id) return;
     try {
@@ -747,9 +712,6 @@ export const SingleGroup = () => {
               >
                 <MdEdit size={16} color="#1976d2" />
               </ActionIconBtn>
-              <ActionIconBtn label={t("singleGroup.leftPanel.deleteGroup")} btnRef={deleteAnchorRef} onClick={() => setDeleteOpen((p) => !p)}>
-                <MdDelete size={16} color="#e53935" />
-              </ActionIconBtn>
               <ActionIconBtn label={t("singleGroup.leftPanel.sendSms")} onClick={() => setSmsOpen(true)}>
                 <MdEmail size={16} color="#f57c00" />
               </ActionIconBtn>
@@ -790,7 +752,7 @@ export const SingleGroup = () => {
                     {t("singleGroup.leftPanel.trainingStart")}
                   </Typography>
                   <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">
-                    {formatTrainingDate(group.startDate, i18n.language)}
+                    {formatTrainingDate(group.startDate)}
                   </Typography>
                 </Box>
                 <Typography fontSize={14} color="#c1c7d0">→</Typography>
@@ -799,7 +761,7 @@ export const SingleGroup = () => {
                     {t("singleGroup.leftPanel.trainingEnd")}
                   </Typography>
                   <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">
-                    {formatTrainingDate(group.endDate, i18n.language)}
+                    {formatTrainingDate(group.endDate)}
                   </Typography>
                 </Box>
               </Stack>
@@ -907,7 +869,13 @@ export const SingleGroup = () => {
                       </Box>
                     }
                     secondary={
-                      <Typography fontSize={12} color="text.secondary" component="span" display="block">
+                      <Typography
+                        fontSize={12}
+                        color="text.secondary"
+                        component="span"
+                        display="block"
+                        sx={{ textDecoration: isArchived ? "line-through" : "none" }}
+                      >
                         {s.phone}
                       </Typography>
                     }
@@ -1092,16 +1060,6 @@ export const SingleGroup = () => {
         isSaving={isSavingGroup}
         onRemoveTeacher={handleRemoveTeacher}
         isRemovingTeacher={isRemovingTeacher}
-      />
-
-      {/* ══ DELETE DROPDOWN ══ */}
-      <DeleteDropdown
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        anchorRef={deleteAnchorRef}
-        groupName={group.name}
-        onConfirm={handleDeleteGroup}
-        loading={isDeletingGroup}
       />
 
       {/* ══ SMS DRAWER ══ */}

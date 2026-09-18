@@ -22,22 +22,15 @@ export const parseTrainingDate = (value?: string | null): ParsedTrainingDate | n
   return { year: Number(y), month: Number(m), day: Number(d) };
 };
 
-// Locale-aware "14 Aug 2026" style label. Falls back to a plain DD.MM.YYYY
-// format if Intl formatting fails for some reason.
-export const formatTrainingDate = (value?: string | null, locale?: string): string => {
+// DD.MM.YYYY, matching the day/month/year order used everywhere else in the
+// app (e.g. FlatStudents' own formatDate) — this used to render a
+// locale-dependent "14 Aug 2026" short-month label via Intl, which produced
+// "Aug 28, 2025"-style output that didn't match the rest of the app's date
+// columns.
+export const formatTrainingDate = (value?: string | null): string => {
   const parsed = parseTrainingDate(value);
   if (!parsed) return "—";
-  try {
-    const utcDate = new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day));
-    return new Intl.DateTimeFormat(locale, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      timeZone: "UTC",
-    }).format(utcDate);
-  } catch {
-    const dd = String(parsed.day).padStart(2, "0");
-    const mm = String(parsed.month).padStart(2, "0");
-    return `${dd}.${mm}.${parsed.year}`;
-  }
+  const dd = String(parsed.day).padStart(2, "0");
+  const mm = String(parsed.month).padStart(2, "0");
+  return `${dd}.${mm}.${parsed.year}`;
 };

@@ -17,13 +17,13 @@ import {
   Menu,
   MenuItem,
   Select,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Chip,
   CircularProgress,
   Stack,
+  Checkbox,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
 } from "@mui/material";
 import {
   MdOutlineEmail,
@@ -37,6 +37,7 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { HiEye, HiEyeOff } from "react-icons/hi";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SendSmsModal } from "../../../../../components/SendSmsModal";
 import { useToast } from "../../../../../Context/ToastContext";
@@ -47,10 +48,33 @@ import {
   useCreateStaffUserMutation,
   useUpdateStaffUserMutation,
   useToggleStaffUserStatusMutation,
-  useDeleteStaffUserMutation,
 } from "../../../../../app/api/usersApi";
-import type { StaffUser, UserStatus } from "../../../../../app/api/usersApi/types";
+import type { UserStatus } from "../../../../../app/api/usersApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi";
+// GET /users only returns ADMIN/SUPERADMIN accounts (its own Swagger
+// description: "STUDENT va TEACHER bu ro'yxatga kirmaydi" — students and
+// teachers are excluded) — Teacher records are merged in from the real,
+// already-working Teachers API so this page can show every staff member
+// (CEO/admins/managers + teachers), not just the users-table subset.
+import { useAllTeachersQuery, useToggleTeacherStatusMutation } from "../../../../../app/api/teachersApi";
+import type { Teacher } from "../../../../../app/api/teachersApi/types";
+
+// The 8 position labels from the reference design. `role` on POST/PATCH
+// /users is a plain optional string (Swagger has no enum for it and no
+// endpoint lists valid values), so these are sent verbatim as typed here —
+// not invented codes, just the exact labels shown in the reference. Only one
+// can apply per user (the field is a single string), so the UI below is
+// checkbox-styled but behaves as a single-select.
+const ROLE_OPTIONS = [
+  "CEO",
+  "Branch Director",
+  "Administrator",
+  "Administrator2",
+  "Limited Administrator",
+  "Teacher",
+  "Marketer",
+  "Cashier",
+];
 
 interface StaffForm {
   name: string;
@@ -91,8 +115,20 @@ const inputSx = {
 
 const PAGE_SIZE = 10;
 
+interface UnifiedStaffRow {
+  id: string;
+  kind: "user" | "teacher";
+  name: string;
+  role: string;
+  jobTitle: string;
+  phone: string | null;
+  email: string | null;
+  status: string;
+}
+
 export const Staff = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const toast = useToast();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
@@ -108,26 +144,60 @@ export const Staff = () => {
 
   useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, selectedBranchId]);
 
-  const queryArgs = useMemo(
+  // Both APIs accept the same search/status/branchId filters — fetched with
+  // a large limit (same convention Students/Teachers pages already use for
+  // "fetch effectively all") since the two sources are merged and paginated
+  // together client-side below, which server-side pagination on either one
+  // alone couldn't do.
+  const sourceQueryArgs = useMemo(
     () => ({
       search: debouncedSearch || undefined,
       status: statusFilter || undefined,
-      page,
-      limit: PAGE_SIZE,
+      limit: 200,
       branchId: selectedBranchId ?? undefined,
     }),
-    [debouncedSearch, statusFilter, page, selectedBranchId]
+    [debouncedSearch, statusFilter, selectedBranchId]
   );
 
-  const { data, isLoading: staffLoading, isError: staffError } = useStaffUsersQuery(queryArgs);
+  const { data: usersData, isLoading: usersLoading, isError: usersError } = useStaffUsersQuery(sourceQueryArgs);
+  // GET /users excludes teachers by design (see import comment above) — this
+  // fills that gap so CEO/admins/managers AND teachers all show up here.
+  const { data: teachersData, isLoading: teachersLoading, isError: teachersError } = useAllTeachersQuery(sourceQueryArgs);
   const { data: branchesData } = useAllBranchesQuery();
   const [createStaffUser, { isLoading: isCreating }] = useCreateStaffUserMutation();
   const [updateStaffUser, { isLoading: isUpdating }] = useUpdateStaffUserMutation();
   const [toggleStaffUserStatus] = useToggleStaffUserStatusMutation();
-  const [deleteStaffUser, { isLoading: isDeleting }] = useDeleteStaffUserMutation();
+  const [toggleTeacherStatus] = useToggleTeacherStatusMutation();
 
-  const rows = data?.rows ?? [];
-  const totalPages = data?.meta.totalPages ?? 1;
+  const staffLoading = usersLoading || teachersLoading;
+  const staffError = usersError || teachersError;
+
+  const unifiedRows: UnifiedStaffRow[] = useMemo(() => {
+    const fromUsers: UnifiedStaffRow[] = (usersData?.rows ?? []).map((u) => ({
+      id: u.id,
+      kind: "user",
+      name: u.name,
+      role: u.role || "—",
+      jobTitle: u.rolePermission?.name ?? "—",
+      phone: u.phone,
+      email: u.email,
+      status: u.status,
+    }));
+    const fromTeachers: UnifiedStaffRow[] = (teachersData?.data ?? []).map((tch: Teacher) => ({
+      id: tch.id,
+      kind: "teacher",
+      name: tch.name,
+      role: "Teacher",
+      jobTitle: tch.specialization ?? "—",
+      phone: tch.phone,
+      email: tch.email,
+      status: tch.status,
+    }));
+    return [...fromUsers, ...fromTeachers];
+  }, [usersData, teachersData]);
+
+  const totalPages = Math.max(1, Math.ceil(unifiedRows.length / PAGE_SIZE));
+  const rows = unifiedRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   // GET /branches includes soft-deleted/deactivated branches — filtered to
   // ACTIVE only, same convention as Header's own branch dropdown, so a
   // staff member can't be assigned to a branch that no longer exists.
@@ -138,29 +208,27 @@ export const Staff = () => {
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedMember, setSelectedMember] = useState<{ id: string; kind: "user" | "teacher" } | null>(null);
   const [form, setForm] = useState<StaffForm>(EMPTY_FORM);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const openMenu = Boolean(anchorEl);
 
-  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, id: string) => {
+  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, id: string, kind: "user" | "teacher") => {
     e.stopPropagation();
     setAnchorEl(e.currentTarget);
-    setSelectedId(id);
+    setSelectedMember({ id, kind });
   };
   const handleCloseMenu = () => setAnchorEl(null);
 
   const openAdd = () => {
     setIsEdit(false);
-    setSelectedId(null);
+    setSelectedMember(null);
     setForm(EMPTY_FORM);
     setPhotoPreview(null);
     setShowPassword(false);
@@ -169,8 +237,13 @@ export const Staff = () => {
     setOpen(true);
   };
 
+  // Editing is only meaningful for real `users`-table rows here — a merged
+  // Teacher row's "Edit" menu item (below) opens its own real edit surface
+  // on the Teachers page instead, since this drawer only knows how to submit
+  // to POST/PATCH /users.
   const openEditDrawer = () => {
-    const member = rows.find((s) => s.id === selectedId);
+    if (selectedMember?.kind !== "user") { handleCloseMenu(); return; }
+    const member = (usersData?.rows ?? []).find((s) => s.id === selectedMember.id);
     if (member) {
       setIsEdit(true);
       setForm({
@@ -232,8 +305,8 @@ export const Staff = () => {
       photo: form.photo ?? undefined,
     };
     try {
-      if (isEdit && selectedId) {
-        await updateStaffUser({ id: selectedId, ...payload }).unwrap();
+      if (isEdit && selectedMember) {
+        await updateStaffUser({ id: selectedMember.id, ...payload }).unwrap();
         toast.success(t("settings.ceo.staff.toast.updated"));
       } else {
         await createStaffUser({
@@ -245,7 +318,7 @@ export const Staff = () => {
       }
       setOpen(false);
       setForm(EMPTY_FORM);
-      setSelectedId(null);
+      setSelectedMember(null);
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("settings.ceo.staff.toast.error");
@@ -255,37 +328,22 @@ export const Staff = () => {
     }
   };
 
-  const handleDelete = () => { setDeleteError(null); setDeleteOpen(true); handleCloseMenu(); };
-  const handleConfirmDelete = async () => {
-    if (!selectedId) return;
-    try {
-      await deleteStaffUser(selectedId).unwrap();
-      toast.success(t("settings.ceo.staff.toast.deleted"));
-      setDeleteOpen(false);
-      setSelectedId(null);
-    } catch (err) {
-      // Swagger: DELETE /users/{id} returns 409 when the user is still
-      // assigned to a branch — surfaced as its own message rather than the
-      // generic one.
-      const fetchError = err as { status?: number };
-      const detail = extractApiError(err);
-      const message =
-        fetchError?.status === 409
-          ? t("settings.ceo.staff.toast.deleteConflict")
-          : detail
-          ? `${t("settings.ceo.staff.toast.error")}: ${detail}`
-          : t("settings.ceo.staff.toast.error");
-      setDeleteError(message);
-      toast.error(message);
-    }
-  };
-
   const handleSmsOpen = () => { setSmsOpen(true); handleCloseMenu(); };
 
+  // The only "remove" action on this list: PATCH .../{id}/toggle-status
+  // flips ACTIVE <-> INACTIVE without deleting the record, for both users
+  // and merged-in teacher rows. A real DELETE isn't exposed from here — for
+  // users, Swagger documents it as a hard delete rejected with 409 while
+  // still assigned to a branch; permanent removal belongs on the Archive
+  // page (staff) / Teachers page's own archive flow (teacher rows).
   const handleToggleStatus = async () => {
-    if (!selectedId) return;
+    if (!selectedMember) return;
     try {
-      await toggleStaffUserStatus(selectedId).unwrap();
+      if (selectedMember.kind === "user") {
+        await toggleStaffUserStatus(selectedMember.id).unwrap();
+      } else {
+        await toggleTeacherStatus(selectedMember.id).unwrap();
+      }
       toast.success(t("settings.ceo.staff.toast.statusToggled"));
     } catch (err) {
       const detail = extractApiError(err);
@@ -295,7 +353,10 @@ export const Staff = () => {
     handleCloseMenu();
   };
 
-  const rolePermissionLabel = (member: StaffUser) => member.rolePermission?.name || member.role || "—";
+  const handleOpenTeacherProfile = () => {
+    if (selectedMember?.kind === "teacher") navigate(`/teachers/${selectedMember.id}`);
+    handleCloseMenu();
+  };
 
   return (
     <Box sx={{ p: 3, bgcolor: "var(--color-bg-page)", minHeight: "100vh" }}>
@@ -306,7 +367,7 @@ export const Staff = () => {
             {t("settings.ceo.staff.title")}
           </Typography>
           <Typography fontSize={14} color="var(--color-text-muted)">
-            {data?.meta.total ?? rows.length} {t("settings.ceo.staff.countSuffix")}
+            {unifiedRows.length} {t("settings.ceo.staff.countSuffix")}
           </Typography>
         </Stack>
         <Stack direction="row" spacing={1.5}>
@@ -397,30 +458,31 @@ export const Staff = () => {
                     <Typography fontSize={13} color="var(--color-text-secondary)">{member.role || "—"}</Typography>
                   </TableCell>
                   <TableCell sx={{ fontSize: 13, color: "var(--color-text-secondary)", verticalAlign: "top", pt: 2 }}>
-                    {rolePermissionLabel(member)}
+                    {member.jobTitle}
                   </TableCell>
                   <TableCell sx={{ fontSize: 13, verticalAlign: "top", pt: 2 }}>
                     {member.phone || member.email || "—"}
                   </TableCell>
                   <TableCell align="right" sx={{ verticalAlign: "top", pt: 1.5 }}>
                     <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
-                      <IconButton size="small" sx={{ color: "#f0a500" }} onClick={() => { setSelectedId(member.id); handleSmsOpen(); }}>
+                      <IconButton size="small" sx={{ color: "#f0a500" }} onClick={() => { setSelectedMember({ id: member.id, kind: member.kind }); handleSmsOpen(); }}>
                         <MdOutlineEmail size={20} />
                       </IconButton>
-                      <IconButton size="small" onClick={(e) => handleMenuOpen(e, member.id)}>
+                      <IconButton size="small" onClick={(e) => handleMenuOpen(e, member.id, member.kind)}>
                         <BsThreeDotsVertical size={18} />
                       </IconButton>
                     </Box>
                     <Menu
                       anchorEl={anchorEl}
-                      open={openMenu && selectedId === member.id}
+                      open={openMenu && selectedMember?.id === member.id}
                       onClose={handleCloseMenu}
                       anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                       transformOrigin={{ vertical: "top", horizontal: "right" }}
                     >
-                      <MenuItem onClick={openEditDrawer}>{t("settings.ceo.staff.menu.edit")}</MenuItem>
+                      {member.kind === "user"
+                        ? <MenuItem onClick={openEditDrawer}>{t("settings.ceo.staff.menu.edit")}</MenuItem>
+                        : <MenuItem onClick={handleOpenTeacherProfile}>{t("settings.ceo.staff.menu.edit")}</MenuItem>}
                       <MenuItem onClick={handleToggleStatus}>{t("settings.ceo.staff.menu.toggleStatus")}</MenuItem>
-                      <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>{t("settings.ceo.staff.menu.delete")}</MenuItem>
                     </Menu>
                   </TableCell>
                 </TableRow>
@@ -454,7 +516,7 @@ export const Staff = () => {
 
       <SendSmsModal
         open={smsOpen}
-        onClose={() => { setSmsOpen(false); setSelectedId(null); }}
+        onClose={() => { setSmsOpen(false); setSelectedMember(null); }}
         selectedCount={1}
         recipientLabel={t("settings.ceo.staff.sms.recipientLabel")}
         sender="3700"
@@ -513,7 +575,26 @@ export const Staff = () => {
 
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.role")}</Typography>
-              <TextField name="role" value={form.role} onChange={handleChange} fullWidth size="small" helperText={t("settings.ceo.staff.form.roleHelp")} sx={inputSx} />
+              {/* `role` is a single plain string on POST/PATCH /users (no
+                  enum, no listing endpoint) — checkbox-styled to match the
+                  reference design, but only one stays checked at a time
+                  since the backend can only store one value. */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", columnGap: 2, rowGap: 0.5 }}>
+                {ROLE_OPTIONS.map((option) => (
+                  <FormControlLabel
+                    key={option}
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={form.role === option}
+                        onChange={() => setForm((p) => ({ ...p, role: p.role === option ? "" : option }))}
+                      />
+                    }
+                    label={<span style={{ fontSize: 13 }}>{option}</span>}
+                    sx={{ mr: 0 }}
+                  />
+                ))}
+              </Box>
             </Box>
 
             <Box>
@@ -546,6 +627,18 @@ export const Staff = () => {
                 InputProps={{ startAdornment: (<InputAdornment position="start"><MdCalendarToday size={15} color="var(--color-text-muted)" /></InputAdornment>) }}
                 sx={inputSx}
               />
+            </Box>
+
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.gender")}</Typography>
+              <RadioGroup
+                row
+                value={form.gender}
+                onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value }))}
+              >
+                <FormControlLabel value="MALE" control={<Radio size="small" />} label={<span style={{ fontSize: 13 }}>{t("settings.ceo.staff.form.male")}</span>} />
+                <FormControlLabel value="FEMALE" control={<Radio size="small" />} label={<span style={{ fontSize: 13 }}>{t("settings.ceo.staff.form.female")}</span>} />
+              </RadioGroup>
             </Box>
 
             <Box>
@@ -602,23 +695,6 @@ export const Staff = () => {
           </Button>
         </Box>
       </Drawer>
-
-      {/* Delete dialog */}
-      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} PaperProps={{ sx: { borderRadius: 3, width: 380 } }}>
-        <DialogTitle sx={{ fontWeight: 600 }}>{t("settings.ceo.staff.deleteDialog.title")}</DialogTitle>
-        <DialogContent>
-          <Typography fontSize={14} color="text.secondary">{t("settings.ceo.staff.deleteDialog.message")}</Typography>
-          {deleteError && <Typography fontSize={13} color="error" mt={1.5}>{deleteError}</Typography>}
-        </DialogContent>
-        <DialogActions sx={{ px: 2, pb: 2 }}>
-          <Button onClick={() => setDeleteOpen(false)} disabled={isDeleting} sx={{ textTransform: "none", color: "var(--color-text-secondary)" }}>
-            {t("settings.ceo.staff.deleteDialog.cancel")}
-          </Button>
-          <Button variant="contained" color="error" onClick={handleConfirmDelete} disabled={isDeleting} sx={{ borderRadius: 2, textTransform: "none" }}>
-            {isDeleting ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : t("settings.ceo.staff.deleteDialog.confirm")}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

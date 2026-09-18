@@ -5,10 +5,6 @@ import {
   Box,
   Typography,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   IconButton,
   InputBase,
@@ -43,11 +39,11 @@ import type { RootState } from "../../app/store";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../Context/ToastContext";
+import { extractApiError } from "../../utils/extractApiError";
 import {
   useAllTeachersQuery,
   useCreateTeacherMutation,
   useUpdateTeacherMutation,
-  useDeleteTeacherMutation,
   useToggleTeacherStatusMutation,
   useLazyTeachersExcelQuery,
 } from "../../app/api/teachersApi";
@@ -86,7 +82,6 @@ export const Teachers = () => {
   const { data: allGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
   const [createTeacher, { isLoading: isCreating }] = useCreateTeacherMutation();
   const [updateTeacher, { isLoading: isUpdating }] = useUpdateTeacherMutation();
-  const [deleteTeacher, { isLoading: isDeleting }] = useDeleteTeacherMutation();
   const [toggleTeacherStatus] = useToggleTeacherStatusMutation();
   const [fetchTeachersExcel, { isFetching: isExportingExcel }] = useLazyTeachersExcelQuery();
 
@@ -109,7 +104,6 @@ export const Teachers = () => {
   const [anchorEl, setAnchorEl]                   = useState<null | HTMLElement>(null);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const [form, setForm]                           = useState(EMPTY_FORM);
-  const [deleteOpen, setDeleteOpen]               = useState(false);
   const [smsOpen, setSmsOpen]                     = useState(false);
   const [showPassword, setShowPassword]           = useState(false);
   const [photoPreview, setPhotoPreview]           = useState<string | null>(null);
@@ -209,24 +203,12 @@ export const Teachers = () => {
       setForm(EMPTY_FORM);
       setOpen(false);
       setSelectedTeacherId(null);
-    } catch {
-      toast.error(t("teachers.toast.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `${t("teachers.toast.error")}: ${detail}` : t("teachers.toast.error"));
     }
   };
 
-  /* ── delete ── */
-  const handleDelete     = () => { setDeleteOpen(true); handleCloseMenu(); };
-  const handleConfirmDel = async () => {
-    if (!selectedTeacherId) return;
-    try {
-      await deleteTeacher(selectedTeacherId).unwrap();
-      toast.success(t("teachers.toast.deleted"));
-      setDeleteOpen(false);
-      setSelectedTeacherId(null);
-    } catch {
-      toast.error(t("teachers.toast.error"));
-    }
-  };
   const handleSmsOpen    = () => { setSmsOpen(true); handleCloseMenu(); };
   const handleExportExcel = async () => {
     try {
@@ -246,13 +228,19 @@ export const Teachers = () => {
       toast.error(t("teachers.actions.exportError"));
     }
   };
+  // The only "remove" action on this list: PATCH /teachers/{id}/toggle-status
+  // flips ACTIVE <-> INACTIVE (this list shows both, unlike Students/Groups)
+  // without deleting the record. A real DELETE /teachers/{id} isn't exposed
+  // from here — it's the Archive page's permanent-delete action, since the
+  // backend rejects it outright while the teacher still has groups/history.
   const handleToggleStatus = async () => {
     if (!selectedTeacherId) return;
     try {
       await toggleTeacherStatus(selectedTeacherId).unwrap();
       toast.success(t("teachers.toast.statusToggled"));
-    } catch {
-      toast.error(t("teachers.toast.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `${t("teachers.toast.error")}: ${detail}` : t("teachers.toast.error"));
     }
     handleCloseMenu();
   };
@@ -336,7 +324,6 @@ export const Teachers = () => {
                       <MenuItem onClick={openEditDrawer}>✏️ {t("teachers.menu.edit")}</MenuItem>
                       <MenuItem onClick={handleSmsOpen}>📱 {t("teachers.menu.sms")}</MenuItem>
                       <MenuItem onClick={handleToggleStatus}>🔁 {t("teachers.menu.toggleStatus")}</MenuItem>
-                      <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>🗑 {t("teachers.menu.delete")}</MenuItem>
                     </Menu>
                   </TableCell>
                 </TableRow>
@@ -499,21 +486,6 @@ export const Teachers = () => {
         </Box>
       </Drawer>
 
-      {/* Delete Dialog */}
-      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} PaperProps={{ sx: { borderRadius: 3, width: 360 } }}>
-        <DialogTitle sx={{ fontWeight: 600 }}>{t("teachers.deleteDialog.title")}</DialogTitle>
-        <DialogContent>
-          <Typography fontSize={14} color="text.secondary">
-            {t("teachers.deleteDialog.message")}
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 2, pb: 2 }}>
-          <Button onClick={() => setDeleteOpen(false)} disabled={isDeleting} sx={{ textTransform: "none", color: "var(--color-text-secondary)" }}>{t("teachers.deleteDialog.cancel")}</Button>
-          <Button variant="contained" color="error" onClick={handleConfirmDel} disabled={isDeleting} sx={{ borderRadius: 2, textTransform: "none" }}>
-            {isDeleting ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : t("teachers.deleteDialog.confirm")}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </div>
   );
 };

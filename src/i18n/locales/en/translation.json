@@ -1834,7 +1834,7 @@
           "role": "Role", "roleHelp": "Optional (e.g. ADMIN, SUPERADMIN) — Swagger doesn't document a fixed list of values.",
           "rolePermissionId": "Position (RolePermission ID)",
           "rolePermissionIdHelp": "Required — the id of a record from the Positions module. No listing endpoint for it exists yet, so it must be entered manually.",
-          "branches": "Branches", "jobTitle": "Position", "dateOfBirth": "Date of birth", "gender": "Gender",
+          "branches": "Branches", "jobTitle": "Position", "dateOfBirth": "Date of birth", "gender": "Gender", "male": "Male", "female": "Female",
           "photo": "Photo", "noFileChosen": "No file chosen", "browse": "Browse", "submit": "Submit"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Branch Director", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Limited Administrator", "teacher": "Teacher", "marketer": "Marketer", "cashier": "Cashier" },

@@ -1838,7 +1838,7 @@
           "role": "Роль", "roleHelp": "Необязательно (например ADMIN, SUPERADMIN) — Swagger не документирует фиксированный список значений.",
           "rolePermissionId": "Должность (RolePermission ID)",
           "rolePermissionIdHelp": "Обязательно — id записи из модуля \"Должности\". Endpoint для получения списка пока недоступен, поэтому значение вводится вручную.",
-          "branches": "Филиалы", "jobTitle": "Должность", "dateOfBirth": "Дата рождения", "gender": "Пол",
+          "branches": "Филиалы", "jobTitle": "Должность", "dateOfBirth": "Дата рождения", "gender": "Пол", "male": "Мужской", "female": "Женский",
           "photo": "Фото", "noFileChosen": "Файл не выбран", "browse": "Обзор", "submit": "Отправить"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Директор филиала", "administrator": "Администратор", "administrator2": "Администратор2", "limitedAdministrator": "Ограниченный администратор", "teacher": "Учитель", "marketer": "Маркетолог", "cashier": "Кассир" },

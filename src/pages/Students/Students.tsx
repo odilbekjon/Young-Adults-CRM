@@ -48,7 +48,7 @@ import { useNavigate } from "react-router-dom";
 
 import { AddStudent } from "../../components/AddStudent";
 import { AddPayment } from "../../components/AddPayment";
-import { useAllStudentsQuery, useUpdateStudentMutation, useDeleteStudentMutation, useToggleStudentStatusMutation, useLazyStudentsExcelQuery } from "../../app/api/studentsApi";
+import { useAllStudentsQuery, useUpdateStudentMutation, useToggleStudentStatusMutation, useLazyStudentsExcelQuery } from "../../app/api/studentsApi";
 import { useAllGroupsQuery, useAddStudentToGroupMutation } from "../../app/api/groupsApi";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils/extractApiError";
@@ -600,7 +600,6 @@ export const Students = () => {
   const limit = 20;
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const [updateStudent, { isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
-  const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
   const [toggleStudentStatus, { isLoading: isArchivingStudent }] = useToggleStudentStatusMutation();
   const [fetchStudentsExcel, { isFetching: isExportingExcel }] = useLazyStudentsExcelQuery();
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
@@ -615,7 +614,6 @@ export const Students = () => {
   const [visibleCols,       setVisibleCols]       = useState<string[]>(ALL_COLUMNS.map((c) => c.key));
   const [columnsAnchor,     setColumnsAnchor]     = useState<null | HTMLElement>(null);
   const [actionMenu,        setActionMenu]        = useState<{ el: HTMLElement; uid: string } | null>(null);
-  const [deleteUid,         setDeleteUid]         = useState<string | null>(null);
   const [archiveUid,        setArchiveUid]        = useState<string | null>(null);
 
   const [editDrawerOpen,    setEditDrawerOpen]    = useState(false);
@@ -745,32 +743,18 @@ export const Students = () => {
   const toggleOne   = (uid: string) =>
     setSelected((p) => p.includes(uid) ? p.filter((x) => x !== uid) : [...p, uid]);
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteUid) return;
-    setActionError(null);
-    try {
-      await deleteStudent(deleteUid).unwrap();
-      setSelected((p) => p.filter((x) => x !== deleteUid));
-      setDeleteUid(null);
-      toast.success(t("students.toast.deleted"));
-    } catch (err) {
-      const detail = extractApiError(err);
-      const message = detail ? `${t("students.deleteDialog.error")}: ${detail}` : t("students.deleteDialog.error");
-      setActionError(message);
-      toast.error(message);
-    }
-  };
-
-  // Archive is a distinct action from permanent delete: PATCH
+  // "Delete"/"Archive" on the active list are the same action: PATCH
   // /students/{id}/toggle-status flips the student's status to INACTIVE
-  // (or back to ACTIVE) without removing the record, unlike deleteStudent
-  // above (DELETE /students/{id}), which the backend itself refuses while
-  // the student still has active group memberships.
+  // (moving them out of the active list into Archive) without removing the
+  // record. A real DELETE /students/{id} is reserved for the Archive page's
+  // permanent-delete action — the backend rejects it outright here while the
+  // student still has group memberships or attendance records.
   const handleArchiveConfirm = async () => {
     if (!archiveUid) return;
     setActionError(null);
     try {
       await toggleStudentStatus(archiveUid).unwrap();
+      setSelected((p) => p.filter((x) => x !== archiveUid));
       setArchiveUid(null);
       toast.success(t("students.toast.archived"));
     } catch (err) {
@@ -785,12 +769,12 @@ export const Students = () => {
     if (selected.length === 0) return;
     setActionError(null);
     try {
-      await Promise.all(selected.map((uid) => deleteStudent(uid).unwrap()));
+      await Promise.all(selected.map((uid) => toggleStudentStatus(uid).unwrap()));
       setSelected([]);
-      toast.success(t("students.toast.deleted"));
+      toast.success(t("students.toast.archived"));
     } catch (err) {
       const detail = extractApiError(err);
-      const message = detail ? `${t("students.deleteDialog.error")}: ${detail}` : t("students.deleteDialog.error");
+      const message = detail ? `${t("students.archiveDialog.error")}: ${detail}` : t("students.archiveDialog.error");
       setActionError(message);
       toast.error(message);
     }
@@ -1213,12 +1197,8 @@ export const Students = () => {
                           <MdPayment size={16} color="var(--color-success)" /> {t("students.actions.addPayment")}
                         </MenuItem>
                         <Divider sx={{ my: 0.5 }} />
-                        <MenuItem onClick={() => { setActionMenu(null); setActionError(null); setArchiveUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-text-secondary)" }}>
-                          <MdArchive size={16} color="var(--color-text-secondary)" /> {t("students.actions.archive")}
-                        </MenuItem>
-                        <Divider sx={{ my: 0.5 }} />
-                        <MenuItem onClick={() => { setActionMenu(null); setActionError(null); setDeleteUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-danger)" }}>
-                          <MdDelete size={16} /> {t("students.actions.remove")}
+                        <MenuItem onClick={() => { setActionMenu(null); setActionError(null); setArchiveUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-danger)" }}>
+                          <MdArchive size={16} /> {t("students.actions.archive")}
                         </MenuItem>
                       </Menu>
                     </TableCell>
@@ -1304,23 +1284,10 @@ export const Students = () => {
         selectedCount={selected.length}
       />
 
-      {/* Delete dialog */}
-      <Dialog open={Boolean(deleteUid)} onClose={() => setDeleteUid(null)} PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ fontWeight: 700 }}>{t("students.deleteDialog.title")}</DialogTitle>
-        <DialogContent>
-          <Typography fontSize={14} color="text.secondary">{t("students.deleteDialog.message")}</Typography>
-          {actionError && (
-            <Typography fontSize={13} color="error" mt={1.5}>{actionError}</Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteUid(null)} disabled={isDeletingStudent} sx={{ color: "var(--color-text-secondary)" }}>{t("students.deleteDialog.cancel")}</Button>
-          <Button variant="contained" color="error" disabled={isDeletingStudent} onClick={handleDeleteConfirm} sx={{ borderRadius: 2 }}>{t("students.deleteDialog.confirm")}</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Archive dialog — PATCH /students/{id}/toggle-status (status -> INACTIVE),
-          a separate action from permanent delete above. */}
+      {/* Archive dialog — PATCH /students/{id}/toggle-status (status -> INACTIVE).
+          This is the active list's only "remove" action: permanent DELETE is
+          reserved for the Archive page, since the backend rejects it here
+          while the student still has group/attendance records. */}
       <Dialog open={Boolean(archiveUid)} onClose={() => setArchiveUid(null)} PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>{t("students.archiveDialog.title")}</DialogTitle>
         <DialogContent>

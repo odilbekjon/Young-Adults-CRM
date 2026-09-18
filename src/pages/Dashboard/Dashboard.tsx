@@ -212,8 +212,15 @@ export const Dashboard = () => {
     [events, tab],
   );
 
-  // Navigate stat card → page (with optional ?filter=xxx)
-  const goTo = (route: string, filter?: string) => {
+  // Navigate stat card → page (with optional ?filter=xxx, or for "paid" the
+  // current month's date range — AllPayments reads startDate/endDate from
+  // the URL to pre-filter its list, same param names its own filter panel
+  // already sends to GET /finance/payments).
+  const goTo = (key: string, route: string, filter?: string) => {
+    if (key === "paid") {
+      navigate(`${route}?startDate=${monthStart}&endDate=${monthEnd}`);
+      return;
+    }
     const url = filter ? `${route}?filter=${filter}` : route;
     navigate(url);
   };
@@ -249,7 +256,7 @@ export const Dashboard = () => {
           <Tooltip key={key} title={t("dashboard.stats.goToPage", { label: t(labelKey) })} placement="top" arrow>
             <Paper
               elevation={0}
-              onClick={() => goTo(route, filter)}
+              onClick={() => goTo(key, route, filter)}
               sx={{
                 px: 1.5, py: 2,
                 borderRadius: "12px",

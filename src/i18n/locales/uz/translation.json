@@ -1834,7 +1834,7 @@
           "role": "Rol", "roleHelp": "Ixtiyoriy (masalan ADMIN, SUPERADMIN) — Swagger qat'iy qiymatlar ro'yxatini hujjatlashtirmagan.",
           "rolePermissionId": "Lavozim (RolePermission ID)",
           "rolePermissionIdHelp": "Majburiy — Lavozimlar modulidagi yozuvning IDsi. Buning ro'yxatini olish uchun endpoint hali mavjud emas, shu sabab qo'lda kiritiladi.",
-          "branches": "Filiallar", "jobTitle": "Lavozim", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi",
+          "branches": "Filiallar", "jobTitle": "Lavozim", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi", "male": "Erkak", "female": "Ayol",
           "photo": "Rasm", "noFileChosen": "Fayl tanlanmagan", "browse": "Tanlash", "submit": "Yuborish"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Filial direktori", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Cheklangan administrator", "teacher": "O'qituvchi", "marketer": "Marketolog", "cashier": "Kassir" },

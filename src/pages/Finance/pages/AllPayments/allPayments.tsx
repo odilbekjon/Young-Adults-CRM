@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -60,14 +60,21 @@ export const AllPayments = () => {
   const toast = useToast();
   const branchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
+  // Dashboard's "Paid during the month" card links here with ?startDate=
+  // &endDate= (the current month's range) so the list opens pre-filtered
+  // instead of just landing on the unfiltered page.
+  const [searchParams] = useSearchParams();
+  const initialStartDate = searchParams.get("startDate") ?? "";
+  const initialEndDate = searchParams.get("endDate") ?? "";
+
   // Draft inputs — only committed to the request on "Filter" click
   const [draftSearch, setDraftSearch] = useState("");
-  const [draftStartDate, setDraftStartDate] = useState("");
-  const [draftEndDate, setDraftEndDate] = useState("");
+  const [draftStartDate, setDraftStartDate] = useState(initialStartDate);
+  const [draftEndDate, setDraftEndDate] = useState(initialEndDate);
   const [draftPaymentMethodId, setDraftPaymentMethodId] = useState("");
 
   const [applied, setApplied] = useState({
-    search: "", startDate: "", endDate: "", paymentMethodId: "", page: 1,
+    search: "", startDate: initialStartDate, endDate: initialEndDate, paymentMethodId: "", page: 1,
   });
 
   const [showFilters, setShowFilters] = useState(true);

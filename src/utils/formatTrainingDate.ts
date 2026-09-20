@@ -34,3 +34,25 @@ export const formatTrainingDate = (value?: string | null): string => {
   const mm = String(parsed.month).padStart(2, "0");
   return `${dd}.${mm}.${parsed.year}`;
 };
+
+const daysInMonth = (year: number, month: number): number =>
+  // month is 1-12; day 0 of the *next* month is the last day of this one.
+  new Date(year, month, 0).getDate();
+
+// Adds `months` (Course.months, e.g. 3) to an ISO `YYYY-MM-DD`-prefixed date
+// and returns a plain `YYYY-MM-DD` string — used to auto-fill a group's
+// trainingEnd from its course's duration + trainingStart. Pure integer
+// arithmetic on the parsed y/m/d (same approach as parseTrainingDate/
+// formatTrainingDate above) rather than `new Date(...)` + setMonth, so this
+// can't drift a day depending on the viewer's timezone. A start day that
+// doesn't exist in the target month (e.g. Jan 31 + 1 month) clamps to that
+// month's last day instead of overflowing into the month after (Mar 3).
+export const addMonthsToIsoDate = (value: string, months: number): string | null => {
+  const parsed = parseTrainingDate(value);
+  if (!parsed || !Number.isFinite(months)) return null;
+  const totalMonths = parsed.year * 12 + (parsed.month - 1) + months;
+  const year = Math.floor(totalMonths / 12);
+  const month = (totalMonths % 12) + 1;
+  const day = Math.min(parsed.day, daysInMonth(year, month));
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+};

@@ -9,6 +9,7 @@ import {
 } from "../../../../app/api/reportsApi";
 import { useAllLeadSourcesQuery } from "../../../../app/api/leadSourcesApi";
 import { useToast } from "../../../../Context/ToastContext";
+import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 
 type FunnelStage = "Incoming" | "Waiting" | "Set" | "Attended" | "Paid";
 
@@ -216,10 +217,8 @@ export const ConversionReports = () => {
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-          className="w-40 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-[15px] text-slate-700 outline-none focus:border-blue-400" />
-        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-          className="w-40 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-[15px] text-slate-700 outline-none focus:border-blue-400" />
+        <DatePickerField value={dateFrom} onChange={setDateFrom} />
+        <DatePickerField value={dateTo} onChange={setDateTo} />
         <SelectBox value={leadSource} onChange={setLeadSource}
           options={sourceOptions} placeholder={t("reports.conversion.filters.leadsSources")} />
         <SelectBox value={byStaff} onChange={setByStaff}

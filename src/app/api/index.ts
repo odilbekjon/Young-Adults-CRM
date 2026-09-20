@@ -24,3 +24,4 @@ export * from "./studentFreezesApi";
 export * from "./studentPortalApi";
 export * from "./teacherPortalApi";
 export * from "./usersApi";
+export * from "./rolePermissionsApi";

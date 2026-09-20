@@ -5,7 +5,6 @@ import {
   BsTelephone, BsKey, BsPerson, BsEnvelope,
   BsTelegram, BsMortarboard, BsGeoAlt, BsCardText,
 } from "react-icons/bs";
-import { MdCalendarToday } from "react-icons/md";
 import { IoClose } from "react-icons/io5";
 import { RightDrawer } from "../common/RightDrawer";
 import { useToast } from "../../Context/ToastContext";
@@ -13,6 +12,7 @@ import { useCreateStudentMutation } from "../../app/api/studentsApi/studentsApi"
 import type { StudentGender } from "../../app/api/studentsApi/types";
 import { useAllGroupsQuery, useAssignStudentsToGroupMutation } from "../../app/api/groupsApi/groupsApi";
 import type { RootState } from "../../app/store";
+import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
 
 /* ─── shared styles ─── */
 const inputStyle: React.CSSProperties = {
@@ -203,18 +203,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
         {/* Date of birth */}
         <div>
           <label style={labelStyle}>{t("addStudent.dob")}</label>
-          <div style={{ position: "relative" }}>
-            <MdCalendarToday size={14} style={{
-              position: "absolute", left: 12, top: "50%",
-              transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
-            }} />
-            <input
-              type="date"
-              style={{ ...inputStyle, paddingLeft: 34, color: dob ? "#1a1a1a" : "#aaa" }}
-              value={dob}
-              onChange={(e) => setDob(e.target.value)}
-            />
-          </div>
+          <DatePickerField value={dob} onChange={setDob} />
         </div>
 
         {/* Gender */}

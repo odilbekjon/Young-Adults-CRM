@@ -23,6 +23,7 @@ import {
   useLazyReportLeadsExcelQuery,
 } from "../../../../app/api/reportsApi";
 import { useToast } from "../../../../Context/ToastContext";
+import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 
 // Known sources keep their established colours; anything else the backend
 // returns falls back to a generated one instead of all sharing a single grey.
@@ -127,18 +128,8 @@ export const LeadsReports = () => {
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
         {/* Date + Calculate bar */}
         <div className="flex items-center gap-3 mb-5">
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400 w-40 text-gray-700"
-          />
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400 w-40 text-gray-700"
-          />
+          <DatePickerField value={dateFrom} onChange={setDateFrom} />
+          <DatePickerField value={dateTo} onChange={setDateTo} />
           <button
             onClick={handleCalculate}
             className="bg-blue-700 hover:bg-blue-800 text-white rounded-full px-6 py-1.5 text-sm font-medium transition-colors"

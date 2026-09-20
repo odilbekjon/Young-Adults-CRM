@@ -11,13 +11,14 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { MdCalendarToday, MdRefresh, MdTune, MdViewColumn } from "react-icons/md";
+import { MdRefresh, MdTune, MdViewColumn } from "react-icons/md";
 
 import { useAllGroupsQuery, useStudentGroupsQuery } from "../../../../../app/api/groupsApi";
 import type { StudentGroupStatus } from "../../../../../app/api/groupsApi/types";
 import { useAllCoursesQuery } from "../../../../../app/api/coursesApi";
 import { useReasonsSelectQuery } from "../../../../../app/api/reasonsApi";
 import type { RootState } from "../../../../../app/store";
+import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
 
 const PAGE_SIZE = 10;
 
@@ -245,23 +246,9 @@ export const StudentLeft = () => {
           {/* Filters Row 1 */}
           <div className="flex flex-wrap gap-2 mb-2">
             {/* Start date */}
-            <TextField
-              size="small"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              InputProps={{ startAdornment: <MdCalendarToday size={14} className="mr-1 text-gray-400" /> }}
-              sx={{ ...inputSx, width: 160 }}
-            />
+            <DatePickerField value={startDate} onChange={setStartDate} />
             {/* End date */}
-            <TextField
-              size="small"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              InputProps={{ startAdornment: <MdCalendarToday size={14} className="mr-1 text-gray-400" /> }}
-              sx={{ ...inputSx, width: 160 }}
-            />
+            <DatePickerField value={endDate} onChange={setEndDate} />
             {/* Search */}
             <TextField
               size="small"

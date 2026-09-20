@@ -1,5 +1,5 @@
 // src/pages/Students.tsx
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import {
@@ -34,7 +34,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { MdDelete, MdMail, MdEdit, MdPayment, MdAdd, MdCalendarToday, MdArchive } from "react-icons/md";
+import { MdDelete, MdMail, MdEdit, MdPayment } from "react-icons/md";
 import { BsThreeDotsVertical, BsPersonPlus } from "react-icons/bs";
 import { TbAdjustmentsHorizontal, TbColumns3 } from "react-icons/tb";
 import { HiChevronDown } from "react-icons/hi";
@@ -51,6 +51,7 @@ import { AddPayment } from "../../components/AddPayment";
 import { useAllStudentsQuery, useUpdateStudentMutation, useToggleStudentStatusMutation, useLazyStudentsExcelQuery } from "../../app/api/studentsApi";
 import { useAllGroupsQuery, useAddStudentToGroupMutation } from "../../app/api/groupsApi";
 import { useToast } from "../../Context/ToastContext";
+import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { extractApiError } from "../../utils/extractApiError";
 import type { RootState } from "../../app/store";
 
@@ -82,32 +83,6 @@ const inputSx = {
     "&.Mui-focused fieldset": { borderColor: "#5c7fa3" },
   },
 };
-
-/* ─── ICON BUTTON HELPER (Header'dan ko'chirildi) ────── */
-const IconBtn = ({ children, onClick, active, title }: {
-  children: React.ReactNode; onClick?: () => void; active?: boolean; title?: string;
-}) => (
-  <button
-    title={title}
-    onClick={onClick}
-    style={{
-      width: 34, height: 34, border: "1px solid var(--color-border)", borderRadius: 8,
-      background: active ? "var(--color-surface-hover)" : "var(--color-surface)", display: "flex",
-      alignItems: "center", justifyContent: "center", cursor: "pointer",
-      color: "var(--color-text-secondary)", flexShrink: 0, transition: "background 0.15s, color 0.15s",
-    }}
-    onMouseEnter={(e) => {
-      (e.currentTarget as HTMLButtonElement).style.background = "var(--color-surface-hover)";
-      (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-primary)";
-    }}
-    onMouseLeave={(e) => {
-      (e.currentTarget as HTMLButtonElement).style.background = active ? "var(--color-surface-hover)" : "var(--color-surface)";
-      (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-secondary)";
-    }}
-  >
-    {children}
-  </button>
-);
 
 /* ─── DROPDOWN FILTER ────────────────────────────────── */
 interface DropdownProps {
@@ -198,33 +173,9 @@ const TextFilterInput = ({ placeholder, value, onChange, disabled, disabledTitle
 );
 
 /* ─── DATE FILTER BOX (From/To created) ─────────────────── */
-// Native <input type="date"> ignores the `placeholder` attribute in every
-// browser, so an empty-state label ("From created") is layered on top
-// (pointer-events: none) instead — it just hides once a value is picked.
 const DateFilterInput = ({ placeholder, value, onChange }: { placeholder: string; value: string; onChange: (val: string) => void }) => (
-  <Box
-    sx={{
-      position: "relative", display: "flex", alignItems: "center", gap: 0.6,
-      border: "1px solid var(--color-border)", borderRadius: "6px",
-      px: 1.2, py: 0.6, bgcolor: "var(--color-surface)", minWidth: 150,
-    }}
-  >
-    <input
-      aria-label={placeholder}
-      value={value}
-      type="date"
-      onChange={(e) => onChange(e.target.value)}
-      style={{ border: "none", outline: "none", fontSize: 13, color: "var(--color-text-secondary)", background: "transparent", width: "100%" }}
-    />
-    {!value && (
-      <span style={{
-        position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-        fontSize: 13, color: "var(--color-text-muted)", pointerEvents: "none", background: "var(--color-surface)",
-      }}>
-        {placeholder}
-      </span>
-    )}
-    <MdCalendarToday size={13} color="var(--color-text-muted)" style={{ flexShrink: 0, position: "relative", zIndex: 1 }} />
+  <Box sx={{ minWidth: 150 }}>
+    <DatePickerField value={value} onChange={onChange} placeholder={placeholder} />
   </Box>
 );
 
@@ -382,25 +333,7 @@ const AddToGroupModal = ({
             <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>
               {t("students.addToGroup.paymentStartDate")}
             </Typography>
-            <TextField
-              fullWidth
-              size="small"
-              type="date"
-              value={paymentStartDate}
-              onChange={(e) => setPaymentStartDate(e.target.value)}
-              disabled={isSubmitting}
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "8px",
-                  fontSize: 14,
-                  bgcolor: "var(--color-surface)",
-                  "& fieldset": { borderColor: "var(--color-border)" },
-                  "&:hover fieldset": { borderColor: "var(--color-text-muted)" },
-                  "&.Mui-focused fieldset": { borderColor: "#5c7fa3" },
-                },
-              }}
-            />
+            <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} disabled={isSubmitting} />
           </Box>
         )}
 
@@ -477,7 +410,7 @@ const EditStudentDrawer = ({
 
         <Box mb={2.5}>
           <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("students.editDrawer.dob")}</Typography>
-          <TextField fullWidth size="small" type="date" value={dob} onChange={(e) => setDob(e.target.value)} InputLabelProps={{ shrink: true }} sx={inputSx} />
+          <DatePickerField value={dob} onChange={setDob} />
         </Box>
 
         <Box mb={2.5}>
@@ -532,62 +465,6 @@ const EditStudentDrawer = ({
 };
 
 
-/* ══════════════════════════════════════════
-   Quick Add Dropdown (➕)
-══════════════════════════════════════════ */
-const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
-  onAddStudent: () => void; onAddPayment: () => void;
-}) => {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
-
-  const items = [
-    { label: t("quickAdd.addStudent"), emoji: "🎓", action: onAddStudent },
-    { label: t("quickAdd.addPayment"), emoji: "💳", action: onAddPayment },
-  ];
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <IconBtn onClick={() => setOpen((p) => !p)} title={t("quickAdd.addStudent")} active={open}>
-        <MdAdd size={18} />
-      </IconBtn>
-      {open && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 8px)", left: 0,
-          background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 10,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 500,
-          minWidth: 180, animation: "dropDown 0.15s ease", overflow: "hidden",
-        }}>
-          <style>{`@keyframes dropDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-          {items.map((item) => (
-            <div
-              key={item.label}
-              onClick={() => { setOpen(false); item.action(); }}
-              style={{
-                padding: "11px 16px", fontSize: 13, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 10,
-                color: "var(--color-text-primary)", transition: "background 0.1s",
-              }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "var(--color-surface-alt)")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "var(--color-surface)")}
-            >
-              <span style={{ fontSize: 16 }}>{item.emoji}</span>
-              <span>{item.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
 /* ─── MAIN COMPONENT ─────────────────────────────────── */
 export const Students = () => {
   const { t } = useTranslation();
@@ -615,6 +492,7 @@ export const Students = () => {
   const [columnsAnchor,     setColumnsAnchor]     = useState<null | HTMLElement>(null);
   const [actionMenu,        setActionMenu]        = useState<{ el: HTMLElement; uid: string } | null>(null);
   const [archiveUid,        setArchiveUid]        = useState<string | null>(null);
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
   const [editDrawerOpen,    setEditDrawerOpen]    = useState(false);
   const [activeStudent,     setActiveStudent]     = useState<FlatStudent | null>(null);
@@ -780,6 +658,11 @@ export const Students = () => {
     }
   };
 
+  const handleBulkDeleteConfirm = async () => {
+    setBulkDeleteConfirmOpen(false);
+    await handleBulkDelete();
+  };
+
   const handleSaveEdit = async (uid: string, data: { name: string; phone: string }): Promise<boolean> => {
     setActionError(null);
     try {
@@ -831,7 +714,10 @@ export const Students = () => {
         status: filters.status === "active" ? "ACTIVE" : filters.status === "inactive" ? "INACTIVE" : undefined,
         branchId: selectedBranchId ?? undefined,
         page: 1,
-        limit: Math.max(pageMeta.total || filtered.length, 1),
+        // Backend doesn't reliably return pagination meta for GET /students,
+        // so `pageMeta.total` can be capped at the on-screen page size. Use a
+        // large fixed limit instead so the export always covers every match.
+        limit: 1_000_000,
       }).unwrap();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -875,10 +761,6 @@ export const Students = () => {
           <Typography fontSize={14} color="var(--color-text-secondary)">{t("students.header.quantity", { count: studentsData ? pageMeta.total : filtered.length })}</Typography>
         </Stack>
         <Stack direction="row" alignItems="center" gap={1}>
-          <QuickAddBtn
-            onAddStudent={() => setAddStudentOpen(true)}
-            onAddPayment={() => setAddPaymentOpen(true)}
-          />
           <Button
             variant="outlined"
             onClick={handleExportExcel}
@@ -1102,7 +984,7 @@ export const Students = () => {
                     <Tooltip title={t("students.table.deleteSelected")}>
                       <IconButton
                         size="small" sx={{ color: "var(--color-text-muted)" }}
-                        onClick={handleBulkDelete}
+                        onClick={() => setBulkDeleteConfirmOpen(true)}
                       >
                         <MdDelete size={15} />
                       </IconButton>
@@ -1198,7 +1080,7 @@ export const Students = () => {
                         </MenuItem>
                         <Divider sx={{ my: 0.5 }} />
                         <MenuItem onClick={() => { setActionMenu(null); setActionError(null); setArchiveUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-danger)" }}>
-                          <MdArchive size={16} /> {t("students.actions.archive")}
+                          <MdDelete size={16} /> {t("students.actions.archive")}
                         </MenuItem>
                       </Menu>
                     </TableCell>
@@ -1298,7 +1180,19 @@ export const Students = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setArchiveUid(null)} disabled={isArchivingStudent} sx={{ color: "var(--color-text-secondary)" }}>{t("students.archiveDialog.cancel")}</Button>
-          <Button variant="contained" disabled={isArchivingStudent} onClick={handleArchiveConfirm} sx={{ borderRadius: 2, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" } }}>{t("students.archiveDialog.confirm")}</Button>
+          <Button variant="contained" color="error" disabled={isArchivingStudent} onClick={handleArchiveConfirm} sx={{ borderRadius: 2 }}>{t("students.archiveDialog.confirm")}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk delete (archive) confirm — same toggle-status mutation, applied to every selected row */}
+      <Dialog open={bulkDeleteConfirmOpen} onClose={() => setBulkDeleteConfirmOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>{t("students.archiveDialog.title")}</DialogTitle>
+        <DialogContent>
+          <Typography fontSize={14} color="text.secondary">{t("students.archiveDialog.message")}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setBulkDeleteConfirmOpen(false)} sx={{ color: "var(--color-text-secondary)" }}>{t("students.archiveDialog.cancel")}</Button>
+          <Button variant="contained" color="error" onClick={handleBulkDeleteConfirm} sx={{ borderRadius: 2 }}>{t("students.archiveDialog.confirm")}</Button>
         </DialogActions>
       </Dialog>
     </Box>

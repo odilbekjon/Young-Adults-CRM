@@ -25,18 +25,23 @@ import {
   Collapse,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { IoSearchOutline } from "react-icons/io5";
 import { GoPlus } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { PiMicrosoftExcelLogoFill } from "react-icons/pi";
-import { MdDownload, MdCalendarToday, MdClose } from "react-icons/md";
+import { MdClose, MdDelete } from "react-icons/md";
 import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useBranch } from "../../Context/BranchContext";
 import type { RootState } from "../../app/store";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
+import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils/extractApiError";
@@ -109,6 +114,7 @@ export const Teachers = () => {
   const [photoPreview, setPhotoPreview]           = useState<string | null>(null);
   const fileInputRef                              = useRef<HTMLInputElement>(null);
   const [errors, setErrors]                       = useState<Record<string, string>>({});
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const openMenu = Boolean(anchorEl);
 
@@ -216,7 +222,10 @@ export const Teachers = () => {
         search: searchValue || undefined,
         branchId: selectedBranchId ?? undefined,
         page: 1,
-        limit: Math.max(teachersData?.meta?.total ?? teachers.length, 1),
+        // A large fixed limit instead of relying on `meta.total`, which can
+        // be missing or capped by whatever page size is loaded on screen —
+        // this always asks the backend for every matching record.
+        limit: 1_000_000,
       }).unwrap();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -233,7 +242,12 @@ export const Teachers = () => {
   // without deleting the record. A real DELETE /teachers/{id} isn't exposed
   // from here — it's the Archive page's permanent-delete action, since the
   // backend rejects it outright while the teacher still has groups/history.
-  const handleToggleStatus = async () => {
+  const handleDeleteClick = () => {
+    setDeleteConfirmOpen(true);
+    handleCloseMenu();
+  };
+  const handleDeleteConfirm = async () => {
+    setDeleteConfirmOpen(false);
     if (!selectedTeacherId) return;
     try {
       await toggleTeacherStatus(selectedTeacherId).unwrap();
@@ -242,7 +256,6 @@ export const Teachers = () => {
       const detail = extractApiError(err);
       toast.error(detail ? `${t("teachers.toast.error")}: ${detail}` : t("teachers.toast.error"));
     }
-    handleCloseMenu();
   };
 
   /* ════════════════════════════════════════════════════════ */
@@ -259,10 +272,6 @@ export const Teachers = () => {
           <Button variant="contained" startIcon={<GoPlus />} onClick={openAdd}
             sx={{ borderRadius: "20px", background: "#1a3a5c", boxShadow: "none", textTransform: "none", fontWeight: 500, px: 3 }}>
             {t("teachers.actions.addNew")}
-          </Button>
-          <Button variant="outlined" startIcon={<MdDownload />}
-            sx={{ borderRadius: "20px", textTransform: "none", color: "inherit", borderColor: "var(--color-border)" }}>
-            {t("teachers.actions.import")}
           </Button>
           <Button
             variant="outlined"
@@ -323,7 +332,9 @@ export const Teachers = () => {
                       transformOrigin={{ vertical: "top", horizontal: "center" }}>
                       <MenuItem onClick={openEditDrawer}>✏️ {t("teachers.menu.edit")}</MenuItem>
                       <MenuItem onClick={handleSmsOpen}>📱 {t("teachers.menu.sms")}</MenuItem>
-                      <MenuItem onClick={handleToggleStatus}>🔁 {t("teachers.menu.toggleStatus")}</MenuItem>
+                      <MenuItem onClick={handleDeleteClick} sx={{ color: "#d32f2f" }}>
+                        <MdDelete size={15} style={{ marginRight: 8 }} /> {t("teachers.menu.delete")}
+                      </MenuItem>
                     </Menu>
                   </TableCell>
                 </TableRow>
@@ -345,6 +356,24 @@ export const Teachers = () => {
         recipientLabel={t("teachers.sms.recipientLabel")}
         sender="3700"
       />
+
+      {/* ══════════════════════════════════════════════════════
+          DELETE CONFIRM
+      ══════════════════════════════════════════════════════ */}
+      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} PaperProps={{ sx: { borderRadius: 2, minWidth: 360 } }}>
+        <DialogTitle sx={{ fontWeight: 600 }}>{t("teachers.deleteDialog.title")}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">{t("teachers.deleteDialog.message")}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button variant="outlined" onClick={() => setDeleteConfirmOpen(false)} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+            {t("teachers.deleteDialog.cancel")}
+          </Button>
+          <Button variant="contained" color="error" onClick={handleDeleteConfirm} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+            {t("teachers.deleteDialog.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ══════════════════════════════════════════════════════
           DRAWER
@@ -400,22 +429,7 @@ export const Teachers = () => {
             {/* Date of birth */}
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("teachers.form.dob")}</Typography>
-              <TextField name="dob" type="date" value={form.dob} onChange={handleChange}
-                fullWidth size="small" InputLabelProps={{ shrink: true }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <MdCalendarToday size={15} color="var(--color-text-muted)" />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  ...inputSx,
-                  "& input[type='date']::-webkit-calendar-picker-indicator": {
-                    opacity: 0, position: "absolute", right: 0, width: "100%", cursor: "pointer",
-                  },
-                }}
-              />
+              <DatePickerField value={form.dob} onChange={(iso) => setForm((prev) => ({ ...prev, dob: iso }))} />
             </Box>
 
             {/* Gender */}

@@ -24,7 +24,8 @@ import {
   MdGroup,
   MdCalendarToday,
 } from "react-icons/md";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { Calendar } from "../SingleGroup/Calendar";
 
 // ─── Mock teachers ────────────────────────────────────────────────────────────
 const TEACHERS = [
@@ -98,21 +99,26 @@ function DateFilterButton({
   value: string; // "YYYY-MM-DD" or ""
   onChange: (v: string) => void;
 }) {
-  const [, setAnchor] = useState<HTMLElement | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   const displayValue = value
     ? value.split("-").reverse().join(".")
     : null;
 
   return (
-    <>
+    <Box ref={wrapRef} sx={{ position: "relative" }}>
       <Box
-        onClick={(e) => {
-          setAnchor(e.currentTarget);
-          // native calendar ni ochish uchun kichik timeout
-          setTimeout(() => inputRef.current?.showPicker?.(), 50);
-        }}
+        onClick={() => setOpen((p) => !p)}
         sx={{
           position: "relative",
           display: "flex",
@@ -150,25 +156,29 @@ function DateFilterButton({
             <MdClose size={14} />
           </Box>
         )}
-        {/* Hidden native date input */}
-        <input
-          ref={inputRef}
-          type="date"
-          value={value}
-          onChange={(e) => {
-            onChange(e.target.value);
-            setAnchor(null);
-          }}
-          style={{
-            position: "absolute",
-            opacity: 0,
-            width: 0,
-            height: 0,
-            pointerEvents: "none",
-          }}
-        />
       </Box>
-    </>
+      {open && (
+        <Box
+          sx={{
+            position: "absolute", top: "calc(100% + 8px)", left: 0,
+            width: 300, bgcolor: "#fff", border: "1px solid #eee",
+            borderRadius: "12px", boxShadow: "0 12px 32px rgba(0,0,0,0.14)",
+            p: 2, zIndex: 50,
+          }}
+        >
+          <Calendar
+            value={value ? new Date(`${value}T00:00:00`) : null}
+            onChange={(d) => {
+              const y = d.getFullYear();
+              const m = (d.getMonth() + 1).toString().padStart(2, "0");
+              const day = d.getDate().toString().padStart(2, "0");
+              onChange(`${y}-${m}-${day}`);
+              setOpen(false);
+            }}
+          />
+        </Box>
+      )}
+    </Box>
   );
 }
 

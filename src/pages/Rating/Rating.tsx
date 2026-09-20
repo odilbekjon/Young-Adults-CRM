@@ -10,14 +10,12 @@ import {
   MenuItem,
   Select,
   FormControl,
-  TextField,
   IconButton,
   Tabs,
   Tab,
   Box,
 } from "@mui/material";
 import {
-  FiCalendar,
   FiChevronLeft,
   FiChevronRight,
 } from "react-icons/fi";
@@ -33,6 +31,7 @@ import {
   Cell,
 } from "recharts";
 import { ALL_STUDENTS } from "../../constants/Students";
+import { DatePickerField } from "../SingleGroup/DatePickerField";
 
 
 
@@ -63,19 +62,7 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 function DateField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="relative flex-1">
-      <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" size={16} />
-      <TextField
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        size="small"
-        fullWidth
-        sx={{
-          "& .MuiInputBase-root": { paddingLeft: "2rem", backgroundColor: "#fff" },
-          "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e5e7eb" },
-          "& .MuiInputBase-input": { fontSize: 14, color: "#374151" },
-        }}
-      />
+      <DatePickerField value={value} onChange={onChange} />
     </div>
   );
 }

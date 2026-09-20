@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Popover, Typography, TextField, MenuItem, Button, CircularProgress } from "@mui/material";
+import { Popover, Typography, TextField, MenuItem, Button, CircularProgress, Box } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useAllGroupsQuery } from "../../app/api/groupsApi";
 import { useAddLeadToTrialMutation } from "../../app/api/leadsApi";
 import { useToast } from "../../Context/ToastContext";
+import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
 
 interface Props {
   leadId: string;
@@ -66,13 +67,9 @@ export const AddToTrialPopover = ({ leadId, anchorEl, onClose }: Props) => {
           <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>
         ))}
       </TextField>
-      <TextField
-        size="small" fullWidth type="date" value={trialDate}
-        onChange={(e) => setTrialDate(e.target.value)}
-        label={t("leadsPage.addToTrial.trialDate")}
-        InputLabelProps={{ shrink: true }}
-        sx={{ mb: 1 }}
-      />
+      <Box sx={{ mb: 1 }}>
+        <DatePickerField value={trialDate} onChange={setTrialDate} placeholder={t("leadsPage.addToTrial.trialDate")} />
+      </Box>
       <TextField
         size="small" fullWidth multiline rows={2} value={notes}
         onChange={(e) => setNotes(e.target.value)}

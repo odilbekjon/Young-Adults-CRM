@@ -31,6 +31,7 @@ import type { ExpenseCategory } from "../../../../app/api/financeApi/types";
 import { useAllBranchesQuery } from "../../../../app/api/branchesApi/branchesApi";
 import { PaymentMethodPicker } from "../../../../components/PaymentMethodPicker";
 import { useToast } from "../../../../Context/ToastContext";
+import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import type { RootState } from "../../../../app/store";
 
 // ---------- Helpers ----------
@@ -328,11 +329,11 @@ export const TotalExpenses = () => {
             <div className="grid grid-cols-5 gap-3 items-end">
               <div>
                 <label className={labelCls}>{t("finance.totalExpenses.filters.dateFrom")}</label>
-                <input type="date" className={inputCls} value={draftStartDate} onChange={(e) => setDraftStartDate(e.target.value)} />
+                <DatePickerField value={draftStartDate} onChange={setDraftStartDate} />
               </div>
               <div>
                 <label className={labelCls}>{t("finance.totalExpenses.filters.dateTo")}</label>
-                <input type="date" className={inputCls} value={draftEndDate} onChange={(e) => setDraftEndDate(e.target.value)} />
+                <DatePickerField value={draftEndDate} onChange={setDraftEndDate} />
               </div>
               <div>
                 <label className={labelCls}>{t("finance.totalExpenses.filters.description")}</label>
@@ -526,12 +527,7 @@ export const TotalExpenses = () => {
             <label className={labelCls}>
               {t("finance.totalExpenses.form.date")} <span className="text-red-500">*</span>
             </label>
-            <input
-              type="date"
-              className={inputCls}
-              value={form.date}
-              onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-            />
+            <DatePickerField value={form.date} onChange={(iso) => setForm((f) => ({ ...f, date: iso }))} />
           </div>
 
           <div>

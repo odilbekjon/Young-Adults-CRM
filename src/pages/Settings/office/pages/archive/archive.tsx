@@ -23,10 +23,10 @@ import {
   MdEmail,
   MdRefresh,
   MdClose,
-  MdCalendarToday,
   MdArrowBack,
 } from "react-icons/md";
 import { useAllArchivesQuery } from "../../../../../app/api/archivesApi/archivesApi";
+import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
 import type { ArchiveRecord, ArchiveRole } from "../../../../../app/api/archivesApi/types";
 import {
   useAllReasonsQuery,
@@ -715,23 +715,15 @@ export const Archive = () => {
           ))}
         </Select>
 
-        <TextField
-          size="small"
-          type="date"
+        <DatePickerField
           value={startDate}
-          onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-          InputProps={{ startAdornment: <MdCalendarToday size={14} className="mr-1 text-gray-400" /> }}
-          inputProps={{ placeholder: t("settings.office.archive.filters.startDate") }}
-          sx={{ ...inputSx, width: 160 }}
+          onChange={(iso) => { setStartDate(iso); setPage(1); }}
+          placeholder={t("settings.office.archive.filters.startDate")}
         />
 
-        <TextField
-          size="small"
-          type="date"
+        <DatePickerField
           value={endDate}
-          onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-          InputProps={{ startAdornment: <MdCalendarToday size={14} className="mr-1 text-gray-400" /> }}
-          sx={{ ...inputSx, width: 160 }}
+          onChange={(iso) => { setEndDate(iso); setPage(1); }}
         />
 
         <div className="flex items-center gap-3 ml-2">

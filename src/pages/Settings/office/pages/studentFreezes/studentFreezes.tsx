@@ -24,6 +24,7 @@ import { useGroupsSelectQuery } from "../../../../../app/api/groupsApi";
 import { useToast } from "../../../../../Context/ToastContext";
 import { extractApiError } from "../../../../../utils";
 import type { RootState } from "../../../../../app/store";
+import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
 
 const PAGE_SIZE = 10;
 const STATUSES: StudentFreezeStatus[] = ["ACTIVE", "EXPIRED", "CANCELLED"];
@@ -367,15 +368,13 @@ export const StudentFreezes = () => {
               <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
                 {t("settings.office.studentFreezes.form.startDate")} <span style={{ color: "red" }}>*</span>
               </Typography>
-              <TextField fullWidth size="small" type="date" value={createForm.startDate}
-                onChange={(e) => setCreateForm((p) => ({ ...p, startDate: e.target.value }))} />
+              <DatePickerField value={createForm.startDate} onChange={(iso) => setCreateForm((p) => ({ ...p, startDate: iso }))} />
             </Box>
             <Box sx={{ flex: 1 }}>
               <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
                 {t("settings.office.studentFreezes.form.endDate")}
               </Typography>
-              <TextField fullWidth size="small" type="date" value={createForm.endDate}
-                onChange={(e) => setCreateForm((p) => ({ ...p, endDate: e.target.value }))} />
+              <DatePickerField value={createForm.endDate} onChange={(iso) => setCreateForm((p) => ({ ...p, endDate: iso }))} />
             </Box>
           </Box>
 
@@ -421,15 +420,15 @@ export const StudentFreezes = () => {
               <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
                 {t("settings.office.studentFreezes.form.startDate")}
               </Typography>
-              <TextField fullWidth size="small" type="date" value={editForm.startDate} disabled={isLoadingForEdit}
-                onChange={(e) => setEditForm((p) => ({ ...p, startDate: e.target.value }))} />
+              <DatePickerField value={editForm.startDate} disabled={isLoadingForEdit}
+                onChange={(iso) => setEditForm((p) => ({ ...p, startDate: iso }))} />
             </Box>
             <Box sx={{ flex: 1 }}>
               <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
                 {t("settings.office.studentFreezes.form.endDate")}
               </Typography>
-              <TextField fullWidth size="small" type="date" value={editForm.endDate} disabled={isLoadingForEdit}
-                onChange={(e) => setEditForm((p) => ({ ...p, endDate: e.target.value }))} />
+              <DatePickerField value={editForm.endDate} disabled={isLoadingForEdit}
+                onChange={(iso) => setEditForm((p) => ({ ...p, endDate: iso }))} />
             </Box>
           </Box>
 

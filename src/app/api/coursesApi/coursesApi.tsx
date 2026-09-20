@@ -33,11 +33,16 @@ export const coursesApi = baseApi.injectEndpoints({
             providesTags: ["course"],
         }),
         createCourse: builder.mutation<CourseResponse, CreateCourseRequest>({
-            query: ({ name, price, branchId }) => {
+            query: ({ name, price, branchId, code, months, lessonDuration, lessonsPerMonth, description }) => {
                 const formData = new FormData();
                 formData.append("name", name);
                 if (price !== undefined) formData.append("price", String(price));
                 formData.append("branchId", branchId);
+                if (code !== undefined && code !== "") formData.append("code", code);
+                if (months !== undefined) formData.append("months", String(months));
+                if (lessonDuration !== undefined) formData.append("lessonDuration", String(lessonDuration));
+                if (lessonsPerMonth !== undefined) formData.append("lessonsPerMonth", String(lessonsPerMonth));
+                if (description !== undefined && description !== "") formData.append("description", description);
                 return {
                     url: PATHS.COURSES,
                     method: "POST",
@@ -47,11 +52,16 @@ export const coursesApi = baseApi.injectEndpoints({
             invalidatesTags: ["course"],
         }),
         updateCourse: builder.mutation<CourseResponse, UpdateCourseRequest>({
-            query: ({ id, name, price, branchId }) => {
+            query: ({ id, name, price, branchId, code, months, lessonDuration, lessonsPerMonth, description }) => {
                 const formData = new FormData();
                 if (name !== undefined) formData.append("name", name);
                 if (price !== undefined) formData.append("price", String(price));
                 if (branchId !== undefined) formData.append("branchId", branchId);
+                if (code !== undefined && code !== "") formData.append("code", code);
+                if (months !== undefined) formData.append("months", String(months));
+                if (lessonDuration !== undefined) formData.append("lessonDuration", String(lessonDuration));
+                if (lessonsPerMonth !== undefined) formData.append("lessonsPerMonth", String(lessonsPerMonth));
+                if (description !== undefined && description !== "") formData.append("description", description);
                 return {
                     url: `${PATHS.COURSES}/${id}`,
                     method: "PATCH",

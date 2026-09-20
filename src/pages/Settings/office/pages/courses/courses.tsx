@@ -54,9 +54,19 @@ interface FormState {
   name: string;
   branchId: string;
   price: string;
+  months: string;
+  description: string;
+  code: string;
+  lessonDuration: string;
+  lessonsPerMonth: string;
 }
 
-const defaultForm: FormState = { name: "", branchId: "", price: "" };
+const defaultForm: FormState = {
+  name: "", branchId: "", price: "", months: "", description: "",
+  code: "", lessonDuration: "", lessonsPerMonth: "",
+};
+
+const LESSON_DURATION_OPTIONS = [45, 60, 90, 120, 150];
 
 export const Courses = () => {
   const { t } = useTranslation();
@@ -108,6 +118,11 @@ export const Courses = () => {
       name: course.name,
       branchId: course.branchId,
       price: String(course.price?.d?.[0] ?? ""),
+      months: course.months !== undefined && course.months !== null ? String(course.months) : "",
+      description: course.description ?? "",
+      code: course.code ?? "",
+      lessonDuration: course.lessonDuration !== undefined && course.lessonDuration !== null ? String(course.lessonDuration) : "",
+      lessonsPerMonth: course.lessonsPerMonth !== undefined && course.lessonsPerMonth !== null ? String(course.lessonsPerMonth) : "",
     });
     setErrors({});
     setSaveError(null);
@@ -196,13 +211,24 @@ export const Courses = () => {
     if (!validate()) return;
     setSaveError(null);
     const price = form.price.trim() ? parseInt(form.price, 10) : undefined;
+    const months = form.months.trim() ? parseInt(form.months, 10) : undefined;
+    const description = form.description.trim() || undefined;
+    const code = form.code.trim() || undefined;
+    const lessonDuration = form.lessonDuration.trim() ? parseInt(form.lessonDuration, 10) : undefined;
+    const lessonsPerMonth = form.lessonsPerMonth.trim() ? parseInt(form.lessonsPerMonth, 10) : undefined;
 
     try {
       if (editingCourse) {
-        await updateCourse({ id: editingCourse.id, name: form.name, branchId: form.branchId, price }).unwrap();
+        await updateCourse({
+          id: editingCourse.id, name: form.name, branchId: form.branchId, price,
+          months, description, code, lessonDuration, lessonsPerMonth,
+        }).unwrap();
         toast.success(t("settings.office.courses.toast.updated"));
       } else {
-        await createCourse({ name: form.name, branchId: form.branchId, price }).unwrap();
+        await createCourse({
+          name: form.name, branchId: form.branchId, price,
+          months, description, code, lessonDuration, lessonsPerMonth,
+        }).unwrap();
         toast.success(t("settings.office.courses.toast.created"));
       }
       setDrawerOpen(false);
@@ -371,15 +397,45 @@ export const Courses = () => {
                   fontSize={16}
                   color="#fff"
                   textAlign="center"
-                  sx={{ position: "relative", zIndex: 1, px: 2, textShadow: "0 1px 3px rgba(0,0,0,0.2)" }}
+                  sx={{
+                    position: "relative", zIndex: 1, px: 2, textShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                    overflow: "hidden", textOverflow: "ellipsis",
+                    display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
+                  }}
+                  title={course.name}
                 >
                   {course.name}
                 </Typography>
                 <BookIllustration />
               </Box>
               <Box sx={{ p: 2 }}>
-                <Typography fontWeight={500} fontSize={15} mb={1}>{course.name}</Typography>
-                <Typography fontSize={13} color="#888">{fmt(course.price?.d?.[0] ?? 0)}</Typography>
+                <Typography
+                  fontWeight={500} fontSize={15} mb={1}
+                  sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                  title={course.name}
+                >
+                  {course.name}
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                  <Typography fontSize={13} color="#888">{fmt(course.price?.d?.[0] ?? 0)}</Typography>
+                  {!!course.months && (
+                    <Typography fontSize={12} color="#5c7fa3" sx={{ bgcolor: "#eef2f6", borderRadius: 1, px: 0.8, py: 0.1 }}>
+                      {t("settings.office.courses.form.courseDuration")}: {course.months}
+                    </Typography>
+                  )}
+                </Box>
+                {course.description && (
+                  <Typography
+                    fontSize={12.5} color="#6b7280" mt={0.8}
+                    sx={{
+                      overflow: "hidden", textOverflow: "ellipsis",
+                      display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                    }}
+                    title={course.description}
+                  >
+                    {course.description}
+                  </Typography>
+                )}
                 {course.branch?.name && (
                   <Typography fontSize={12} color="#aaa" mt={0.5}>{course.branch.name}</Typography>
                 )}
@@ -451,11 +507,55 @@ export const Courses = () => {
             )}
           </Box>
 
-          <Box mb={3}>
+          <Box mb={2}>
             <Typography fontSize={13} mb={0.5}>{t("settings.office.courses.form.price")}</Typography>
             <TextField fullWidth size="small" type="number" value={form.price}
               onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
               inputProps={{ min: 0 }} />
+          </Box>
+
+          <Box mb={2}>
+            <Typography fontSize={13} mb={0.5}>{t("settings.office.courses.form.courseDuration")}</Typography>
+            <TextField fullWidth size="small" type="number" value={form.months}
+              onChange={(e) => setForm((p) => ({ ...p, months: e.target.value }))}
+              inputProps={{ min: 0 }} />
+          </Box>
+
+          <Box mb={2}>
+            <Typography fontSize={13} mb={0.5}>{t("settings.office.courses.form.codeCourse")}</Typography>
+            <TextField fullWidth size="small" value={form.code}
+              onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))} />
+          </Box>
+
+          <Box mb={2}>
+            <Typography fontSize={13} mb={0.5}>{t("settings.office.courses.form.lessonDuration")}</Typography>
+            <Select
+              fullWidth
+              size="small"
+              displayEmpty
+              value={form.lessonDuration}
+              onChange={(e) => setForm((p) => ({ ...p, lessonDuration: e.target.value }))}
+            >
+              <MenuItem value="">—</MenuItem>
+              {LESSON_DURATION_OPTIONS.map((min) => (
+                <MenuItem key={min} value={String(min)}>
+                  {t(`settings.office.courses.durationOptions.min${min}`)}
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
+
+          <Box mb={2}>
+            <Typography fontSize={13} mb={0.5}>{t("settings.office.courses.form.lessonsPerMonth")}</Typography>
+            <TextField fullWidth size="small" type="number" value={form.lessonsPerMonth}
+              onChange={(e) => setForm((p) => ({ ...p, lessonsPerMonth: e.target.value }))}
+              inputProps={{ min: 0 }} />
+          </Box>
+
+          <Box mb={3}>
+            <Typography fontSize={13} mb={0.5}>{t("settings.office.courses.form.description")}</Typography>
+            <TextField fullWidth size="small" multiline minRows={3} value={form.description}
+              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
           </Box>
 
           {saveError && (

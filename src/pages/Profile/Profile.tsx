@@ -189,6 +189,46 @@ const ProfilePage = () => {
           </Typography>
         </Box>
 
+        {/* Job title */}
+        <Box sx={{ mb: 1.5 }}>
+          <Typography variant="body2" sx={{ color: "#9ca3af", fontSize: 13 }}>
+            Job title:
+          </Typography>
+          <Typography variant="body2" fontWeight={500} sx={{ color: "#1a1a2e" }}>
+            {user?.jobTitle || "—"}
+          </Typography>
+        </Box>
+
+        {/* Branches */}
+        <Box sx={{ mb: 1.5 }}>
+          <Typography variant="body2" sx={{ color: "#9ca3af", fontSize: 13, mb: 0.8 }}>
+            Branches:
+          </Typography>
+          {user?.branches && user.branches.length > 0 ? (
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+              {user.branches.map((b) => (
+                <Chip
+                  key={b.id}
+                  label={b.name}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    borderColor: "#0F6E56",
+                    color: "#0F6E56",
+                    fontSize: 12,
+                    height: 26,
+                    borderRadius: "20px",
+                  }}
+                />
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body2" fontWeight={500} sx={{ color: "#1a1a2e" }}>
+              —
+            </Typography>
+          )}
+        </Box>
+
         {/* Role */}
         <Box sx={{ mb: 1.5 }}>
           <Typography variant="body2" sx={{ color: "#9ca3af", fontSize: 13, mb: 0.8 }}>

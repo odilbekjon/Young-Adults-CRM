@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
   FiEdit2, FiMail, FiFlag, FiPrinter,
   FiChevronDown, FiUsers, FiDollarSign, FiPhone,
-  FiCalendar, FiGitBranch, FiPause, FiUser, FiX,
+  FiCalendar, FiGitBranch, FiPause, FiPlay, FiUser, FiX,
   FiMessageSquare, FiArchive,
 } from "react-icons/fi";
 import { IoArrowBack } from "react-icons/io5";
@@ -22,17 +22,31 @@ import {
   useUpdateStudentMutation,
   useToggleStudentStatusMutation,
   useTransferStudentBranchMutation,
+  useStudentCommentsQuery,
+  useStudentHistoryQuery,
+  useStudentSmsHistoryQuery,
+  useStudentPaymentsQuery,
+  useStudentFinanceHistoryQuery,
 } from "../../app/api/studentsApi";
-import type { StudentGender, StudentGroupMembership } from "../../app/api/studentsApi/types";
-import { useAllGroupsQuery, useAddStudentToGroupMutation, useStudentGroupsQuery } from "../../app/api/groupsApi";
+import type {
+  StudentGender, StudentGroupMembership, StudentFinanceHistoryEntry,
+} from "../../app/api/studentsApi/types";
+import {
+  useAllGroupsQuery, useAddStudentToGroupMutation, useStudentGroupsQuery,
+  useFreezeStudentGroupMutation, useUnfreezeStudentGroupMutation, useUpdateStudentGroupStatusMutation,
+} from "../../app/api/groupsApi";
 import type { Group } from "../../app/api/groupsApi/types";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
-import { usePaymentsListQuery, useDeletePaymentMutation } from "../../app/api/financeApi";
+import { useDeletePaymentMutation } from "../../app/api/financeApi";
 import type { PaymentRow } from "../../app/api/financeApi/types";
+import { useSendSmsToStudentsMutation } from "../../app/api/smsApi";
 import { useToast } from "../../Context/ToastContext";
+import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { extractApiError } from "../../utils/extractApiError";
 import { AddPayment } from "../../components/AddPayment";
 import { PaymentReceiptModal } from "../../components/PaymentReceiptModal";
+import { FreezeModal } from "../SingleGroup/FreezeModal";
+import { ActivateModal } from "../SingleGroup/ActivateModal";
 
 /* ─── TYPES ─────────────────────────────────────────── */
 const TABS = ["Groups", "Comments", "Call history", "SMS", "History", "Lead history"];
@@ -211,18 +225,7 @@ const EditStudentDrawer = ({
           >
             Date of birth
           </label>
-          <TextField
-            fullWidth
-            size="small"
-            type="date"
-            value={dob}
-            onChange={(e) => setDob(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{
-              "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 },
-              "& input": { color: "#9ca3af" },
-            }}
-          />
+          <DatePickerField value={dob} onChange={setDob} />
         </div>
 
         {/* Gender */}
@@ -438,15 +441,34 @@ const SendSmsDrawer = ({
   onClose: () => void;
   student: FlatStudent;
 }) => {
+  const toast = useToast();
+  const [sendSms, { isLoading: isSendingSms }] = useSendSmsToStudentsMutation();
   const [message, setMessage] = useState("");
   const SMS_LIMIT = 160;
   const smsCount = Math.ceil(message.length / SMS_LIMIT) || 1;
+
+  const handleClose = () => {
+    setMessage("");
+    onClose();
+  };
+
+  const handleSend = async () => {
+    if (!message.trim() || isSendingSms) return;
+    try {
+      await sendSms({ studentIds: [student.uid], text: message.trim() }).unwrap();
+      toast.success("SMS sent");
+      handleClose();
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to send SMS: ${detail}` : "Failed to send SMS");
+    }
+  };
 
   return (
     <Drawer
       anchor="right"
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       PaperProps={{
         sx: {
           width: 420,
@@ -469,7 +491,7 @@ const SendSmsDrawer = ({
         <span style={{ fontSize: 18, fontWeight: 600, color: "#111827" }}>
           Send SMS to student
         </span>
-        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}>
+        <IconButton size="small" onClick={handleClose} sx={{ color: "#9ca3af" }}>
           <FiX size={20} />
         </IconButton>
       </div>
@@ -487,6 +509,7 @@ const SendSmsDrawer = ({
           placeholder="Enter a message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
+          disabled={isSendingSms}
           sx={{
             "& .MuiOutlinedInput-root": {
               borderRadius: "8px",
@@ -512,10 +535,8 @@ const SendSmsDrawer = ({
 
         <Button
           variant="contained"
-          onClick={() => {
-            console.log("SMS sent:", message);
-            onClose();
-          }}
+          onClick={handleSend}
+          disabled={!message.trim() || isSendingSms}
           sx={{
             background: "#5b8ab5",
             borderRadius: "20px",
@@ -528,7 +549,7 @@ const SendSmsDrawer = ({
             "&:hover": { background: "#4a7aa3" },
           }}
         >
-          Send SMS
+          {isSendingSms ? "Sending…" : "Send SMS"}
         </Button>
       </div>
     </Drawer>
@@ -1002,7 +1023,7 @@ const formatDaysType = (daysType: string | undefined | null) =>
   daysType === "EVEN" ? "Even days" : daysType === "ODD" ? "Odd days" : (daysType || "—");
 
 const GroupCard = ({
-  membership, group, onOpenGroup,
+  membership, group, onOpenGroup, onPauseOrPlay, onArchive,
 }: {
   membership: StudentGroupMembership;
   // The group's schedule/room aren't returned by GET /students/{id}/groups
@@ -1013,8 +1034,18 @@ const GroupCard = ({
   // case the schedule/room/open-group link are simply omitted.
   group?: Group;
   onOpenGroup?: () => void;
+  // Freeze (ACTIVE/PROBATION -> FROZEN) or unfreeze (FROZEN -> ACTIVE) this
+  // one membership — undefined (button hidden) once it's already
+  // INACTIVE/DELETED, since there's nothing left to pause.
+  onPauseOrPlay?: () => void;
+  // Ends this one membership (PATCH /student-groups/{id}/status -> INACTIVE),
+  // same action SingleGroup's "Remove from group" performs at the
+  // per-membership level.
+  onArchive?: () => void;
 }) => {
   const badge = GROUP_STATUS_BADGE[membership.status] ?? { label: membership.status, bg: "#f3f4f6", color: "#6b7280" };
+  const isFrozen = membership.status === "FROZEN";
+  const isEnded = membership.status === "INACTIVE" || membership.status === "DELETED";
   const teacherNames = membership.teachers.map((t) => t.name).join(", ") || "—";
   const schedule = group ? `${formatDaysType(group.daysType)}${group.time ? ` • ${group.time}` : ""}` : null;
 
@@ -1092,105 +1123,53 @@ const GroupCard = ({
             </div>
           ))}
         </div>
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: 8, marginLeft: 16 }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Tooltip title="Pause">
-            <IconButton
-              size="small"
-              sx={{
-                border: "1.5px solid #06b6d4",
-                color: "#06b6d4",
-                width: 36,
-                height: 36,
-              }}
-            >
-              <FiPause size={15} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Archive">
-            <IconButton
-              size="small"
-              sx={{
-                border: "1.5px solid #ef4444",
-                color: "#ef4444",
-                width: 36,
-                height: 36,
-              }}
-            >
-              <FiArchive size={15} />
-            </IconButton>
-          </Tooltip>
-        </div>
+        {!isEnded && (
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: 8, marginLeft: 16 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Tooltip title={isFrozen ? "Activate" : "Freeze"}>
+              <IconButton
+                size="small"
+                onClick={onPauseOrPlay}
+                sx={{
+                  border: "1.5px solid #06b6d4",
+                  color: "#06b6d4",
+                  width: 36,
+                  height: 36,
+                }}
+              >
+                {isFrozen ? <FiPlay size={15} /> : <FiPause size={15} />}
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Remove from group">
+              <IconButton
+                size="small"
+                onClick={onArchive}
+                sx={{
+                  border: "1.5px solid #ef4444",
+                  color: "#ef4444",
+                  width: 36,
+                  height: 36,
+                }}
+              >
+                <FiArchive size={15} />
+              </IconButton>
+            </Tooltip>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 /* ─── MONTHLY BALANCE ────────────────────────────────── */
-// No backend endpoint returns a per-month balance history (confirmed: no
-// such field/endpoint exists anywhere in financeApi/studentsApi) — this is
-// derived client-side from two sources that ARE real: each group
-// membership's `customPrice` (the monthly tuition owed while enrolled,
-// between `joinedAt` and `exitedAt`) as the expected charge, and the
-// student's actual payments (GET /finance/payments, already fetched for the
-// table below) summed by calendar month as what was actually paid.
+// Backed by GET /students/{id}/finance-history — "Talabaning oylik
+// moliyaviy tarixi": the real per-month charged/paid ledger, including
+// which group created the debt. Previously this had no matching endpoint
+// and was approximated client-side from memberships' customPrice + payment
+// dates; that approximation is gone now that the real data is available.
 type MonthlyBalanceEntry = { key: string; label: string; amount: number; color: "green" | "red" | "yellow" };
-
-const buildMonthlyBalance = (
-  memberships: StudentGroupMembership[],
-  payments: PaymentRow[],
-): MonthlyBalanceEntry[] => {
-  const now = new Date();
-  const starts = memberships
-    .map((m) => m.joinedAt ?? m.trainingStart ?? m.paymentStartDate)
-    .filter((d): d is string => Boolean(d))
-    .map((d) => new Date(d));
-  // No enrollment history at all -> just show the trailing 12 months rather
-  // than nothing.
-  const earliest = starts.length > 0
-    ? starts.reduce((a, b) => (a < b ? a : b))
-    : new Date(now.getFullYear(), now.getMonth() - 11, 1);
-  const floor = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
-
-  const entries: MonthlyBalanceEntry[] = [];
-  let cursor = new Date(now.getFullYear(), now.getMonth(), 1);
-  let guard = 0;
-  // Cap how far back this renders so a long-enrolled student doesn't
-  // produce an unbounded row of boxes.
-  while (cursor >= floor && guard < 24) {
-    const year = cursor.getFullYear();
-    const month = cursor.getMonth();
-    const monthStart = cursor;
-    const monthEnd = new Date(year, month + 1, 0);
-
-    const expected = memberships.reduce((sum, m) => {
-      const joined = m.joinedAt ? new Date(m.joinedAt) : null;
-      const exited = m.exitedAt ? new Date(m.exitedAt) : null;
-      const startedInTime = !joined || joined <= monthEnd;
-      const stillEnrolled = !exited || exited >= monthStart;
-      return startedInTime && stillEnrolled ? sum + (m.customPrice ?? 0) : sum;
-    }, 0);
-
-    const paid = payments.reduce((sum, p) => {
-      if (!p.date) return sum;
-      const d = new Date(p.date);
-      return d.getFullYear() === year && d.getMonth() === month ? sum + p.amount : sum;
-    }, 0);
-
-    entries.push({
-      key: `${year}-${month}`,
-      label: `${year} M${String(month + 1).padStart(2, "0")}`,
-      amount: paid - expected,
-      color: expected === 0 ? "yellow" : paid >= expected ? "green" : "red",
-    });
-
-    cursor = new Date(year, month - 1, 1);
-    guard += 1;
-  }
-  return entries;
-};
 
 const MONTH_BALANCE_COLORS: Record<MonthlyBalanceEntry["color"], { border: string; text: string }> = {
   green:  { border: "#34d399", text: "#16a34a" },
@@ -1199,12 +1178,23 @@ const MONTH_BALANCE_COLORS: Record<MonthlyBalanceEntry["color"], { border: strin
 };
 
 const MonthlyBalance = ({
-  memberships, payments,
+  rows, isLoading,
 }: {
-  memberships: StudentGroupMembership[];
-  payments: PaymentRow[];
+  rows: StudentFinanceHistoryEntry[];
+  isLoading?: boolean;
 }) => {
-  const entries = useMemo(() => buildMonthlyBalance(memberships, payments), [memberships, payments]);
+  const entries: MonthlyBalanceEntry[] = useMemo(
+    () => rows.map((r) => ({
+      key: r.id,
+      label: r.month,
+      amount: r.paid - r.charged,
+      color: r.charged === 0 ? "yellow" : r.paid >= r.charged ? "green" : "red",
+    })),
+    [rows]
+  );
+
+  if (isLoading) return null;
+  if (entries.length === 0) return null;
 
   return (
     <div>
@@ -1469,6 +1459,47 @@ const PaymentsTable = ({
   );
 };
 
+/* ─── SIMPLE HISTORY / COMMENTS / SMS LIST ───────────── */
+// Shared renderer for the Comments/SMS/History tabs — same envelope
+// (id/primary text/secondary line/date), just fed by whichever endpoint is
+// active. Keeps these three tabs, which previously showed a static "No data
+// available" with nothing wired up at all, visually consistent with each
+// other.
+const SimpleHistoryList = ({
+  items, isLoading, isError, emptyLabel,
+}: {
+  items: { id: string; primary: string; secondary?: string | null; date: string }[];
+  isLoading?: boolean;
+  isError?: boolean;
+  emptyLabel: string;
+}) => {
+  if (isLoading) {
+    return <div style={{ padding: 32, textAlign: "center", color: "#9ca3af", fontSize: 14 }}>Loading...</div>;
+  }
+  if (isError) {
+    return <div style={{ padding: 32, textAlign: "center", color: "#ef4444", fontSize: 14 }}>Failed to load</div>;
+  }
+  if (items.length === 0) {
+    return <div style={{ padding: 32, textAlign: "center", color: "#9ca3af", fontSize: 14 }}>{emptyLabel}</div>;
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {items.map((item) => (
+        <div
+          key={item.id}
+          style={{ background: "white", border: "1px solid #eaecf0", borderRadius: 10, padding: "12px 16px" }}
+        >
+          <div style={{ fontSize: 13, color: "#111827" }}>{item.primary || "—"}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 12, color: "#9ca3af" }}>
+            <span>{item.secondary || "—"}</span>
+            <span>{item.date ? formatDate(item.date.slice(0, 10)) : ""}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 /* ─── MAIN COMPONENT ─────────────────────────────────── */
 export const StudentProfile = () => {
   const navigate = useNavigate();
@@ -1495,6 +1526,9 @@ export const StudentProfile = () => {
   const [toggleStudentStatus, { isLoading: isArchivingStudent }] = useToggleStudentStatusMutation();
   const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
+  const [freezeStudentGroup, { isLoading: isFreezingGroup }] = useFreezeStudentGroupMutation();
+  const [unfreezeStudentGroup, { isLoading: isUnfreezingGroup }] = useUnfreezeStudentGroupMutation();
+  const [updateStudentGroupStatus, { isLoading: isArchivingGroup }] = useUpdateStudentGroupStatusMutation();
 
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
   const groupsById = useMemo(() => {
@@ -1518,16 +1552,18 @@ export const StudentProfile = () => {
   );
   const currentBranchIds = useMemo(() => (data?.data.branch ?? []).map((b) => b.id), [data]);
 
-  // GET /finance/payments has no studentId filter, so it's narrowed by the
-  // student's name server-side (same `search` convention as the rest of the
-  // finance module) and filtered exactly by studentId client-side.
+  // GET /students/{id}/payments — the student's own payment registry,
+  // scoped server-side by id (replaces the previous approach of name-
+  // searching the whole-branch GET /finance/payments registry client-side,
+  // which risked showing another same-named student's payments).
   const {
-    data: paymentsData, isFetching: isPaymentsLoading, isError: isPaymentsError,
-  } = usePaymentsListQuery(
-    { page: 1, limit: 50, search: student?.name },
-    { skip: !student }
+    data: studentPaymentsData, isFetching: isPaymentsLoading, isError: isPaymentsError,
+  } = useStudentPaymentsQuery({ id: student?.uid ?? "", page: 1, limit: 50 }, { skip: !student });
+  const payments = studentPaymentsData?.rows ?? [];
+
+  const { data: financeHistoryData, isFetching: isFinanceHistoryLoading } = useStudentFinanceHistoryQuery(
+    student?.uid ?? "", { skip: !student }
   );
-  const payments = (paymentsData?.rows ?? []).filter((p) => p.studentId === student?.uid);
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
@@ -1542,6 +1578,22 @@ export const StudentProfile = () => {
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
   const [groupMenuAnchor, setGroupMenuAnchor] = useState<null | HTMLElement>(null);
   const [paymentMenuAnchor, setPaymentMenuAnchor] = useState<null | HTMLElement>(null);
+  const [freezeTarget, setFreezeTarget] = useState<StudentGroupMembership | null>(null);
+  const [activateTarget, setActivateTarget] = useState<StudentGroupMembership | null>(null);
+  const [archiveGroupTarget, setArchiveGroupTarget] = useState<StudentGroupMembership | null>(null);
+
+  // Tab content for Comments/SMS/History is only fetched once its tab is
+  // actually opened — no point firing three extra requests on every profile
+  // load for tabs the staff member may never click.
+  const { data: commentsData, isFetching: isCommentsLoading, isError: isCommentsError } = useStudentCommentsQuery(
+    student?.uid ?? "", { skip: !student || activeTab !== 1 }
+  );
+  const { data: smsData, isFetching: isSmsLoading, isError: isSmsError } = useStudentSmsHistoryQuery(
+    { id: student?.uid ?? "", page: 1, limit: 50 }, { skip: !student || activeTab !== 3 }
+  );
+  const { data: historyData, isFetching: isHistoryLoading, isError: isHistoryError } = useStudentHistoryQuery(
+    student?.uid ?? "", { skip: !student || activeTab !== 4 }
+  );
 
   if (isLoading) {
     return (
@@ -1652,6 +1704,53 @@ export const StudentProfile = () => {
     }
   };
 
+  // POST /student-groups/{id}/freeze — same call SingleGroup's FreezeModal
+  // makes, just targeting a membership reached from the student's own
+  // profile instead of that group's roster.
+  const handleFreezeGroupConfirm = async (freezeData: { reason: string; startDate: string }) => {
+    if (!freezeTarget) return;
+    try {
+      await freezeStudentGroup({
+        id: freezeTarget.id,
+        startDate: freezeData.startDate,
+        reason: freezeData.reason.trim() || undefined,
+      }).unwrap();
+      toast.success("Group membership frozen");
+      setFreezeTarget(null);
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to freeze: ${detail}` : "Failed to freeze");
+    }
+  };
+
+  const handleUnfreezeConfirm = async () => {
+    if (!activateTarget) return;
+    try {
+      await unfreezeStudentGroup(activateTarget.id).unwrap();
+      toast.success("Group membership activated");
+      setActivateTarget(null);
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to activate: ${detail}` : "Failed to activate");
+    }
+  };
+
+  // PATCH /student-groups/{id}/status -> INACTIVE — ends just this one
+  // membership, the per-group equivalent of SingleGroup's "Remove from
+  // group" (which additionally archives the whole account; this action is
+  // scoped to a single group card here, so it doesn't).
+  const handleArchiveGroupConfirm = async () => {
+    if (!archiveGroupTarget) return;
+    try {
+      await updateStudentGroupStatus({ id: archiveGroupTarget.id, status: "INACTIVE" }).unwrap();
+      toast.success("Removed from the group");
+      setArchiveGroupTarget(null);
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to remove from the group: ${detail}` : "Failed to remove from the group");
+    }
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: "#f0f2f5", padding: 24 }}>
       {/* Back button */}
@@ -1731,6 +1830,8 @@ export const StudentProfile = () => {
                           membership={m}
                           group={groupId ? groupsById.get(groupId) : undefined}
                           onOpenGroup={groupId ? () => navigate(`/groups/${groupId}`) : undefined}
+                          onPauseOrPlay={() => (m.status === "FROZEN" ? setActivateTarget(m) : setFreezeTarget(m))}
+                          onArchive={() => setArchiveGroupTarget(m)}
                         />
                       );
                     })
@@ -1739,9 +1840,30 @@ export const StudentProfile = () => {
                       No groups yet
                     </div>
                   )}
-                  <MonthlyBalance memberships={groupMemberships ?? []} payments={payments} />
+                  <MonthlyBalance rows={financeHistoryData ?? []} isLoading={isFinanceHistoryLoading} />
                   <PaymentsTable payments={payments} isLoading={isPaymentsLoading} isError={isPaymentsError} />
                 </>
+              ) : activeTab === 1 ? (
+                <SimpleHistoryList
+                  isLoading={isCommentsLoading}
+                  isError={isCommentsError}
+                  emptyLabel="No comments yet"
+                  items={(commentsData ?? []).map((c) => ({ id: c.id, primary: c.text, secondary: c.author, date: c.createdAt }))}
+                />
+              ) : activeTab === 3 ? (
+                <SimpleHistoryList
+                  isLoading={isSmsLoading}
+                  isError={isSmsError}
+                  emptyLabel="No SMS sent yet"
+                  items={(smsData ?? []).map((s) => ({ id: s.id, primary: s.text, secondary: s.status, date: s.createdAt }))}
+                />
+              ) : activeTab === 4 ? (
+                <SimpleHistoryList
+                  isLoading={isHistoryLoading}
+                  isError={isHistoryError}
+                  emptyLabel="No history yet"
+                  items={(historyData ?? []).map((h) => ({ id: h.id, primary: h.detail || h.type, secondary: h.actor, date: h.createdAt }))}
+                />
               ) : (
                 <div
                   style={{
@@ -1860,6 +1982,49 @@ export const StudentProfile = () => {
         <MenuItem onClick={() => setPaymentMenuAnchor(null)}>Return money</MenuItem>
         <MenuItem onClick={() => setPaymentMenuAnchor(null)}>Write off</MenuItem>
       </Menu>
+
+      <FreezeModal
+        open={Boolean(freezeTarget)}
+        onClose={() => setFreezeTarget(null)}
+        student={null}
+        onConfirm={handleFreezeGroupConfirm}
+        isSaving={isFreezingGroup}
+      />
+
+      <ActivateModal
+        open={Boolean(activateTarget)}
+        onClose={() => setActivateTarget(null)}
+        onConfirm={handleUnfreezeConfirm}
+        isSaving={isUnfreezingGroup}
+      />
+
+      <Dialog
+        open={Boolean(archiveGroupTarget)}
+        onClose={() => setArchiveGroupTarget(null)}
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Remove from group</DialogTitle>
+        <DialogContent>
+          <div style={{ fontSize: 14, color: "#6b7280" }}>
+            Remove {student.name} from {archiveGroupTarget?.name}? This only ends this one
+            membership — the student account itself stays active.
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setArchiveGroupTarget(null)} disabled={isArchivingGroup} sx={{ color: "#6b7280" }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={isArchivingGroup}
+            onClick={handleArchiveGroupConfirm}
+            sx={{ borderRadius: 2 }}
+          >
+            Remove
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

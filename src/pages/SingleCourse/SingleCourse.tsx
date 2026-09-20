@@ -178,8 +178,39 @@ export const SingleCourse = () => {
             {/* Info fields */}
             <Box sx={{ p: 2.5 }}>
               <InfoRow label="Price" value={fmt(course.price?.d?.[0] ?? 0)} />
+              {!!course.months && (
+                <InfoRow
+                  label={t("settings.office.courses.form.courseDuration")}
+                  value={String(course.months)}
+                />
+              )}
+              {!!course.lessonDuration && (
+                <InfoRow
+                  label={t("settings.office.courses.form.lessonDuration")}
+                  value={`${course.lessonDuration} min`}
+                />
+              )}
+              {!!course.lessonsPerMonth && (
+                <InfoRow
+                  label={t("settings.office.courses.form.lessonsPerMonth")}
+                  value={String(course.lessonsPerMonth)}
+                />
+              )}
+              {course.code && (
+                <InfoRow label={t("settings.office.courses.form.codeCourse")} value={course.code} />
+              )}
               <InfoRow label="Branch" value={course.branch?.name || "—"} />
               <InfoRow label="Status" value={course.status} />
+              {course.description && (
+                <Box sx={{ mb: 1.5 }}>
+                  <Typography fontSize={12} color="#aaa" mb={0.2}>
+                    {t("settings.office.courses.form.description")}
+                  </Typography>
+                  <Typography fontSize={13.5} sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                    {course.description}
+                  </Typography>
+                </Box>
+              )}
             </Box>
           </Paper>
         </Box>

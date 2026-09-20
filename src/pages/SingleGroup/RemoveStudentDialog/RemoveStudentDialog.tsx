@@ -3,17 +3,11 @@ import { Checkbox, FormControl, FormControlLabel, Radio, RadioGroup, Switch } fr
 import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { inputStyle } from "../styles";
-import { RemoveReason } from "../types";
 
-// NOTE: option values are kept as-is (they match the RemoveReason literal
-// union type in ../types/types.ts); only the displayed label is translated.
-const REMOVE_REASON_LABEL_KEYS: Record<Exclude<RemoveReason, "">, string> = {
-  "No attendance": "noAttendance",
-  "Discipline problem": "disciplineProblem",
-  "Moved to another center": "movedToAnotherCenter",
-  "Parent request": "parentRequest",
-  "Other": "other",
-};
+interface ReasonOption {
+  id: string;
+  name: string;
+}
 
 interface RemoveStudentDialogProps {
   open: boolean;
@@ -21,8 +15,9 @@ interface RemoveStudentDialogProps {
   onConfirm: () => void;
   deleteMode: boolean;
   onDeleteModeChange: (v: boolean) => void;
-  reason: RemoveReason;
-  onReasonChange: (v: RemoveReason) => void;
+  reasonId: string;
+  onReasonIdChange: (v: string) => void;
+  reasons: ReasonOption[];
   comment: string;
   onCommentChange: (v: string) => void;
   recalculate: boolean;
@@ -35,7 +30,8 @@ interface RemoveStudentDialogProps {
 export const RemoveStudentDialog = ({
   open, onClose, onConfirm,
   deleteMode, onDeleteModeChange,
-  reason, onReasonChange,
+  reasonId, onReasonIdChange,
+  reasons,
   comment, onCommentChange,
   recalculate, onRecalculateChange,
   scope, onScopeChange,
@@ -73,20 +69,18 @@ export const RemoveStudentDialog = ({
 
           <div style={{ marginBottom: 14 }}>
             <select
-              style={{ ...inputStyle, height: 48, color: reason ? "#1a1a1a" : "#b0b0b0", fontSize: 14 }}
-              value={reason}
-              onChange={(e) => onReasonChange(e.target.value as RemoveReason)}
+              style={{ ...inputStyle, height: 48, color: reasonId ? "#1a1a1a" : "#b0b0b0", fontSize: 14 }}
+              value={reasonId}
+              onChange={(e) => onReasonIdChange(e.target.value)}
             >
               <option value="">{t("singleGroup.removeStudentDialog.reasonsForRemoval")}</option>
-              {(Object.keys(REMOVE_REASON_LABEL_KEYS) as Exclude<RemoveReason, "">[]).map((r) => (
-                <option key={r} value={r}>
-                  {t(`singleGroup.removeStudentDialog.reasons.${REMOVE_REASON_LABEL_KEYS[r]}`)}
-                </option>
+              {reasons.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
           </div>
 
-          <div style={{ marginBottom: 14 }}>
+          <div style={{ marginBottom: 18 }}>
             <textarea
               style={{ ...inputStyle, minHeight: 70, resize: "vertical", fontSize: 14, color: "#555" }}
               value={comment}
@@ -95,29 +89,31 @@ export const RemoveStudentDialog = ({
             />
           </div>
 
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={recalculate}
-                onChange={(e) => onRecalculateChange(e.target.checked)}
-                size="small"
-              />
-            }
-            label={<span style={{ fontSize: 14, color: "#3f3f3f" }}>{t("singleGroup.removeStudentDialog.recalculateBalance")}</span>}
-            sx={{ m: 0, mb: 1.2 }}
-          />
+          <div style={{ background: "#f7f8fa", border: "1px solid #ececec", borderRadius: 10, padding: "14px 16px", marginBottom: 22 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={recalculate}
+                  onChange={(e) => onRecalculateChange(e.target.checked)}
+                  size="small"
+                />
+              }
+              label={<span style={{ fontSize: 14, color: "#3f3f3f" }}>{t("singleGroup.removeStudentDialog.recalculateBalance")}</span>}
+              sx={{ m: 0, mb: 1 }}
+            />
 
-          <FormControl component="fieldset" sx={{ mb: 3 }}>
-            <RadioGroup
-              row
-              value={scope}
-              onChange={(e) => onScopeChange(e.target.value as "current" | "all")}
-              sx={{ gap: 2 }}
-            >
-              <FormControlLabel value="current" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{t("singleGroup.removeStudentDialog.currentGroup")}</span>} />
-              <FormControlLabel value="all" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{t("singleGroup.removeStudentDialog.allGroups")}</span>} />
-            </RadioGroup>
-          </FormControl>
+            <FormControl component="fieldset" sx={{ display: "block" }}>
+              <RadioGroup
+                row
+                value={scope}
+                onChange={(e) => onScopeChange(e.target.value as "current" | "all")}
+                sx={{ gap: 2 }}
+              >
+                <FormControlLabel value="current" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{t("singleGroup.removeStudentDialog.currentGroup")}</span>} />
+                <FormControlLabel value="all" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{t("singleGroup.removeStudentDialog.allGroups")}</span>} />
+              </RadioGroup>
+            </FormControl>
+          </div>
 
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 26 }}>
             <button

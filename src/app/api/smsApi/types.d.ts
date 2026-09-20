@@ -63,3 +63,18 @@ export interface DeleteSmsTemplateResponse {
   success: boolean;
   message?: string;
 }
+
+// POST /sms/send/students — Swagger: application/json {studentIds (required),
+// text?, templateId?}. Either `text` or `templateId` is presumably needed
+// for the backend to have anything to send, but only studentIds is marked
+// required, so that's the only field enforced client-side too.
+export interface SendSmsToStudentsRequest {
+  studentIds: string[];
+  text?: string;
+  templateId?: string;
+}
+
+export interface SendSmsToStudentsResponse {
+  success?: boolean;
+  message?: string;
+}

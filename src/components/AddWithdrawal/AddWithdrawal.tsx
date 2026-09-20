@@ -7,8 +7,9 @@ import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
 import { useCreateWithdrawalMutation } from "../../app/api/financeApi/financeApi";
 import { PaymentMethodPicker } from "../PaymentMethodPicker";
 import type { RootState } from "../../app/store";
+import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
 
-import { MdKeyboardArrowDown, MdCalendarToday } from "react-icons/md";
+import { MdKeyboardArrowDown } from "react-icons/md";
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -156,18 +157,7 @@ export const AddWithdrawal = ({ open, onClose }: { open: boolean; onClose: () =>
         {/* Date */}
         <div>
           <label style={labelStyle}>{t("addWithdrawal.date")}</label>
-          <div style={{ position: "relative" }}>
-            <MdCalendarToday size={14} style={{
-              position: "absolute", left: 12, top: "50%",
-              transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
-            }} />
-            <input
-              type="date"
-              style={{ ...inputStyle, paddingLeft: 34 }}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
+          <DatePickerField value={date} onChange={setDate} />
         </div>
 
         {/* Reason */}

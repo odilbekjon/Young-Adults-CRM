@@ -16,6 +16,7 @@ import { useAllCoursesQuery } from "../../../../app/api/coursesApi";
 import { useAllTeachersQuery } from "../../../../app/api/teachersApi";
 import { useReasonsSelectQuery } from "../../../../app/api/reasonsApi";
 import { useToast } from "../../../../Context/ToastContext";
+import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 
 // ---------- SelectBox ----------
 const SelectBox = ({ value, onChange, options, placeholder }: {
@@ -163,10 +164,8 @@ export const StudentsLeftGroup = () => {
 
       {/* Filter bar */}
       <div className="flex items-center gap-2 flex-wrap mb-5">
-        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400 w-36 text-gray-600" />
-        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-400 w-36 text-gray-600" />
+        <DatePickerField value={dateFrom} onChange={setDateFrom} />
+        <DatePickerField value={dateTo} onChange={setDateTo} />
         <SelectBox value={course} onChange={setCourse} options={courseNames} placeholder={t("reports.studentsLeft.filters.course")} />
         <SelectBox value={teacher} onChange={setTeacher} options={teacherNames} placeholder={t("reports.studentsLeft.filters.teachers")} />
         <SelectBox value={reason} onChange={setReason} options={reasonNames} placeholder={t("reports.studentsLeft.filters.reasons")} />

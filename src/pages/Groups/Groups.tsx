@@ -6,15 +6,16 @@ import {
   Divider, IconButton, Menu, MenuItem, Paper, Stack, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
   TextField, Tooltip, Typography, Drawer,
+  Dialog, DialogTitle, DialogContent, DialogActions,
 } from "@mui/material";
 import { GoPlus }                        from "react-icons/go";
-import { MdEdit, MdSms, MdArchive, MdUnarchive } from "react-icons/md";
+import { MdEdit, MdSms, MdUnarchive, MdDelete } from "react-icons/md";
 import { BsThreeDotsVertical }           from "react-icons/bs";
 import { PiMicrosoftExcelLogoFill }      from "react-icons/pi";
 import { IoClose }                       from "react-icons/io5";
 import { TbAdjustmentsHorizontal, TbColumns3, TbCalendar } from "react-icons/tb";
 import { HiChevronDown }                 from "react-icons/hi";
-import { useMemo, useRef, useState }     from "react";
+import { useEffect, useMemo, useRef, useState }     from "react";
 import { useNavigate }                   from "react-router-dom";
 import { useTranslation }                from "react-i18next";
 import { useSelector }                   from "react-redux";
@@ -31,8 +32,11 @@ import { useTeachersSelectQuery } from "../../app/api/teachersApi";
 import type { RootState } from "../../app/store";
 import { useBranch } from "../../Context/BranchContext";
 import { useToast } from "../../Context/ToastContext";
+import { Calendar } from "../SingleGroup/Calendar";
+import { DatePickerField } from "../SingleGroup/DatePickerField";
+import { TimeSelectField } from "../SingleGroup/TimeSelectField";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
-import { extractApiError, formatTrainingDate } from "../../utils";
+import { extractApiError, formatTrainingDate, addMonthsToIsoDate, classifyDays, classifyDayList, DAYS_PRESETS } from "../../utils";
 
 /* ─── types ─────────────────────────────────────────────── */
 type SortKey = keyof GroupRow | "";
@@ -123,6 +127,10 @@ const toDaysType = (days: string): string | undefined => {
   if (days === "Even days") return "EVEN";
   if (days === "Odd days") return "ODD";
   if (days === "MIXED" || days === "OTHER") return days;
+  // "Weekend days"/"Every day"/"Other" are derived client-side from the
+  // concrete day list (see classifyDays) — the backend's daysType enum has
+  // no equivalent value for them, so no daysType filter is sent for GET
+  // /groups/excel in that case (other filters, e.g. status/date, still apply).
   return undefined;
 };
 
@@ -147,7 +155,7 @@ const toGroupRow = (g: Group): GroupRow => ({
   teacherIds: g.teachers?.map((t) => t.id) ?? [],
   teacherNames: g.teachers?.map((t) => t.name) ?? [],
   teacher: g.teachers?.map((t) => t.name).join(", ") || "—",
-  days: g.daysType === "EVEN" ? "Even days" : g.daysType === "ODD" ? "Odd days" : (g.daysType || "—"),
+  days: classifyDays(g.daysType, g.days ?? []),
   dayList: g.days ?? [],
   lessonStartTime: g.time ?? "",
   weekOfStudy: g.weekOfStudy ?? "",
@@ -178,45 +186,48 @@ interface DropdownProps {
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
   onClear?: () => void;
+  minWidth?: number;
 }
-const DropdownFilter = ({ label, value, options, onChange, onClear }: DropdownProps) => {
+const DropdownFilter = ({ label, value, options, onChange, onClear, minWidth = 200 }: DropdownProps) => {
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchor);
   return (
     <>
       <Button
         variant="outlined"
         size="small"
-        endIcon={!value ? <HiChevronDown /> : undefined}
+        endIcon={<HiChevronDown style={{ transform: open ? "rotate(180deg)" : undefined, transition: "transform 0.15s" }} />}
         onClick={(e) => setAnchor(e.currentTarget)}
         sx={{
           borderRadius: "8px",
           borderColor: value ? "primary.main" : "#d0d5dd",
           color: value ? "primary.main" : "#667085",
           bgcolor: value ? "#eff8ff" : "white",
-          fontWeight: 400, fontSize: 13, px: 1.5, py: 0.75,
+          fontWeight: 400, fontSize: 13, px: 1.5, py: 0.9,
+          minWidth, justifyContent: "space-between",
           textTransform: "none",
           "&:hover": { borderColor: "primary.main", bgcolor: "#eff8ff" },
         }}
       >
         {value ? (
-          <Stack direction="row" alignItems="center" gap={0.5}>
+          <Stack direction="row" alignItems="center" gap={0.5} flex={1} justifyContent="space-between">
             <span>{options.find((o) => o.value === value)?.label || value}</span>
             <IoClose size={14} onClick={(e) => { e.stopPropagation(); onClear?.(); }} />
           </Stack>
-        ) : label}
+        ) : <span style={{ flex: 1, textAlign: "left" }}>{label}</span>}
       </Button>
       <Menu
         anchorEl={anchor}
-        open={Boolean(anchor)}
+        open={open}
         onClose={() => setAnchor(null)}
-        PaperProps={{ sx: { borderRadius: 2, minWidth: 160, mt: 0.5 } }}
+        PaperProps={{ sx: { borderRadius: 2, minWidth, mt: 0.5 } }}
       >
         {options.map((o) => (
           <MenuItem
             key={o.value}
             selected={value === o.value}
             onClick={() => { onChange(o.value); setAnchor(null); }}
-            sx={{ fontSize: 13 }}
+            sx={{ fontSize: 13, fontWeight: value === o.value ? 700 : 400, color: value === o.value ? "primary.main" : "inherit" }}
           >
             {o.label}
           </MenuItem>
@@ -232,43 +243,72 @@ interface DateFilterProps {
   value: string;
   onChange: (v: string) => void;
   onClear: () => void;
+  minWidth?: number;
 }
-const DateFilter = ({ label, value, onChange, onClear }: DateFilterProps) => {
-  const inputRef = useRef<HTMLInputElement>(null);
+const DateFilter = ({ label, value, onChange, onClear, minWidth = 200 }: DateFilterProps) => {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   return (
-    <Button
-      variant="outlined"
-      size="small"
-      startIcon={<TbCalendar size={14} />}
-      onClick={() => inputRef.current?.showPicker()}
-      sx={{
-        borderRadius: "8px",
-        borderColor: value ? "primary.main" : "#d0d5dd",
-        color: value ? "primary.main" : "#667085",
-        bgcolor: value ? "#eff8ff" : "white",
-        fontSize: 13, fontWeight: 400, px: 1.5,
-        textTransform: "none",
-        position: "relative",
-        "&:hover": { borderColor: "primary.main", bgcolor: "#eff8ff" },
-      }}
-    >
-      {value ? (
-        <Stack direction="row" alignItems="center" gap={0.5}>
-          <span>{formatTrainingDate(value)}</span>
-          <IoClose
-            size={14}
-            onClick={(e) => { e.stopPropagation(); onClear(); }}
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<TbCalendar size={14} />}
+        onClick={() => setOpen((p) => !p)}
+        sx={{
+          borderRadius: "8px",
+          borderColor: value ? "primary.main" : "#d0d5dd",
+          color: value ? "primary.main" : "#667085",
+          bgcolor: value ? "#eff8ff" : "white",
+          fontSize: 13, fontWeight: 400, px: 1.5, py: 0.9,
+          minWidth, justifyContent: "flex-start",
+          textTransform: "none",
+          position: "relative",
+          "&:hover": { borderColor: "primary.main", bgcolor: "#eff8ff" },
+        }}
+      >
+        {value ? (
+          <Stack direction="row" alignItems="center" gap={0.5}>
+            <span>{formatTrainingDate(value)}</span>
+            <IoClose
+              size={14}
+              onClick={(e) => { e.stopPropagation(); onClear(); }}
+            />
+          </Stack>
+        ) : label}
+      </Button>
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 8px)", left: 0,
+            width: 300, background: "#fff", border: "1px solid #eee",
+            borderRadius: 12, boxShadow: "0 12px 32px rgba(0,0,0,0.14)",
+            padding: 16, zIndex: 50,
+          }}
+        >
+          <Calendar
+            value={value ? new Date(`${value}T00:00:00`) : null}
+            onChange={(d) => {
+              const y = d.getFullYear();
+              const m = (d.getMonth() + 1).toString().padStart(2, "0");
+              const day = d.getDate().toString().padStart(2, "0");
+              onChange(`${y}-${m}-${day}`);
+              setOpen(false);
+            }}
           />
-        </Stack>
-      ) : label}
-      <input
-        ref={inputRef}
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
-      />
-    </Button>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -321,6 +361,15 @@ export const Groups = () => {
     Trial:   t("groups.options.tags.trial"),
   };
 
+  const FILTER_TOGGLES: { key: string; label: string }[] = [
+    { key: "status",  label: t("groups.filters.panel.groupStatus") },
+    { key: "teacher", label: t("groups.filters.panel.teachers") },
+    { key: "course",  label: t("groups.filters.panel.courses") },
+    { key: "days",    label: t("groups.filters.panel.days") },
+    { key: "tags",    label: t("groups.filters.panel.tags") },
+    { key: "date",    label: t("groups.filters.panel.date") },
+  ];
+
   const COLUMN_LABELS: Record<string, string> = {
     course:       t("groups.table.course"),
     teacher:      t("groups.table.teacher"),
@@ -363,10 +412,13 @@ export const Groups = () => {
 
   const COURSES  = [...new Set(allGroups.map((g) => g.course).filter(Boolean))];
   const TEACHERS = [...new Set(allGroups.flatMap((g) => g.teacherNames))];
-  const DAY_OPTIONS = useMemo(
-    () => [...new Set(allGroups.map((g) => g.days).filter(Boolean))].map((d) => ({ value: d, label: d })),
-    [allGroups]
-  );
+  const DAY_FILTER_OPTIONS = [
+    { value: "Odd days",     label: t("groups.options.days.odd") },
+    { value: "Even days",    label: t("groups.options.days.even") },
+    { value: "Weekend days", label: t("groups.options.days.weekend") },
+    { value: "Every day",    label: t("groups.options.days.every") },
+    { value: "Other",        label: t("groups.options.days.other") },
+  ];
   const STATUS_OPTIONS = useMemo(
     () => [...new Set(allGroups.map((g) => g.status).filter(Boolean))].map((s) => ({ value: s, label: STATUS_LABELS[s] ?? s })),
     [allGroups] // eslint-disable-line react-hooks/exhaustive-deps
@@ -375,9 +427,11 @@ export const Groups = () => {
   const [open,              setOpen]              = useState(false);
   const [editingId,         setEditingId]         = useState<string | null>(null);
   const [form,              setForm]              = useState<FormState>(EMPTY_FORM);
+  const [daysMode,          setDaysMode]          = useState<string>("");
   const [formErrors,        setFormErrors]        = useState<{ name?: string; course?: string }>({});
   const [saveError,         setSaveError]         = useState<string | null>(null);
   const [actionMenuAnchor,  setActionMenuAnchor]  = useState<{ el: HTMLElement; id: string } | null>(null);
+  const [deleteConfirmId,   setDeleteConfirmId]   = useState<string | null>(null);
   const [smsGroupId,        setSmsGroupId]        = useState<string | null>(null);
   const [sortKey,           setSortKey]           = useState<SortKey>("");
   const [sortDir,           setSortDir]           = useState<SortDir>("asc");
@@ -386,6 +440,8 @@ export const Groups = () => {
   const [filters,           setFilters]           = useState<Filters>({
     status: "", teacher: "", course: "", days: "", tags: [], startDate: "", endDate: "",
   });
+  const [showFiltersPanel, setShowFiltersPanel] = useState(false);
+  const [visibleFilters,   setVisibleFilters]   = useState<string[]>(["status", "teacher", "course", "days", "tags", "date"]);
 
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -432,7 +488,10 @@ export const Groups = () => {
         startDate: filters.startDate || undefined,
         endDate: filters.endDate || undefined,
         page: 1,
-        limit: Math.max(groupsData?.meta?.total ?? allGroups.length, 1),
+        // A large fixed limit instead of relying on `meta.total`/the on-screen
+        // list (which is fetched with a hardcoded limit: 100) — this always
+        // asks the backend for every matching record.
+        limit: 1_000_000,
       }).unwrap();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -450,9 +509,33 @@ export const Groups = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Course.months (duration in months) + trainingStart -> trainingEnd,
+  // recomputed whenever either changes (course.months isn't guaranteed to be
+  // set for every course — those quietly leave trainingEnd untouched rather
+  // than clearing whatever the user may have entered manually).
+  const recalcEndDate = (courseId: string, startDate: string) => {
+    if (!startDate) return;
+    const months = activeCourses.find((c) => c.id === courseId)?.months;
+    if (!months) return;
+    const end = addMonthsToIsoDate(startDate, months);
+    if (end) setForm((prev) => ({ ...prev, trainingEnd: end }));
+  };
+
+  const handleCourseChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const courseId = e.target.value;
+    setForm((prev) => ({ ...prev, courseId }));
+    recalcEndDate(courseId, form.trainingStart);
+  };
+
+  const handleStartDateChange = (iso: string) => {
+    setForm((prev) => ({ ...prev, trainingStart: iso }));
+    recalcEndDate(form.courseId, iso);
+  };
+
   const handleOpenAdd = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setDaysMode("");
     setFormErrors({});
     setSaveError(null);
     setOpen(true);
@@ -470,6 +553,7 @@ export const Groups = () => {
       trainingStart: group.startDate,
       trainingEnd: group.endDate,
     });
+    setDaysMode(classifyDayList(group.dayList));
     setFormErrors({});
     setSaveError(null);
     setOpen(true);
@@ -561,93 +645,146 @@ export const Groups = () => {
         </Button>
       </Stack>
 
-      {/* FILTERS */}
-      <Stack direction="row" flexWrap="wrap" gap={1} mb={1}>
-        <DropdownFilter
-          label={t("groups.filters.status")}
-          value={filters.status}
-          options={STATUS_OPTIONS}
-          onChange={(v) => setFilter("status", v)}
-          onClear={() => setFilter("status", "")}
-        />
-        <DropdownFilter
-          label={t("groups.filters.teacher")}
-          value={filters.teacher}
-          options={TEACHERS.map((tc) => ({ value: tc, label: tc }))}
-          onChange={(v) => setFilter("teacher", v)}
-          onClear={() => setFilter("teacher", "")}
-        />
-        <DropdownFilter
-          label={t("groups.filters.courses")}
-          value={filters.course}
-          options={COURSES.map((c) => ({ value: c, label: c }))}
-          onChange={(v) => setFilter("course", v)}
-          onClear={() => setFilter("course", "")}
-        />
-        <DropdownFilter
-          label={t("groups.filters.days")}
-          value={filters.days}
-          options={
-            DAY_OPTIONS.length > 0
-              ? DAY_OPTIONS
-              : [
-                  { value: "Odd days",  label: t("groups.options.days.odd") },
-                  { value: "Even days", label: t("groups.options.days.even") },
-                ]
-          }
-          onChange={(v) => setFilter("days", v)}
-          onClear={() => setFilter("days", "")}
-        />
-        <DropdownFilter
-          label={t("groups.filters.tags")}
-          value={filters.tags[0] || ""}
-          options={TAGS.map((tag) => ({ value: tag, label: TAG_LABELS[tag] ?? tag }))}
-          onChange={(v) => setFilter("tags", [v])}
-          onClear={() => setFilter("tags", [])}
-        />
-        <DateFilter
-          label={t("groups.filters.startDate")}
-          value={filters.startDate}
-          onChange={(v) => setFilter("startDate", v)}
-          onClear={() => setFilter("startDate", "")}
-        />
-        <DateFilter
-          label={t("groups.filters.endDate")}
-          value={filters.endDate}
-          onChange={(v) => setFilter("endDate", v)}
-          onClear={() => setFilter("endDate", "")}
-        />
+      {/* FILTERS — always visible */}
+      <Stack direction="row" flexWrap="wrap" alignItems="center" gap={1.5} mb={1.5}>
+        {visibleFilters.includes("status") && (
+          <DropdownFilter
+            label={t("groups.filters.status")}
+            value={filters.status}
+            options={STATUS_OPTIONS}
+            onChange={(v) => setFilter("status", v)}
+            onClear={() => setFilter("status", "")}
+          />
+        )}
+        {visibleFilters.includes("teacher") && (
+          <DropdownFilter
+            label={t("groups.filters.teacher")}
+            value={filters.teacher}
+            options={TEACHERS.map((tc) => ({ value: tc, label: tc }))}
+            onChange={(v) => setFilter("teacher", v)}
+            onClear={() => setFilter("teacher", "")}
+          />
+        )}
+        {visibleFilters.includes("course") && (
+          <DropdownFilter
+            label={t("groups.filters.courses")}
+            value={filters.course}
+            options={COURSES.map((c) => ({ value: c, label: c }))}
+            onChange={(v) => setFilter("course", v)}
+            onClear={() => setFilter("course", "")}
+          />
+        )}
+        {visibleFilters.includes("days") && (
+          <DropdownFilter
+            label={t("groups.filters.days")}
+            value={filters.days}
+            options={DAY_FILTER_OPTIONS}
+            onChange={(v) => setFilter("days", v)}
+            onClear={() => setFilter("days", "")}
+          />
+        )}
+        {visibleFilters.includes("tags") && (
+          <DropdownFilter
+            label={t("groups.filters.tags")}
+            value={filters.tags[0] || ""}
+            options={TAGS.map((tag) => ({ value: tag, label: TAG_LABELS[tag] ?? tag }))}
+            onChange={(v) => setFilter("tags", [v])}
+            onClear={() => setFilter("tags", [])}
+          />
+        )}
+        {visibleFilters.includes("date") && (
+          <>
+            <DateFilter
+              label={t("groups.filters.startDate")}
+              value={filters.startDate}
+              onChange={(v) => setFilter("startDate", v)}
+              onClear={() => setFilter("startDate", "")}
+            />
+            <DateFilter
+              label={t("groups.filters.endDate")}
+              value={filters.endDate}
+              onChange={(v) => setFilter("endDate", v)}
+              onClear={() => setFilter("endDate", "")}
+            />
+          </>
+        )}
+        {hasActiveFilters && (
+          <IconButton
+            size="small"
+            onClick={clearAllFilters}
+            title={t("groups.filters.clearAll")}
+            sx={{ border: "1px solid #d0d5dd", borderRadius: "8px", color: "#667085" }}
+          >
+            <IoClose size={16} />
+          </IconButton>
+        )}
       </Stack>
 
-      {hasActiveFilters && (
-        <Box mb={1}>
+      {/* FILTERS / COLUMNS toolbar */}
+      <Stack direction="row" justifyContent="flex-end" gap={1} mb={1.5}>
+        <Box sx={{ position: "relative" }}>
           <Button
             size="small"
-            startIcon={<IoClose />}
-            onClick={clearAllFilters}
+            startIcon={<TbAdjustmentsHorizontal size={15} />}
             variant="outlined"
+            onClick={() => setShowFiltersPanel((p) => !p)}
             sx={{
-              borderRadius: "8px", borderColor: "#d0d5dd", color: "#667085",
-              fontSize: 12, fontWeight: 400, px: 1.5, textTransform: "none",
+              borderRadius: "8px",
+              borderColor: showFiltersPanel ? "primary.main" : "#d0d5dd",
+              color: showFiltersPanel ? "primary.main" : "#667085",
+              bgcolor: showFiltersPanel ? "#eff8ff" : "white",
+              fontSize: 12, fontWeight: 500, px: 1.5, textTransform: "none",
             }}
           >
-            {t("groups.filters.clearAll")}
+            {t("groups.filters.filtersButton")}
           </Button>
+          {showFiltersPanel && (
+            <Paper
+              variant="outlined"
+              sx={{
+                position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 20,
+                borderRadius: 2, borderColor: "#e5e7eb", p: 2, width: 300,
+                boxShadow: "0 12px 32px rgba(0,0,0,0.14)",
+              }}
+            >
+              <Typography fontWeight={600} fontSize={13} color="#344054" mb={1.5}>
+                {t("groups.filters.filtersButton")}
+              </Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1}>
+                {FILTER_TOGGLES.map((f) => {
+                  const checked = visibleFilters.includes(f.key);
+                  return (
+                    <Box
+                      key={f.key}
+                      onClick={() =>
+                        setVisibleFilters((prev) =>
+                          prev.includes(f.key) ? prev.filter((k) => k !== f.key) : [...prev, f.key]
+                        )
+                      }
+                      sx={{
+                        display: "flex", alignItems: "center", gap: 1, cursor: "pointer",
+                        border: "1px solid", borderColor: checked ? "primary.main" : "#d0d5dd",
+                        borderRadius: "8px", px: 1.2, py: 0.6, bgcolor: checked ? "#eff8ff" : "white",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 14, height: 14, borderRadius: 0.5, border: "2px solid",
+                          borderColor: checked ? "primary.main" : "#d0d5dd",
+                          bgcolor: checked ? "primary.main" : "transparent",
+                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                        }}
+                      >
+                        {checked && <Box sx={{ width: 7, height: 7, bgcolor: "white", borderRadius: 0.25 }} />}
+                      </Box>
+                      <Typography fontSize={12} color={checked ? "primary.main" : "#344054"}>{f.label}</Typography>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            </Paper>
+          )}
         </Box>
-      )}
-
-      <Stack direction="row" justifyContent="flex-end" gap={1} mb={1.5}>
-        <Button
-          size="small"
-          startIcon={<TbAdjustmentsHorizontal size={15} />}
-          variant="outlined"
-          sx={{
-            borderRadius: "8px", borderColor: "#d0d5dd", color: "#667085",
-            fontSize: 12, fontWeight: 500, px: 1.5, textTransform: "none",
-          }}
-        >
-          {t("groups.filters.filtersButton")}
-        </Button>
         <Button
           size="small"
           startIcon={<TbColumns3 size={15} />}
@@ -697,7 +834,7 @@ export const Groups = () => {
       </Stack>
 
       {/* TABLE */}
-      <Paper sx={{ borderRadius: 3, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
+      <Box>
         {groupsLoading && (
           <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
             <CircularProgress size={28} />
@@ -712,13 +849,13 @@ export const Groups = () => {
 
         {!groupsLoading && !groupsError && (
         <TableContainer>
-          <Table>
+          <Table sx={{ borderCollapse: "separate", borderSpacing: "0 10px" }}>
             <TableHead>
               <TableRow
                 sx={{
                   "& th": {
                     fontWeight: 600, fontSize: 13, color: "#374151",
-                    py: 1.5, borderBottom: "1px solid #e5e7eb", bgcolor: "white",
+                    py: 1.5, border: "none",
                   },
                 }}
               >
@@ -752,8 +889,11 @@ export const Groups = () => {
                   onClick={() => navigate(`/groups/${g.id}`)}
                   sx={{
                     cursor: "pointer",
-                    "& td": { borderBottom: "1px solid #f3f4f6", py: 1.8, fontSize: 13 },
-                    "&:last-child td": { borderBottom: "none" },
+                    bgcolor: "white",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                    "& td": { border: "none", py: 1.8, fontSize: 13 },
+                    "& td:first-of-type": { borderTopLeftRadius: 12, borderBottomLeftRadius: 12 },
+                    "& td:last-of-type": { borderTopRightRadius: 12, borderBottomRightRadius: 12 },
                     "&:hover": { bgcolor: "#f9fafb" },
                   }}
                 >
@@ -824,11 +964,18 @@ export const Groups = () => {
                       </MenuItem>
                       <Divider sx={{ my: 0.5 }} />
                       <MenuItem
-                        onClick={() => handleToggleStatus(g.id)}
-                        sx={{ fontSize: 13, gap: 1 }}
+                        onClick={() => {
+                          if (g.status === "ACTIVE") {
+                            setDeleteConfirmId(g.id);
+                            setActionMenuAnchor(null);
+                          } else {
+                            handleToggleStatus(g.id);
+                          }
+                        }}
+                        sx={{ fontSize: 13, gap: 1, color: g.status === "ACTIVE" ? "#d32f2f" : undefined }}
                       >
                         {g.status === "ACTIVE"
-                          ? <><MdArchive size={15} /> {t("groups.actions.archive")}</>
+                          ? <><MdDelete size={15} /> {t("groups.deleteDialog.confirm")}</>
                           : <><MdUnarchive size={15} /> {t("groups.actions.activate")}</>}
                       </MenuItem>
                     </Menu>
@@ -846,7 +993,7 @@ export const Groups = () => {
           </Table>
         </TableContainer>
         )}
-      </Paper>
+      </Box>
 
       {/* EXCEL */}
       <Tooltip title={t("groups.actions.exportExcel")} placement="left">
@@ -918,7 +1065,7 @@ export const Groups = () => {
               select
               name="courseId"
               value={form.courseId}
-              onChange={handleChange}
+              onChange={handleCourseChange}
               size="small"
               fullWidth
               error={!!formErrors.course}
@@ -931,7 +1078,7 @@ export const Groups = () => {
             </TextField>
           </Box>
 
-          {/* Select teacher */}
+          {/* Select teacher — single choice only, closes right after picking */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
               {t("groups.form.teacher")}
@@ -940,14 +1087,13 @@ export const Groups = () => {
               select
               fullWidth
               size="small"
+              value={form.teacherIds[0] ?? ""}
+              onChange={(e) => setForm((p) => ({ ...p, teacherIds: e.target.value ? [e.target.value] : [] }))}
               SelectProps={{
-                multiple: true,
-                value: form.teacherIds,
-                onChange: (e) => setForm((p) => ({ ...p, teacherIds: e.target.value as string[] })),
                 displayEmpty: true,
                 renderValue: (selected) =>
-                  (selected as string[]).length
-                    ? (selected as string[]).map((id) => activeTeachers.find((tc) => tc.id === id)?.name ?? id).join(", ")
+                  selected
+                    ? activeTeachers.find((tc) => tc.id === selected)?.name ?? String(selected)
                     : <span style={{ color: "#9ca3af" }}>{t("groups.form.teacher")}</span>,
               }}
               sx={inputSx}
@@ -958,7 +1104,7 @@ export const Groups = () => {
             </TextField>
           </Box>
 
-          {/* Days */}
+          {/* Days — quick presets (Odd/Even/Weekend/Every day), "Other" reveals the manual weekday picker */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
               {t("groups.form.days")}
@@ -967,59 +1113,81 @@ export const Groups = () => {
               select
               fullWidth
               size="small"
+              value={daysMode}
+              onChange={(e) => {
+                const mode = e.target.value;
+                setDaysMode(mode);
+                if (mode !== "Other") setForm((p) => ({ ...p, days: DAYS_PRESETS[mode] ?? [] }));
+              }}
               SelectProps={{
-                multiple: true,
-                value: form.days,
-                onChange: (e) => setForm((p) => ({ ...p, days: e.target.value as GroupDay[] })),
                 displayEmpty: true,
                 renderValue: (selected) =>
-                  (selected as GroupDay[]).length
-                    ? (selected as GroupDay[]).map((d) => WEEKDAY_LABELS[d]).join(", ")
+                  selected
+                    ? DAY_FILTER_OPTIONS.find((o) => o.value === selected)?.label ?? String(selected)
                     : <span style={{ color: "#9ca3af" }}>{t("groups.form.days")}</span>,
               }}
               sx={inputSx}
             >
-              {WEEKDAY_VALUES.map((day) => (
-                <MenuItem key={day} value={day} sx={{ fontSize: 13 }}>{WEEKDAY_LABELS[day]}</MenuItem>
+              {DAY_FILTER_OPTIONS.map((o) => (
+                <MenuItem key={o.value} value={o.value} sx={{ fontSize: 13 }}>{o.label}</MenuItem>
               ))}
             </TextField>
+            {daysMode === "Other" && (
+              <TextField
+                select
+                fullWidth
+                size="small"
+                SelectProps={{
+                  multiple: true,
+                  value: form.days,
+                  onChange: (e) => setForm((p) => ({ ...p, days: e.target.value as GroupDay[] })),
+                  displayEmpty: true,
+                  renderValue: (selected) =>
+                    (selected as GroupDay[]).length
+                      ? (selected as GroupDay[]).map((d) => WEEKDAY_LABELS[d]).join(", ")
+                      : <span style={{ color: "#9ca3af" }}>{t("groups.form.days")}</span>,
+                }}
+                sx={{ ...inputSx, mt: 1 }}
+              >
+                {WEEKDAY_VALUES.map((day) => (
+                  <MenuItem key={day} value={day} sx={{ fontSize: 13 }}>{WEEKDAY_LABELS[day]}</MenuItem>
+                ))}
+              </TextField>
+            )}
           </Box>
 
-          {/* Select room */}
-          <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.room")}
-            </Typography>
-            <TextField
-              select
-              name="roomId"
-              value={form.roomId}
-              onChange={handleChange}
-              size="small"
-              fullWidth
-              sx={inputSx}
-            >
-              <MenuItem value="" sx={{ fontSize: 13 }}>—</MenuItem>
-              {activeRooms.map((r) => (
-                <MenuItem key={r.id} value={r.id} sx={{ fontSize: 13 }}>{r.name}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
+          {/* Select room — edit only; not part of the fields a new group asks for */}
+          {editingId !== null && (
+            <Box mb={2.5}>
+              <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+                {t("groups.form.room")}
+              </Typography>
+              <TextField
+                select
+                name="roomId"
+                value={form.roomId}
+                onChange={handleChange}
+                size="small"
+                fullWidth
+                sx={inputSx}
+              >
+                <MenuItem value="" sx={{ fontSize: 13 }}>—</MenuItem>
+                {activeRooms.map((r) => (
+                  <MenuItem key={r.id} value={r.id} sx={{ fontSize: 13 }}>{r.name}</MenuItem>
+                ))}
+              </TextField>
+            </Box>
+          )}
 
-          {/* Lesson start time */}
+          {/* Lesson start time — 08:00–20:00 in 1-hour steps */}
           <Box mb={2.5}>
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
               {t("groups.form.lessonStartTime")}
             </Typography>
-            <TextField
-              type="time"
-              name="time"
+            <TimeSelectField
               value={form.time}
-              onChange={handleChange}
-              size="small"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              sx={inputSx}
+              onChange={(time) => setForm((p) => ({ ...p, time }))}
+              placeholder={t("groups.form.noTimeSelected")}
             />
           </Box>
 
@@ -1028,36 +1196,24 @@ export const Groups = () => {
             <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
               {t("groups.form.startDate")}
             </Typography>
-            <TextField
-              type="date"
-              name="trainingStart"
+            <DatePickerField
               value={form.trainingStart}
-              onChange={handleChange}
-              size="small"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              sx={inputSx}
+              onChange={handleStartDateChange}
+              shortcuts
             />
           </Box>
 
-          {/* Group end date — edit only */}
-          {editingId !== null && (
-            <Box mb={2.5}>
-              <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-                {t("groups.form.endDate")}
-              </Typography>
-              <TextField
-                type="date"
-                name="trainingEnd"
-                value={form.trainingEnd}
-                onChange={handleChange}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-                sx={inputSx}
-              />
-            </Box>
-          )}
+          {/* Group end date — auto-filled from the selected course's
+              duration (Course.months) once both a course and a start date
+              are picked, but stays a normal editable field so it can still
+              be overridden by hand; picking a different course or start
+              date recomputes it again. */}
+          <Box mb={2.5}>
+            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+              {t("groups.form.endDate")}
+            </Typography>
+            <DatePickerField value={form.trainingEnd} onChange={(iso) => setForm((prev) => ({ ...prev, trainingEnd: iso }))} />
+          </Box>
 
           {saveError && (
             <Typography fontSize={13} color="error" mb={2}>{saveError}</Typography>
@@ -1092,6 +1248,30 @@ export const Groups = () => {
         recipientLabel={t("groups.sms.recipientLabel")}
         sender="3700"
       />
+
+      {/* DELETE CONFIRM */}
+      <Dialog open={deleteConfirmId !== null} onClose={() => setDeleteConfirmId(null)} PaperProps={{ sx: { borderRadius: 2, minWidth: 360 } }}>
+        <DialogTitle sx={{ fontWeight: 600 }}>{t("groups.deleteDialog.title")}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">{t("groups.deleteDialog.body")}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button variant="outlined" onClick={() => setDeleteConfirmId(null)} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+            {t("groups.deleteDialog.cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => {
+              if (deleteConfirmId) handleToggleStatus(deleteConfirmId);
+              setDeleteConfirmId(null);
+            }}
+            sx={{ textTransform: "none", borderRadius: 1.5 }}
+          >
+            {t("groups.deleteDialog.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -25,6 +25,7 @@ import {
   useFinanceStatsQuery,
 } from "../../../../app/api/financeApi";
 import { useToast } from "../../../../Context/ToastContext";
+import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import type { RootState } from "../../../../app/store";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -312,9 +313,9 @@ export const AllPayments = () => {
           <div className="px-5 pb-4 border-t border-gray-100 dark:border-gray-800">
             <div className="grid grid-cols-5 gap-3 mt-4 items-end">
               <div><Label text={t("finance.allPayments.filters.dateFrom")} />
-                <Input type="date" value={draftStartDate} onChange={setDraftStartDate} /></div>
+                <DatePickerField value={draftStartDate} onChange={setDraftStartDate} /></div>
               <div><Label text={t("finance.allPayments.filters.dateTo")} />
-                <Input type="date" value={draftEndDate} onChange={setDraftEndDate} /></div>
+                <DatePickerField value={draftEndDate} onChange={setDraftEndDate} /></div>
               <div><Label text={t("finance.allPayments.filters.namePhone")} />
                 <Input value={draftSearch} onChange={setDraftSearch} placeholder={t("finance.allPayments.filters.searchPlaceholder")} /></div>
               <div>

@@ -24,12 +24,16 @@ import {
   FormControlLabel,
   Radio,
   RadioGroup,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   MdOutlineEmail,
   MdClose,
   MdCloudUpload,
-  MdCalendarToday,
+  MdDelete,
 } from "react-icons/md";
 import { IoSearchOutline } from "react-icons/io5";
 import { GoPlus } from "react-icons/go";
@@ -41,6 +45,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SendSmsModal } from "../../../../../components/SendSmsModal";
 import { useToast } from "../../../../../Context/ToastContext";
+import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
 import { extractApiError } from "../../../../../utils";
 import type { RootState } from "../../../../../app/store";
 import {
@@ -58,22 +63,17 @@ import { useAllBranchesQuery } from "../../../../../app/api/branchesApi";
 // (CEO/admins/managers + teachers), not just the users-table subset.
 import { useAllTeachersQuery, useToggleTeacherStatusMutation } from "../../../../../app/api/teachersApi";
 import type { Teacher } from "../../../../../app/api/teachersApi/types";
+import { useRolePermissionsSelectQuery } from "../../../../../app/api/rolePermissionsApi";
 
-// The 8 position labels from the reference design. `role` on POST/PATCH
-// /users is a plain optional string (Swagger has no enum for it and no
-// endpoint lists valid values), so these are sent verbatim as typed here —
-// not invented codes, just the exact labels shown in the reference. Only one
-// can apply per user (the field is a single string), so the UI below is
-// checkbox-styled but behaves as a single-select.
-const ROLE_OPTIONS = [
-  "CEO",
-  "Branch Director",
-  "Administrator",
-  "Administrator2",
-  "Limited Administrator",
-  "Teacher",
-  "Marketer",
-  "Cashier",
+// POST /users (Swagger) is documented as being for SUPERADMIN/ADMIN accounts
+// specifically — TEACHER/STUDENT accounts are created through their own
+// dedicated endpoints (teachersApi/studentsApi) elsewhere in this app — so
+// this is the full, real value domain for `role` here, confirmed against
+// Swagger's Role enum (which also lists TEACHER/STUDENT, not applicable to
+// this form).
+const SYSTEM_ROLE_OPTIONS: { value: "SUPERADMIN" | "ADMIN" }[] = [
+  { value: "ADMIN" },
+  { value: "SUPERADMIN" },
 ];
 
 interface StaffForm {
@@ -164,6 +164,7 @@ export const Staff = () => {
   // fills that gap so CEO/admins/managers AND teachers all show up here.
   const { data: teachersData, isLoading: teachersLoading, isError: teachersError } = useAllTeachersQuery(sourceQueryArgs);
   const { data: branchesData } = useAllBranchesQuery();
+  const { data: rolePermissionOptions } = useRolePermissionsSelectQuery();
   const [createStaffUser, { isLoading: isCreating }] = useCreateStaffUserMutation();
   const [updateStaffUser, { isLoading: isUpdating }] = useUpdateStaffUserMutation();
   const [toggleStaffUserStatus] = useToggleStaffUserStatusMutation();
@@ -209,6 +210,7 @@ export const Staff = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedMember, setSelectedMember] = useState<{ id: string; kind: "user" | "teacher" } | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [form, setForm] = useState<StaffForm>(EMPTY_FORM);
   const [smsOpen, setSmsOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -283,7 +285,10 @@ export const Staff = () => {
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = t("settings.ceo.staff.validation.nameRequired");
-    if (!isEdit && !form.rolePermissionId.trim()) e.rolePermissionId = t("settings.ceo.staff.validation.rolePermissionIdRequired");
+    if (!form.rolePermissionId.trim()) e.rolePermissionId = t("settings.ceo.staff.validation.rolePermissionIdRequired");
+    // Without this, POST /users silently defaults `role` to STUDENT — a
+    // staff account created that way lands with zero admin permissions.
+    if (!form.role.trim()) e.role = t("settings.ceo.staff.validation.roleRequired");
     if (!isEdit && !form.email.trim() && !form.phone.trim()) e.phone = t("settings.ceo.staff.validation.contactRequired");
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -336,7 +341,12 @@ export const Staff = () => {
   // users, Swagger documents it as a hard delete rejected with 409 while
   // still assigned to a branch; permanent removal belongs on the Archive
   // page (staff) / Teachers page's own archive flow (teacher rows).
-  const handleToggleStatus = async () => {
+  const handleDeleteClick = () => {
+    setDeleteConfirmOpen(true);
+    handleCloseMenu();
+  };
+  const handleDeleteConfirm = async () => {
+    setDeleteConfirmOpen(false);
     if (!selectedMember) return;
     try {
       if (selectedMember.kind === "user") {
@@ -350,7 +360,6 @@ export const Staff = () => {
       const generic = t("settings.ceo.staff.toast.error");
       toast.error(detail ? `${generic}: ${detail}` : generic);
     }
-    handleCloseMenu();
   };
 
   const handleOpenTeacherProfile = () => {
@@ -482,7 +491,9 @@ export const Staff = () => {
                       {member.kind === "user"
                         ? <MenuItem onClick={openEditDrawer}>{t("settings.ceo.staff.menu.edit")}</MenuItem>
                         : <MenuItem onClick={handleOpenTeacherProfile}>{t("settings.ceo.staff.menu.edit")}</MenuItem>}
-                      <MenuItem onClick={handleToggleStatus}>{t("settings.ceo.staff.menu.toggleStatus")}</MenuItem>
+                      <MenuItem onClick={handleDeleteClick} sx={{ color: "#d32f2f" }}>
+                        <MdDelete size={15} style={{ marginRight: 8 }} /> {t("settings.ceo.staff.menu.delete")}
+                      </MenuItem>
                     </Menu>
                   </TableCell>
                 </TableRow>
@@ -521,6 +532,22 @@ export const Staff = () => {
         recipientLabel={t("settings.ceo.staff.sms.recipientLabel")}
         sender="3700"
       />
+
+      {/* Delete confirm */}
+      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} PaperProps={{ sx: { borderRadius: 2, minWidth: 360 } }}>
+        <DialogTitle sx={{ fontWeight: 600 }}>{t("settings.ceo.staff.deleteDialog.title")}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">{t("settings.ceo.staff.deleteDialog.message")}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button variant="outlined" onClick={() => setDeleteConfirmOpen(false)} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+            {t("settings.ceo.staff.deleteDialog.cancel")}
+          </Button>
+          <Button variant="contained" color="error" onClick={handleDeleteConfirm} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+            {t("settings.ceo.staff.deleteDialog.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Drawer */}
       <Drawer anchor="right" open={open} onClose={() => setOpen(false)} PaperProps={{ sx: { width: 420, display: "flex", flexDirection: "column", bgcolor: "var(--color-surface)" } }}>
@@ -564,37 +591,61 @@ export const Staff = () => {
             </Box>
 
             <Box>
-              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.rolePermissionId")}</Typography>
-              <TextField
-                name="rolePermissionId" value={form.rolePermissionId} onChange={handleChange} fullWidth size="small"
-                error={Boolean(errors.rolePermissionId)}
-                helperText={errors.rolePermissionId || t("settings.ceo.staff.form.rolePermissionIdHelp")}
-                sx={inputSx}
-              />
+              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.role")}</Typography>
+              <Select
+                size="small"
+                fullWidth
+                displayEmpty
+                value={form.role}
+                onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
+                error={Boolean(errors.role)}
+                sx={{ bgcolor: "var(--color-surface-alt)", fontSize: 14 }}
+              >
+                <MenuItem value="" disabled sx={{ fontSize: 14 }}>
+                  {t("settings.ceo.staff.form.role")}
+                </MenuItem>
+                {SYSTEM_ROLE_OPTIONS.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: 14 }}>
+                    {t(`settings.ceo.staff.form.roleOptions.${opt.value}`)}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Typography fontSize={12} color={errors.role ? "error" : "var(--color-text-muted)"} mt={0.5}>
+                {errors.role || t("settings.ceo.staff.form.roleHelp")}
+              </Typography>
             </Box>
 
             <Box>
-              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.role")}</Typography>
-              {/* `role` is a single plain string on POST/PATCH /users (no
-                  enum, no listing endpoint) — checkbox-styled to match the
-                  reference design, but only one stays checked at a time
-                  since the backend can only store one value. */}
+              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.rolePermissionId")}</Typography>
+              {/* `rolePermissionId` is a single id on POST/PATCH /users, so
+                  only one of these real Lavozimlar/Positions records
+                  (GET /role-permissions/select) can be checked at a time —
+                  checkbox-styled per the reference design, single-select
+                  behavior underneath. */}
               <Box sx={{ display: "flex", flexWrap: "wrap", columnGap: 2, rowGap: 0.5 }}>
-                {ROLE_OPTIONS.map((option) => (
+                {(rolePermissionOptions ?? []).map((option) => (
                   <FormControlLabel
-                    key={option}
+                    key={option.id}
                     control={
                       <Checkbox
                         size="small"
-                        checked={form.role === option}
-                        onChange={() => setForm((p) => ({ ...p, role: p.role === option ? "" : option }))}
+                        checked={form.rolePermissionId === option.id}
+                        onChange={() => setForm((p) => ({ ...p, rolePermissionId: p.rolePermissionId === option.id ? "" : option.id }))}
                       />
                     }
-                    label={<span style={{ fontSize: 13 }}>{option}</span>}
+                    label={<span style={{ fontSize: 13 }}>{option.name}</span>}
                     sx={{ mr: 0 }}
                   />
                 ))}
+                {(rolePermissionOptions ?? []).length === 0 && (
+                  <Typography fontSize={12.5} color="var(--color-text-muted)">
+                    {t("settings.ceo.staff.form.rolePermissionIdHelp")}
+                  </Typography>
+                )}
               </Box>
+              {errors.rolePermissionId && (
+                <Typography fontSize={12} color="error" mt={0.5}>{errors.rolePermissionId}</Typography>
+              )}
             </Box>
 
             <Box>
@@ -621,12 +672,7 @@ export const Staff = () => {
 
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.dateOfBirth")}</Typography>
-              <TextField
-                name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} fullWidth size="small"
-                InputLabelProps={{ shrink: true }}
-                InputProps={{ startAdornment: (<InputAdornment position="start"><MdCalendarToday size={15} color="var(--color-text-muted)" /></InputAdornment>) }}
-                sx={inputSx}
-              />
+              <DatePickerField value={form.dateOfBirth} onChange={(iso) => setForm((prev) => ({ ...prev, dateOfBirth: iso }))} />
             </Box>
 
             <Box>

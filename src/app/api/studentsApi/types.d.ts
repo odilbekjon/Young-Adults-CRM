@@ -1,3 +1,5 @@
+import type { PaymentRow } from "../financeApi/types";
+
 export interface StudentGroupRef {
   id: string;
   name: string;
@@ -208,4 +210,115 @@ export interface StudentGroupMembership {
 export interface StudentGroupMembershipsResponse {
   success: boolean;
   data: StudentGroupMembership[];
+}
+
+// POST /students/{id}/status — Swagger: "Talaba profil holatini ACTIVE,
+// INACTIVE, FROZEN, DEBTOR holatlariga o'tkazadi va sababini tarixga
+// yozadi" (changes the student's account-wide status and records the
+// reason to their history), application/json body. Distinct from
+// toggleStudentStatus (PATCH .../toggle-status, a blind ACTIVE<->INACTIVE
+// flip with no reason) — this is the endpoint to use whenever a reason
+// needs to be attached (e.g. archiving from SingleGroup's remove dialog).
+export type StudentStatusValue = "ACTIVE" | "INACTIVE" | "FROZEN" | "DEBTOR";
+
+export interface UpdateStudentStatusRequest {
+  id: string;
+  status: StudentStatusValue;
+  reason?: string;
+  paymentEndDate?: string;
+}
+
+export interface UpdateStudentStatusResponse {
+  success?: boolean;
+  message?: string;
+  data?: StudentDetail;
+}
+
+// GET /students/{id}/comments — "Admin va ustozlar tomonidan talaba haqida
+// qoldirilgan ichki eslatmalar va izohlar" (internal notes/remarks left
+// about the student). Read-only: Swagger documents no POST for this
+// resource anywhere in the API, so there is currently no way for this app
+// to create a new entry here (see AddNoteModal).
+export interface StudentComment {
+  id: string;
+  text: string;
+  author: string | null;
+  createdAt: string;
+}
+
+// GET /students/{id}/history — "Talaba bo'yicha sodir bo'lgan barcha
+// voqealar xronologiyasi (status o'zgarishi, guruhga qo'shilish va h.k)".
+// Envelope/fields aren't documented beyond a bare 200, so normalized
+// defensively the same way groupsApi's normalizeHistory is.
+export interface StudentHistoryEntry {
+  id: string;
+  type: string;
+  detail: string;
+  createdAt: string;
+  actor: string | null;
+}
+
+// GET /students/{id}/sms-history — "Bitta talabaga yuborilgan barcha SMS
+// xabarlar tarixini olish". Envelope/fields aren't documented beyond a bare
+// 200, so normalized defensively.
+export interface StudentSmsEntry {
+  id: string;
+  text: string;
+  status: string | null;
+  createdAt: string;
+}
+
+export interface StudentSmsHistoryRequest {
+  id: string;
+  search?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+  branchId?: string;
+}
+
+// GET /students/{id}/payments — "Talabaning to'lovlar tarixi va moliyaviy
+// balansi": the student's own payment registry plus their totals
+// (totalPaid/totalCharged/balance/totalDebt). Distinct from GET
+// /finance/payments (the whole branch's registry, previously the only way
+// this app could list a single student's payments — by name-searching that
+// list client-side, which risked mixing up same-named students).
+export interface StudentPaymentsRequest {
+  id: string;
+  page?: number;
+  limit?: number;
+  groupId?: string;
+  paymentMethodId?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface StudentPaymentsSummary {
+  totalPaid: number;
+  totalCharged: number;
+  balance: number;
+  totalDebt: number;
+}
+
+export interface StudentPaymentsResult {
+  rows: PaymentRow[];
+  summary: StudentPaymentsSummary;
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+// GET /students/{id}/finance-history — "Talabaning oylik moliyaviy tarixi":
+// per-month debt/payment ledger, including which group created the debt
+// and who received the payment. Replaces the client-side
+// memberships+payments approximation StudentProfile's "Monthly balance
+// status" section previously had to fall back to (no endpoint returned
+// this directly before).
+export interface StudentFinanceHistoryEntry {
+  id: string;
+  month: string;
+  charged: number;
+  paid: number;
+  balance: number;
+  groupName: string | null;
+  receivedBy: string | null;
 }

@@ -14,6 +14,7 @@ import type {
 import { useAllBranchesQuery } from "../../../../app/api/branchesApi";
 import { useGroupsSelectQuery } from "../../../../app/api/groupsApi";
 import { useToast } from "../../../../Context/ToastContext";
+import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 
 type SortKey = "name" | "status" | "group" | "attendance";
 type SortDir = "asc" | "desc";
@@ -312,14 +313,12 @@ export const AttendanceReports = () => {
           <div className="flex flex-col gap-4">
             <div>
               <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.dateFrom")}</label>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400 text-gray-700" />
+              <DatePickerField value={dateFrom} onChange={setDateFrom} />
             </div>
 
             <div>
               <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.dateTo")}</label>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400 text-gray-700" />
+              <DatePickerField value={dateTo} onChange={setDateTo} />
             </div>
 
             <div>

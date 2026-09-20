@@ -7,11 +7,14 @@ export const ActionIconBtn = ({
   onClick,
   children,
   btnRef,
+  color = "#e0e0e0",
 }: {
   label: string;
   onClick?: () => void;
   children: React.ReactNode;
   btnRef?: React.Ref<HTMLButtonElement>;
+  /** Border color of the circular button, matching its icon's color */
+  color?: string;
 }) => {
   const [hovered, setHovered] = useState(false);
   return (
@@ -19,7 +22,7 @@ export const ActionIconBtn = ({
       <IconButton
         ref={btnRef}
         size="small"
-        sx={{ border: "1px solid #e0e0e0", borderRadius: 2 }}
+        sx={{ border: "1.5px solid", borderColor: color, borderRadius: "50%" }}
         onClick={onClick}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}

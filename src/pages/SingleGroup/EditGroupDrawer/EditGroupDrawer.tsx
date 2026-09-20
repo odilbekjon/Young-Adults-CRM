@@ -1,12 +1,14 @@
 // src/pages/groups/EditGroupDrawer.tsx
 import { CSSProperties, useEffect, useState } from "react";
 import { HiChevronDown } from "react-icons/hi";
-import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
-import { Box, Chip, CircularProgress, Stack } from "@mui/material";
+import { Chip, Stack, CircularProgress } from "@mui/material";
 import { RightDrawer } from "../../../components/RightDrawer";
 import { inputStyle, labelStyle, submitBtn, cancelBtn } from "../styles";
-import type { GroupDay, GroupDetail, GroupPersonRef, UpdateGroupRequest } from "../../../app/api/groupsApi/types";
+import { DatePickerField } from "../DatePickerField";
+import { TimeSelectField } from "../TimeSelectField";
+import { DAYS_PRESETS, classifyDayList, addMonthsToIsoDate } from "../../../utils";
+import type { GroupDay, GroupDetail, UpdateGroupRequest } from "../../../app/api/groupsApi/types";
 
 const ALL_DAYS: GroupDay[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
@@ -70,6 +72,7 @@ const SelectField = ({
 interface EditGroupFormState {
   name: string;
   courseId: string;
+  teacherId: string;
   roomId: string;
   days: GroupDay[];
   time: string;
@@ -80,6 +83,7 @@ interface EditGroupFormState {
 const toFormState = (group: GroupDetail): EditGroupFormState => ({
   name: group.name ?? "",
   courseId: group.courseId ?? "",
+  teacherId: group.teachers?.[0]?.id ?? "",
   roomId: group.roomId ?? "",
   days: group.days ?? [],
   time: group.time ?? "",
@@ -93,27 +97,29 @@ export const EditGroupDrawer = ({
   onClose,
   courses,
   rooms,
+  teachers,
   onSave,
   isSaving,
-  onRemoveTeacher,
-  isRemovingTeacher,
 }: {
   group: GroupDetail;
   open: boolean;
   onClose: () => void;
-  courses: { id: string; name: string }[];
+  courses: { id: string; name: string; months?: number | null }[];
   rooms: { id: string; name: string }[];
+  teachers: { id: string; name: string }[];
   onSave: (data: Omit<UpdateGroupRequest, "id">) => void;
   isSaving: boolean;
-  onRemoveTeacher: (teacherId: string) => void;
-  isRemovingTeacher: boolean;
 }) => {
   const { t } = useTranslation();
   const [form, setForm] = useState<EditGroupFormState>(() => toFormState(group));
+  const [daysMode, setDaysMode] = useState<string>(() => classifyDayList(group.days ?? []));
 
   // Har safar drawer ochilganda formani real guruh ma'lumotlari bilan qayta boshlaymiz.
   useEffect(() => {
-    if (open) setForm(toFormState(group));
+    if (open) {
+      setForm(toFormState(group));
+      setDaysMode(classifyDayList(group.days ?? []));
+    }
   }, [open, group]);
 
   const toggleDay = (day: GroupDay) => {
@@ -123,10 +129,29 @@ export const EditGroupDrawer = ({
     }));
   };
 
+  const DAY_OPTIONS = [
+    { value: "Odd days",     label: t("groups.options.days.odd") },
+    { value: "Even days",    label: t("groups.options.days.even") },
+    { value: "Weekend days", label: t("groups.options.days.weekend") },
+    { value: "Every day",    label: t("groups.options.days.every") },
+    { value: "Other",        label: t("groups.options.days.other") },
+  ];
+
+  // Same Course.months + trainingStart -> trainingEnd auto-calc as Groups.tsx's
+  // create/edit drawer, kept consistent here.
+  const recalcEndDate = (courseId: string, startDate: string) => {
+    if (!startDate) return;
+    const months = courses.find((c) => c.id === courseId)?.months;
+    if (!months) return;
+    const end = addMonthsToIsoDate(startDate, months);
+    if (end) setForm((f) => ({ ...f, trainingEnd: end }));
+  };
+
   const handleSubmit = () => {
     onSave({
       name: form.name,
       courseId: form.courseId || undefined,
+      teacherIds: form.teacherId ? [form.teacherId] : undefined,
       roomId: form.roomId || undefined,
       days: form.days,
       time: form.time || undefined,
@@ -134,8 +159,6 @@ export const EditGroupDrawer = ({
       trainingEnd: form.trainingEnd || undefined,
     });
   };
-
-  const teachers: GroupPersonRef[] = group.teachers ?? [];
 
   return (
     <RightDrawer open={open} onClose={onClose} title={t("singleGroup.editGroupDrawer.title")}>
@@ -153,47 +176,44 @@ export const EditGroupDrawer = ({
         <SelectField
           label={t("singleGroup.editGroupDrawer.selectCourse")}
           value={form.courseId}
-          onChange={(v) => setForm((f) => ({ ...f, courseId: v }))}
+          onChange={(v) => { setForm((f) => ({ ...f, courseId: v })); recalcEndDate(v, form.trainingStart); }}
           options={courses.map((c) => ({ value: c.id, label: c.name }))}
           placeholder={t("singleGroup.editGroupDrawer.selectCourse")}
         />
 
-        <div>
-          <label style={labelStyle}>{t("singleGroup.editGroupDrawer.teachers")}</label>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            {teachers.length === 0 ? (
-              <Box sx={{ fontSize: 13, color: "#9ca3af" }}>
-                {t("singleGroup.editGroupDrawer.noTeachers")}
-              </Box>
-            ) : (
-              teachers.map((tch) => (
-                <Chip
-                  key={tch.id}
-                  label={tch.name}
-                  size="small"
-                  disabled={isRemovingTeacher}
-                  onDelete={() => onRemoveTeacher(tch.id)}
-                  deleteIcon={<MdClose />}
-                />
-              ))
-            )}
-          </Stack>
-        </div>
+        <SelectField
+          label={t("singleGroup.editGroupDrawer.selectTeacher")}
+          value={form.teacherId}
+          onChange={(v) => setForm((f) => ({ ...f, teacherId: v }))}
+          options={teachers.map((tc) => ({ value: tc.id, label: tc.name }))}
+          placeholder={t("singleGroup.editGroupDrawer.selectTeacher")}
+        />
 
         <div>
-          <label style={labelStyle}>{t("singleGroup.editGroupDrawer.days")}</label>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            {ALL_DAYS.map((day) => (
-              <Chip
-                key={day}
-                label={t(`singleGroup.editGroupDrawer.weekdays.${day}`)}
-                size="small"
-                color={form.days.includes(day) ? "primary" : "default"}
-                onClick={() => toggleDay(day)}
-                sx={{ cursor: "pointer" }}
-              />
-            ))}
-          </Stack>
+          <SelectField
+            label={t("singleGroup.editGroupDrawer.days")}
+            value={daysMode}
+            onChange={(mode) => {
+              setDaysMode(mode);
+              if (mode !== "Other") setForm((f) => ({ ...f, days: DAYS_PRESETS[mode] ?? [] }));
+            }}
+            options={DAY_OPTIONS}
+            placeholder={t("singleGroup.editGroupDrawer.selectDays")}
+          />
+          {daysMode === "Other" && (
+            <Stack direction="row" flexWrap="wrap" gap={1} mt={1}>
+              {ALL_DAYS.map((day) => (
+                <Chip
+                  key={day}
+                  label={t(`singleGroup.editGroupDrawer.weekdays.${day}`)}
+                  size="small"
+                  color={form.days.includes(day) ? "primary" : "default"}
+                  onClick={() => toggleDay(day)}
+                  sx={{ cursor: "pointer" }}
+                />
+              ))}
+            </Stack>
+          )}
         </div>
 
         <SelectField
@@ -204,33 +224,32 @@ export const EditGroupDrawer = ({
           placeholder={t("singleGroup.editGroupDrawer.selectRoom")}
         />
 
+        {/* Tags aren't stored anywhere on the backend Group model — shown as a
+            disabled placeholder to match the reference design rather than a
+            field that would silently fail to save. */}
+        <div>
+          <label style={labelStyle}>{t("singleGroup.editGroupDrawer.tags")}</label>
+          <div style={{ ...inputStyle, display: "flex", alignItems: "center", color: "#b0b0b0", cursor: "not-allowed", background: "#f9fafb" }}>
+            {t("singleGroup.editGroupDrawer.addNewTags")}
+          </div>
+        </div>
+
         <div>
           <label style={labelStyle}>{t("singleGroup.editGroupDrawer.lessonStartTime")}</label>
-          <input
-            style={inputStyle}
-            type="time"
-            value={form.time}
-            onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
-          />
+          <TimeSelectField value={form.time} onChange={(time) => setForm((f) => ({ ...f, time }))} />
         </div>
 
         <div>
           <label style={labelStyle}>{t("singleGroup.editGroupDrawer.groupStartDate")}</label>
-          <input
-            style={inputStyle}
-            type="date"
+          <DatePickerField
             value={form.trainingStart}
-            onChange={(e) => setForm((f) => ({ ...f, trainingStart: e.target.value }))}
+            onChange={(iso) => { setForm((f) => ({ ...f, trainingStart: iso })); recalcEndDate(form.courseId, iso); }}
+            shortcuts
           />
         </div>
         <div>
           <label style={labelStyle}>{t("singleGroup.editGroupDrawer.groupEndDate")}</label>
-          <input
-            style={inputStyle}
-            type="date"
-            value={form.trainingEnd}
-            onChange={(e) => setForm((f) => ({ ...f, trainingEnd: e.target.value }))}
-          />
+          <DatePickerField value={form.trainingEnd} onChange={(iso) => setForm((f) => ({ ...f, trainingEnd: iso }))} />
         </div>
 
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>

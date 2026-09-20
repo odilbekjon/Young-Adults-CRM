@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { PublicRoute } from "./routes/PublicRoute";
 import { StudentRoute } from "./routes/StudentRoute";
+import { GroupsRoute, GroupDetailRoute } from "./routes/RoleGroupsRoute";
 import { StudentPortalLayout } from "./layouts/StudentPortalLayout/StudentPortalLayout";
 import { StudentPortalDashboard } from "./pages/StudentPortal/Dashboard/Dashboard";
 import { StudentPortalAttendance } from "./pages/StudentPortal/Attendance/Attendance";
@@ -16,7 +17,6 @@ import { Layout } from "./layouts/layout";
 import { Budget } from "./pages/Budget";
 import { Teachers } from "./pages/Teachers/Teachers";
 import { Leads } from "./pages/Leads/Leads";
-import { Groups } from "./pages/Groups/Groups";
 import { Students } from "./pages/Students/Students";
 import { StudentProfile } from "./pages/StudentProfile/StudentProfile";
 import { Reminders } from "./pages/Reminders";
@@ -24,7 +24,6 @@ import SignUp from "./pages/SignUp/SignUp";
 import LoginPage from "./pages/Login/Login";
 import Profile  from "./pages/Profile/Profile";
 import { Notifications } from "./pages/Notifications/Notifications";
-import { SingleGroup } from "./pages/SingleGroup";
 import { TeacherProfile } from "./pages/TeacherProfile";
 import { Rating } from "./pages/Rating";
 import { TeacherAttendanceReport } from "./pages/TeacherAddanceReport";
@@ -86,8 +85,8 @@ export const AppRouter = () => {
             <Route path="/leads" element={<Layout><Leads/></Layout>} />
             <Route path="/teachers" element={<Layout><Teachers/></Layout>} />
             <Route path="/teachers/:id" element={<Layout><TeacherProfile/></Layout>} />
-            <Route path="/groups" element={<Layout><Groups/></Layout>} />
-            <Route path="/groups/:id" element={<Layout><SingleGroup/></Layout>} />
+            <Route path="/groups" element={<Layout><GroupsRoute/></Layout>} />
+            <Route path="/groups/:id" element={<Layout><GroupDetailRoute/></Layout>} />
             <Route path="/students" element={<Layout><Students/></Layout>} />
             <Route path="/students/:id" element={<Layout><StudentProfile/></Layout>} />
             <Route path="/courses/:id" element={<Layout><SingleCourse/></Layout>} />

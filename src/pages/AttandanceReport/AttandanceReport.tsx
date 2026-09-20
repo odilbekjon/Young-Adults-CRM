@@ -3,10 +3,11 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   MenuItem, Select, FormControl, TextField, IconButton, CircularProgress,
 } from "@mui/material";
-import { FiCalendar, FiX, FiAlertCircle } from "react-icons/fi";
+import { FiX, FiAlertCircle } from "react-icons/fi";
 import { useAllGroupsQuery } from "../../app/api/groupsApi";
 import { useAllTeachersQuery } from "../../app/api/teachersApi";
 import { useAttendanceReportQuery } from "../../app/api/attendancesApi";
+import { DatePickerField } from "../SingleGroup/DatePickerField";
 import type {
   AttendanceReportGroupStatus,
   AttendanceReportAttendanceStatus,
@@ -176,16 +177,7 @@ export const AttendanceReport = () => {
 
       {/* Filter bar */}
       <div className="flex flex-wrap gap-2 items-center mb-5">
-        <div className="relative">
-          <FiCalendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 z-10" size={14} />
-          <TextField
-            type="date"
-            value={applied.date}
-            onChange={(e) => handleDateChange(e.target.value)}
-            size="small"
-            sx={{ ...inputSx, "& .MuiInputBase-root": { pl: "2rem", backgroundColor: "var(--color-surface)", minWidth: 150 } }}
-          />
-        </div>
+        <DatePickerField value={applied.date} onChange={handleDateChange} />
 
         <TextField placeholder="Name" value={draftName} onChange={(e) => setDraftName(e.target.value)} size="small" sx={{ ...inputSx, minWidth: 130 }} />
         <TextField placeholder="Phone" value={draftPhone} onChange={(e) => setDraftPhone(e.target.value)} size="small" sx={{ ...inputSx, minWidth: 120 }} />

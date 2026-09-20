@@ -13,6 +13,7 @@ import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useAllGroupsQuery } from "../../app/api/groupsApi";
 import { useTeacherSalariesQuery } from "../../app/api/salariesApi";
 import { useToast } from "../../Context/ToastContext";
+import { DatePickerField } from "../SingleGroup/DatePickerField";
 
 const BADGE_COLORS = [
   { bg: "#E6F1FB", color: "#185FA5", border: "#B5D4F4" },
@@ -141,7 +142,7 @@ const EditDrawer = ({
           </div>
           <div>
             <label style={labelStyle}>Date of birth</label>
-            <input type="date" style={{ ...inputStyle, color: dob ? "#1a1a1a" : "#aaa" }} value={dob} onChange={(e) => setDob(e.target.value)} />
+            <DatePickerField value={dob} onChange={setDob} />
           </div>
           <div>
             <label style={labelStyle}>Gender</label>
@@ -666,7 +667,9 @@ export const TeacherProfile = () => {
               )}
               <div style={{ marginLeft: 12, marginTop: 10, fontSize: 15, fontWeight: 500, color: "#1a1a1a" }}>{teacher.name}</div>
             </div>
+            <div style={{ fontSize: 13, marginBottom: 4 }}>ID: <span style={{ color: "#185FA5", fontWeight: 500 }}>{teacher.id}</span></div>
             {teacher.phone && <div style={{ fontSize: 13, marginBottom: 4 }}>Phone: <span style={{ color: "#185FA5", fontWeight: 500 }}>{teacher.phone}</span></div>}
+            <div style={{ fontSize: 13, marginBottom: 4 }}>Role: <span style={{ color: "#185FA5", fontWeight: 500 }}>Teacher</span></div>
             {teacher.email && <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{teacher.email}</div>}
             {teacher.specialization && <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{teacher.specialization}</div>}
             <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "12px 0" }} />

@@ -25,6 +25,11 @@ export interface LoginResponse {
   };
 }
 
+export interface MeUserBranchRef {
+  id: string;
+  name: string;
+}
+
 export interface MeUser {
   id: string;
   name: string | null;
@@ -32,9 +37,11 @@ export interface MeUser {
   phone: string | null;
   photo: string | null;
   role: string;
+  jobTitle: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;
+  branches: MeUserBranchRef[];
 }
 
 export interface MeResponse {

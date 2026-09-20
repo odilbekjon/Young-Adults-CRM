@@ -41,6 +41,11 @@ type AttendanceStudent = Student & { realId: string };
 interface Props {
   groupId: string;
   students: AttendanceStudent[];
+  // TEACHER-role sessions (SingleGroup passed via TeacherGroupDetail) can
+  // only mark today's lesson, never a past or future date — viewing other
+  // months to check history is still allowed, only the edit picker/remove
+  // button are gated per-cell.
+  restrictToToday?: boolean;
 }
 
 const MONTH_KEYS = [
@@ -72,7 +77,7 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 
 type AttVal = "Was" | "Not" | null;
 
-export const Attendance = ({ groupId, students }: Props) => {
+export const Attendance = ({ groupId, students, restrictToToday }: Props) => {
   const { t } = useTranslation();
   const toast = useToast();
   const now = new Date();
@@ -154,8 +159,11 @@ export const Attendance = ({ groupId, students }: Props) => {
     setYear(now.getFullYear());
   };
 
+  const todayIso = dateFor(today);
+
   const handleSet = (studentId: string, day: number, val: "Was" | "Not") => {
     const date = dateFor(day);
+    if (restrictToToday && (!isCurrentMonth || date !== todayIso)) return;
     setOverrides((prev) => ({
       ...prev,
       [studentId]: { ...(prev[studentId] || {}), [date]: val },
@@ -341,6 +349,7 @@ export const Attendance = ({ groupId, students }: Props) => {
                     (year === now.getFullYear() &&
                       month < now.getMonth()) ||
                     (isCurrentMonth && d < today);
+                  const isEditable = !restrictToToday || isToday;
 
                   return (
                     <TableCell
@@ -359,19 +368,19 @@ export const Attendance = ({ groupId, students }: Props) => {
                           height: 28,
                           mx: "auto",
                           "& .cell-value": { transition: "opacity 0.12s" },
-                          "&:hover .cell-value": { opacity: 0 },
+                          "&:hover .cell-value": { opacity: isEditable ? 0 : 1 },
                           "& .att-picker": {
                             opacity: 0,
                             pointerEvents: "none",
                             transition: "opacity 0.12s",
                           },
-                          "&:hover .att-picker": {
+                          "&:hover .att-picker": isEditable ? {
                             opacity: 1,
                             pointerEvents: "auto",
-                          },
+                          } : undefined,
                           "& .remove-btn": { display: "none" },
                           "&:hover .remove-btn": {
-                            display: val ? "flex" : "none",
+                            display: isEditable && val ? "flex" : "none",
                           },
                         }}
                       >

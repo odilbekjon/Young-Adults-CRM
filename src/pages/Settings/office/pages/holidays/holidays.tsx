@@ -14,7 +14,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { MdAdd, MdClose, MdCalendarToday, MdEdit, MdDelete } from "react-icons/md";
+import { MdAdd, MdClose, MdEdit, MdDelete } from "react-icons/md";
 import {
   useAllHolidaysQuery,
   useLazyHolidayForEditQuery,
@@ -24,6 +24,7 @@ import {
 } from "../../../../../app/api/holidaysApi";
 import type { Holiday } from "../../../../../app/api/holidaysApi/types";
 import { useToast } from "../../../../../Context/ToastContext";
+import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
 import { extractApiError } from "../../../../../utils";
 
 // Swagger's write contract is YYYY-MM-DD, but reads can come back as a full
@@ -348,28 +349,11 @@ export const Holidays = () => {
             >
               {t("settings.office.holidays.form.date")}
             </Typography>
-            <TextField
-              fullWidth
-              size="small"
-              type="date"
+            <DatePickerField
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={setDate}
               disabled={isLoadingForEdit}
-              InputProps={{
-                startAdornment: (
-                  <MdCalendarToday size={16} className="mr-2 text-gray-400" />
-                ),
-              }}
-              inputProps={{ placeholder: t("settings.office.holidays.form.noDateSelected") }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "6px",
-                  color: date ? "#1f2937" : "#9ca3af",
-                  "& fieldset": { borderColor: "#d1d5db" },
-                  "&:hover fieldset": { borderColor: "#9ca3af" },
-                  "&.Mui-focused fieldset": { borderColor: "#29b6f6" },
-                },
-              }}
+              placeholder={t("settings.office.holidays.form.noDateSelected")}
             />
           </div>
 

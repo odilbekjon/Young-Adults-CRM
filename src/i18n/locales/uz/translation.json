@@ -304,16 +304,16 @@
     "actions": {
       "editStudent": "O'quvchini tahrirlash",
       "addPayment": "To'lov qo'shish",
-      "archive": "Arxivlash",
+      "archive": "O'chirish",
       "remove": "Butunlay o'chirish",
       "exportExcel": "Excelga eksport",
       "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring."
     },
     "archiveDialog": {
-      "title": "O'quvchini arxivlash",
+      "title": "O'quvchini o'chirish",
       "message": "Ushbu o'quvchini arxivga o'tkazishni xohlaysizmi? U ma'lumotlar bazasida saqlanib qoladi, faqat holati \"Faol emas\" (INACTIVE) bo'ladi — istalgan payt qayta faollashtirish mumkin.",
       "cancel": "Bekor qilish",
-      "confirm": "Arxivlash",
+      "confirm": "O'chirish",
       "error": "O'quvchini arxivlashda xatolik yuz berdi"
     },
     "addToGroup": {
@@ -432,7 +432,7 @@
     },
     "deleteDialog": {
       "title": "O'qituvchini o'chirish",
-      "message": "Ushbu o'qituvchini o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
+      "message": "Ushbu o'qituvchini o'chirishni xohlaysizmi? U arxivga ko'chiriladi va \"Faol emas\" holatiga o'tkaziladi — istalgan vaqtda Arxiv sahifasidan qayta tiklashingiz mumkin.",
       "cancel": "Bekor qilish",
       "confirm": "O'chirish"
     },
@@ -584,20 +584,32 @@
       "tags": "Teglar",
       "startDate": "Boshlanish sanasi",
       "endDate": "Tugash sanasi",
-      "clearAll": "Barchasini tozalash",
+      "clearAll": "Tozalash",
       "filtersButton": "Filtrlar",
-      "columns": "Ustunlar"
+      "hideFilters": "Filtrlarni yashirish",
+      "apply": "Qo'llash",
+      "columns": "Ustunlar",
+      "panel": {
+        "groupStatus": "Guruh holati",
+        "teachers": "O'qituvchilar",
+        "courses": "Kurslar",
+        "days": "Kunlar",
+        "tags": "Teglar",
+        "date": "Sana"
+      }
     },
     "options": {
       "status": {
-        "active": "🟢 Faol",
-        "archive": "🔴 Arxiv",
-        "completed": "🔵 Tugallangan"
+        "active": "Faol guruhlar",
+        "archive": "Arxivlangan guruhlar",
+        "completed": "Tugallangan guruh"
       },
       "days": {
         "odd": "Toq kunlar",
         "even": "Juft kunlar",
-        "every": "Har kuni"
+        "weekend": "Dam olish kunlari",
+        "every": "Har kuni",
+        "other": "Boshqa"
       },
       "tags": {
         "new": "Yangi",
@@ -640,6 +652,7 @@
       "days": "Kunlar",
       "room": "Xonani tanlang",
       "lessonStartTime": "Dars boshlanish vaqti",
+      "noTimeSelected": "Vaqt tanlanmagan",
       "startDate": "Guruh boshlanish sanasi",
       "endDate": "Guruh tugash sanasi",
       "weekOfStudy": "O'qish haftasi",
@@ -673,10 +686,10 @@
     },
     "deleteDialog": {
       "title": "Guruhni o'chirish",
-      "body": "Ushbu guruhni o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi. Agar guruhda talabalar, o'qituvchilar yoki davomat mavjud bo'lsa, o'chirish rad etiladi — bunday holda uni butunlay o'chirish o'rniga arxivlashingiz mumkin.",
+      "body": "Ushbu guruhni o'chirishni xohlaysizmi? U arxivga ko'chiriladi va \"Faol emas\" holatiga o'tkaziladi — istalgan vaqtda Arxiv sahifasidan qayta tiklashingiz mumkin.",
       "cancel": "Bekor qilish",
       "confirm": "O'chirish",
-      "error": "Guruhni o'chirib bo'lmadi. Agar guruhda talabalar/o'qituvchilar yoki davomat mavjud bo'lsa, o'chirish rad etiladi. Buning o'rniga guruhni arxivlashingiz mumkin."
+      "error": "Guruhni o'chirishda xatolik yuz berdi. Qaytadan urinib ko'ring."
     }
   },
   "finance": {
@@ -1221,7 +1234,13 @@
         "statusToggled": "Guruh holati o'zgartirildi",
         "statusToggleError": "Guruh holatini o'zgartirib bo'lmadi. Qaytadan urinib ko'ring."
       },
-      "rooms": "Xonalar",
+      "deleteDialog": {
+        "title": "Guruhni o'chirish",
+        "message": "Ushbu guruhni o'chirishni xohlaysizmi? U arxivga ko'chiriladi va \"Faol emas\" holatiga o'tkaziladi — istalgan vaqtda Arxiv sahifasidan qayta tiklashingiz mumkin.",
+        "cancel": "Bekor qilish",
+        "confirm": "O'chirish"
+      },
+      "rooms": "Xona",
       "roomCapacity": "Xona sig'imi",
       "trainingDates": "Dars sanalari",
       "trainingStart": "Boshlanishi",
@@ -1231,6 +1250,8 @@
       "branches": "Filiallar",
       "sortAZ": "A-Z bo'yicha",
       "sortZA": "Z-A bo'yicha",
+      "sortNewest": "Yangi qo'shilganlar",
+      "sortOldest": "Eski qo'shilganlar",
       "archivedChip": "Arxivda",
       "showArchivedStudents": "Arxivdagi o'quvchilarni ko'rsatish",
       "hideArchivedStudents": "Arxivdagi o'quvchilarni yashirish",
@@ -1362,10 +1383,18 @@
       }
     },
     "datePickerField": {
-      "noDateSelected": "Sana tanlanmagan"
+      "noDateSelected": "Sana tanlanmagan",
+      "shortcuts": {
+        "yesterday": "Kecha",
+        "today": "Bugun",
+        "tomorrow": "Ertaga",
+        "startOfMonth": "Oy boshi",
+        "startOfNextMonth": "Keyingi oy boshi"
+      }
     },
     "activateModal": {
-      "title": "Faollashtirish sanasini tanlang",
+      "title": "O'quvchini faollashtirish",
+      "description": "Ushbu o'quvchini muzlatishdan chiqarib, guruhdagi qatnashuvini davom ettirilsinmi?",
       "submit": "Yuborish",
       "saving": "Faollashtirilmoqda...",
       "toast": {
@@ -1461,6 +1490,8 @@
         "everyDay": "Har kuni"
       },
       "priceUzs": "Narx (UZS)",
+      "tags": "Teglar",
+      "addNewTags": "Yangi teg qo'shish",
       "lessonStartTime": "Dars boshlanish vaqti",
       "groupStartDate": "Guruh boshlanish sanasi",
       "groupEndDate": "Guruh tugash sanasi",
@@ -1570,6 +1601,8 @@
       "phone": "Telefon",
       "addedAt": "Qo'shilgan",
       "activatedAt": "Faollashtirilgan",
+      "joinedAt": "Guruhga qo'shilgan sana",
+      "note": "Izoh",
       "allCoins": "Barcha tangalar",
       "goToProfile": "Profilga o'tish →"
     }
@@ -1831,16 +1864,17 @@
         "form": {
           "title": "Yangi xodim qo'shish", "name": "Ism", "phone": "Telefon", "email": "Email", "emailPlaceholder": "email@example.com",
           "password": "Parol", "passwordPlaceholder": "Parolni kiriting", "setPasswordToggle": "+ Parol o'rnatish", "hidePasswordToggle": "− Parolni yashirish",
-          "role": "Rol", "roleHelp": "Ixtiyoriy (masalan ADMIN, SUPERADMIN) — Swagger qat'iy qiymatlar ro'yxatini hujjatlashtirmagan.",
-          "rolePermissionId": "Lavozim (RolePermission ID)",
-          "rolePermissionIdHelp": "Majburiy — Lavozimlar modulidagi yozuvning IDsi. Buning ro'yxatini olish uchun endpoint hali mavjud emas, shu sabab qo'lda kiritiladi.",
+          "role": "Tizim roli", "roleHelp": "Majburiy — bu hisobning kirish darajasini belgilaydi.",
+          "rolePermissionId": "Lavozim",
+          "rolePermissionIdHelp": "Majburiy — Lavozimlar modulidagi lavozimlardan birini tanlang.",
+          "roleOptions": { "SUPERADMIN": "Super admin", "ADMIN": "Admin" },
           "branches": "Filiallar", "jobTitle": "Lavozim", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi", "male": "Erkak", "female": "Ayol",
           "photo": "Rasm", "noFileChosen": "Fayl tanlanmagan", "browse": "Tanlash", "submit": "Yuborish"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Filial direktori", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Cheklangan administrator", "teacher": "O'qituvchi", "marketer": "Marketolog", "cashier": "Kassir" },
         "gender": { "male": "Erkak", "female": "Ayol" },
-        "validation": { "nameRequired": "Ism kiritilishi shart", "rolePermissionIdRequired": "Lavozim (RolePermission ID) kiritilishi shart", "contactRequired": "Email yoki telefon raqamini kiriting" },
-        "deleteDialog": { "title": "Xodimni o'chirish", "message": "Rostdan ham bu xodimni o'chirmoqchimisiz? Bu amalni qaytarib bo'lmaydi.", "cancel": "Bekor qilish", "confirm": "O'chirish" },
+        "validation": { "nameRequired": "Ism kiritilishi shart", "rolePermissionIdRequired": "Lavozim tanlanishi shart", "roleRequired": "Tizim roli tanlanishi shart", "contactRequired": "Email yoki telefon raqamini kiriting" },
+        "deleteDialog": { "title": "Xodimni o'chirish", "message": "Rostdan ham bu xodimni o'chirmoqchimisiz? U arxivga ko'chiriladi va \"Faol emas\" holatiga o'tkaziladi — istalgan vaqtda Arxiv sahifasidan qayta tiklashingiz mumkin.", "cancel": "Bekor qilish", "confirm": "O'chirish" },
         "toast": { "created": "Xodim qo'shildi", "updated": "Xodim ma'lumotlari yangilandi", "deleted": "Xodim o'chirildi", "statusToggled": "Status yangilandi", "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring.", "deleteConflict": "Bu xodim hali filialga biriktirilgan, shuning uchun o'chirib bo'lmaydi." },
         "pagination": { "prev": "Orqaga", "next": "Oldinga" }
       },
@@ -2107,6 +2141,7 @@
           "name": "Nomi",
           "codeCourse": "Kurs kodi",
           "lessonDuration": "Dars davomiyligi",
+          "lessonsPerMonth": "Oyiga darslar soni",
           "courseDuration": "Kurs davomiyligi (oy)",
           "branch": "Filial",
           "branchPlaceholder": "Filialni tanlang",
@@ -2300,6 +2335,17 @@
         "actions": { "save": "Saqlash" }
       }
     }
+  },
+  "teacherGroups": {
+    "title": "Mening guruhlarim",
+    "loadError": "Guruhlaringizni yuklab bo'lmadi.",
+    "empty": "Sizda hali guruhlar yo'q.",
+    "students": "o'quvchi",
+    "notFound": "Guruh topilmadi yoki sizga biriktirilmagan.",
+    "backToGroups": "Guruhlarimga qaytish",
+    "attendanceOnlyNote": "Bu guruhda faqat bugungi dars uchun davomat belgilay olasiz.",
+    "roster": "O'quvchilar",
+    "schedule": "Dars jadvali"
   },
   "studentPortal": {
     "appTitle": "O'quvchi portali",

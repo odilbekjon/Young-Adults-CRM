@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { BsCashStack } from "react-icons/bs";
-import { FiCalendar, FiMail, FiAlertCircle, FiDownload, FiFileText } from "react-icons/fi";
+import { FiMail, FiAlertCircle, FiDownload, FiFileText } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 import { CircularProgress, IconButton, Tooltip } from "@mui/material";
 
@@ -11,6 +11,7 @@ import { SendSmsModal } from "../../../../components/SendSmsModal";
 import { DebtorReceiptModal } from "../../../../components/DebtorReceiptModal";
 import { useDebtorsQuery, useDebtorsTotalQuery, useLazyDebtorsExcelQuery } from "../../../../app/api/financeApi";
 import { useToast } from "../../../../Context/ToastContext";
+import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import type { RootState } from "../../../../app/store";
 
 const PAGE_SIZE_OPTIONS = [20, 25, 50];
@@ -149,27 +150,11 @@ export const Debtors = () => {
           </div>
           <div>
             <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t("finance.debtors.filters.dateFrom")}</label>
-            <div className="relative">
-              <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={13} />
-              <input
-                type="date"
-                className={inputCls + " pl-7 w-44"}
-                value={draftStartDate}
-                onChange={(e) => setDraftStartDate(e.target.value)}
-              />
-            </div>
+            <DatePickerField value={draftStartDate} onChange={setDraftStartDate} />
           </div>
           <div>
             <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t("finance.debtors.filters.dateTo")}</label>
-            <div className="relative">
-              <FiCalendar className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={13} />
-              <input
-                type="date"
-                className={inputCls + " pl-7 w-44"}
-                value={draftEndDate}
-                onChange={(e) => setDraftEndDate(e.target.value)}
-              />
-            </div>
+            <DatePickerField value={draftEndDate} onChange={setDraftEndDate} />
           </div>
           <button
             onClick={applyFilters}

@@ -9,6 +9,8 @@ import {
     CreateSmsTemplateRequest,
     UpdateSmsTemplateRequest,
     DeleteSmsTemplateResponse,
+    SendSmsToStudentsRequest,
+    SendSmsToStudentsResponse,
 } from "./types";
 
 // SMS endpoints' response envelope isn't shown in Swagger beyond the status
@@ -99,6 +101,19 @@ export const smsApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ["smsTemplate"],
         }),
+        // POST /sms/send/students — used by both the per-student "Send SMS"
+        // drawer (StudentProfile) and the per-group one (SmsDrawer,
+        // SingleGroup), neither of which called any backend before this (the
+        // group one just cleared its textarea and closed; the student one
+        // only console.logged the message).
+        sendSmsToStudents: builder.mutation<SendSmsToStudentsResponse, SendSmsToStudentsRequest>({
+            query: (data) => ({
+                url: PATHS.SEND_STUDENTS,
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["student"],
+        }),
     })
 })
 
@@ -110,4 +125,5 @@ export const {
     useCreateSmsTemplateMutation,
     useUpdateSmsTemplateMutation,
     useDeleteSmsTemplateMutation,
+    useSendSmsToStudentsMutation,
 } = smsApi;

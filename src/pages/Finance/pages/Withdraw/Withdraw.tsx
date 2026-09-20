@@ -17,6 +17,7 @@ import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, B
 import { useFinanceChartQuery, useWithdrawalsQuery, useWithdrawalsTotalQuery, useLazyWithdrawalsExcelQuery, useDeleteWithdrawalMutation } from "../../../../app/api/financeApi";
 import { AddWithdrawal } from "../../../../components/AddWithdrawal";
 import { useToast } from "../../../../Context/ToastContext";
+import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import type { RootState } from "../../../../app/store";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -221,11 +222,11 @@ export const Withdraw = () => {
         <div className="grid grid-cols-4 gap-3 items-end">
           <div>
             <Label text={t("finance.withdraw.filters.dateFrom")} />
-            <Input type="date" value={draftStartDate} onChange={setDraftStartDate} />
+            <DatePickerField value={draftStartDate} onChange={setDraftStartDate} />
           </div>
           <div>
             <Label text={t("finance.withdraw.filters.dateTo")} />
-            <Input type="date" value={draftEndDate} onChange={setDraftEndDate} />
+            <DatePickerField value={draftEndDate} onChange={setDraftEndDate} />
           </div>
           <div>
             <Label text={t("finance.withdraw.filters.namePhone")} />

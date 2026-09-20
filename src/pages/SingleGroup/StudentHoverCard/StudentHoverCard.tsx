@@ -167,9 +167,19 @@ export const StudentHoverCard = ({
       <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
 
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.activatedAt")}</div>
-        <div style={{ fontSize: 13, color: "#1a1a1a" }}>{student.activatedAt || "—"}</div>
+        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.joinedAt")}</div>
+        <div style={{ fontSize: 13, color: "#1a1a1a" }}>{student.joinedAt || "—"}</div>
       </div>
+
+      {student.note && (
+        <>
+          <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.note")}</div>
+            <div style={{ fontSize: 13, color: "#1a1a1a", whiteSpace: "pre-wrap" }}>{student.note}</div>
+          </div>
+        </>
+      )}
 
       <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
 

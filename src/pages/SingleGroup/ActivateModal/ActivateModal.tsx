@@ -1,34 +1,20 @@
 // src/pages/groups/ActivateModal.tsx
-import { useEffect, useState } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton, Button } from "@mui/material";
 import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
-import { DatePickerField } from "../DatePickerField";
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
-
+// POST /student-groups/{id}/unfreeze takes no request body (Swagger) — this
+// is a plain confirm, not a date picker. `onConfirm` no longer takes a
+// date; SingleGroup.tsx stamps "Activated at" with today's date locally.
 export const ActivateModal = ({
   open, onClose, onConfirm, isSaving,
 }: {
   open: boolean;
   onClose: () => void;
-  onConfirm: (activateDate: string) => void;
+  onConfirm: () => void;
   isSaving?: boolean;
 }) => {
   const { t } = useTranslation();
-  const [activateDate, setActivateDate] = useState(todayISO());
-
-  // The unfreeze endpoint itself takes no date — this is only kept locally
-  // to display "Activated at" in the UI, so it's pre-filled with today
-  // rather than blocking the confirm action on a pick.
-  useEffect(() => {
-    if (open) setActivateDate(todayISO());
-  }, [open]);
-
-  const handleSubmit = () => {
-    if (!activateDate) return;
-    onConfirm(activateDate);
-  };
 
   return (
     <Dialog
@@ -46,25 +32,27 @@ export const ActivateModal = ({
       </DialogTitle>
 
       <DialogContent sx={{ px: 2.5, pt: 1, pb: 2 }}>
-        <DatePickerField value={activateDate} onChange={setActivateDate} />
+        <Typography fontSize={13} color="#6b7280">
+          {t("singleGroup.activateModal.description")}
+        </Typography>
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: "center", pb: 3, px: 2.5 }}>
         <Button
           variant="contained"
-          onClick={handleSubmit}
-          disabled={!activateDate || isSaving}
+          onClick={onConfirm}
+          disabled={isSaving}
           sx={{
             borderRadius: 999,
             textTransform: "none",
-            bgcolor: activateDate ? "#7a8fa6" : "#c5cdd8",
+            bgcolor: "#7a8fa6",
             fontSize: 14,
             fontWeight: 600,
             px: 5,
             py: 1.2,
             minWidth: 140,
             boxShadow: "none",
-            "&:hover": { bgcolor: activateDate ? "#6b7f96" : "#c5cdd8", boxShadow: "none" },
+            "&:hover": { bgcolor: "#6b7f96", boxShadow: "none" },
           }}
         >
           {isSaving ? t("singleGroup.activateModal.saving") : t("singleGroup.activateModal.submit")}

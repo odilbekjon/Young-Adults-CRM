@@ -49,7 +49,7 @@ export const FreezeModal = ({ open, onClose, isSaving, onConfirm }: FreezeModalP
     <div
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, zIndex: 1300,
+        position: "fixed", inset: 0, zIndex: 1400,
         background: "rgba(0,0,0,0.35)",
         display: "flex", alignItems: "flex-start", justifyContent: "center",
         paddingTop: "8vh", overflowY: "auto",

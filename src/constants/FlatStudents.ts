@@ -109,7 +109,12 @@ export const mapApiStudentToFlat = (s: Student | StudentDetail): FlatStudent => 
 
 export const formatDate = (d: string): string => {
   if (!d) return "—";
-  const [y, m, day] = d.split("-");
+  // Backend timestamps are sometimes date-only ("2026-06-12") and sometimes
+  // full ISO datetimes ("2026-06-12T05:00:00.000Z") — take only the date
+  // part before splitting, otherwise the time/zone suffix leaks into the
+  // "day" segment (e.g. "12T05:00:00.000Z.06.2026").
+  const [y, m, day] = d.slice(0, 10).split("-");
+  if (!y || !m || !day) return "—";
   return `${day}.${m}.${y}`;
 };
 

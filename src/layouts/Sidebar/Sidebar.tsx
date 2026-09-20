@@ -18,6 +18,7 @@ import { FaRegCalendarAlt } from "react-icons/fa";
 import { AiOutlineDollar, AiOutlinePieChart } from "react-icons/ai";
 import { HiBuildingLibrary } from "react-icons/hi2";
 import { useSidebar } from "../../Context/SidebarContext";
+import { useAuth } from "../../hooks/useAuth";
 
 export const SIDEBAR_WIDTH = 140;
 export const SUBMENU_WIDTH = 200;
@@ -533,11 +534,19 @@ const MobileNavItem = ({ item }: { item: (typeof NAV_ITEMS)[number] }) => {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
+// TEACHER only gets their own groups (for attendance) + the dashboard —
+// everything else in NAV_ITEMS (Leads, Teachers, Students, Finance,
+// Settings, Reports...) is admin/CEO territory, matching ProtectedRoute's
+// own TEACHER_ALLOWED_PREFIXES allowlist.
+const TEACHER_NAV_PATHS = ["/dashboard", "/groups"];
+
 export const Sidebar = () => {
   const { pathname } = useLocation();
   const { openSubmenu, toggleSubmenu, setOpenSubmenu, mobileOpen, setMobileOpen } = useSidebar();
+  const { isTeacher } = useAuth();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+  const navItems = isTeacher ? NAV_ITEMS.filter((i) => TEACHER_NAV_PATHS.includes(i.path)) : NAV_ITEMS;
 
   const handleNavClick = (path: string) => {
     if (SUBMENUS[path]) {
@@ -571,7 +580,7 @@ export const Sidebar = () => {
         }}
       >
         <Box sx={{ pt: 1, pb: 4 }}>
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const hasSubmenu = !!SUBMENUS[item.path];
             const submenuOpen = openSubmenu === item.path;
             const isActive = hasSubmenu
@@ -612,7 +621,7 @@ export const Sidebar = () => {
         }}
       >
         <Box sx={{ pt: 1, pb: 4, overflowY: "auto" }}>
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <MobileNavItem key={item.path} item={item} />
           ))}
         </Box>

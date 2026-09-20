@@ -9,14 +9,6 @@ export type GroupStudent = Student & {
   frozenAt?: string;
 };
 
-export type RemoveReason =
-  | ""
-  | "No attendance"
-  | "Discipline problem"
-  | "Moved to another center"
-  | "Parent request"
-  | "Other";
-
 export interface StudentCardData {
   id: number;
   uid: string;
@@ -27,4 +19,8 @@ export interface StudentCardData {
   addedAt?: string;
   activatedAt?: string;
   frozenAt?: string;
+  /** Date this student joined THIS group (their /student-groups membership joinedAt), distinct from addedAt (account creation) */
+  joinedAt?: string;
+  /** Student.comment from GET /students/{id} — read-only, there is no backend endpoint to write it from this app */
+  note?: string;
 }

@@ -41,7 +41,6 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { HiEye, HiEyeOff } from "react-icons/hi";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SendSmsModal } from "../../../../../components/SendSmsModal";
 import { useToast } from "../../../../../Context/ToastContext";
@@ -53,16 +52,10 @@ import {
   useCreateStaffUserMutation,
   useUpdateStaffUserMutation,
   useToggleStaffUserStatusMutation,
+  useLazyStaffUserForEditQuery,
 } from "../../../../../app/api/usersApi";
 import type { UserStatus } from "../../../../../app/api/usersApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi";
-// GET /users only returns ADMIN/SUPERADMIN accounts (its own Swagger
-// description: "STUDENT va TEACHER bu ro'yxatga kirmaydi" — students and
-// teachers are excluded) — Teacher records are merged in from the real,
-// already-working Teachers API so this page can show every staff member
-// (CEO/admins/managers + teachers), not just the users-table subset.
-import { useAllTeachersQuery, useToggleTeacherStatusMutation } from "../../../../../app/api/teachersApi";
-import type { Teacher } from "../../../../../app/api/teachersApi/types";
 import {
   useRolePermissionsSelectQuery,
   useAssignRolePermissionToUserMutation,
@@ -85,6 +78,10 @@ interface StaffForm {
   email: string;
   phone: string;
   password: string;
+  // Not yet a real backend field on POST/PATCH /users (confirmed live,
+  // 2026-09 — silently dropped, doesn't 400). Sent anyway: harmless today,
+  // starts working the moment the backend adds it.
+  jobTitle: string;
   role: string;
   // A user can hold more than one lavozim (AUTH_ROLE_DOCS.md's
   // UserRolePermission is many-to-many) — POST/PATCH /users itself only
@@ -102,6 +99,7 @@ const EMPTY_FORM: StaffForm = {
   email: "",
   phone: "",
   password: "",
+  jobTitle: "",
   role: "",
   rolePermissionIds: [],
   branchIds: [],
@@ -125,9 +123,12 @@ const PAGE_SIZE = 10;
 
 interface UnifiedStaffRow {
   id: string;
-  kind: "user" | "teacher";
   name: string;
-  role: string;
+  // Every tag shown in the Role column: the system role plus any assigned
+  // lavozim name(s) — e.g. ["ADMIN", "Bosh Admin (To'liq Ruxsatlar)"].
+  // Mirrors AUTH_ROLE_DOCS.md's `roles` flattening on /auth/me, built here
+  // from the same two fields (role + rolePermission) GET /users returns.
+  roleTags: string[];
   jobTitle: string;
   phone: string | null;
   email: string | null;
@@ -136,7 +137,6 @@ interface UnifiedStaffRow {
 
 export const Staff = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const toast = useToast();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
@@ -152,25 +152,22 @@ export const Staff = () => {
 
   useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, selectedBranchId]);
 
-  // Both APIs accept the same search/status/branchId filters — fetched with
-  // a large limit (same convention Students/Teachers pages already use for
-  // "fetch effectively all") since the two sources are merged and paginated
-  // together client-side below, which server-side pagination on either one
-  // alone couldn't do.
-  const sourceQueryArgs = useMemo(
+  // GET /users only ever returns ADMIN/SUPERADMIN accounts — teachers have
+  // their own dedicated page (/teachers) and are deliberately NOT merged in
+  // here anymore (they used to be; product direction is that Employees
+  // shows staff accounts only).
+  const usersQueryArgs = useMemo(
     () => ({
       search: debouncedSearch || undefined,
       status: statusFilter || undefined,
-      limit: 200,
+      limit: PAGE_SIZE,
+      page,
       branchId: selectedBranchId ?? undefined,
     }),
-    [debouncedSearch, statusFilter, selectedBranchId]
+    [debouncedSearch, statusFilter, selectedBranchId, page]
   );
 
-  const { data: usersData, isLoading: usersLoading, isError: usersError } = useStaffUsersQuery(sourceQueryArgs);
-  // GET /users excludes teachers by design (see import comment above) — this
-  // fills that gap so CEO/admins/managers AND teachers all show up here.
-  const { data: teachersData, isLoading: teachersLoading, isError: teachersError } = useAllTeachersQuery(sourceQueryArgs);
+  const { data: usersData, isLoading: usersLoading, isError: usersError } = useStaffUsersQuery(usersQueryArgs);
   const { data: branchesData } = useAllBranchesQuery();
   const { data: rolePermissionOptions } = useRolePermissionsSelectQuery();
   const [createStaffUser, { isLoading: isCreating }] = useCreateStaffUserMutation();
@@ -179,37 +176,31 @@ export const Staff = () => {
   const [removeRolePermission] = useRemoveRolePermissionFromUserMutation();
   const [isSavingRoles, setIsSavingRoles] = useState(false);
   const [toggleStaffUserStatus] = useToggleStaffUserStatusMutation();
-  const [toggleTeacherStatus] = useToggleTeacherStatusMutation();
+  const [fetchStaffUserForEdit, { isFetching: isLoadingForEdit }] = useLazyStaffUserForEditQuery();
 
-  const staffLoading = usersLoading || teachersLoading;
-  const staffError = usersError || teachersError;
+  const staffLoading = usersLoading;
+  const staffError = usersError;
 
-  const unifiedRows: UnifiedStaffRow[] = useMemo(() => {
-    const fromUsers: UnifiedStaffRow[] = (usersData?.rows ?? []).map((u) => ({
-      id: u.id,
-      kind: "user",
-      name: u.name,
-      role: u.role || "—",
-      jobTitle: u.rolePermission?.name ?? "—",
-      phone: u.phone,
-      email: u.email,
-      status: u.status,
-    }));
-    const fromTeachers: UnifiedStaffRow[] = (teachersData?.data ?? []).map((tch: Teacher) => ({
-      id: tch.id,
-      kind: "teacher",
-      name: tch.name,
-      role: "Teacher",
-      jobTitle: tch.specialization ?? "—",
-      phone: tch.phone,
-      email: tch.email,
-      status: tch.status,
-    }));
-    return [...fromUsers, ...fromTeachers];
-  }, [usersData, teachersData]);
+  // Job title has no real backend field yet (confirmed live — see
+  // CreateUserRequest.jobTitle's comment), so GET /users never returns one;
+  // shown as "—" rather than inventing a value until the backend adds it.
+  const unifiedRows: UnifiedStaffRow[] = useMemo(
+    () =>
+      (usersData?.rows ?? []).map((u) => ({
+        id: u.id,
+        name: u.name,
+        roleTags: [u.role, u.rolePermission?.name].filter((v): v is string => Boolean(v)),
+        jobTitle: "—",
+        phone: u.phone,
+        email: u.email,
+        status: u.status,
+      })),
+    [usersData]
+  );
 
-  const totalPages = Math.max(1, Math.ceil(unifiedRows.length / PAGE_SIZE));
-  const rows = unifiedRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, usersData?.meta.totalPages ?? 1);
+  const totalCount = usersData?.meta.total ?? unifiedRows.length;
+  const rows = unifiedRows;
   // GET /branches includes soft-deleted/deactivated branches — filtered to
   // ACTIVE only, same convention as Header's own branch dropdown, so a
   // staff member can't be assigned to a branch that no longer exists.
@@ -220,7 +211,7 @@ export const Staff = () => {
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedMember, setSelectedMember] = useState<{ id: string; kind: "user" | "teacher" } | null>(null);
+  const [selectedMember, setSelectedMember] = useState<{ id: string } | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [form, setForm] = useState<StaffForm>(EMPTY_FORM);
   // The only lavozim GET /users actually tells us this member already has
@@ -237,10 +228,10 @@ export const Staff = () => {
 
   const openMenu = Boolean(anchorEl);
 
-  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, id: string, kind: "user" | "teacher") => {
+  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, id: string) => {
     e.stopPropagation();
     setAnchorEl(e.currentTarget);
-    setSelectedMember({ id, kind });
+    setSelectedMember({ id });
   };
   const handleCloseMenu = () => setAnchorEl(null);
 
@@ -256,35 +247,40 @@ export const Staff = () => {
     setOpen(true);
   };
 
-  // Editing is only meaningful for real `users`-table rows here — a merged
-  // Teacher row's "Edit" menu item (below) opens its own real edit surface
-  // on the Teachers page instead, since this drawer only knows how to submit
-  // to POST/PATCH /users.
-  const openEditDrawer = () => {
-    if (selectedMember?.kind !== "user") { handleCloseMenu(); return; }
-    const member = (usersData?.rows ?? []).find((s) => s.id === selectedMember.id);
-    if (member) {
+  // GET /users/{id}/for-edit is the only endpoint that actually returns
+  // branchIds/gender/birthdate (confirmed live, 2026-09) — the already-
+  // cached list row (StaffUser) doesn't carry those, so prefilling from it
+  // used to silently blank them out on every edit.
+  const openEditDrawer = async () => {
+    const memberId = selectedMember?.id;
+    handleCloseMenu();
+    if (!memberId) return;
+    setFormError(null);
+    try {
+      const member = await fetchStaffUserForEdit(memberId).unwrap();
       setIsEdit(true);
+      setSelectedMember({ id: memberId });
       setForm({
         name: member.name,
         email: member.email ?? "",
         phone: member.phone ?? "",
         password: "",
-        role: member.role ?? "",
-        rolePermissionIds: member.rolePermission?.id ? [member.rolePermission.id] : [],
-        branchIds: [],
-        dateOfBirth: "",
-        gender: "",
+        jobTitle: "",
+        role: usersData?.rows.find((u) => u.id === memberId)?.role ?? "",
+        rolePermissionIds: member.rolePermissionId ? [member.rolePermissionId] : [],
+        branchIds: member.branchIds,
+        dateOfBirth: member.birthdate ?? "",
+        gender: member.gender ?? "",
         photo: null,
       });
-      setEditOriginalRolePermissionId(member.rolePermission?.id ?? null);
+      setEditOriginalRolePermissionId(member.rolePermissionId);
       setPhotoPreview(null);
       setShowPassword(false);
       setErrors({});
-      setFormError(null);
       setOpen(true);
+    } catch (err) {
+      toast.error(extractApiError(err) || t("settings.ceo.staff.toast.error"));
     }
-    handleCloseMenu();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -334,6 +330,7 @@ export const Staff = () => {
       email: form.email.trim() || undefined,
       phone: form.phone.trim() || undefined,
       password: form.password || undefined,
+      jobTitle: form.jobTitle.trim() || undefined,
       role: form.role.trim() || undefined,
       rolePermissionId: primaryRolePermissionId,
       branchIds: form.branchIds.length ? form.branchIds : undefined,
@@ -399,11 +396,10 @@ export const Staff = () => {
   const handleSmsOpen = () => { setSmsOpen(true); handleCloseMenu(); };
 
   // The only "remove" action on this list: PATCH .../{id}/toggle-status
-  // flips ACTIVE <-> INACTIVE without deleting the record, for both users
-  // and merged-in teacher rows. A real DELETE isn't exposed from here — for
-  // users, Swagger documents it as a hard delete rejected with 409 while
-  // still assigned to a branch; permanent removal belongs on the Archive
-  // page (staff) / Teachers page's own archive flow (teacher rows).
+  // flips ACTIVE <-> INACTIVE without deleting the record. A real DELETE
+  // isn't exposed from here — Swagger documents it as a hard delete
+  // rejected with 409 while still assigned to a branch; permanent removal
+  // belongs on the Archive page.
   const handleDeleteClick = () => {
     setDeleteConfirmOpen(true);
     handleCloseMenu();
@@ -412,22 +408,13 @@ export const Staff = () => {
     setDeleteConfirmOpen(false);
     if (!selectedMember) return;
     try {
-      if (selectedMember.kind === "user") {
-        await toggleStaffUserStatus(selectedMember.id).unwrap();
-      } else {
-        await toggleTeacherStatus(selectedMember.id).unwrap();
-      }
+      await toggleStaffUserStatus(selectedMember.id).unwrap();
       toast.success(t("settings.ceo.staff.toast.statusToggled"));
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("settings.ceo.staff.toast.error");
       toast.error(detail ? `${generic}: ${detail}` : generic);
     }
-  };
-
-  const handleOpenTeacherProfile = () => {
-    if (selectedMember?.kind === "teacher") navigate(`/teachers/${selectedMember.id}`);
-    handleCloseMenu();
   };
 
   return (
@@ -439,7 +426,7 @@ export const Staff = () => {
             {t("settings.ceo.staff.title")}
           </Typography>
           <Typography fontSize={14} color="var(--color-text-muted)">
-            {unifiedRows.length} {t("settings.ceo.staff.countSuffix")}
+            {totalCount} {t("settings.ceo.staff.countSuffix")}
           </Typography>
         </Stack>
         <Stack direction="row" spacing={1.5}>
@@ -527,7 +514,13 @@ export const Staff = () => {
                     </Stack>
                   </TableCell>
                   <TableCell sx={{ verticalAlign: "top", pt: 2 }}>
-                    <Typography fontSize={13} color="var(--color-text-secondary)">{member.role || "—"}</Typography>
+                    <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                      {member.roleTags.length > 0
+                        ? member.roleTags.map((tag) => (
+                            <Chip key={tag} label={tag} size="small" sx={{ height: 20, fontSize: 11, bgcolor: "var(--color-surface-alt)", color: "var(--color-text-secondary)" }} />
+                          ))
+                        : <Typography fontSize={13} color="var(--color-text-secondary)">—</Typography>}
+                    </Stack>
                   </TableCell>
                   <TableCell sx={{ fontSize: 13, color: "var(--color-text-secondary)", verticalAlign: "top", pt: 2 }}>
                     {member.jobTitle}
@@ -537,10 +530,10 @@ export const Staff = () => {
                   </TableCell>
                   <TableCell align="right" sx={{ verticalAlign: "top", pt: 1.5 }}>
                     <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
-                      <IconButton size="small" sx={{ color: "#f0a500" }} onClick={() => { setSelectedMember({ id: member.id, kind: member.kind }); handleSmsOpen(); }}>
+                      <IconButton size="small" sx={{ color: "#f0a500" }} onClick={() => { setSelectedMember({ id: member.id }); handleSmsOpen(); }}>
                         <MdOutlineEmail size={20} />
                       </IconButton>
-                      <IconButton size="small" onClick={(e) => handleMenuOpen(e, member.id, member.kind)}>
+                      <IconButton size="small" onClick={(e) => handleMenuOpen(e, member.id)}>
                         <BsThreeDotsVertical size={18} />
                       </IconButton>
                     </Box>
@@ -551,9 +544,7 @@ export const Staff = () => {
                       anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                       transformOrigin={{ vertical: "top", horizontal: "right" }}
                     >
-                      {member.kind === "user"
-                        ? <MenuItem onClick={openEditDrawer}>{t("settings.ceo.staff.menu.edit")}</MenuItem>
-                        : <MenuItem onClick={handleOpenTeacherProfile}>{t("settings.ceo.staff.menu.edit")}</MenuItem>}
+                      <MenuItem onClick={openEditDrawer} disabled={isLoadingForEdit}>{t("settings.ceo.staff.menu.edit")}</MenuItem>
                       <MenuItem onClick={handleDeleteClick} sx={{ color: "#d32f2f" }}>
                         <MdDelete size={15} style={{ marginRight: 8 }} /> {t("settings.ceo.staff.menu.delete")}
                       </MenuItem>
@@ -665,6 +656,14 @@ export const Staff = () => {
                 }}
                 sx={inputSx}
               />
+            </Box>
+
+            <Box>
+              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.jobTitle")}</Typography>
+              <TextField name="jobTitle" value={form.jobTitle} onChange={handleChange} fullWidth size="small" placeholder={t("settings.ceo.staff.form.jobTitlePlaceholder")} sx={inputSx} />
+              <Typography fontSize={11.5} color="var(--color-text-muted)" mt={0.5}>
+                {t("settings.ceo.staff.form.jobTitleHelp")}
+              </Typography>
             </Box>
 
             <Box>

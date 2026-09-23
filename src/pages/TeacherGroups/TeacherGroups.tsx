@@ -1,14 +1,75 @@
-// TEACHER-role read-only view of the Groups page — shows only this
-// teacher's own groups (GET /teacher-portal/groups, scoped server-side by
-// the logged-in teacher's token, not client-side filtering) with no create/
-// edit/delete/archive controls, since group management is admin/CEO
-// territory. Rendered in place of the full admin `Groups` page by
-// `src/routes/RoleGroupsRoute.tsx`.
+// TEACHER-role landing page — replaces Dashboard entirely for a TEACHER
+// session (product direction: a teacher only needs their own groups and
+// schedule, not the admin dashboard). Shows this teacher's own schedule
+// (GET /teacher-portal/schedule, scoped server-side, previously unused
+// anywhere in this app) above their group cards (GET /teacher-portal/groups,
+// same server-side scoping). Rendered in place of the full admin `Groups`
+// page by `src/routes/RoleGroupsRoute.tsx`, and is where PublicRoute now
+// sends a TEACHER session right after login instead of /dashboard.
+import { useMemo } from "react";
 import { Box, Paper, Typography, CircularProgress, Chip, Stack } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { TbUsers } from "react-icons/tb";
-import { useTeacherPortalGroupsQuery } from "../../app/api/teacherPortalApi";
+import { TbUsers, TbClock } from "react-icons/tb";
+import { useTeacherPortalGroupsQuery, useTeacherPortalScheduleQuery } from "../../app/api/teacherPortalApi";
+
+const DAY_ORDER = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+
+const TeacherSchedule = () => {
+  const { t } = useTranslation();
+  const { data, isLoading, isError } = useTeacherPortalScheduleQuery();
+  const items = useMemo(() => data ?? [], [data]);
+
+  const byDay = useMemo(() => {
+    const map = new Map<string, typeof items>();
+    items.forEach((item) => {
+      const key = (item.day || "").toUpperCase();
+      map.set(key, [...(map.get(key) ?? []), item]);
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => {
+        const ai = DAY_ORDER.indexOf(a);
+        const bi = DAY_ORDER.indexOf(b);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      })
+      .map(([day, dayItems]) => [day, [...dayItems].sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""))] as const);
+  }, [items]);
+
+  if (isLoading) {
+    return <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress size={22} /></Box>;
+  }
+  if (isError) {
+    return <Typography color="error" fontSize={13.5}>{t("teacherGroups.schedule.loadError")}</Typography>;
+  }
+  if (items.length === 0) {
+    return <Typography color="text.secondary" fontSize={13.5}>{t("teacherGroups.schedule.empty")}</Typography>;
+  }
+
+  return (
+    <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 1 }}>
+      {byDay.map(([day, dayItems]) => (
+        <Paper
+          key={day}
+          elevation={0}
+          sx={{ minWidth: 200, flexShrink: 0, p: 2, borderRadius: "12px", border: "1px solid #e5e7eb" }}
+        >
+          <Typography fontSize={13.5} fontWeight={700} mb={1.2}>
+            {t(`singleGroup.editGroupDrawer.weekdays.${day}`, { defaultValue: day })}
+          </Typography>
+          <Stack gap={1}>
+            {dayItems.map((item, i) => (
+              <Stack key={`${item.groupId}-${i}`} direction="row" alignItems="center" gap={1}>
+                <TbClock size={14} color="#9ca3af" />
+                <Typography fontSize={12.5} color="text.secondary" sx={{ minWidth: 42 }}>{item.time || "—"}</Typography>
+                <Typography fontSize={12.5} fontWeight={500}>{item.groupName}</Typography>
+              </Stack>
+            ))}
+          </Stack>
+        </Paper>
+      ))}
+    </Box>
+  );
+};
 
 export const TeacherGroups = () => {
   const { t } = useTranslation();
@@ -18,7 +79,12 @@ export const TeacherGroups = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography fontSize={22} fontWeight={700} mb={2.5}>
+      <Typography fontSize={22} fontWeight={700} mb={2}>
+        {t("teacherGroups.scheduleTitle")}
+      </Typography>
+      <TeacherSchedule />
+
+      <Typography fontSize={22} fontWeight={700} mt={4} mb={2.5}>
         {t("teacherGroups.title")}
       </Typography>
 

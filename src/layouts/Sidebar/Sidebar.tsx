@@ -606,11 +606,11 @@ const MobileNavItem = ({ item }: { item: (typeof NAV_ITEMS)[number] }) => {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-// TEACHER only gets their own groups (for attendance) + the dashboard —
-// everything else in NAV_ITEMS (Leads, Teachers, Students, Finance,
-// Settings, Reports...) is admin/CEO territory, matching ProtectedRoute's
-// own TEACHER_ALLOWED_PREFIXES allowlist.
-const TEACHER_NAV_PATHS = ["/dashboard", "/groups"];
+// TEACHER only gets their own groups (schedule + attendance, their landing
+// page) — no Dashboard, and everything else in NAV_ITEMS (Leads, Teachers,
+// Students, Finance, Settings, Reports...) is admin/CEO territory, matching
+// ProtectedRoute's own TEACHER_ALLOWED_PREFIXES allowlist.
+const TEACHER_NAV_PATHS = ["/groups"];
 
 export const Sidebar = () => {
   const { pathname } = useLocation();

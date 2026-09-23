@@ -72,6 +72,8 @@
   },
   "addPayment": {
     "title": "Добавить платёж",
+    "editTitle": "Редактировать платёж",
+    "updateSubmit": "Сохранить",
     "student": "Студент",
     "selectStudent": "Выберите пользователя",
     "studentLoading": "Загрузка студентов...",
@@ -95,7 +97,8 @@
       "save": "Не удалось сохранить платёж"
     },
     "toast": {
-      "created": "Платёж успешно добавлен"
+      "created": "Платёж успешно добавлен",
+      "updated": "Платёж успешно обновлён"
     }
   },
   "paymentReceipt": {
@@ -1881,7 +1884,7 @@
           "rolePermissionId": "Должность",
           "rolePermissionIdHelp": "Обязательно — выберите одну из должностей модуля \"Должности\".",
           "roleOptions": { "SUPERADMIN": "Супер админ", "ADMIN": "Админ" },
-          "branches": "Филиалы", "jobTitle": "Должность", "dateOfBirth": "Дата рождения", "gender": "Пол", "male": "Мужской", "female": "Женский",
+          "branches": "Филиалы", "jobTitle": "Должность (для отображения)", "jobTitlePlaceholder": "Например: Менеджер", "jobTitleHelp": "Бэкенд пока не сохраняет это поле — введённое значение пока не будет отображаться.", "dateOfBirth": "Дата рождения", "gender": "Пол", "male": "Мужской", "female": "Женский",
           "photo": "Фото", "noFileChosen": "Файл не выбран", "browse": "Обзор", "submit": "Отправить"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Директор филиала", "administrator": "Администратор", "administrator2": "Администратор2", "limitedAdministrator": "Ограниченный администратор", "teacher": "Учитель", "marketer": "Маркетолог", "cashier": "Кассир" },
@@ -2351,6 +2354,11 @@
   },
   "teacherGroups": {
     "title": "Мои группы",
+    "scheduleTitle": "Моё расписание",
+    "schedule": {
+      "loadError": "Не удалось загрузить расписание.",
+      "empty": "У вас пока нет запланированных занятий."
+    },
     "loadError": "Не удалось загрузить ваши группы.",
     "empty": "У вас пока нет групп.",
     "students": "учеников",

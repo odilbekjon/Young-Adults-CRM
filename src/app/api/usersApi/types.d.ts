@@ -10,12 +10,18 @@ export interface RolePermissionRef {
   name: string;
 }
 
-// GET /users — confirmed real response shape (Swagger "Try it out" was
-// actually executed): {success, data: [{id, photo, name, email, phone,
-// role, rolePermission, status, createdAt}]}. No meta was visible in the
-// captured response, so pagination meta is treated as optional/defensive
-// like every other list endpoint in this app whose envelope isn't fully
-// documented.
+export interface StaffUserBranchRef {
+  branchId: string;
+  branch: { id: string; name: string };
+}
+
+// GET /users — confirmed live against the real backend (2026-09): {success,
+// data: [{id, name, email, phone, role, rolePermission, photo, status,
+// createdAt, branches}]}. `branches` was previously undocumented here but
+// is real — used to prefill the edit form's branch picker. No meta was
+// visible in the captured response, so pagination meta is treated as
+// optional/defensive like every other list endpoint in this app whose
+// envelope isn't fully documented.
 export interface StaffUser {
   id: string;
   name: string;
@@ -26,6 +32,24 @@ export interface StaffUser {
   photo: string | null;
   status: UserStatus | string;
   createdAt: string | null;
+  branches: StaffUserBranchRef[];
+}
+
+// GET /users/{id}/for-edit — confirmed live (2026-09): {id, name, email,
+// phone, rolePermissionId, photo, gender, birthdate, branchIds} — the
+// dedicated edit-prefill shape, distinct from StaffUser (no `role`/
+// `status`/`createdAt`, but does carry `gender`/`birthdate`/`branchIds`
+// flat, which StaffUser doesn't expose at all).
+export interface StaffUserForEdit {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  rolePermissionId: string | null;
+  photo: string | null;
+  gender: string | null;
+  birthdate: string | null;
+  branchIds: string[];
 }
 
 export interface UsersRequest {
@@ -64,6 +88,11 @@ export interface CreateUserRequest {
   branchIds?: string[];
   birthdate?: string;
   gender?: string;
+  // NOT yet a real backend field — confirmed live (2026-09) that POST
+  // /users silently drops this (no error, but doesn't persist or come back
+  // on GET). Sent anyway: harmless today, and this field starts working
+  // the moment the backend adds it, with zero frontend changes needed.
+  jobTitle?: string;
 }
 
 export interface UpdateUserRequest extends Partial<Omit<CreateUserRequest, "name" | "rolePermissionId">> {

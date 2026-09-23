@@ -2,16 +2,18 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 // A TEACHER-role session only needs their own groups (for attendance) plus
-// the shared dashboard/profile/notifications pages — everything else under
-// ProtectedRoute (Students, Finance, Settings, Reports, other staff's data,
-// etc.) is admin/CEO territory. This is a path-prefix allowlist rather than
-// per-route guards sprinkled across Router.tsx, so a route can't be added
-// later and accidentally skip the check. `/groups/:id` itself is further
-// restricted (own groups only, Attendance-only tabs, no student-profile
-// links) inside SingleGroup.tsx/Groups.tsx directly, since that needs the
-// group/membership data those pages already fetch — a route guard alone
-// can't know which groups belong to this teacher.
-const TEACHER_ALLOWED_PREFIXES = ["/dashboard", "/groups", "/profile", "/notifications"];
+// the shared profile/notifications pages — no Dashboard (product direction:
+// a teacher's landing page is TeacherGroups' own schedule+groups view, not
+// the admin dashboard) and everything else under ProtectedRoute (Students,
+// Finance, Settings, Reports, other staff's data, etc.) is admin/CEO
+// territory. This is a path-prefix allowlist rather than per-route guards
+// sprinkled across Router.tsx, so a route can't be added later and
+// accidentally skip the check. `/groups/:id` itself is further restricted
+// (own groups only, Attendance-only tabs, no student-profile links) inside
+// SingleGroup.tsx/Groups.tsx directly, since that needs the group/
+// membership data those pages already fetch — a route guard alone can't
+// know which groups belong to this teacher.
+const TEACHER_ALLOWED_PREFIXES = ["/groups", "/profile", "/notifications"];
 
 export const ProtectedRoute = () => {
   const { isAuthenticated, isStudent, isTeacher } = useAuth();
@@ -28,7 +30,7 @@ export const ProtectedRoute = () => {
   }
 
   if (isTeacher && !TEACHER_ALLOWED_PREFIXES.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`))) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/groups" replace />;
   }
 
   return <Outlet />;

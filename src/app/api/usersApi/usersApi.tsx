@@ -2,6 +2,8 @@ import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
 import {
     StaffUser,
+    StaffUserBranchRef,
+    StaffUserForEdit,
     RolePermissionRef,
     UsersRequest,
     UsersResult,
@@ -36,6 +38,18 @@ const normalizeRolePermission = (raw: unknown): RolePermissionRef | null => {
     return { id, name: str(r.name) };
 };
 
+const normalizeStaffUserBranches = (raw: unknown): StaffUserBranchRef[] => {
+    if (!Array.isArray(raw)) return [];
+    return (raw as Row[])
+        .map((entry) => {
+            const branch = (entry.branch ?? {}) as Row;
+            const id = str(entry.branchId, branch.id);
+            if (!id) return null;
+            return { branchId: id, branch: { id, name: str(branch.name) } };
+        })
+        .filter((b): b is StaffUserBranchRef => b !== null);
+};
+
 const normalizeStaffUser = (r: Row): StaffUser => ({
     id: str(r.id, r._id),
     name: str(r.name),
@@ -46,6 +60,19 @@ const normalizeStaffUser = (r: Row): StaffUser => ({
     photo: strOrNull(r.photo),
     status: str(r.status).toUpperCase() || "ACTIVE",
     createdAt: strOrNull(r.createdAt),
+    branches: normalizeStaffUserBranches(r.branches),
+});
+
+const normalizeStaffUserForEdit = (r: Row): StaffUserForEdit => ({
+    id: str(r.id, r._id),
+    name: str(r.name),
+    email: strOrNull(r.email),
+    phone: strOrNull(r.phone),
+    rolePermissionId: strOrNull(r.rolePermissionId),
+    photo: strOrNull(r.photo),
+    gender: strOrNull(r.gender),
+    birthdate: strOrNull(r.birthdate),
+    branchIds: Array.isArray(r.branchIds) ? (r.branchIds as unknown[]).map((id) => str(id)).filter(Boolean) : [],
 });
 
 // GET /users' confirmed real response is {success, data: [...]} with no
@@ -127,15 +154,17 @@ export const usersApi = baseApi.injectEndpoints({
             transformResponse: (response: unknown) => normalizeStaffUser(pickRow(response)),
             providesTags: ["staff"],
         }),
-        // GET /users/{id}/for-edit — same envelope as GET /users/{id}, used
-        // specifically to prefill the edit form (kept as its own endpoint
-        // since Swagger documents it separately).
-        staffUserForEdit: builder.query<StaffUser, string>({
+        // GET /users/{id}/for-edit — confirmed live (2026-09) to be a
+        // DIFFERENT, flatter shape than GET /users/{id} (see StaffUserForEdit):
+        // it's the one endpoint that actually returns branchIds/gender/
+        // birthdate for prefilling the edit form, which the list/detail
+        // shapes don't carry.
+        staffUserForEdit: builder.query<StaffUserForEdit, string>({
             query: (id) => ({
                 url: `${PATHS.USERS}/${id}/for-edit`,
                 method: "GET",
             }),
-            transformResponse: (response: unknown) => normalizeStaffUser(pickRow(response)),
+            transformResponse: (response: unknown) => normalizeStaffUserForEdit(pickRow(response)),
             providesTags: ["staff"],
         }),
         staffUsersExcel: builder.query<Blob, void>({

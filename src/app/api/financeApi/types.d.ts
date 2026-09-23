@@ -1,7 +1,16 @@
 export type PaymentProvider = "MANUAL" | "PAYME" | "CLICK" | "UZUM" | "STRIPE" | "PAYPAL";
 
+// PATCH /finance/payments/{id} — confirmed live against the real backend
+// (2026-09): a fake id returns {"error":["To'lov topilmadi"]} (404, a real
+// "not found" business error, not a route-missing 404), proving this route
+// exists even though it wasn't visible in the Swagger screenshots this app
+// was otherwise built from. multipart/form-data, same fields as create,
+// all optional (partial update).
+export interface UpdatePaymentRequest extends Partial<CreatePaymentRequest> {
+  id: string;
+}
+
 // POST /finance/payments — Swagger'da tasdiqlangan yagona endpoint (multipart/form-data).
-// GET/PUT/DELETE hozircha backend contract'ida tasdiqlanmagan, shu sabab bu yerda yo'q.
 export interface CreatePaymentRequest {
   amount: number;
   paymentMethodId: string;

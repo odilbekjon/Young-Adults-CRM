@@ -2,6 +2,7 @@ import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
 import {
     CreatePaymentRequest,
+    UpdatePaymentRequest,
     PaymentResponse,
     FinanceChartQueryArgs,
     FinanceChartMonth,
@@ -341,6 +342,20 @@ export const financeApi = baseApi.injectEndpoints({
             },
             invalidatesTags: ["payment", "student", "group"],
         }),
+        // PATCH /finance/payments/{id} — see UpdatePaymentRequest's doc comment
+        // for how its existence was confirmed.
+        updatePayment: builder.mutation<PaymentResponse, UpdatePaymentRequest>({
+            query: ({ id, ...data }) => {
+                const formData = new FormData();
+                appendPaymentFormData(formData, data);
+                return {
+                    url: `${PATHS.PAYMENTS}/${id}`,
+                    method: "PATCH",
+                    body: formData,
+                };
+            },
+            invalidatesTags: ["payment", "student", "group"],
+        }),
         financeChart: builder.query<FinanceChartMonth[], FinanceChartQueryArgs>({
             query: ({ year, branchId }) => {
                 const qs = new URLSearchParams();
@@ -660,6 +675,7 @@ export const financeApi = baseApi.injectEndpoints({
 
 export const {
     useCreatePaymentMutation,
+    useUpdatePaymentMutation,
     useFinanceChartQuery,
     useDebtorsQuery,
     useDebtorsTotalQuery,

@@ -23,12 +23,31 @@ import {
     StudentPaymentsRequest,
     StudentPaymentsResult,
     StudentFinanceHistoryEntry,
+    StudentFinanceHistoryDebtEntry,
+    StudentFinanceHistoryPaymentEntry,
+    StudentFinanceTransaction,
 } from "./types";
+import type { PaymentRow } from "../financeApi/types";
 
 const asString = (raw: unknown): string | null => {
     if (raw === undefined || raw === null) return null;
     if (typeof raw === "object") return String((raw as Record<string, unknown>).name ?? (raw as Record<string, unknown>).id ?? "") || null;
     return String(raw);
+};
+
+// Confirmed live (2026-09): money fields on this backend aren't always
+// plain numbers — some come back as a serialized decimal object
+// ({s: sign, e: exponent, d: [digits]}, matching decimal.js's internal
+// shape), which `Number(...)` on its own turns into NaN and silently
+// coerces to 0. Same fix as financeApi.tsx's own `asMoney` (GET
+// /students/{id}/payments returns amount this way, same as GET
+// /finance/payments — this module didn't have the fix, so every payment
+// amount and monthly charge/paid figure on StudentProfile showed 0 UZS).
+const asMoney = (raw: unknown): number => {
+    if (raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).d)) {
+        return Number((raw as { d: unknown[] }).d[0]) || 0;
+    }
+    return Number(raw) || 0;
 };
 
 // Backend's exact envelope for GET /students/{id}/comments isn't documented
@@ -104,32 +123,41 @@ const normalizeStudentPayments = (raw: unknown): StudentPaymentsResult => {
         : Array.isArray(dataBlock.payments)
         ? dataBlock.payments
         : [];
-    const rows = (list as Record<string, unknown>[]).map((r, i) => ({
-        id: String(r.id ?? r._id ?? i),
-        amount: Number(r.amount) || 0,
-        studentId: asString(r.studentId ?? r.student),
-        studentName: String(r.studentName ?? ""),
-        studentPhone: String(r.studentPhone ?? ""),
-        groupId: asString(r.groupId ?? r.group),
-        groupName: String(r.groupName ?? ""),
-        paymentMethodId: asString(r.paymentMethodId ?? r.paymentMethod),
-        paymentMethodName: String(r.paymentMethodName ?? ""),
-        branchId: asString(r.branchId),
-        date: (r.date as string | undefined) ?? null,
-        notes: String(r.notes ?? r.comment ?? ""),
-        createdBy: asString(r.createdBy),
-        createdAt: r.createdAt as string | undefined,
-    }));
+    const rows = (list as Record<string, unknown>[]).map((r, i) => {
+        // Confirmed live: `student` nests `{id, name, phone, photo}`, `group`
+        // nests `{id, name, course:{...}}`, and `paymentMethod` nests
+        // `{id, name, code}` — not the flat studentName/groupName/
+        // paymentMethodName strings this was previously reading.
+        const student = (r.student ?? {}) as Record<string, unknown>;
+        const group = (r.group ?? {}) as Record<string, unknown>;
+        const method = (r.paymentMethod ?? {}) as Record<string, unknown>;
+        return {
+            id: String(r.id ?? r._id ?? i),
+            amount: asMoney(r.amount),
+            studentId: asString(r.studentId ?? student.id),
+            studentName: String(r.studentName ?? student.name ?? ""),
+            studentPhone: String(r.studentPhone ?? student.phone ?? ""),
+            groupId: asString(r.groupId ?? group.id),
+            groupName: String(r.groupName ?? group.name ?? ""),
+            paymentMethodId: asString(r.paymentMethodId ?? method.id),
+            paymentMethodName: String(r.paymentMethodName ?? method.name ?? ""),
+            branchId: asString(r.branchId),
+            date: (r.date as string | undefined) ?? null,
+            notes: String(r.notes ?? r.comment ?? ""),
+            createdBy: asString(r.createdBy),
+            createdAt: r.createdAt as string | undefined,
+        };
+    });
     const meta = (container.meta ?? dataBlock.meta ?? {}) as Record<string, unknown>;
     const total = Number(meta.total ?? meta.totalItems) || rows.length;
     const limit = Number(meta.limit) || rows.length || 10;
     return {
         rows,
         summary: {
-            totalPaid: Number(dataBlock.totalPaid) || 0,
-            totalCharged: Number(dataBlock.totalCharged) || 0,
-            balance: Number(dataBlock.balance) || 0,
-            totalDebt: Number(dataBlock.totalDebt) || 0,
+            totalPaid: asMoney(dataBlock.totalPaid),
+            totalCharged: asMoney(dataBlock.totalCharged),
+            balance: asMoney(dataBlock.balance),
+            totalDebt: asMoney(dataBlock.totalDebt),
         },
         meta: {
             total,
@@ -140,6 +168,34 @@ const normalizeStudentPayments = (raw: unknown): StudentPaymentsResult => {
     };
 };
 
+const normalizeFinanceDebtEntry = (r: Record<string, unknown>): StudentFinanceHistoryDebtEntry => ({
+    type: "DEBT",
+    amount: asMoney(r.amount),
+    groupId: asString(r.groupId),
+    groupName: asString(r.groupName),
+    branchId: asString(r.branchId),
+    branchName: asString(r.branchName),
+    description: asString(r.description),
+    date: String(r.date ?? ""),
+    author: asString(r.author),
+});
+
+const normalizeFinancePaymentEntry = (r: Record<string, unknown>): StudentFinanceHistoryPaymentEntry => ({
+    type: "PAYMENT",
+    amount: asMoney(r.amount),
+    date: String(r.date ?? ""),
+    method: asString(r.method),
+    branchId: asString(r.branchId),
+    branchName: asString(r.branchName),
+    author: asString(r.author),
+    receiptUrl: asString(r.receiptUrl),
+    notes: asString(r.notes),
+});
+
+// GET /students/{id}/finance-history — confirmed live (2026-09): each
+// month entry carries its own `debts` (system-generated monthly group
+// charges) and `payments` (real payments) arrays — see the doc comment on
+// StudentFinanceHistoryEntry in types.d.ts for the full real shape.
 const normalizeStudentFinanceHistory = (raw: unknown): StudentFinanceHistoryEntry[] => {
     const container = (raw ?? {}) as Record<string, unknown>;
     const list: unknown[] = Array.isArray(raw)
@@ -149,15 +205,71 @@ const normalizeStudentFinanceHistory = (raw: unknown): StudentFinanceHistoryEntr
         : Array.isArray(container.data)
         ? container.data
         : [];
-    return (list as Record<string, unknown>[]).map((r, i) => ({
-        id: String(r.id ?? r._id ?? i),
-        month: String(r.month ?? r.period ?? r.date ?? ""),
-        charged: Number(r.charged ?? r.debt ?? r.expected) || 0,
-        paid: Number(r.paid ?? r.payment) || 0,
-        balance: Number(r.balance) || 0,
-        groupName: asString(r.groupName ?? r.group),
-        receivedBy: asString(r.receivedBy ?? r.createdBy ?? r.processedBy),
+    return (list as Record<string, unknown>[]).map((r) => ({
+        month: String(r.month ?? ""),
+        debts: (Array.isArray(r.debts) ? r.debts : []).map((d) => normalizeFinanceDebtEntry(d as Record<string, unknown>)),
+        payments: (Array.isArray(r.payments) ? r.payments : []).map((p) => normalizeFinancePaymentEntry(p as Record<string, unknown>)),
+        totalDebt: asMoney(r.totalDebt),
+        totalPaid: asMoney(r.totalPaid),
+        monthBalance: asMoney(r.monthBalance),
+        runningBalance: asMoney(r.runningBalance),
     }));
+};
+
+// Flattens every month's debts+payments into one chronological list for the
+// combined "system vs payment" transactions table (AUTH_ROLE_DOCS-style
+// reference design) — matched against the real payments list (which has
+// the actual payment id + precise creator name/timestamp) by amount+date so
+// Print/Edit/Remove on a PAYMENT row can target the real record. A DEBT row
+// has no backing record — it's a computed monthly charge, not something to
+// edit/delete.
+export const normalizeFinanceTransactions = (
+    history: StudentFinanceHistoryEntry[],
+    payments: PaymentRow[]
+): StudentFinanceTransaction[] => {
+    const rows: StudentFinanceTransaction[] = [];
+    history.forEach((month, monthIndex) => {
+        month.debts.forEach((d, i) => {
+            rows.push({
+                key: `debt-${monthIndex}-${i}`,
+                type: "DEBT",
+                date: d.date,
+                amount: d.amount,
+                groupName: d.groupName,
+                methodOrDescription: d.description,
+                notes: null,
+                author: d.author,
+                createdAt: null,
+                paymentId: null,
+                paymentMethodId: null,
+                studentId: null,
+                studentName: null,
+            });
+        });
+        month.payments.forEach((p, i) => {
+            // Same-day, same-amount match against the real payments list —
+            // the finance-history payment entry itself carries no id.
+            const matched = payments.find(
+                (row) => (row.date ?? "").slice(0, 10) === (p.date ?? "").slice(0, 10) && Math.abs(row.amount - p.amount) < 1
+            );
+            rows.push({
+                key: `payment-${monthIndex}-${i}`,
+                type: "PAYMENT",
+                date: p.date,
+                amount: p.amount,
+                groupName: matched?.groupName || null,
+                methodOrDescription: p.method,
+                notes: p.notes,
+                author: matched?.createdBy ?? p.author,
+                createdAt: matched?.createdAt ?? null,
+                paymentId: matched?.id ?? null,
+                paymentMethodId: matched?.paymentMethodId ?? null,
+                studentId: matched?.studentId ?? null,
+                studentName: matched?.studentName ?? null,
+            });
+        });
+    });
+    return rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 };
 
 const appendStudentFormData = (formData: FormData, data: Partial<CreateStudentRequest>) => {

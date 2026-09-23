@@ -72,6 +72,8 @@
   },
   "addPayment": {
     "title": "To'lov qo'shish",
+    "editTitle": "To'lovni tahrirlash",
+    "updateSubmit": "Saqlash",
     "student": "O'quvchi",
     "selectStudent": "Foydalanuvchini tanlang",
     "studentLoading": "O'quvchilar yuklanmoqda...",
@@ -95,7 +97,8 @@
       "save": "To'lovni saqlashda xatolik yuz berdi"
     },
     "toast": {
-      "created": "To'lov muvaffaqiyatli qo'shildi"
+      "created": "To'lov muvaffaqiyatli qo'shildi",
+      "updated": "To'lov muvaffaqiyatli yangilandi"
     }
   },
   "paymentReceipt": {
@@ -1877,7 +1880,7 @@
           "rolePermissionId": "Lavozim",
           "rolePermissionIdHelp": "Majburiy — Lavozimlar modulidagi lavozimlardan birini tanlang.",
           "roleOptions": { "SUPERADMIN": "Super admin", "ADMIN": "Admin" },
-          "branches": "Filiallar", "jobTitle": "Lavozim", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi", "male": "Erkak", "female": "Ayol",
+          "branches": "Filiallar", "jobTitle": "Ish unvoni (faqat ko'rsatish uchun)", "jobTitlePlaceholder": "Masalan: Menejer", "jobTitleHelp": "Backend hali bu maydonni saqlamaydi — kiritilgan qiymat hozircha ko'rsatilmaydi.", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi", "male": "Erkak", "female": "Ayol",
           "photo": "Rasm", "noFileChosen": "Fayl tanlanmagan", "browse": "Tanlash", "submit": "Yuborish"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Filial direktori", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Cheklangan administrator", "teacher": "O'qituvchi", "marketer": "Marketolog", "cashier": "Kassir" },
@@ -2347,6 +2350,11 @@
   },
   "teacherGroups": {
     "title": "Mening guruhlarim",
+    "scheduleTitle": "Dars jadvalim",
+    "schedule": {
+      "loadError": "Dars jadvalini yuklab bo'lmadi.",
+      "empty": "Sizda hali rejalashtirilgan darslar yo'q."
+    },
     "loadError": "Guruhlaringizni yuklab bo'lmadi.",
     "empty": "Sizda hali guruhlar yo'q.",
     "students": "o'quvchi",

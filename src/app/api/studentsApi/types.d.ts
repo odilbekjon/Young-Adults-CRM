@@ -307,18 +307,70 @@ export interface StudentPaymentsResult {
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
-// GET /students/{id}/finance-history — "Talabaning oylik moliyaviy tarixi":
-// per-month debt/payment ledger, including which group created the debt
-// and who received the payment. Replaces the client-side
-// memberships+payments approximation StudentProfile's "Monthly balance
-// status" section previously had to fall back to (no endpoint returned
-// this directly before).
-export interface StudentFinanceHistoryEntry {
-  id: string;
-  month: string;
-  charged: number;
-  paid: number;
-  balance: number;
+// GET /students/{id}/finance-history — confirmed live against the real
+// backend (2026-09), and a completely different shape than previously
+// assumed here: each month carries its own `debts` (system-generated
+// monthly group charges) and `payments` (real payments) arrays, not a
+// single flat charged/paid/balance row. This is the real source for a
+// combined "system vs payment" transaction ledger (AUTH_ROLE_DOCS-style
+// reference design), not just a monthly summary.
+export interface StudentFinanceHistoryDebtEntry {
+  type: "DEBT";
+  amount: number;
+  groupId: string | null;
   groupName: string | null;
-  receivedBy: string | null;
+  branchId: string | null;
+  branchName: string | null;
+  description: string | null;
+  date: string;
+  author: string | null;
+}
+
+export interface StudentFinanceHistoryPaymentEntry {
+  type: "PAYMENT";
+  amount: number;
+  date: string;
+  method: string | null;
+  branchId: string | null;
+  branchName: string | null;
+  author: string | null;
+  receiptUrl: string | null;
+  notes: string | null;
+}
+
+export interface StudentFinanceHistoryEntry {
+  month: string;
+  debts: StudentFinanceHistoryDebtEntry[];
+  payments: StudentFinanceHistoryPaymentEntry[];
+  totalDebt: number;
+  totalPaid: number;
+  monthBalance: number;
+  runningBalance: number;
+}
+
+// A debt (system charge) and a payment, flattened into one chronological
+// row shape for the combined transactions table — built client-side from
+// StudentFinanceHistoryEntry.debts/payments (see normalizeFinanceTransactions
+// in studentsApi.tsx). Payment rows carry a real `paymentId` (from GET
+// /students/{id}/payments, matched by amount+date) so Print/Edit/Remove can
+// target the real payment record; debt rows have no backing record to edit.
+export interface StudentFinanceTransaction {
+  key: string;
+  type: "DEBT" | "PAYMENT";
+  date: string;
+  amount: number;
+  groupName: string | null;
+  methodOrDescription: string | null;
+  notes: string | null;
+  author: string | null;
+  // Only set for a PAYMENT row matched against the real payments list —
+  // that's the one place with a precise entry timestamp (finance-history's
+  // own payment entries only carry a `date`, no time-of-entry), the actual
+  // paymentMethodId (vs. just the method's display name), and the
+  // studentId/studentName EditPaymentTarget needs to open the edit form.
+  createdAt: string | null;
+  paymentId: string | null;
+  paymentMethodId: string | null;
+  studentId: string | null;
+  studentName: string | null;
 }

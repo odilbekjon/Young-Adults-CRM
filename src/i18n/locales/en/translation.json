@@ -72,6 +72,8 @@
   },
   "addPayment": {
     "title": "Add payment",
+    "editTitle": "Edit payment",
+    "updateSubmit": "Save",
     "student": "Student",
     "selectStudent": "Select user",
     "studentLoading": "Loading students...",
@@ -95,7 +97,8 @@
       "save": "Failed to save the payment"
     },
     "toast": {
-      "created": "Payment added successfully"
+      "created": "Payment added successfully",
+      "updated": "Payment updated successfully"
     }
   },
   "paymentReceipt": {
@@ -1877,7 +1880,7 @@
           "rolePermissionId": "Position",
           "rolePermissionIdHelp": "Required — pick one of the positions defined in the Positions module.",
           "roleOptions": { "SUPERADMIN": "Super Admin", "ADMIN": "Admin" },
-          "branches": "Branches", "jobTitle": "Position", "dateOfBirth": "Date of birth", "gender": "Gender", "male": "Male", "female": "Female",
+          "branches": "Branches", "jobTitle": "Job title (display only)", "jobTitlePlaceholder": "e.g. Manager", "jobTitleHelp": "The backend doesn't store this field yet — the value entered here won't be shown anywhere until it does.", "dateOfBirth": "Date of birth", "gender": "Gender", "male": "Male", "female": "Female",
           "photo": "Photo", "noFileChosen": "No file chosen", "browse": "Browse", "submit": "Submit"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Branch Director", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Limited Administrator", "teacher": "Teacher", "marketer": "Marketer", "cashier": "Cashier" },
@@ -2347,6 +2350,11 @@
   },
   "teacherGroups": {
     "title": "My groups",
+    "scheduleTitle": "My schedule",
+    "schedule": {
+      "loadError": "Failed to load your schedule.",
+      "empty": "You don't have any scheduled lessons yet."
+    },
     "loadError": "Failed to load your groups.",
     "empty": "You don't have any groups yet.",
     "students": "students",

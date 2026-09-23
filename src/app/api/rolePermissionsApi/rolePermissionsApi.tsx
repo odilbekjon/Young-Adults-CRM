@@ -1,6 +1,6 @@
 import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
-import { RolePermissionSelectOption } from "./types";
+import { RolePermissionAssignmentResponse, RolePermissionSelectOption } from "./types";
 
 // Backend ba'zan ro'yxatni tekis massiv, ba'zan {data: [...], meta} ko'rinishida
 // qaytarishi mumkin — groupsApi/reasonsApi'dagi bir xil naqsh.
@@ -24,7 +24,29 @@ export const rolePermissionsApi = baseApi.injectEndpoints({
             transformResponse: (response: { data: unknown }) =>
                 normalizeList<RolePermissionSelectOption>(response?.data),
         }),
+        // POST /role-permissions/{id}/assign-user/{userId} — attaches one
+        // additional lavozim to a user, on top of whichever one Users'
+        // create/update endpoints set as the primary `rolePermissionId`.
+        assignRolePermissionToUser: builder.mutation<RolePermissionAssignmentResponse, { id: string; userId: string }>({
+            query: ({ id, userId }) => ({
+                url: `${PATHS.ROLE_PERMISSIONS}/${id}/assign-user/${userId}`,
+                method: "POST",
+            }),
+            invalidatesTags: ["staff"],
+        }),
+        // DELETE /role-permissions/{id}/remove-user/{userId}
+        removeRolePermissionFromUser: builder.mutation<RolePermissionAssignmentResponse, { id: string; userId: string }>({
+            query: ({ id, userId }) => ({
+                url: `${PATHS.ROLE_PERMISSIONS}/${id}/remove-user/${userId}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["staff"],
+        }),
     }),
 });
 
-export const { useRolePermissionsSelectQuery } = rolePermissionsApi;
+export const {
+    useRolePermissionsSelectQuery,
+    useAssignRolePermissionToUserMutation,
+    useRemoveRolePermissionFromUserMutation,
+} = rolePermissionsApi;

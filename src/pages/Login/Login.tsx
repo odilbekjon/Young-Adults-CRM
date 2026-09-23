@@ -10,6 +10,7 @@ import { useLoginMutation } from "../../app/api/authApi";
 import { loginSuccess } from "../../app/store/authSlice";
 import type { AppDispatch } from "../../app/store";
 import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
+import { extractApiError } from "../../utils/extractApiError";
 
 const LANGUAGE_OPTIONS: { code: "en" | "ru" | "uz"; label: string }[] = [
   { code: "en", label: "EN" },
@@ -28,7 +29,9 @@ const LoginPage = () => {
   const { t, i18n } = useTranslation();
   const [login, { isLoading: loading }] = useLoginMutation();
 
-  const [email, setEmail] = useState("");
+  // Backend accepts either an email or a phone number in the single
+  // `identifier` field (AUTH_ROLE_DOCS.md §1) — one input, no format switch.
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
@@ -40,17 +43,17 @@ const LoginPage = () => {
     localStorage.setItem("appLanguage", code);
   };
 
-  const canSubmit = !loading && email.trim() !== "" && password !== "";
+  const canSubmit = !loading && identifier.trim() !== "" && password !== "";
 
   const handleLogin = async () => {
     if (loading) return;
-    if (!email.trim() || !password) {
+    if (!identifier.trim() || !password) {
       setError(t("login.requiredFields"));
       return;
     }
     setError("");
     try {
-      const res = await login({ identifier: email.trim(), password }).unwrap();
+      const res = await login({ identifier: identifier.trim(), password }).unwrap();
       // No manual navigate() here: PublicRoute reacts to the auth state
       // change and redirects to the originally-requested page (or
       // /dashboard for staff, /portal for a STUDENT-role user).
@@ -61,8 +64,7 @@ const LoginPage = () => {
         setError(t("login.networkError"));
         return;
       }
-      const data = fetchError?.data as { message?: string } | undefined;
-      setError(data?.message || t("login.error"));
+      setError(extractApiError(err) || t("login.error"));
     }
   };
 
@@ -160,14 +162,14 @@ const LoginPage = () => {
 
               <TextField
                 fullWidth
-                label={t("login.email")}
+                label={t("login.identifier")}
                 required
                 size="small"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                placeholder="example@adults.uz"
+                placeholder={t("login.identifierPlaceholder")}
                 sx={{ mb: 2 }}
               />
 

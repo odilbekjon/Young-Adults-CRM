@@ -36,8 +36,16 @@ export const AddNoteModal = ({
             placeholder={t("singleGroup.addNoteModal.notePlaceholder")}
           />
         </div>
+        {/* No POST endpoint for student notes exists anywhere in Swagger
+            (see studentsApi/types.d.ts's StudentComment doc comment) — Save
+            used to silently discard the typed note, which looked like it
+            worked. Disabled instead of faking success until the backend
+            adds a create endpoint for this. */}
+        <div style={{ fontSize: 12.5, color: "#b45309" }}>{t("singleGroup.addNoteModal.notConnected")}</div>
         <div style={{ display: "flex", gap: 10 }}>
-          <button style={paymentSubmitBtn} onClick={handleClose}>{t("singleGroup.addNoteModal.save")}</button>
+          <button style={{ ...paymentSubmitBtn, opacity: 0.5, cursor: "not-allowed" }} disabled>
+            {t("singleGroup.addNoteModal.save")}
+          </button>
           <button style={cancelBtn} onClick={handleClose}>{t("singleGroup.addNoteModal.cancel")}</button>
         </div>
       </div>

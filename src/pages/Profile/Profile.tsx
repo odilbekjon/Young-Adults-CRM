@@ -208,8 +208,8 @@ const ProfilePage = () => {
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
               {user.branches.map((b) => (
                 <Chip
-                  key={b.id}
-                  label={b.name}
+                  key={b.branch.id}
+                  label={b.branch.name}
                   size="small"
                   variant="outlined"
                   sx={{

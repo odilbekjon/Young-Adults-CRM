@@ -63,16 +63,31 @@ export const ReminderDrawer = ({
             <option value="Iskandar Tojiyev">Iskandar Tojiyev</option>
           </select>
         </div>
-        <div style={{ marginTop: 8 }}>
+        {/* No create endpoint for reminders exists in Swagger — Save used to
+            silently discard everything typed here (identical to Cancel),
+            which looked like it worked. Disabled instead of faking success
+            until the backend adds one. */}
+        <div style={{ fontSize: 12.5, color: "#b45309" }}>{t("singleGroup.reminderDrawer.notConnected")}</div>
+        <div style={{ marginTop: 8, display: "flex", gap: 10 }}>
           <button
             style={{
               background: "#0f5c9a", color: "#fff", border: "none",
+              borderRadius: 999, padding: "12px 30px", fontSize: 14,
+              fontWeight: 600, cursor: "not-allowed", opacity: 0.5,
+            }}
+            disabled
+          >
+            {t("singleGroup.reminderDrawer.save")}
+          </button>
+          <button
+            style={{
+              background: "transparent", color: "#374151", border: "1px solid #d1d5db",
               borderRadius: 999, padding: "12px 30px", fontSize: 14,
               fontWeight: 600, cursor: "pointer",
             }}
             onClick={handleClose}
           >
-            {t("singleGroup.reminderDrawer.save")}
+            {t("singleGroup.reminderDrawer.cancel")}
           </button>
         </div>
       </div>

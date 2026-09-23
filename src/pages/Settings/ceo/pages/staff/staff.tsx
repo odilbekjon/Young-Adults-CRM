@@ -63,7 +63,11 @@ import { useAllBranchesQuery } from "../../../../../app/api/branchesApi";
 // (CEO/admins/managers + teachers), not just the users-table subset.
 import { useAllTeachersQuery, useToggleTeacherStatusMutation } from "../../../../../app/api/teachersApi";
 import type { Teacher } from "../../../../../app/api/teachersApi/types";
-import { useRolePermissionsSelectQuery } from "../../../../../app/api/rolePermissionsApi";
+import {
+  useRolePermissionsSelectQuery,
+  useAssignRolePermissionToUserMutation,
+  useRemoveRolePermissionFromUserMutation,
+} from "../../../../../app/api/rolePermissionsApi";
 
 // POST /users (Swagger) is documented as being for SUPERADMIN/ADMIN accounts
 // specifically — TEACHER/STUDENT accounts are created through their own
@@ -82,7 +86,11 @@ interface StaffForm {
   phone: string;
   password: string;
   role: string;
-  rolePermissionId: string;
+  // A user can hold more than one lavozim (AUTH_ROLE_DOCS.md's
+  // UserRolePermission is many-to-many) — POST/PATCH /users itself only
+  // accepts a single primary `rolePermissionId`, so any additional selected
+  // ids here are attached afterwards via assign-user (see handleSubmit).
+  rolePermissionIds: string[];
   branchIds: string[];
   dateOfBirth: string;
   gender: string;
@@ -95,7 +103,7 @@ const EMPTY_FORM: StaffForm = {
   phone: "",
   password: "",
   role: "",
-  rolePermissionId: "",
+  rolePermissionIds: [],
   branchIds: [],
   dateOfBirth: "",
   gender: "",
@@ -167,6 +175,9 @@ export const Staff = () => {
   const { data: rolePermissionOptions } = useRolePermissionsSelectQuery();
   const [createStaffUser, { isLoading: isCreating }] = useCreateStaffUserMutation();
   const [updateStaffUser, { isLoading: isUpdating }] = useUpdateStaffUserMutation();
+  const [assignRolePermission] = useAssignRolePermissionToUserMutation();
+  const [removeRolePermission] = useRemoveRolePermissionFromUserMutation();
+  const [isSavingRoles, setIsSavingRoles] = useState(false);
   const [toggleStaffUserStatus] = useToggleStaffUserStatusMutation();
   const [toggleTeacherStatus] = useToggleTeacherStatusMutation();
 
@@ -212,6 +223,11 @@ export const Staff = () => {
   const [selectedMember, setSelectedMember] = useState<{ id: string; kind: "user" | "teacher" } | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [form, setForm] = useState<StaffForm>(EMPTY_FORM);
+  // The only lavozim GET /users actually tells us this member already has
+  // (StaffUser.rolePermission is a single ref) — used on edit to know which
+  // assign-user/remove-user calls to make without ever touching a lavozim
+  // this page was never told about (see handleSubmit).
+  const [editOriginalRolePermissionId, setEditOriginalRolePermissionId] = useState<string | null>(null);
   const [smsOpen, setSmsOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -232,6 +248,7 @@ export const Staff = () => {
     setIsEdit(false);
     setSelectedMember(null);
     setForm(EMPTY_FORM);
+    setEditOriginalRolePermissionId(null);
     setPhotoPreview(null);
     setShowPassword(false);
     setErrors({});
@@ -254,12 +271,13 @@ export const Staff = () => {
         phone: member.phone ?? "",
         password: "",
         role: member.role ?? "",
-        rolePermissionId: member.rolePermission?.id ?? "",
+        rolePermissionIds: member.rolePermission?.id ? [member.rolePermission.id] : [],
         branchIds: [],
         dateOfBirth: "",
         gender: "",
         photo: null,
       });
+      setEditOriginalRolePermissionId(member.rolePermission?.id ?? null);
       setPhotoPreview(null);
       setShowPassword(false);
       setErrors({});
@@ -285,44 +303,89 @@ export const Staff = () => {
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = t("settings.ceo.staff.validation.nameRequired");
-    if (!form.rolePermissionId.trim()) e.rolePermissionId = t("settings.ceo.staff.validation.rolePermissionIdRequired");
+    if (form.rolePermissionIds.length === 0) e.rolePermissionId = t("settings.ceo.staff.validation.rolePermissionIdRequired");
     // Without this, POST /users silently defaults `role` to STUDENT — a
     // staff account created that way lands with zero admin permissions.
     if (!form.role.trim()) e.role = t("settings.ceo.staff.validation.roleRequired");
     if (!isEdit && !form.email.trim() && !form.phone.trim()) e.phone = t("settings.ceo.staff.validation.contactRequired");
+    // Same minimum as login (AUTH_ROLE_DOCS.md §1) — this is the same
+    // password field a created account will log in with.
+    if (form.password && form.password.length < 6) e.password = t("settings.ceo.staff.validation.passwordTooShort");
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  // POST /users' response shape for the created record isn't documented
+  // beyond {success, message, data} — read defensively the same way every
+  // other loosely-typed list row in this file already is (see `str`-style
+  // helpers in usersApi.tsx).
+  const extractUserId = (response: unknown): string | null => {
+    const data = (response as { data?: { id?: string; _id?: string } } | undefined)?.data;
+    const id = data?.id ?? data?._id;
+    return typeof id === "string" && id ? id : null;
   };
 
   const handleSubmit = async () => {
     setFormError(null);
     if (!validate()) return;
+    const [primaryRolePermissionId, ...extraRolePermissionIds] = form.rolePermissionIds;
     const payload = {
       name: form.name.trim(),
       email: form.email.trim() || undefined,
       phone: form.phone.trim() || undefined,
       password: form.password || undefined,
       role: form.role.trim() || undefined,
-      rolePermissionId: form.rolePermissionId.trim() || undefined,
+      rolePermissionId: primaryRolePermissionId,
       branchIds: form.branchIds.length ? form.branchIds : undefined,
       birthdate: form.dateOfBirth || undefined,
       gender: form.gender || undefined,
       photo: form.photo ?? undefined,
     };
     try {
+      let userId: string | null = null;
       if (isEdit && selectedMember) {
         await updateStaffUser({ id: selectedMember.id, ...payload }).unwrap();
-        toast.success(t("settings.ceo.staff.toast.updated"));
+        userId = selectedMember.id;
       } else {
-        await createStaffUser({
+        const created = await createStaffUser({
           ...payload,
           name: form.name.trim(),
-          rolePermissionId: form.rolePermissionId.trim(),
+          rolePermissionId: primaryRolePermissionId,
         }).unwrap();
-        toast.success(t("settings.ceo.staff.toast.created"));
+        userId = extractUserId(created);
       }
+
+      // Every additional lavozim beyond the primary one is a separate
+      // attach call (POST /role-permissions/{id}/assign-user/{userId} —
+      // AUTH_ROLE_DOCS.md §14, idempotent even if already assigned). On
+      // edit, a previously-known lavozim that got unchecked (and wasn't
+      // re-picked as the new primary) is explicitly detached — nothing
+      // this page was never told about is ever touched.
+      if (userId) {
+        setIsSavingRoles(true);
+        try {
+          const toAssign = extraRolePermissionIds;
+          const toRemove =
+            isEdit && editOriginalRolePermissionId && editOriginalRolePermissionId !== primaryRolePermissionId && !extraRolePermissionIds.includes(editOriginalRolePermissionId)
+              ? [editOriginalRolePermissionId]
+              : [];
+          const results = await Promise.allSettled([
+            ...toAssign.map((rpId) => assignRolePermission({ id: rpId, userId: userId! }).unwrap()),
+            ...toRemove.map((rpId) => removeRolePermission({ id: rpId, userId: userId! }).unwrap()),
+          ]);
+          const failed = results.some((r) => r.status === "rejected");
+          if (failed) {
+            toast.error(t("settings.ceo.staff.toast.rolePermissionPartialError"));
+          }
+        } finally {
+          setIsSavingRoles(false);
+        }
+      }
+
+      toast.success(isEdit ? t("settings.ceo.staff.toast.updated") : t("settings.ceo.staff.toast.created"));
       setOpen(false);
       setForm(EMPTY_FORM);
+      setEditOriginalRolePermissionId(null);
       setSelectedMember(null);
     } catch (err) {
       const detail = extractApiError(err);
@@ -586,6 +649,25 @@ export const Staff = () => {
             </Box>
 
             <Box>
+              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.password")}</Typography>
+              <TextField
+                name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange}
+                fullWidth size="small" placeholder={t("settings.ceo.staff.form.passwordPlaceholder")}
+                error={Boolean(errors.password)} helperText={errors.password}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => setShowPassword((v) => !v)}>
+                        {showPassword ? <HiEye size={18} /> : <HiEyeOff size={18} />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={inputSx}
+              />
+            </Box>
+
+            <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.email")}</Typography>
               <TextField name="email" value={form.email} onChange={handleChange} fullWidth size="small" placeholder={t("settings.ceo.staff.form.emailPlaceholder")} sx={inputSx} />
             </Box>
@@ -617,11 +699,11 @@ export const Staff = () => {
 
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.rolePermissionId")}</Typography>
-              {/* `rolePermissionId` is a single id on POST/PATCH /users, so
-                  only one of these real Lavozimlar/Positions records
-                  (GET /role-permissions/select) can be checked at a time —
-                  checkbox-styled per the reference design, single-select
-                  behavior underneath. */}
+              {/* A user can hold multiple lavozims (AUTH_ROLE_DOCS.md's
+                  UserRolePermission is many-to-many) — real multi-select
+                  now. POST/PATCH /users only takes one primary
+                  rolePermissionId; every other checked box is attached via
+                  a separate assign-user call in handleSubmit. */}
               <Box sx={{ display: "flex", flexWrap: "wrap", columnGap: 2, rowGap: 0.5 }}>
                 {(rolePermissionOptions ?? []).map((option) => (
                   <FormControlLabel
@@ -629,8 +711,15 @@ export const Staff = () => {
                     control={
                       <Checkbox
                         size="small"
-                        checked={form.rolePermissionId === option.id}
-                        onChange={() => setForm((p) => ({ ...p, rolePermissionId: p.rolePermissionId === option.id ? "" : option.id }))}
+                        checked={form.rolePermissionIds.includes(option.id)}
+                        onChange={() =>
+                          setForm((p) => ({
+                            ...p,
+                            rolePermissionIds: p.rolePermissionIds.includes(option.id)
+                              ? p.rolePermissionIds.filter((id) => id !== option.id)
+                              : [...p.rolePermissionIds, option.id],
+                          }))
+                        }
                       />
                     }
                     label={<span style={{ fontSize: 13 }}>{option.name}</span>}
@@ -705,27 +794,6 @@ export const Staff = () => {
               </Box>
             </Box>
 
-            <Box>
-              <Button onClick={() => setShowPassword((v) => !v)} sx={{ fontSize: 13, color: "#5b8def", textTransform: "none", p: 0, fontWeight: 500, "&:hover": { background: "none", textDecoration: "underline" } }}>
-                {showPassword ? t("settings.ceo.staff.form.hidePasswordToggle") : t("settings.ceo.staff.form.setPasswordToggle")}
-              </Button>
-              {showPassword && (
-                <TextField
-                  name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange}
-                  fullWidth size="small" placeholder={t("settings.ceo.staff.form.passwordPlaceholder")} sx={{ ...inputSx, mt: 1.5 }}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setShowPassword((v) => !v)}>
-                          {showPassword ? <HiEye size={18} /> : <HiEyeOff size={18} />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              )}
-            </Box>
-
             {formError && (
               <Typography fontSize={13} color="error">{formError}</Typography>
             )}
@@ -734,10 +802,10 @@ export const Staff = () => {
 
         <Box sx={{ px: 3, py: 2.5, borderTop: "1px solid var(--color-border)" }}>
           <Button
-            fullWidth variant="contained" onClick={handleSubmit} disabled={isCreating || isUpdating}
+            fullWidth variant="contained" onClick={handleSubmit} disabled={isCreating || isUpdating || isSavingRoles}
             sx={{ borderRadius: "24px", py: 1.3, fontSize: 15, fontWeight: 600, textTransform: "none", bgcolor: "#4f7ec4", boxShadow: "0 4px 12px rgba(79,126,196,0.35)", "&:hover": { bgcolor: "#3b6ab0" } }}
           >
-            {(isCreating || isUpdating) ? <CircularProgress size={18} sx={{ color: "#fff" }} /> : t("settings.ceo.staff.form.submit")}
+            {(isCreating || isUpdating || isSavingRoles) ? <CircularProgress size={18} sx={{ color: "#fff" }} /> : t("settings.ceo.staff.form.submit")}
           </Button>
         </Box>
       </Drawer>

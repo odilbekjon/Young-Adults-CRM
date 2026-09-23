@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
+import { useAuth } from "../../hooks/useAuth";
 import {
   Avatar,
   Box,
@@ -470,6 +471,7 @@ export const Students = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
+  const { hasPermission } = useAuth();
 
   const [sendSmsOpen, setSendSmsOpen] = useState(false);
 
@@ -1074,10 +1076,14 @@ export const Students = () => {
                         <MenuItem onClick={() => { setActionMenu(null); setEditDrawerOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-text-secondary)" }}>
                           <MdEdit size={16} color="var(--color-text-secondary)" /> {t("students.actions.editStudent")}
                         </MenuItem>
-                        <Divider sx={{ my: 0.5 }} />
-                        <MenuItem onClick={() => { setActionMenu(null); setAddPaymentOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-success)" }}>
-                          <MdPayment size={16} color="var(--color-success)" /> {t("students.actions.addPayment")}
-                        </MenuItem>
+                        {hasPermission("PAYMENTS", "CREATE") && (
+                          <>
+                            <Divider sx={{ my: 0.5 }} />
+                            <MenuItem onClick={() => { setActionMenu(null); setAddPaymentOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-success)" }}>
+                              <MdPayment size={16} color="var(--color-success)" /> {t("students.actions.addPayment")}
+                            </MenuItem>
+                          </>
+                        )}
                         <Divider sx={{ my: 0.5 }} />
                         <MenuItem onClick={() => { setActionMenu(null); setActionError(null); setArchiveUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-danger)" }}>
                           <MdDelete size={16} /> {t("students.actions.archive")}

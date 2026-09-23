@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useBranch, type BranchId } from "../../Context/BranchContext";
 import { useSidebar } from "../../Context/SidebarContext";
 import { useThemeMode } from "../../Context/ThemeContext";
+import { useAuth } from "../../hooks/useAuth";
 
 import { SIDEBAR_WIDTH, HEADER_HEIGHT } from "../Sidebar/Sidebar";
 import { AddStudent } from "../../components/AddStudent/AddStudent";
@@ -74,13 +75,18 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
   const dispatch = useDispatch<AppDispatch>();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { data: branchesData, isLoading: branchesLoading } = useAllBranchesQuery();
+  const { isSuperAdmin, branchIds } = useAuth();
 
-  const options: { value: BranchId; label: string; id: string | null }[] = [
-    { value: "all", label: "All branches", id: null },
-    ...(branchesData?.data ?? [])
-      .filter((b) => b.status === "ACTIVE")
-      .map((b) => ({ value: b.name, label: b.name, id: b.id })),
-  ];
+  // Only SUPERADMIN (CEO) sees every branch / the "All branches" shortcut —
+  // everyone else is scoped to the branches their own account was assigned
+  // (AUTH_ROLE_DOCS.md's branchIds), so they can't select their way into a
+  // branch's data they don't otherwise have access to.
+  const activeBranches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
+  const scopedBranches = isSuperAdmin ? activeBranches : activeBranches.filter((b) => branchIds.includes(b.id));
+
+  const options: { value: BranchId; label: string; id: string | null }[] = isSuperAdmin
+    ? [{ value: "all", label: "All branches", id: null }, ...scopedBranches.map((b) => ({ value: b.name, label: b.name, id: b.id }))]
+    : scopedBranches.map((b) => ({ value: b.name, label: b.name, id: b.id }));
   const current = options.find((o) => o.value === branch);
 
   // Restores the visible selection after a page reload: the real branch id
@@ -497,6 +503,7 @@ const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { hasPermission } = useAuth();
   useEffect(() => {
     if (!open) return;
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
@@ -504,10 +511,15 @@ const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
+  // AUTH_ROLE_DOCS.md: action buttons are shown only when the user actually
+  // holds the matching CREATE permission (e.g. a Manager without PAYMENTS
+  // CREATE shouldn't see "Add payment" here at all).
   const items = [
-    { label: t("quickAdd.addStudent"), emoji: "🎓", action: onAddStudent },
-    { label: t("quickAdd.addPayment"), emoji: "💳", action: onAddPayment },
+    ...(hasPermission("STUDENTS", "CREATE") ? [{ label: t("quickAdd.addStudent"), emoji: "🎓", action: onAddStudent }] : []),
+    ...(hasPermission("PAYMENTS", "CREATE") ? [{ label: t("quickAdd.addPayment"), emoji: "💳", action: onAddPayment }] : []),
   ];
+
+  if (items.length === 0) return null;
 
   return (
     <div ref={ref} style={{ position: "relative" }}>

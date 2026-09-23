@@ -3,18 +3,55 @@ export interface LoginRequest {
   password: string;
 }
 
+// GET /role-permissions/enums documents the exact closed set of values for
+// both fields below — anything outside these is not a valid backend value.
+export type PermissionLabel =
+  | "STUDENTS"
+  | "TEACHERS"
+  | "USERS"
+  | "GROUPS"
+  | "COURSES"
+  | "ROOMS"
+  | "BRANCHES"
+  | "SETTINGS"
+  | "FINANCE"
+  | "PAYMENTS"
+  | "EXPENSES"
+  | "SALARIES"
+  | "LEADS";
+
+export type PermissionAction = "CREATE" | "READ" | "UPDATE" | "DELETE" | "GET_ARCHIVE" | "MANAGE";
+
+export interface Permission {
+  action: PermissionAction;
+  label: PermissionLabel;
+}
+
+// A "lavozim" (position) — a named bundle of permissions a user can be
+// assigned in addition to their base `role` (AUTH_ROLE_DOCS.md §RolePermission).
+export interface RolePermissionDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  labels: PermissionLabel[];
+  permissions: Permission[];
+}
+
 export interface LoginUser {
   id: string;
   email: string;
   phone: string | null;
+  // Base system role: SUPERADMIN | ADMIN | TEACHER | STUDENT.
   role: string;
+  // `role` plus every assigned RolePermission.name — flattened for display
+  // (e.g. sidebar labels), not for permission checks (use rolePermissions).
+  roles?: string[];
+  rolePermissions?: RolePermissionDetail[];
+  jobTitle?: string | null;
 }
 
-// POST /auth/login — Swagger confirms the request as multipart/form-data
-// {identifier, password}; the response body wasn't expanded in Swagger's
-// Responses section. `refreshToken` is modeled defensively (optional)
-// because POST /auth/refresh requires a `refreshToken` string that has to
-// be issued somewhere, and login is the only endpoint that plausibly does.
+// POST /auth/login — multipart/form-data {identifier, password}. identifier
+// accepts either an email or a phone number (AUTH_ROLE_DOCS.md §1).
 export interface LoginResponse {
   success: boolean;
   message: string;
@@ -26,8 +63,12 @@ export interface LoginResponse {
 }
 
 export interface MeUserBranchRef {
-  id: string;
-  name: string;
+  branchId: string;
+  branch: {
+    id: string;
+    name: string;
+    status: string;
+  };
 }
 
 export interface MeUser {
@@ -41,6 +82,12 @@ export interface MeUser {
   status: string;
   createdAt: string;
   updatedAt: string;
+  roles: string[];
+  rolePermissions: RolePermissionDetail[];
+  // First branch id (shortcut) — kept for backward compatibility with call
+  // sites that only need a single "primary" branch.
+  branchId?: string | null;
+  branchIds: string[];
   branches: MeUserBranchRef[];
 }
 
@@ -54,11 +101,6 @@ export interface RefreshRequest {
   refreshToken: string;
 }
 
-// POST /auth/refresh — confirmed via Swagger as multipart/form-data with a
-// single required field `refreshToken` (201 response, no schema shown).
-// Modeled defensively as a renewed access/refresh token pair — the same
-// shape as LoginResponse.data — since both plausible field-name variants
-// (`token` and `accessToken`) are handled when consuming this in baseApi.
 export interface RefreshResponse {
   success?: boolean;
   message?: string;
@@ -66,5 +108,15 @@ export interface RefreshResponse {
     token?: string;
     accessToken?: string;
     refreshToken?: string;
+  };
+}
+
+// GET /auth/sidebar — drives which menus/routes are visible. `allAccess:
+// true` (SUPERADMIN) means everything is visible regardless of `labels`.
+export interface SidebarResponse {
+  success: boolean;
+  data: {
+    allAccess: boolean;
+    labels: PermissionLabel[];
   };
 }

@@ -16,6 +16,7 @@ import {
 
 import { FlatStudent, mapApiStudentToFlat, formatDate, formatLongDate } from "../../constants/FlatStudents";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 import {
   useStudentByIdQuery,
   useStudentGroupMembershipsQuery,
@@ -754,6 +755,7 @@ const SideCard = ({
   onOpenAddToGroupMenu,
   onAddPayment,
   onOpenAddPaymentMenu,
+  canAddPayment,
 }: {
   student: FlatStudent;
   onEdit: () => void;
@@ -763,6 +765,7 @@ const SideCard = ({
   onOpenAddToGroupMenu: (event: React.MouseEvent<HTMLElement>) => void;
   onAddPayment: () => void;
   onOpenAddPaymentMenu: (event: React.MouseEvent<HTMLElement>) => void;
+  canAddPayment: boolean;
 }) => (
   <div
     style={{
@@ -949,37 +952,39 @@ const SideCard = ({
           <FiChevronDown size={13} />
         </IconButton>
       </div>
-      <div style={{ display: "flex", gap: 4 }}>
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<FiDollarSign size={13} />}
-          onClick={onAddPayment}
-          sx={{
-            flex: 1,
-            textTransform: "none",
-            fontWeight: 600,
-            fontSize: 12,
-            whiteSpace: "nowrap",
-            borderColor: "#86efac",
-            color: "#16a34a",
-            borderRadius: 999,
-            "&:hover": { borderColor: "#4ade80", bgcolor: "#f0fdf4" },
-          }}
-        >
-          Add payment
-        </Button>
-        <IconButton
-          size="small"
-          onClick={onOpenAddPaymentMenu}
-          sx={{
-            border: "1px solid #86efac", color: "#16a34a", borderRadius: 999, width: 28, height: 28, flexShrink: 0,
-            "&:hover": { borderColor: "#4ade80", bgcolor: "#f0fdf4" },
-          }}
-        >
-          <FiChevronDown size={13} />
-        </IconButton>
-      </div>
+      {canAddPayment && (
+        <div style={{ display: "flex", gap: 4 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<FiDollarSign size={13} />}
+            onClick={onAddPayment}
+            sx={{
+              flex: 1,
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: 12,
+              whiteSpace: "nowrap",
+              borderColor: "#86efac",
+              color: "#16a34a",
+              borderRadius: 999,
+              "&:hover": { borderColor: "#4ade80", bgcolor: "#f0fdf4" },
+            }}
+          >
+            Add payment
+          </Button>
+          <IconButton
+            size="small"
+            onClick={onOpenAddPaymentMenu}
+            sx={{
+              border: "1px solid #86efac", color: "#16a34a", borderRadius: 999, width: 28, height: 28, flexShrink: 0,
+              "&:hover": { borderColor: "#4ade80", bgcolor: "#f0fdf4" },
+            }}
+          >
+            <FiChevronDown size={13} />
+          </IconButton>
+        </div>
+      )}
     </div>
 
     {/* Note */}
@@ -1504,6 +1509,7 @@ const SimpleHistoryList = ({
 export const StudentProfile = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { hasPermission } = useAuth();
 
   // ✅ uid (string) — real API id orqali topiladi, navigate('/students/:id') bilan mos
   const { data, isLoading } = useStudentByIdQuery(id ?? "", { skip: !id });
@@ -1781,6 +1787,7 @@ export const StudentProfile = () => {
             onOpenAddToGroupMenu={(e) => setGroupMenuAnchor(e.currentTarget)}
             onAddPayment={() => setAddPaymentOpen(true)}
             onOpenAddPaymentMenu={(e) => setPaymentMenuAnchor(e.currentTarget)}
+            canAddPayment={hasPermission("PAYMENTS", "CREATE")}
           />
         </Box>
 

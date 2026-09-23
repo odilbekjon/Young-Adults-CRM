@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
 import { Box, Tooltip, Collapse, Drawer, useMediaQuery, useTheme } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -19,6 +19,7 @@ import { AiOutlineDollar, AiOutlinePieChart } from "react-icons/ai";
 import { HiBuildingLibrary } from "react-icons/hi2";
 import { useSidebar } from "../../Context/SidebarContext";
 import { useAuth } from "../../hooks/useAuth";
+import type { PermissionLabel } from "../../app/api/authApi/types";
 
 export const SIDEBAR_WIDTH = 140;
 export const SUBMENU_WIDTH = 200;
@@ -142,6 +143,37 @@ const SUBMENUS: Record<string, SubMenuItem[]> = {
   ],
 };
 
+// ─── Permission label mapping ──────────────────────────────────────────────
+// Maps nav/submenu paths to the /auth/sidebar `labels` that grant them
+// (AUTH_ROLE_DOCS.md §3/§10). A path with no entry here has no documented
+// backend label and stays visible to any non-TEACHER/STUDENT staff member,
+// same as before this mapping existed — TEACHER's own visibility is still
+// governed entirely by TEACHER_NAV_PATHS below, not by this.
+
+// Top-level NAV_ITEMS: several labels means "any one grants entry" (e.g. a
+// Manager holding only PAYMENTS still needs to see the Finance nav item).
+const NAV_ITEM_LABELS: Record<string, PermissionLabel[]> = {
+  "/leads":     ["LEADS"],
+  "/teachers":  ["TEACHERS"],
+  "/groups":    ["GROUPS"],
+  "/students":  ["STUDENTS"],
+  "/finance":   ["FINANCE", "PAYMENTS", "EXPENSES", "SALARIES"],
+  "/settings":  ["SETTINGS", "USERS", "BRANCHES", "COURSES", "ROOMS"],
+};
+
+// Leaf submenu items with a specific documented label.
+const SUBMENU_ITEM_LABELS: Record<string, PermissionLabel> = {
+  "/finance/all-payments":     "PAYMENTS",
+  "/finance/withdraw":         "EXPENSES",
+  "/finance/total-expenses":   "EXPENSES",
+  "/finance/salaries":         "SALARIES",
+  "/finance/debtors":          "FINANCE",
+  "/settings/ceo/staff":       "USERS",
+  "/settings/ceo/branches":    "BRANCHES",
+  "/settings/office/courses":  "COURSES",
+  "/settings/office/rooms":    "ROOMS",
+};
+
 // ─── NAV ITEMS ────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
@@ -158,6 +190,45 @@ const NAV_ITEMS = [
   { labelKey: "sidebar.nav.reports",             path: "/reports",                    icon: <AiOutlinePieChart size={40} /> },
   { labelKey: "sidebar.nav.settings",            path: "/settings",                   icon: <IoMdSettings size={40} /> },
 ];
+
+// ─── Permission-filtered submenus ──────────────────────────────────────────
+// Recomputes SUBMENUS with any label-gated leaf the current user lacks
+// removed (and its parent group dropped too, if that empties it out) — used
+// by both the desktop flyout and the mobile drawer so they never disagree.
+const useVisibleSubmenus = (): Record<string, SubMenuItem[]> => {
+  const { isTeacher, sidebarAllAccess, sidebarLabels, isPermissionsReady } = useAuth();
+
+  return useMemo(() => {
+    // TEACHER's sidebar never shows Finance/Reports/Settings in the first
+    // place (see TEACHER_NAV_PATHS) — nothing to filter for that case.
+    if (isTeacher) return SUBMENUS;
+
+    const isLabelVisible = (label?: PermissionLabel) => {
+      if (!label) return true;
+      if (sidebarAllAccess) return true;
+      // While /auth/sidebar hasn't resolved yet, default to visible rather
+      // than flashing an empty submenu — PermissionRoute independently
+      // guards the actual route, so this is a display-only grace period.
+      if (!isPermissionsReady) return true;
+      return sidebarLabels.includes(label);
+    };
+
+    const filterItems = (items: SubMenuItem[]): SubMenuItem[] =>
+      items.reduce<SubMenuItem[]>((acc, item) => {
+        if (item.children?.length) {
+          const children = filterItems(item.children);
+          if (children.length) acc.push({ ...item, children });
+          return acc;
+        }
+        if (isLabelVisible(SUBMENU_ITEM_LABELS[item.path])) acc.push(item);
+        return acc;
+      }, []);
+
+    return Object.fromEntries(
+      Object.entries(SUBMENUS).map(([path, items]) => [path, filterItems(items)])
+    );
+  }, [isTeacher, sidebarAllAccess, sidebarLabels, isPermissionsReady]);
+};
 
 // ─── SubMenuLeaf ──────────────────────────────────────────────────────────────
 
@@ -475,7 +546,8 @@ const MobileNavItem = ({ item }: { item: (typeof NAV_ITEMS)[number] }) => {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const { setMobileOpen } = useSidebar();
-  const hasSubmenu = !!SUBMENUS[item.path];
+  const visibleSubmenus = useVisibleSubmenus();
+  const hasSubmenu = !!visibleSubmenus[item.path]?.length;
   const isActive = hasSubmenu
     ? pathname === item.path || pathname.startsWith(item.path + "/")
     : pathname === item.path;
@@ -515,7 +587,7 @@ const MobileNavItem = ({ item }: { item: (typeof NAV_ITEMS)[number] }) => {
       {hasSubmenu && (
         <Collapse in={open}>
           <Box sx={{ backgroundColor: "var(--color-surface-alt)" }}>
-            {SUBMENUS[item.path].map((sub) =>
+            {visibleSubmenus[item.path].map((sub) =>
               sub.dividerBefore ? (
                 <Box key={sub.path}>
                   <Box sx={{ height: "0.5px", bgcolor: "var(--color-border)", mx: 2, my: 0.5 }} />
@@ -543,13 +615,24 @@ const TEACHER_NAV_PATHS = ["/dashboard", "/groups"];
 export const Sidebar = () => {
   const { pathname } = useLocation();
   const { openSubmenu, toggleSubmenu, setOpenSubmenu, mobileOpen, setMobileOpen } = useSidebar();
-  const { isTeacher } = useAuth();
+  const { isTeacher, sidebarAllAccess, sidebarLabels, isPermissionsReady } = useAuth();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  const navItems = isTeacher ? NAV_ITEMS.filter((i) => TEACHER_NAV_PATHS.includes(i.path)) : NAV_ITEMS;
+  const visibleSubmenus = useVisibleSubmenus();
+
+  const navItems = useMemo(() => {
+    if (isTeacher) return NAV_ITEMS.filter((i) => TEACHER_NAV_PATHS.includes(i.path));
+    return NAV_ITEMS.filter((i) => {
+      const labels = NAV_ITEM_LABELS[i.path];
+      if (!labels) return true; // no documented label => always visible for staff
+      if (sidebarAllAccess) return true;
+      if (!isPermissionsReady) return true; // avoid flashing an empty rail; corrects once loaded
+      return labels.some((l) => sidebarLabels.includes(l));
+    });
+  }, [isTeacher, sidebarAllAccess, sidebarLabels, isPermissionsReady]);
 
   const handleNavClick = (path: string) => {
-    if (SUBMENUS[path]) {
+    if (visibleSubmenus[path]?.length) {
       toggleSubmenu(path);
     } else {
       setOpenSubmenu(null);
@@ -581,7 +664,7 @@ export const Sidebar = () => {
       >
         <Box sx={{ pt: 1, pb: 4 }}>
           {navItems.map((item) => {
-            const hasSubmenu = !!SUBMENUS[item.path];
+            const hasSubmenu = !!visibleSubmenus[item.path]?.length;
             const submenuOpen = openSubmenu === item.path;
             const isActive = hasSubmenu
               ? pathname === item.path || pathname.startsWith(item.path + "/")
@@ -602,8 +685,8 @@ export const Sidebar = () => {
         </Box>
       </Box>
 
-      {isDesktop && openSubmenu && SUBMENUS[openSubmenu] && (
-        <SubMenuPanel parentPath={openSubmenu} items={SUBMENUS[openSubmenu]} />
+      {isDesktop && openSubmenu && !!visibleSubmenus[openSubmenu]?.length && (
+        <SubMenuPanel parentPath={openSubmenu} items={visibleSubmenus[openSubmenu]} />
       )}
 
       {/* Mobile / tablet drawer */}

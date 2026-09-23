@@ -72,7 +72,10 @@ const SelectField = ({
 interface EditGroupFormState {
   name: string;
   courseId: string;
-  teacherId: string;
+  // A group can have more than one teacher (GroupDetail.teachers is an
+  // array) — this used to be a single string and silently dropped every
+  // teacher but the first on save, permanently losing co-teachers.
+  teacherIds: string[];
   roomId: string;
   days: GroupDay[];
   time: string;
@@ -83,7 +86,7 @@ interface EditGroupFormState {
 const toFormState = (group: GroupDetail): EditGroupFormState => ({
   name: group.name ?? "",
   courseId: group.courseId ?? "",
-  teacherId: group.teachers?.[0]?.id ?? "",
+  teacherIds: group.teachers?.map((t) => t.id) ?? [],
   roomId: group.roomId ?? "",
   days: group.days ?? [],
   time: group.time ?? "",
@@ -129,6 +132,15 @@ export const EditGroupDrawer = ({
     }));
   };
 
+  const toggleTeacher = (teacherId: string) => {
+    setForm((f) => ({
+      ...f,
+      teacherIds: f.teacherIds.includes(teacherId)
+        ? f.teacherIds.filter((id) => id !== teacherId)
+        : [...f.teacherIds, teacherId],
+    }));
+  };
+
   const DAY_OPTIONS = [
     { value: "Odd days",     label: t("groups.options.days.odd") },
     { value: "Even days",    label: t("groups.options.days.even") },
@@ -151,7 +163,7 @@ export const EditGroupDrawer = ({
     onSave({
       name: form.name,
       courseId: form.courseId || undefined,
-      teacherIds: form.teacherId ? [form.teacherId] : undefined,
+      teacherIds: form.teacherIds.length ? form.teacherIds : undefined,
       roomId: form.roomId || undefined,
       days: form.days,
       time: form.time || undefined,
@@ -181,13 +193,21 @@ export const EditGroupDrawer = ({
           placeholder={t("singleGroup.editGroupDrawer.selectCourse")}
         />
 
-        <SelectField
-          label={t("singleGroup.editGroupDrawer.selectTeacher")}
-          value={form.teacherId}
-          onChange={(v) => setForm((f) => ({ ...f, teacherId: v }))}
-          options={teachers.map((tc) => ({ value: tc.id, label: tc.name }))}
-          placeholder={t("singleGroup.editGroupDrawer.selectTeacher")}
-        />
+        <div>
+          <label style={labelStyle}>{t("singleGroup.editGroupDrawer.selectTeacher")}</label>
+          <Stack direction="row" flexWrap="wrap" gap={1} mt={0.5}>
+            {teachers.map((tc) => (
+              <Chip
+                key={tc.id}
+                label={tc.name}
+                size="small"
+                color={form.teacherIds.includes(tc.id) ? "primary" : "default"}
+                onClick={() => toggleTeacher(tc.id)}
+                sx={{ cursor: "pointer" }}
+              />
+            ))}
+          </Stack>
+        </div>
 
         <div>
           <SelectField

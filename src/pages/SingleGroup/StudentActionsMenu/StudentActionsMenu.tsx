@@ -15,6 +15,7 @@ import {
 import { HiBuildingLibrary } from "react-icons/hi2";
 import { FiX } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../../../hooks/useAuth";
 
 export interface BranchOption {
   id: string;
@@ -168,6 +169,7 @@ export const StudentActionsMenu = ({
   onMoveToBranch,
 }: StudentActionsMenuProps) => {
   const { t } = useTranslation();
+  const { hasPermission } = useAuth();
   const [branchModalOpen, setBranchModalOpen] = useState(false);
 
   const handleOpenBranchModal = () => {
@@ -221,10 +223,12 @@ export const StudentActionsMenu = ({
                 {t("singleGroup.studentActionsMenu.graduateTrial")}
               </MenuItem>
             )}
-            <MenuItem onClick={onAddPayment} sx={itemSx}>
-              <TbWallet size={18} color={iconColor} />
-              {t("singleGroup.studentActionsMenu.addPayment")}
-            </MenuItem>
+            {hasPermission("PAYMENTS", "CREATE") && (
+              <MenuItem onClick={onAddPayment} sx={itemSx}>
+                <TbWallet size={18} color={iconColor} />
+                {t("singleGroup.studentActionsMenu.addPayment")}
+              </MenuItem>
+            )}
             <MenuItem onClick={onAddNote} sx={itemSx}>
               <TbFlag size={18} color={iconColor} />
               {t("singleGroup.studentActionsMenu.addNewNote")}

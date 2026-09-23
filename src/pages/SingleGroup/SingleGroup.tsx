@@ -590,15 +590,18 @@ export const SingleGroup = () => {
         isAllGroup: removeScope === "all",
       }).unwrap();
 
-      // Step 2 — the account-wide action: "Remove from group" archives the
-      // student (POST /students/{id}/status, which also records the reason
-      // to their history — the source of the Archive page's reason/comment
-      // columns); "Delete student" permanently deletes them (DELETE
-      // /students/{id}). The backend rejects a delete while any group
-      // membership is still active, which step 1 above has just cleared.
+      // Step 2 — the account-wide action: "Delete student" permanently
+      // deletes them (DELETE /students/{id}; the backend rejects this while
+      // any group membership is still active, which step 1 above has just
+      // cleared). Otherwise, only archive the student's whole account
+      // (POST /students/{id}/status, which also records the reason to their
+      // history — the source of the Archive page's reason/comment columns)
+      // when they were removed from EVERY group (removeScope === "all") —
+      // removing them from just the current group must leave their
+      // account-wide status, and their other group memberships, untouched.
       if (removeDeleteMode) {
         await deleteStudent(studentId).unwrap();
-      } else {
+      } else if (removeScope === "all") {
         await updateStudentStatus({ id: studentId, status: "INACTIVE", reason: combinedReason }).unwrap();
       }
 

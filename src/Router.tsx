@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { PublicRoute } from "./routes/PublicRoute";
 import { StudentRoute } from "./routes/StudentRoute";
+import { PermissionRoute } from "./routes/PermissionRoute";
 import { GroupsRoute, GroupDetailRoute } from "./routes/RoleGroupsRoute";
 import { StudentPortalLayout } from "./layouts/StudentPortalLayout/StudentPortalLayout";
 import { StudentPortalDashboard } from "./pages/StudentPortal/Dashboard/Dashboard";
@@ -82,13 +83,26 @@ export const AppRouter = () => {
         <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Layout><Dashboard/></Layout>} />
-            <Route path="/leads" element={<Layout><Leads/></Layout>} />
-            <Route path="/teachers" element={<Layout><Teachers/></Layout>} />
-            <Route path="/teachers/:id" element={<Layout><TeacherProfile/></Layout>} />
-            <Route path="/groups" element={<Layout><GroupsRoute/></Layout>} />
-            <Route path="/groups/:id" element={<Layout><GroupDetailRoute/></Layout>} />
-            <Route path="/students" element={<Layout><Students/></Layout>} />
-            <Route path="/students/:id" element={<Layout><StudentProfile/></Layout>} />
+
+            <Route element={<PermissionRoute label="LEADS" />}>
+                <Route path="/leads" element={<Layout><Leads/></Layout>} />
+            </Route>
+
+            <Route element={<PermissionRoute label="TEACHERS" />}>
+                <Route path="/teachers" element={<Layout><Teachers/></Layout>} />
+                <Route path="/teachers/:id" element={<Layout><TeacherProfile/></Layout>} />
+            </Route>
+
+            <Route element={<PermissionRoute label="GROUPS" />}>
+                <Route path="/groups" element={<Layout><GroupsRoute/></Layout>} />
+                <Route path="/groups/:id" element={<Layout><GroupDetailRoute/></Layout>} />
+            </Route>
+
+            <Route element={<PermissionRoute label="STUDENTS" />}>
+                <Route path="/students" element={<Layout><Students/></Layout>} />
+                <Route path="/students/:id" element={<Layout><StudentProfile/></Layout>} />
+            </Route>
+
             <Route path="/courses/:id" element={<Layout><SingleCourse/></Layout>} />
             <Route path="/reminders" element={<Layout><Reminders/></Layout>} />
             <Route path="/rating" element={<Layout><Rating/></Layout>} />
@@ -98,6 +112,11 @@ export const AppRouter = () => {
             <Route path="/teacher-attendance-reports" element={<Layout><TeacherAttendanceReport/></Layout>} />
             <Route path="/notifications" element={<Layout><Notifications/></Layout>} />
 
+            {/* SETTINGS bundles several backend labels (USERS/BRANCHES/COURSES/
+                ROOMS) under one nav icon — entry only requires ANY one of them
+                (or the general SETTINGS label); Sidebar.tsx narrows which
+                specific tabs are then visible. */}
+            <Route element={<PermissionRoute label={["SETTINGS", "USERS", "BRANCHES", "COURSES", "ROOMS"]} />}>
             <Route path="/settings" element={<Layout><Settings/></Layout>} >
                 <Route path="sms" element={<SettingsSms/>}/>
                 <Route path="grade" element={<Grade/>}/>
@@ -136,13 +155,19 @@ export const AppRouter = () => {
                 </Route>
 
             </Route>
+            </Route>
 
+            {/* FINANCE bundles FINANCE/PAYMENTS/EXPENSES/SALARIES — entry only
+                requires ANY one of them, since e.g. a Manager may hold only
+                PAYMENTS; Sidebar.tsx narrows which sub-tabs are then visible. */}
+            <Route element={<PermissionRoute label={["FINANCE", "PAYMENTS", "EXPENSES", "SALARIES"]} />}>
             <Route path="/finance" element={<Layout><Finance/></Layout>}>
                 <Route path="all-payments"   element={<AllPayments />} />
                 <Route path="withdraw"       element={<Withdraw />} />
                 <Route path="total-expenses" element={<TotalExpenses />} />
                 <Route path="salaries"       element={<Salaries />} />
                 <Route path="debtors"        element={<Debtors />} />
+            </Route>
             </Route>
 
             <Route path="/reports" element={<Layout><Reports/></Layout>}>

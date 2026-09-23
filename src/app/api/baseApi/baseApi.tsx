@@ -11,8 +11,11 @@ import {
 import i18n from "../../../i18n";
 import { logout, setToken } from "../../store/authSlice";
 
+// Every endpoint in the provided Swagger screenshots is namespaced under
+// /api/v1 (e.g. /api/v1/auth/login, /api/v1/role-permissions) — missing that
+// prefix here 404s every request against the real backend.
 const fetchQuery = fetchBaseQuery({
-  baseUrl:'https://young-adults-dj7r.onrender.com/api/v1/',
+  baseUrl:'https://api.youngadults-crm.uz/api/v1/',
   credentials: 'include',
   prepareHeaders: (headers, { getState }) => {
     const token = useStorage.getTokens()?.accessToken;
@@ -32,19 +35,7 @@ const fetchQuery = fetchBaseQuery({
   },
 });
 
-// The backend runs on Render's free tier, which spins the server down after
-// inactivity — the first request(s) after that arrive while it's still
-// waking up and fail with a connection error (not an HTTP error status).
-// Retry only those transport-level failures (FETCH_ERROR/TIMEOUT_ERROR);
-// real HTTP responses (400/401/404/500) bail out immediately so app-level
-// error handling (e.g. the 401 refresh flow below) isn't delayed.
-//
-// Render's free-tier cold start commonly takes 30-60s to finish waking the
-// server, but RTK Query's default backoff (maxRetries: 4, capped ~2s/step)
-// gives up after only a few seconds — nowhere near long enough, which is
-// what was surfacing as "Network error" on the very first request after a
-// period of inactivity (e.g. the first login of the day). Retry steadily
-// for up to ~70s instead so that first request survives the wake-up.
+
 const rawBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = retry(
   async (args, api, extraOptions) => {
     const result = await fetchQuery(args, api, extraOptions);

@@ -1,5 +1,5 @@
 import { PATHS } from "./paths";
-import { LoginRequest, LoginResponse, MeResponse, RefreshRequest, RefreshResponse } from "./types";
+import { LoginRequest, LoginResponse, MeResponse, RefreshRequest, RefreshResponse, SidebarResponse } from "./types";
 import { baseApi } from "../baseApi";
 
 export const authApi = baseApi.injectEndpoints({
@@ -24,6 +24,15 @@ export const authApi = baseApi.injectEndpoints({
             }),
             providesTags: ["user"],
         }),
+        // GET /auth/sidebar — {allAccess, labels}, used to drive which nav
+        // items/routes are visible for the current user (AUTH_ROLE_DOCS.md §3).
+        getSidebar: builder.query<SidebarResponse, void>({
+            query: () => ({
+                url: PATHS.SIDEBAR,
+                method: 'GET',
+            }),
+            providesTags: ["user"],
+        }),
         refreshToken: builder.mutation<RefreshResponse, RefreshRequest>({
             query: ({ refreshToken }) => {
                 // POST /auth/refresh — confirmed via Swagger as multipart/form-data
@@ -43,4 +52,4 @@ export const authApi = baseApi.injectEndpoints({
     })
 })
 
-export const { useLoginMutation, useGetMeQuery, useRefreshTokenMutation } = authApi;
+export const { useLoginMutation, useGetMeQuery, useGetSidebarQuery, useRefreshTokenMutation } = authApi;

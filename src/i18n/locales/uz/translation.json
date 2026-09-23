@@ -3,6 +3,10 @@
     "message": "Siz izlagan sahifa mavjud emas.",
     "backHome": "Bosh sahifaga"
   },
+  "accessDenied": {
+    "message": "Bu sahifani ko'rish uchun sizda ruxsat yo'q.",
+    "backHome": "Bosh sahifaga"
+  },
   "header": {
     "search": "Qidiruv",
     "searching": "Qidirilmoqda...",
@@ -140,10 +144,12 @@
     "tagline": "Har doim bir qadam oldinda!",
     "title": "Kirish",
     "email": "Email",
+    "identifier": "Email yoki telefon raqam",
+    "identifierPlaceholder": "example@adults.uz yoki +998901234567",
     "password": "Parol",
-    "error": "Email yoki parol noto'g'ri. Qaytadan urinib ko'ring.",
+    "error": "Login yoki parol noto'g'ri. Qaytadan urinib ko'ring.",
     "networkError": "Tarmoq xatosi. Internet aloqasini tekshirib, qaytadan urinib ko'ring.",
-    "requiredFields": "Email va parolni kiriting.",
+    "requiredFields": "Email/telefon raqam va parolni kiriting.",
     "submit": "Kirish"
   },
   "sidebar": {
@@ -1419,7 +1425,8 @@
       "note": "Eslatma",
       "notePlaceholder": "Eslatmani kiriting...",
       "save": "Saqlash",
-      "cancel": "Bekor qilish"
+      "cancel": "Bekor qilish",
+      "notConnected": "Bu funksiya hali backend bilan bog'lanmagan — eslatma saqlanmaydi."
     },
     "addPaymentDrawer": {
       "title": "To'lov qo'shish",
@@ -1536,7 +1543,9 @@
       "name": "Ism",
       "comment": "Izoh",
       "selectEmployee": "Xodimni tanlang",
-      "save": "Saqlash"
+      "save": "Saqlash",
+      "cancel": "Bekor qilish",
+      "notConnected": "Bu funksiya hali backend bilan bog'lanmagan — eslatma saqlanmaydi."
     },
     "removeStudentDialog": {
       "title": "Rostdan ham o'chirmoqchimisiz?",
@@ -1873,9 +1882,9 @@
         },
         "roles": { "ceo": "CEO", "branchDirector": "Filial direktori", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Cheklangan administrator", "teacher": "O'qituvchi", "marketer": "Marketolog", "cashier": "Kassir" },
         "gender": { "male": "Erkak", "female": "Ayol" },
-        "validation": { "nameRequired": "Ism kiritilishi shart", "rolePermissionIdRequired": "Lavozim tanlanishi shart", "roleRequired": "Tizim roli tanlanishi shart", "contactRequired": "Email yoki telefon raqamini kiriting" },
+        "validation": { "nameRequired": "Ism kiritilishi shart", "rolePermissionIdRequired": "Kamida bitta lavozim tanlanishi shart", "roleRequired": "Tizim roli tanlanishi shart", "contactRequired": "Email yoki telefon raqamini kiriting", "passwordTooShort": "Parol kamida 6 ta belgidan iborat bo'lishi kerak" },
         "deleteDialog": { "title": "Xodimni o'chirish", "message": "Rostdan ham bu xodimni o'chirmoqchimisiz? U arxivga ko'chiriladi va \"Faol emas\" holatiga o'tkaziladi — istalgan vaqtda Arxiv sahifasidan qayta tiklashingiz mumkin.", "cancel": "Bekor qilish", "confirm": "O'chirish" },
-        "toast": { "created": "Xodim qo'shildi", "updated": "Xodim ma'lumotlari yangilandi", "deleted": "Xodim o'chirildi", "statusToggled": "Status yangilandi", "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring.", "deleteConflict": "Bu xodim hali filialga biriktirilgan, shuning uchun o'chirib bo'lmaydi." },
+        "toast": { "created": "Xodim qo'shildi", "updated": "Xodim ma'lumotlari yangilandi", "deleted": "Xodim o'chirildi", "statusToggled": "Status yangilandi", "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring.", "deleteConflict": "Bu xodim hali filialga biriktirilgan, shuning uchun o'chirib bo'lmaydi.", "rolePermissionPartialError": "Xodim saqlandi, lekin ba'zi qo'shimcha lavozimlarni biriktirish/olib tashlashda xatolik yuz berdi." },
         "pagination": { "prev": "Orqaga", "next": "Oldinga" }
       },
       "general": {

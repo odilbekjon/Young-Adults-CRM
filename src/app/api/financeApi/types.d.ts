@@ -270,6 +270,12 @@ export interface PaymentRow {
   notes: string;
   createdBy: string | null;
   createdAt?: string;
+  // Not documented in Swagger beyond DELETE /finance/payments/{id}'s own
+  // description ("marks the payment REFUNDED"), which confirms payments do
+  // carry a status field — read defensively; null on a backend that doesn't
+  // return it, in which case the row is treated as a normal completed
+  // payment (the overwhelmingly common case) rather than assuming a value.
+  status: string | null;
 }
 
 export interface PaymentsListResult {
@@ -281,10 +287,18 @@ export interface PaymentsListResult {
 // info ("chek ma'lumotlarini qaytaradi") beyond the list registry row, but
 // the exact field name isn't shown in Swagger beyond that description, so
 // `checkNumber`/`branchName` are read defensively (see normalizePaymentDetail).
+// teacherName/coursePrice/balance are the same kind of defensive read — the
+// Invoice settings preview (Settings > General > Invoice) already has
+// unused i18n labels for Balance/Group/Course price/Teacher, confirming the
+// receipt is meant to carry them; they're null when the backend doesn't
+// return them rather than guessed.
 export interface PaymentDetail extends PaymentRow {
   receiptUrl: string | null;
   checkNumber: string | null;
   branchName: string | null;
+  teacherName: string | null;
+  coursePrice: number | null;
+  balance: number | null;
 }
 
 // GET /finance/stats

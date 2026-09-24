@@ -105,17 +105,22 @@
     "title": "Chek",
     "print": "Chop etish",
     "loading": "Yuklanmoqda...",
-    "loadError": "Chekni yuklab bo'lmadi"
+    "loadError": "Chekni yuklab bo'lmadi",
+    "notCompletedWarning": "Bu to'lov {{status}} holatida — haqiqiy yakunlangan operatsiya emas"
   },
   "debtorReceipt": {
-    "title": "Qarzdorlik cheki",
+    "title": "Qarzdorlik bo'yicha ma'lumotnoma",
     "print": "Chop etish",
-    "loadError": "Chekni yuklab bo'lmadi",
+    "loadError": "Ma'lumotnomani yuklab bo'lmadi",
+    "status": "QARZDORLIK — TO'LANMAGAN",
+    "notice": "Ushbu hujjat to'lanmagan qarz mavjudligini tasdiqlaydi. Bu to'lov cheki yoki to'lov tasdiqnomasi emas.",
     "name": "Ism",
+    "studentId": "Talaba ID",
     "phone": "Telefon",
     "group": "Guruh",
     "branch": "Filial",
-    "balance": "Qarz summasi"
+    "balance": "Qarz summasi",
+    "issuedAt": "Berilgan sana"
   },
   "addWithdrawal": {
     "title": "Yechib olish qo'shish",
@@ -1993,6 +1998,8 @@
           "cancel": "Bekor qilish",
           "logoAlt": "Young Adults logotipi",
           "preview": {
+            "studentId": "Talaba ID:",
+            "status": "Holat:",
             "checkNumber": "Chek raqami:",
             "company": "Kompaniya:",
             "branch": "Filial:",

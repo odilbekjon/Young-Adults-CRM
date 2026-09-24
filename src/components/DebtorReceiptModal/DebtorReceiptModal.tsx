@@ -13,6 +13,12 @@ const ReceiptRow = ({ label, value }: { label: string; value?: string | null }) 
   );
 };
 
+const formatIssuedAt = () => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 // Shown from the Debtors table's per-row "receipt" action. Backed by
 // GET /finance/debtors/{studentId}/receipt — same print-style layout as
 // PaymentReceiptModal, which backs GET /finance/payments/{id} instead.
@@ -64,11 +70,27 @@ export const DebtorReceiptModal = ({
             <Box sx={{ px: 3, py: 2.5, border: "1px solid #eee", borderTop: "none", borderBottom: "none" }}>
               <img src={logo} alt="Young Adults" width={100} style={{ display: "block", margin: "0 auto 16px" }} />
 
+              <Box
+                sx={{
+                  bgcolor: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca",
+                  borderRadius: 1, px: 1.5, py: 1, mb: 1.5, fontSize: 13, fontWeight: 700, textAlign: "center",
+                  letterSpacing: 0.4,
+                }}
+              >
+                {t("debtorReceipt.status")}
+              </Box>
+
               <ReceiptRow label={t("debtorReceipt.name")} value={receipt.name} />
+              <ReceiptRow label={t("debtorReceipt.studentId")} value={receipt.studentId} />
               <ReceiptRow label={t("debtorReceipt.phone")} value={receipt.phone} />
               <ReceiptRow label={t("debtorReceipt.group")} value={receipt.groupName} />
               <ReceiptRow label={t("debtorReceipt.branch")} value={receipt.branchName} />
-              <ReceiptRow label={t("debtorReceipt.balance")} value={`${receipt.balance.toLocaleString("ru-RU")} UZS`} />
+              <ReceiptRow label={t("debtorReceipt.balance")} value={`${Math.abs(receipt.balance).toLocaleString("ru-RU")} UZS`} />
+              <ReceiptRow label={t("debtorReceipt.issuedAt")} value={formatIssuedAt()} />
+
+              <Box sx={{ mt: 1.5, fontSize: 11, color: "#888", fontStyle: "italic" }}>
+                {t("debtorReceipt.notice")}
+              </Box>
             </Box>
           </Box>
         )}

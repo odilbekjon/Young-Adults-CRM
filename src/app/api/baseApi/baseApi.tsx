@@ -27,7 +27,7 @@ import { logout, setToken } from "../../store/authSlice";
 // for up to ~70s so the very first request of the day survives the
 // wake-up instead of surfacing as a raw "Network error".
 const fetchQuery = fetchBaseQuery({
-  baseUrl:'https://young-adults-dj7r.onrender.com/api/v1/',
+  baseUrl:'https://api.youngadults-crm.uz/',
   credentials: 'include',
   prepareHeaders: (headers, { getState }) => {
     const token = useStorage.getTokens()?.accessToken;

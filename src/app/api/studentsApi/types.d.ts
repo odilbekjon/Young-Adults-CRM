@@ -373,4 +373,9 @@ export interface StudentFinanceTransaction {
   paymentMethodId: string | null;
   studentId: string | null;
   studentName: string | null;
+  // From the matched payment row's own `status` (e.g. REFUNDED once
+  // deletePayment has run) — null for a DEBT row or an unmatched/normal
+  // PAYMENT row. Lets the table refuse to offer a "paid" receipt for a
+  // payment that's no longer actually paid.
+  paymentStatus: string | null;
 }

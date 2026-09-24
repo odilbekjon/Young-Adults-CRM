@@ -13,6 +13,7 @@ import {
   TextField, Radio, RadioGroup, FormControlLabel,
   InputAdornment, Menu, MenuItem,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 
 import { FlatStudent, mapApiStudentToFlat, formatDate, formatLongDate } from "../../constants/FlatStudents";
 import { useNavigate, useParams } from "react-router-dom";
@@ -32,6 +33,7 @@ import {
 } from "../../app/api/studentsApi";
 import type {
   StudentGender, StudentGroupMembership, StudentFinanceHistoryEntry, StudentFinanceTransaction,
+  StudentPaymentsSummary,
 } from "../../app/api/studentsApi/types";
 import {
   useAllGroupsQuery, useAddStudentToGroupMutation, useStudentGroupsQuery,
@@ -39,13 +41,15 @@ import {
 } from "../../app/api/groupsApi";
 import type { Group } from "../../app/api/groupsApi/types";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
-import { useDeletePaymentMutation } from "../../app/api/financeApi";
+import { useDeletePaymentMutation, isCompletedPaymentStatus } from "../../app/api/financeApi";
+import { useAttendanceReportQuery } from "../../app/api/attendancesApi";
 import { useSendSmsToStudentsMutation } from "../../app/api/smsApi";
 import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { extractApiError } from "../../utils/extractApiError";
 import { AddPayment } from "../../components/AddPayment";
 import { PaymentReceiptModal } from "../../components/PaymentReceiptModal";
+import { DebtorReceiptModal } from "../../components/DebtorReceiptModal";
 import { FreezeModal } from "../SingleGroup/FreezeModal";
 import { ActivateModal } from "../SingleGroup/ActivateModal";
 
@@ -1012,12 +1016,17 @@ const SideCard = ({
 // data (status, dates, teachers, course), not the mock TEACHERS_DATA lookup
 // this card used to fall back to (which meant Course/Room/Price/Teacher
 // always showed placeholder values regardless of the student's real groups).
-const GROUP_STATUS_BADGE: Record<string, { label: string; bg: string; color: string }> = {
-  ACTIVE:    { label: "Active",    bg: "#dcfce7", color: "#15803d" },
-  PROBATION: { label: "Trial",     bg: "#fef3c7", color: "#92400e" },
-  FROZEN:    { label: "Frozen",    bg: "#dbeafe", color: "#1d4ed8" },
-  INACTIVE:  { label: "Inactive",  bg: "#f3f4f6", color: "#6b7280" },
-  DELETED:   { label: "Removed",   bg: "#f3f4f6", color: "#6b7280" },
+// Layout follows the reference design: chip = the group's own name (this
+// backend names groups things like "IT Friends"/"Deep Science" — confirmed
+// by those exact strings showing up as group badges elsewhere, e.g. the
+// payments table's group tag), heading = the course name, status is shown
+// as colored text next to the date range rather than as the chip.
+const GROUP_STATUS_TEXT: Record<string, { color: string; fallback: string }> = {
+  ACTIVE:    { color: "#1d4ed8", fallback: "Active (Learns)" },
+  PROBATION: { color: "#92400e", fallback: "Trial" },
+  FROZEN:    { color: "#1d4ed8", fallback: "Frozen (paused)" },
+  INACTIVE:  { color: "#6b7280", fallback: "Inactive" },
+  DELETED:   { color: "#6b7280", fallback: "Removed" },
 };
 
 const formatMembershipDate = (iso: string | null) => (iso ? formatDate(iso.slice(0, 10)) : "—");
@@ -1027,17 +1036,90 @@ const formatMembershipDate = (iso: string | null) => (iso ? formatDate(iso.slice
 const formatDaysType = (daysType: string | undefined | null) =>
   daysType === "EVEN" ? "Even days" : daysType === "ODD" ? "Odd days" : (daysType || "—");
 
+const moneyOrDash = (n: number | null | undefined) =>
+  n === null || n === undefined ? "—" : `${n.toLocaleString("ru-RU")} UZS`;
+
+// Course price on Group/GroupCourse is serialized as a decimal.js-style
+// object ({s,e,d}) on read (same as financeApi/studentsApi's own asMoney) —
+// membership.customPrice (StudentGroupMembership) is already a plain number.
+const asCoursePrice = (raw: unknown): number | null => {
+  if (raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).d)) {
+    return Number((raw as { d: unknown[] }).d[0]) || 0;
+  }
+  return typeof raw === "number" ? raw : null;
+};
+
+// Total lessons / present / absent for this ONE student in this ONE group.
+// No endpoint returns a per-student-per-group attendance summary directly —
+// this is the closest available data (GET /attendances/report, filtered to
+// the group, matched by studentId client-side from its per-date rows), so
+// it's best-effort and capped by the query's own limit rather than a
+// guaranteed-complete count for a very long-running group.
+const useGroupAttendanceSummary = (groupId: string | undefined, studentId: string) => {
+  const { data, isFetching } = useAttendanceReportQuery(
+    { groupId: groupId ?? "", limit: 500 },
+    { skip: !groupId }
+  );
+  return useMemo(() => {
+    const rows = (data?.rows ?? []).filter((r) => r.studentId === studentId);
+    const total = rows.length;
+    const present = rows.filter((r) => r.attendanceStatus === "PRESENT").length;
+    const absent = rows.filter((r) => r.attendanceStatus === "ABSENT").length;
+    return { total, present, absent, other: total - present - absent, isFetching };
+  }, [data, studentId, isFetching]);
+};
+
+const AttendanceLegendRow = ({ color, label, value }: { color: string; label: string; value: number }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#6b7280" }}>
+    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+    {label}: <strong style={{ color: "#111827" }}>{value}</strong>
+  </div>
+);
+
+const AttendanceSummary = ({ groupId, studentId }: { groupId: string | undefined; studentId: string }) => {
+  const { total, present, absent, other, isFetching } = useGroupAttendanceSummary(groupId, studentId);
+  if (isFetching || total === 0) return null;
+
+  const presentDeg = (present / total) * 360;
+  const absentDeg = (absent / total) * 360;
+  const pct = Math.round((present / total) * 100);
+  const gradient = `conic-gradient(#22c55e 0deg ${presentDeg}deg, #ef4444 ${presentDeg}deg ${presentDeg + absentDeg}deg, #d1d5db ${presentDeg + absentDeg}deg 360deg)`;
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ width: 60, height: 60, borderRadius: "50%", background: gradient, flexShrink: 0 }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ fontSize: 12, color: "#6b7280" }}>
+            Total lessons: <strong style={{ color: "#111827" }}>{total}</strong>
+          </div>
+          <AttendanceLegendRow color="#22c55e" label="Was" value={present} />
+          <AttendanceLegendRow color="#ef4444" label="Not" value={absent} />
+          <AttendanceLegendRow color="#d1d5db" label="Not attended" value={other} />
+        </div>
+      </div>
+      <div style={{ fontSize: 13, color: "#6b7280", marginTop: 8 }}>
+        Attendance: <strong style={{ color: "#111827" }}>{pct}%</strong>
+      </div>
+    </div>
+  );
+};
+
 const GroupCard = ({
-  membership, group, onOpenGroup, onPauseOrPlay, onArchive,
+  membership, group, studentId, branchName, onOpenGroup, onPauseOrPlay, onArchive,
 }: {
   membership: StudentGroupMembership;
-  // The group's schedule/room aren't returned by GET /students/{id}/groups
-  // (only status/dates/teachers/price are) — this comes from GET /groups
-  // (already fetched for the "Add to group" picker), matched by real group
-  // id via GET /student-groups?studentId=. It's undefined only if that
-  // cross-reference fails to find the group (e.g. it was deleted), in which
-  // case the schedule/room/open-group link are simply omitted.
+  // The group's schedule/room/course price aren't returned by GET
+  // /students/{id}/groups (only status/dates/teachers/customPrice are) —
+  // this comes from GET /groups (already fetched for the "Add to group"
+  // picker), matched by real group id via GET /student-groups?studentId=.
+  // It's undefined only if that cross-reference fails to find the group
+  // (e.g. it was deleted), in which case schedule/branch/open-group link
+  // and the course base price (for the discount note) are simply omitted.
   group?: Group;
+  // Real backend student id (student.uid), for the attendance lookup.
+  studentId: string;
+  branchName?: string | null;
   onOpenGroup?: () => void;
   // Freeze (ACTIVE/PROBATION -> FROZEN) or unfreeze (FROZEN -> ACTIVE) this
   // one membership — undefined (button hidden) once it's already
@@ -1048,11 +1130,24 @@ const GroupCard = ({
   // per-membership level.
   onArchive?: () => void;
 }) => {
-  const badge = GROUP_STATUS_BADGE[membership.status] ?? { label: membership.status, bg: "#f3f4f6", color: "#6b7280" };
+  const { t } = useTranslation();
+  const statusMeta = GROUP_STATUS_TEXT[membership.status] ?? { color: "#6b7280", fallback: membership.status };
+  const statusLabel =
+    membership.status === "ACTIVE" ? t("singleGroup.studentHoverCard.activeLearns", { defaultValue: statusMeta.fallback }) :
+    membership.status === "FROZEN" ? t("singleGroup.studentHoverCard.frozenPaused", { defaultValue: statusMeta.fallback }) :
+    statusMeta.fallback;
   const isFrozen = membership.status === "FROZEN";
   const isEnded = membership.status === "INACTIVE" || membership.status === "DELETED";
-  const teacherNames = membership.teachers.map((t) => t.name).join(", ") || "—";
+  const teacherNames = membership.teachers.map((teacher) => teacher.name).join(", ") || "—";
   const schedule = group ? `${formatDaysType(group.daysType)}${group.time ? ` • ${group.time}` : ""}` : null;
+
+  const basePrice = group?.course?.price ? asCoursePrice(group.course.price) : null;
+  const customPrice = membership.customPrice;
+  const priceValue = customPrice ?? basePrice;
+  const priceNote =
+    customPrice != null && basePrice != null && customPrice !== basePrice
+      ? (customPrice < basePrice ? "(Individual discount)" : "(Individual price)")
+      : null;
 
   return (
     <div
@@ -1068,71 +1163,46 @@ const GroupCard = ({
       onMouseEnter={(e) => { if (onOpenGroup) e.currentTarget.style.borderColor = "#93c5fd"; }}
       onMouseLeave={(e) => { if (onOpenGroup) e.currentTarget.style.borderColor = "#eaecf0"; }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: 12,
-        }}
-      >
-        <div style={{ flex: 1 }}>
-          <Chip
-            label={badge.label}
-            size="small"
-            sx={{
-              fontSize: 11,
-              height: 20,
-              bgcolor: badge.bg,
-              color: badge.color,
-              fontWeight: 600,
-              mb: 0.5,
-            }}
-          />
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>
-            {membership.name}
-          </div>
-          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-            {teacherNames}
-          </div>
-          {schedule && (
-            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-              {schedule}{group?.room?.name ? ` • ${group.room.name}` : ""}
-            </div>
-          )}
-        </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+        <Chip
+          label={membership.name}
+          size="small"
+          sx={{ fontSize: 11, height: 22, bgcolor: "#eff6ff", color: "#1d4ed8", fontWeight: 600 }}
+        />
         <div style={{ fontSize: 12, color: "#6b7280", textAlign: "right" }}>
-          <div>{formatMembershipDate(membership.trainingStart)} —</div>
-          <div>{formatMembershipDate(membership.trainingEnd)}</div>
+          <div>{formatMembershipDate(membership.trainingStart)} — {formatMembershipDate(membership.trainingEnd)}</div>
+          {schedule && <div style={{ marginTop: 2 }}>{schedule}{group?.room?.name ? ` • ${group.room.name}` : ""}</div>}
+          <div style={{ marginTop: 2, fontWeight: 600, color: statusMeta.color }}>{statusLabel}</div>
+        </div>
+      </div>
+
+      <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>{membership.courseName ?? "—"}</div>
+      <div style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>{teacherNames}</div>
+      {branchName && <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{branchName}</div>}
+
+      <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "12px 0" }} />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ fontSize: 12, color: "#6b7280" }}>
+          {t("singleGroup.studentHoverCard.addedAt")}: <strong style={{ color: "#111827" }}>{formatMembershipDate(membership.joinedAt)}</strong>
+        </div>
+        <div style={{ fontSize: 12, color: "#6b7280" }}>
+          {t("singleGroup.studentHoverCard.activatedAt")}: <strong style={{ color: "#111827" }}>{formatMembershipDate(membership.paymentStartDate)}</strong>
+        </div>
+        <div style={{ fontSize: 12, color: "#6b7280" }}>
+          Price for student: <strong style={{ color: "#111827" }}>{moneyOrDash(priceValue)}</strong>
+          {priceNote && <span style={{ color: "#9ca3af" }}> {priceNote}</span>}
         </div>
       </div>
 
       <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "12px 0" }} />
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {[
-            ["Status", badge.label],
-            ["Course", membership.courseName ?? "—"],
-            ["Joined", formatMembershipDate(membership.joinedAt)],
-            ["Payment start date", formatMembershipDate(membership.paymentStartDate)],
-          ].map(([label, val]) => (
-            <div key={label} style={{ fontSize: 12, color: "#6b7280" }}>
-              {label}: <strong style={{ color: "#111827" }}>{val}</strong>
-            </div>
-          ))}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <AttendanceSummary groupId={group?.id} studentId={studentId} />
         </div>
         {!isEnded && (
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: 8, marginLeft: 16 }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
             <Tooltip title={isFrozen ? "Activate" : "Freeze"}>
               <IconButton
                 size="small"
@@ -1162,6 +1232,85 @@ const GroupCard = ({
               </IconButton>
             </Tooltip>
           </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ─── OUTSTANDING BALANCE ────────────────────────────── */
+// student.balance (StudentDetail — the same authoritative figure the
+// sidebar's BalanceBadge already shows) is the single source of truth for
+// whether the student owes money, kept consistent with the sidebar rather
+// than re-deriving a second balance from totalCharged/totalPaid that could
+// disagree with it. totalCharged/totalPaid (GET /students/{id}/payments'
+// own `summary` block) are shown purely as a breakdown alongside it, never
+// as an independent balance calculation — avoids the duplicate-counting/
+// conflicting-numbers trap the task explicitly warns about.
+const OutstandingBalanceCard = ({
+  balance, summary, isLoading, onPrintNotice,
+}: {
+  balance: number;
+  summary?: StudentPaymentsSummary;
+  isLoading?: boolean;
+  onPrintNotice: () => void;
+}) => {
+  if (isLoading) return null;
+
+  const isDebt = balance < 0;
+  const isCredit = balance > 0;
+  const hasBreakdown = summary && (summary.totalCharged > 0 || summary.totalPaid > 0);
+
+  return (
+    <div style={{ margin: "20px 0 12px" }}>
+      <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", marginBottom: 12 }}>
+        Balance
+      </div>
+      <div
+        style={{
+          background: isDebt ? "#fef2f2" : "#f0fdf4",
+          border: `1px solid ${isDebt ? "#fecaca" : "#bbf7d0"}`,
+          borderRadius: 12,
+          padding: 16,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 12, color: isDebt ? "#b91c1c" : "#15803d", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>
+            {isDebt ? "Outstanding balance" : isCredit ? "Credit balance" : "Fully paid"}
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: isDebt ? "#dc2626" : "#16a34a", marginTop: 4 }}>
+            {moneyOrDash(Math.abs(balance))}
+          </div>
+          {hasBreakdown && (
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+              Total due: <strong style={{ color: "#111827" }}>{moneyOrDash(summary!.totalCharged)}</strong>
+              {"   ·   "}Already paid: <strong style={{ color: "#111827" }}>{moneyOrDash(summary!.totalPaid)}</strong>
+            </div>
+          )}
+        </div>
+        {isDebt && (
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<FiPrinter size={13} />}
+            onClick={onPrintNotice}
+            sx={{
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: 12,
+              borderRadius: 999,
+              borderColor: "#ef4444",
+              color: "#dc2626",
+              "&:hover": { borderColor: "#dc2626", bgcolor: "#fef2f2" },
+            }}
+          >
+            Print Payment Notice
+          </Button>
         )}
       </div>
     </div>
@@ -1325,8 +1474,16 @@ const TransactionsTable = ({
         </thead>
         <tbody>
           {transactions.map((tx) => {
-            const badge = TX_TYPE_BADGE[tx.type];
             const isDebt = tx.type === "DEBT";
+            // A payment whose own status is REFUNDED/CANCELLED/etc is no
+            // longer real money received — shown as its own status instead
+            // of the green "payment" badge, muted like a DEBT row, and with
+            // no Print/Edit/Remove actions, so a voided payment can never
+            // produce a "paid" receipt.
+            const isVoidedPayment = tx.type === "PAYMENT" && !isCompletedPaymentStatus(tx.paymentStatus);
+            const badge = isVoidedPayment
+              ? { label: (tx.paymentStatus ?? "").toLowerCase(), bg: "#fee2e2", color: "#b91c1c" }
+              : TX_TYPE_BADGE[tx.type];
             return (
               <tr key={tx.key} style={{ borderBottom: "1px solid #f9fafb" }}>
                 <td style={{ padding: "14px 16px", fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>
@@ -1337,8 +1494,8 @@ const TransactionsTable = ({
                     {badge.label}
                   </span>
                 </td>
-                <td style={{ padding: "14px 16px", fontWeight: 600, color: isDebt ? "#6b7280" : "#16a34a", whiteSpace: "nowrap" }}>
-                  {isDebt ? "−" : "+"}{tx.amount.toLocaleString("ru-RU")} UZS
+                <td style={{ padding: "14px 16px", fontWeight: 600, color: isDebt || isVoidedPayment ? "#6b7280" : "#16a34a", whiteSpace: "nowrap" }}>
+                  {isDebt ? "−" : isVoidedPayment ? "" : "+"}{tx.amount.toLocaleString("ru-RU")} UZS
                 </td>
                 <td style={{ padding: "14px 16px", fontSize: 13, color: "#374151" }}>
                   {tx.groupName && (
@@ -1358,7 +1515,7 @@ const TransactionsTable = ({
                   )}
                 </td>
                 <td style={{ padding: "14px 16px", whiteSpace: "nowrap" }}>
-                  {!isDebt && tx.paymentId ? (
+                  {!isDebt && !isVoidedPayment && tx.paymentId ? (
                     <>
                       <Button
                         size="small"
@@ -1588,6 +1745,15 @@ export const StudentProfile = () => {
     [branchesData]
   );
   const currentBranchIds = useMemo(() => (data?.data.branch ?? []).map((b) => b.id), [data]);
+  // Group/GroupDetail carries no branch field of its own — a membership's
+  // branch is derived from its course's branchId (every course belongs to
+  // one branch), cross-referenced against the same branches list already
+  // fetched above for the "Move to another branch" picker.
+  const branchNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    (branchesData?.data ?? []).forEach((b) => map.set(b.id, b.name));
+    return map;
+  }, [branchesData]);
 
   // GET /students/{id}/payments — the student's own payment registry,
   // scoped server-side by id (replaces the previous approach of name-
@@ -1620,6 +1786,7 @@ export const StudentProfile = () => {
   const [addToGroupOpen, setAddToGroupOpen] = useState(false);
   const [moveBranchOpen, setMoveBranchOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
+  const [debtorReceiptOpen, setDebtorReceiptOpen] = useState(false);
   const [groupMenuAnchor, setGroupMenuAnchor] = useState<null | HTMLElement>(null);
   const [paymentMenuAnchor, setPaymentMenuAnchor] = useState<null | HTMLElement>(null);
   const [freezeTarget, setFreezeTarget] = useState<StudentGroupMembership | null>(null);
@@ -1869,11 +2036,15 @@ export const StudentProfile = () => {
                   {(groupMemberships ?? []).length > 0 ? (
                     (groupMemberships ?? []).map((m) => {
                       const groupId = groupIdByMembershipId.get(m.id);
+                      const g = groupId ? groupsById.get(groupId) : undefined;
+                      const branchId = g?.course?.branchId ?? g?.room?.branchId ?? null;
                       return (
                         <GroupCard
                           key={m.id}
                           membership={m}
-                          group={groupId ? groupsById.get(groupId) : undefined}
+                          group={g}
+                          studentId={student.uid}
+                          branchName={branchId ? branchNameById.get(branchId) ?? null : null}
                           onOpenGroup={groupId ? () => navigate(`/groups/${groupId}`) : undefined}
                           onPauseOrPlay={() => (m.status === "FROZEN" ? setActivateTarget(m) : setFreezeTarget(m))}
                           onArchive={() => setArchiveGroupTarget(m)}
@@ -1885,6 +2056,12 @@ export const StudentProfile = () => {
                       No groups yet
                     </div>
                   )}
+                  <OutstandingBalanceCard
+                    balance={student.balance ?? 0}
+                    summary={studentPaymentsData?.summary}
+                    isLoading={isPaymentsLoading}
+                    onPrintNotice={() => setDebtorReceiptOpen(true)}
+                  />
                   <MonthlyBalance rows={financeHistoryData ?? []} isLoading={isFinanceHistoryLoading} />
                   <TransactionsTable
                     transactions={transactions}
@@ -2008,6 +2185,12 @@ export const StudentProfile = () => {
         onClose={() => setAddPaymentOpen(false)}
         initialStudentId={student.uid}
         initialStudentName={student.name}
+      />
+
+      <DebtorReceiptModal
+        open={debtorReceiptOpen}
+        onClose={() => setDebtorReceiptOpen(false)}
+        studentId={student.uid}
       />
 
       <Menu

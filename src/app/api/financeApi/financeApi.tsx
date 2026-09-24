@@ -39,6 +39,21 @@ import {
     FinanceDeleteResponse,
 } from "./types";
 
+// Payment statuses confirmed to exist by DELETE /finance/payments/{id}'s own
+// doc comment (soft-delete sets REFUNDED) — the other values are the plain-
+// English/likely equivalents a payment could carry once it's no longer a
+// valid completed transaction. Anything else (including no status at all,
+// the overwhelmingly common case on this backend) is treated as a normal
+// completed payment rather than guessed at.
+const NON_COMPLETED_PAYMENT_STATUSES = new Set(["REFUNDED", "CANCELLED", "CANCELED", "FAILED", "VOID", "DECLINED", "PENDING"]);
+
+// Whether a payment's own `status` still represents money actually received
+// — used to stop a refunded/cancelled/pending payment from ever being
+// offered as a printable "paid" receipt (StudentProfile's TransactionsTable/
+// PaymentReceiptModal).
+export const isCompletedPaymentStatus = (status: string | null | undefined): boolean =>
+    !status || !NON_COMPLETED_PAYMENT_STATUSES.has(status.toUpperCase());
+
 const appendPaymentFormData = (formData: FormData, data: Partial<CreatePaymentRequest>) => {
     const { receiptUrl, ...rest } = data;
     (Object.keys(rest) as (keyof typeof rest)[]).forEach((key) => {
@@ -251,6 +266,7 @@ const normalizePaymentRow = (raw: unknown, index: number): PaymentRow => {
         notes: asString(obj.notes ?? obj.comment),
         createdBy: asString(creator.name ?? obj.createdBy) || null,
         createdAt: obj.createdAt ? asString(obj.createdAt) : undefined,
+        status: obj.status ? asString(obj.status) : null,
     };
 };
 
@@ -263,6 +279,13 @@ const normalizePaymentDetail = (raw: unknown): PaymentDetail => {
     const row = normalizePaymentRow(raw, 0);
     const obj = (raw ?? {}) as Record<string, unknown>;
     const branch = (obj.branch ?? {}) as Record<string, unknown>;
+    const student = (obj.student ?? {}) as Record<string, unknown>;
+    const group = (obj.group ?? {}) as Record<string, unknown>;
+    const course = (group.course ?? obj.course ?? {}) as Record<string, unknown>;
+    const teacher = (obj.teacher ?? {}) as Record<string, unknown>;
+    const groupTeachers = Array.isArray(group.teachers) ? (group.teachers as Record<string, unknown>[]) : [];
+    const coursePriceRaw = obj.coursePrice ?? course.price ?? obj.price;
+    const balanceRaw = obj.balance ?? student.balance;
     return {
         ...row,
         receiptUrl: obj.receiptUrl ? asString(obj.receiptUrl) : null,
@@ -270,6 +293,9 @@ const normalizePaymentDetail = (raw: unknown): PaymentDetail => {
             obj.checkNumber ?? obj.checkNo ?? obj.receiptNumber ?? obj.receiptNo ?? obj.number
         ) || null,
         branchName: asString(obj.branchName ?? branch.name) || null,
+        teacherName: asString(obj.teacherName ?? teacher.name ?? groupTeachers[0]?.name) || null,
+        coursePrice: coursePriceRaw !== undefined ? asMoney(coursePriceRaw) : null,
+        balance: balanceRaw !== undefined ? asMoney(balanceRaw) : null,
     };
 };
 

@@ -1,0 +1,16 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: young_adults_frontend
+    restart: always
+    ports:
+      - "${PORT:-8080}:80"
+    networks:
+      - crm-network
+
+networks:
+  crm-network:
+    name: crm-network
+    driver: bridge

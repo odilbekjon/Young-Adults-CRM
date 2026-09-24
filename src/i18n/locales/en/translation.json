@@ -105,17 +105,22 @@
     "title": "Receipt",
     "print": "Print",
     "loading": "Loading...",
-    "loadError": "Failed to load the receipt"
+    "loadError": "Failed to load the receipt",
+    "notCompletedWarning": "This payment is {{status}} — not a valid completed transaction"
   },
   "debtorReceipt": {
-    "title": "Debt receipt",
+    "title": "Outstanding Balance Statement",
     "print": "Print",
-    "loadError": "Failed to load the receipt",
+    "loadError": "Failed to load the statement",
+    "status": "OUTSTANDING BALANCE — UNPAID",
+    "notice": "This document confirms an unpaid balance. It is not a payment receipt or proof of payment.",
     "name": "Name",
+    "studentId": "Student ID",
     "phone": "Phone",
     "group": "Group",
     "branch": "Branch",
-    "balance": "Debt amount"
+    "balance": "Amount outstanding",
+    "issuedAt": "Issued at"
   },
   "addWithdrawal": {
     "title": "Add withdrawal",
@@ -1997,6 +2002,7 @@
             "company": "Company:",
             "branch": "Branch:",
             "student": "Student:",
+            "studentId": "Student ID:",
             "phone": "Phone:",
             "balance": "Balance:",
             "group": "Group:",
@@ -2004,6 +2010,7 @@
             "teacher": "Teacher:",
             "type": "Type:",
             "paymentAmount": "Payment amount:",
+            "status": "Status:",
             "date": "Date:",
             "creator": "Creator:",
             "time": "Time:"

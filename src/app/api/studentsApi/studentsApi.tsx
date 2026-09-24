@@ -146,6 +146,7 @@ const normalizeStudentPayments = (raw: unknown): StudentPaymentsResult => {
             notes: String(r.notes ?? r.comment ?? ""),
             createdBy: asString(r.createdBy),
             createdAt: r.createdAt as string | undefined,
+            status: asString(r.status),
         };
     });
     const meta = (container.meta ?? dataBlock.meta ?? {}) as Record<string, unknown>;
@@ -244,6 +245,7 @@ export const normalizeFinanceTransactions = (
                 paymentMethodId: null,
                 studentId: null,
                 studentName: null,
+                paymentStatus: null,
             });
         });
         month.payments.forEach((p, i) => {
@@ -266,6 +268,7 @@ export const normalizeFinanceTransactions = (
                 paymentMethodId: matched?.paymentMethodId ?? null,
                 studentId: matched?.studentId ?? null,
                 studentName: matched?.studentName ?? null,
+                paymentStatus: matched?.status ?? null,
             });
         });
     });

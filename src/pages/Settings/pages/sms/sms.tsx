@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { MdSms, MdSave, MdClose, MdDelete, MdEdit } from "react-icons/md";
 import {
@@ -11,6 +12,7 @@ import {
 } from "../../../../app/api/smsApi";
 import type { AutoSmsSetting, SmsTemplate } from "../../../../app/api/smsApi/types";
 import { useToast } from "../../../../Context/ToastContext";
+import type { RootState } from "../../../../app/store";
 
 // NOTE: `desc` holds an i18n key (not raw text) because this array is defined
 // outside the component and translated at render time via t(v.desc).
@@ -96,10 +98,11 @@ export const SettingsSms = () => {
   const { t } = useTranslation();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<"auto-sms" | "templates">("auto-sms");
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const {
     data: autoSettings, isLoading: autoSettingsLoading, isError: autoSettingsError,
-  } = useAutoSmsSettingsQuery();
+  } = useAutoSmsSettingsQuery({ branchId: selectedBranchId ?? "all" });
   const [updateAutoSmsSetting] = useUpdateAutoSmsSettingMutation();
   const [savingType, setSavingType] = useState<string | null>(null);
 

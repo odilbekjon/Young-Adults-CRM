@@ -1,9 +1,14 @@
-// GET/PUT /api/v1/settings — Swagger shows only x-lang/x-branch-id headers
-// (no query/path params — this is a single global settings object, not a
-// per-branch or per-id resource) and pins down the exact PUT body shape.
-// GET's response schema isn't expanded beyond "200", so it is assumed to
-// mirror the PUT body (the standard shape for this kind of singleton
-// settings endpoint elsewhere on this backend).
+// GET/PUT /api/v1/settings — confirmed live (2026-09-24) that this is in
+// fact per-branch, not a single global object as originally assumed here:
+// omitting `branchId` (even sending "all") 400s with "Sozlamalarni ko'rish
+// uchun aniq bitta filial (branchId) tanlanishi shart" ("viewing settings
+// requires exactly one branch to be selected") — makes sense in hindsight,
+// since company name/logo/hours are plausibly different per branch. A
+// specific real branch id is required; there is no "all branches" view.
+export interface GeneralSettingsRequest {
+  branchId: string;
+}
+
 export interface GeneralSettings {
   companyName: string;
   companyPhone: string;
@@ -25,4 +30,6 @@ export interface GeneralSettingsResponse {
 // PUT body — every field optional-in-practice since Swagger's example shows
 // them all as plain strings/booleans with no explicit required markers, but
 // the endpoint is modeled as a full replace (same object shape as GET).
-export type UpdateGeneralSettingsRequest = GeneralSettings;
+// `branchId` is sent the same way as the GET side (query param, not part of
+// the body) — same per-branch requirement applies to writes.
+export type UpdateGeneralSettingsRequest = GeneralSettings & { branchId: string };

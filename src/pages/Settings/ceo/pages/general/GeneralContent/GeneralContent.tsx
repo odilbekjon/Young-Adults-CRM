@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import {
   TextField, Switch, Button, Typography, Box, Divider, CircularProgress,
 } from "@mui/material";
@@ -12,6 +13,7 @@ import {
 import type { GeneralSettings } from "../../../../../../app/api/settingsApi/types";
 import { useToast } from "../../../../../../Context/ToastContext";
 import { extractApiError } from "../../../../../../utils";
+import type { RootState } from "../../../../../../app/store";
 
 const EMPTY_FORM: GeneralSettings = {
   companyName: "",
@@ -28,8 +30,15 @@ const EMPTY_FORM: GeneralSettings = {
 const GeneralContent = () => {
   const { t } = useTranslation();
   const toast = useToast();
+  // General settings are per-branch on the backend (confirmed live) — there
+  // is no "all branches" view, so a specific branch must be selected in the
+  // header first.
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
-  const { data, isLoading, isError } = useGeneralSettingsQuery();
+  const { data, isLoading, isError } = useGeneralSettingsQuery(
+    { branchId: selectedBranchId ?? "" },
+    { skip: !selectedBranchId }
+  );
   const [updateSettings, { isLoading: isSaving }] = useUpdateGeneralSettingsMutation();
 
   const [form, setForm] = useState<GeneralSettings>(EMPTY_FORM);
@@ -51,9 +60,10 @@ const GeneralContent = () => {
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleSave = async () => {
+    if (!selectedBranchId) return;
     setSaveError(null);
     try {
-      await updateSettings(form).unwrap();
+      await updateSettings({ ...form, branchId: selectedBranchId }).unwrap();
       toast.success(t("settings.ceo.general.generalContent.toast.saved"));
     } catch (err) {
       const detail = extractApiError(err);
@@ -63,6 +73,16 @@ const GeneralContent = () => {
       toast.error(message);
     }
   };
+
+  if (!selectedBranchId) {
+    return (
+      <Box sx={{ flex: 1, p: 5 }}>
+        <Typography sx={{ fontSize: 14, color: "#6b7280" }}>
+          {t("settings.ceo.general.generalContent.selectBranchFirst")}
+        </Typography>
+      </Box>
+    );
+  }
 
   if (isLoading) {
     return (

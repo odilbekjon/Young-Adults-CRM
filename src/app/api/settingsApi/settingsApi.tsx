@@ -1,6 +1,6 @@
 import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
-import { GeneralSettings, UpdateGeneralSettingsRequest } from "./types";
+import { GeneralSettings, GeneralSettingsRequest, UpdateGeneralSettingsRequest } from "./types";
 
 // Swagger never expands GET /settings' response schema beyond "200", so both
 // a flat object and a {data: {...}} envelope are accepted — same defensive
@@ -24,9 +24,11 @@ const normalizeSettings = (raw: unknown): GeneralSettings => {
 export const settingsApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         // GET /settings — "Umumiy sozlamalarni olish (Redis orqali keshlangan)".
-        generalSettings: builder.query<GeneralSettings, void>({
-            query: () => ({
-                url: PATHS.SETTINGS,
+        // Confirmed live: requires a `branchId` query param naming one real,
+        // specific branch — see GeneralSettingsRequest's doc comment.
+        generalSettings: builder.query<GeneralSettings, GeneralSettingsRequest>({
+            query: ({ branchId }) => ({
+                url: `${PATHS.SETTINGS}?branchId=${encodeURIComponent(branchId)}`,
                 method: "GET",
             }),
             transformResponse: (response: unknown) => normalizeSettings(response),
@@ -34,8 +36,8 @@ export const settingsApi = baseApi.injectEndpoints({
         }),
         // PUT /settings — "Umumiy sozlamalarni saqlash", application/json.
         updateGeneralSettings: builder.mutation<GeneralSettings, UpdateGeneralSettingsRequest>({
-            query: (data) => ({
-                url: PATHS.SETTINGS,
+            query: ({ branchId, ...data }) => ({
+                url: `${PATHS.SETTINGS}?branchId=${encodeURIComponent(branchId)}`,
                 method: "PUT",
                 body: data,
             }),

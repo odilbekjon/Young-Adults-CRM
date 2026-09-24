@@ -2,6 +2,7 @@ import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
 import {
     AutoSmsSetting,
+    AutoSmsSettingsRequest,
     UpdateAutoSmsSettingRequest,
     UpdateAutoSmsSettingResponse,
     SmsTemplate,
@@ -34,9 +35,9 @@ const normalizeList = <T,>(raw: unknown): T[] => {
 
 export const smsApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        autoSmsSettings: builder.query<AutoSmsSetting[], void>({
-            query: () => ({
-                url: PATHS.AUTO_SETTINGS,
+        autoSmsSettings: builder.query<AutoSmsSetting[], AutoSmsSettingsRequest>({
+            query: ({ branchId }) => ({
+                url: `${PATHS.AUTO_SETTINGS}?branchId=${encodeURIComponent(branchId)}`,
                 method: "GET",
             }),
             transformResponse: (response: unknown) => {

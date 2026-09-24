@@ -1945,6 +1945,7 @@
           "offerUrlPlaceholder": "Offer URL",
           "save": "Save",
           "loadError": "Failed to load settings.",
+          "selectBranchFirst": "Select one specific branch from the header first to view general settings — \"All branches\" isn't supported here.",
           "toast": {
             "saved": "Settings saved",
             "error": "Failed to save settings. Please try again."

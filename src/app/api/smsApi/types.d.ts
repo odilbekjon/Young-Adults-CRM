@@ -11,6 +11,17 @@ export interface AutoSmsSetting {
   template: string;
 }
 
+// GET /sms/auto-settings — confirmed live (2026-09-24) that a `branchId`
+// query param is actually required, unlike most endpoints where the
+// x-branch-id header alone is enough — omitting it 400s with "So'rov
+// ma'lumotlari noto'g'ri" ("request data invalid") even though nothing else
+// about the request is wrong. The literal string "all" is accepted (same
+// convention as teachersApi's teachersSelect) when no specific branch is
+// selected.
+export interface AutoSmsSettingsRequest {
+  branchId: string;
+}
+
 export interface AutoSmsSettingsResponse {
   success: boolean;
   message?: string;

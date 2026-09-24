@@ -1945,6 +1945,7 @@
           "offerUrlPlaceholder": "Oferta URL",
           "save": "Saqlash",
           "loadError": "Sozlamalarni yuklab bo'lmadi.",
+          "selectBranchFirst": "Umumiy sozlamalarni ko'rish uchun avval yuqoridan aniq bitta filialni tanlang — \"Barcha filiallar\" bilan ishlamaydi.",
           "toast": {
             "saved": "Sozlamalar saqlandi",
             "error": "Sozlamalarni saqlab bo'lmadi. Qaytadan urinib ko'ring."

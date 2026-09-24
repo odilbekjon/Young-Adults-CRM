@@ -92,8 +92,23 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
   // Restores the visible selection after a page reload: the real branch id
   // persists in Redux/localStorage, but the label state (`branch`) resets to
   // "all" on mount, so once branches load we re-sync the label to match.
+  //
+  // Also clears a *stale* selectedBranchId — one that doesn't match any
+  // branch this backend actually has (e.g. left over in localStorage from
+  // before baseApi's baseUrl pointed at a different backend/database, whose
+  // branch UUIDs don't exist here). Left uncleared, every request kept
+  // silently sending `x-branch-id: <dead-id>` — the header still read "All
+  // branches" (since `branch` itself only ever falls back to "all", never
+  // resolving a match), but branch-scoped endpoints (courses, groups, ...)
+  // came back empty against a branch that doesn't exist.
   useEffect(() => {
-    if (!selectedBranchId || branch !== "all") return;
+    if (!selectedBranchId || !branchesData) return;
+    const knownBranchIds = new Set((branchesData.data ?? []).map((b) => b.id));
+    if (!knownBranchIds.has(selectedBranchId)) {
+      dispatch(changeSelectedBranch(null));
+      return;
+    }
+    if (branch !== "all") return;
     const match = options.find((o) => o.id === selectedBranchId);
     if (match) setBranch(match.value);
     // eslint-disable-next-line react-hooks/exhaustive-deps

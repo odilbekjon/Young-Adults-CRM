@@ -11,23 +11,18 @@ import {
 import i18n from "../../../i18n";
 import { logout, setToken } from "../../store/authSlice";
 
-// The real, live backend (confirmed by directly calling it and by the
-// Swagger UI's own "Try it out" — both hit young-adults-dj7r.onrender.com)
-// is namespaced under /api/v1 (e.g. /api/v1/auth/login,
-// /api/v1/role-permissions). A prior, uncommitted change swapped this to
-// https://api.youngadults-crm.uz/, which returns 403 "User is not
-// authenticated" for a real, valid login — that host is not (yet, at
-// least) a working mirror of the real backend, so every request through it
-// failed. Reverted back to the confirmed-working host.
+// The project migrated off the old Render-hosted backend
+// (young-adults-dj7r.onrender.com) to this dedicated host (confirmed live,
+// 2026-09-24: nginx/Ubuntu, not Render — real login, /courses, /auth/me,
+// /auth/sidebar all verified working here). Everything is still namespaced
+// under /api/v1 (e.g. /api/v1/auth/login, /api/v1/courses).
 //
-// The backend runs on Render's free tier, which spins the server down
-// after inactivity — the first request(s) after that arrive while it's
-// still waking up and fail with a connection error (not an HTTP error
-// status). rawBaseQuery below retries only those transport-level failures
-// for up to ~70s so the very first request of the day survives the
-// wake-up instead of surfacing as a raw "Network error".
+// rawBaseQuery below retries transport-level failures (FETCH_ERROR/
+// TIMEOUT_ERROR) for up to ~70s — originally to survive Render's free-tier
+// cold starts, which don't apply to this host, but harmless to keep as a
+// general resilience margin against transient network errors.
 const fetchQuery = fetchBaseQuery({
-  baseUrl:'https://young-adults-dj7r.onrender.com/api/v1/',
+  baseUrl:"https://api.youngadults-crm.uz/api/v1/",
   credentials: 'include',
   prepareHeaders: (headers, { getState }) => {
     const token = useStorage.getTokens()?.accessToken;

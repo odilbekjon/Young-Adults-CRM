@@ -62,16 +62,15 @@ import {
   useRemoveRolePermissionFromUserMutation,
 } from "../../../../../app/api/rolePermissionsApi";
 
-// POST /users (Swagger) is documented as being for SUPERADMIN/ADMIN accounts
-// specifically — TEACHER/STUDENT accounts are created through their own
-// dedicated endpoints (teachersApi/studentsApi) elsewhere in this app — so
-// this is the full, real value domain for `role` here, confirmed against
-// Swagger's Role enum (which also lists TEACHER/STUDENT, not applicable to
-// this form).
-const SYSTEM_ROLE_OPTIONS: { value: "SUPERADMIN" | "ADMIN" }[] = [
-  { value: "ADMIN" },
-  { value: "SUPERADMIN" },
-];
+// POST /users' `role` (SUPERADMIN/ADMIN) is a legacy field, optional per
+// Swagger (unlike `rolePermissionId`, which is required and is what actually
+// "belgilaydi" — determines — the account's position and permissions). A
+// dedicated "System role" picker duplicated what Position already controls,
+// so this form no longer surfaces one — every staff account created here is
+// sent as ADMIN, the tier this endpoint documents itself as being for
+// ("Faqat SUPERADMIN va ADMIN foydalana oladi"); editing an existing
+// account's role is left untouched (see openEditDrawer/handleSubmit below).
+const DEFAULT_STAFF_ROLE = "ADMIN";
 
 interface StaffForm {
   name: string;
@@ -100,7 +99,7 @@ const EMPTY_FORM: StaffForm = {
   phone: "",
   password: "",
   jobTitle: "",
-  role: "",
+  role: DEFAULT_STAFF_ROLE,
   rolePermissionIds: [],
   branchIds: [],
   dateOfBirth: "",
@@ -300,9 +299,6 @@ export const Staff = () => {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = t("settings.ceo.staff.validation.nameRequired");
     if (form.rolePermissionIds.length === 0) e.rolePermissionId = t("settings.ceo.staff.validation.rolePermissionIdRequired");
-    // Without this, POST /users silently defaults `role` to STUDENT — a
-    // staff account created that way lands with zero admin permissions.
-    if (!form.role.trim()) e.role = t("settings.ceo.staff.validation.roleRequired");
     if (!isEdit && !form.email.trim() && !form.phone.trim()) e.phone = t("settings.ceo.staff.validation.contactRequired");
     // Same minimum as login (AUTH_ROLE_DOCS.md §1) — this is the same
     // password field a created account will log in with.
@@ -669,31 +665,6 @@ export const Staff = () => {
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.email")}</Typography>
               <TextField name="email" value={form.email} onChange={handleChange} fullWidth size="small" placeholder={t("settings.ceo.staff.form.emailPlaceholder")} sx={inputSx} />
-            </Box>
-
-            <Box>
-              <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.role")}</Typography>
-              <Select
-                size="small"
-                fullWidth
-                displayEmpty
-                value={form.role}
-                onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
-                error={Boolean(errors.role)}
-                sx={{ bgcolor: "var(--color-surface-alt)", fontSize: 14 }}
-              >
-                <MenuItem value="" disabled sx={{ fontSize: 14 }}>
-                  {t("settings.ceo.staff.form.role")}
-                </MenuItem>
-                {SYSTEM_ROLE_OPTIONS.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: 14 }}>
-                    {t(`settings.ceo.staff.form.roleOptions.${opt.value}`)}
-                  </MenuItem>
-                ))}
-              </Select>
-              <Typography fontSize={12} color={errors.role ? "error" : "var(--color-text-muted)"} mt={0.5}>
-                {errors.role || t("settings.ceo.staff.form.roleHelp")}
-              </Typography>
             </Box>
 
             <Box>

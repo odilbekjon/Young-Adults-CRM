@@ -327,6 +327,15 @@ export const SingleGroup = () => {
   const [removeRecalculate, setRemoveRecalculate] = useState(false);
   const [removeScope, setRemoveScope] = useState<"current" | "all">("current");
 
+  // "Delete student" always deletes the whole account (DELETE /students/{id}),
+  // which the backend rejects while ANY membership is still active — so
+  // switching into delete mode forces scope to "all" (handleRemoveStudent
+  // also enforces this server-side regardless of what's displayed here).
+  const handleRemoveDeleteModeChange = (v: boolean) => {
+    setRemoveDeleteMode(v);
+    if (v) setRemoveScope("all");
+  };
+
   if (groupLoading) {
     return (
       <Box p={4} sx={{ display: "flex", justifyContent: "center" }}><CircularProgress /></Box>
@@ -621,7 +630,10 @@ export const SingleGroup = () => {
         status: removeDeleteMode ? "DELETED" : "INACTIVE",
         reasonId: removeReasonId || undefined,
         reason: removeComment.trim() || undefined,
-        isAllGroup: removeScope === "all",
+        // Deleting the student is account-wide, so every membership must be
+        // cleared here regardless of the scope radio — otherwise deleteStudent
+        // below 409s on whichever other group memberships are still active.
+        isAllGroup: removeDeleteMode || removeScope === "all",
       }).unwrap();
 
       // Step 2 — the account-wide action: "Delete student" permanently
@@ -1173,7 +1185,7 @@ export const SingleGroup = () => {
         onClose={handleCloseRemove}
         onConfirm={handleRemoveStudent}
         deleteMode={removeDeleteMode}
-        onDeleteModeChange={setRemoveDeleteMode}
+        onDeleteModeChange={handleRemoveDeleteModeChange}
         reasonId={removeReasonId}
         onReasonIdChange={setRemoveReasonId}
         reasons={reasonOptions ?? []}

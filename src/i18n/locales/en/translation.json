@@ -330,6 +330,10 @@
       "confirm": "Delete",
       "error": "Failed to archive the student"
     },
+    "removeDialog": {
+      "archiveLabel": "Archive",
+      "deleteError": "Failed to delete the student"
+    },
     "addToGroup": {
       "title": "Add student to group",
       "studentsSelected_one": "{{count}} student selected",
@@ -1881,16 +1885,14 @@
         "form": {
           "title": "Add New Staff", "name": "Name", "phone": "Phone", "email": "Email", "emailPlaceholder": "email@example.com",
           "password": "Password", "passwordPlaceholder": "Enter password", "setPasswordToggle": "+ Set password", "hidePasswordToggle": "− Hide password",
-          "role": "System role", "roleHelp": "Required — controls what this account can access.",
           "rolePermissionId": "Position",
-          "rolePermissionIdHelp": "Required — pick one of the positions defined in the Positions module.",
-          "roleOptions": { "SUPERADMIN": "Super Admin", "ADMIN": "Admin" },
+          "rolePermissionIdHelp": "Required — controls what this account can access. Pick one of the positions defined in the Positions module.",
           "branches": "Branches", "jobTitle": "Job title (display only)", "jobTitlePlaceholder": "e.g. Manager", "jobTitleHelp": "The backend doesn't store this field yet — the value entered here won't be shown anywhere until it does.", "dateOfBirth": "Date of birth", "gender": "Gender", "male": "Male", "female": "Female",
           "photo": "Photo", "noFileChosen": "No file chosen", "browse": "Browse", "submit": "Submit"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Branch Director", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Limited Administrator", "teacher": "Teacher", "marketer": "Marketer", "cashier": "Cashier" },
         "gender": { "male": "Male", "female": "Female" },
-        "validation": { "nameRequired": "Name is required", "rolePermissionIdRequired": "At least one position is required", "roleRequired": "System role is required", "contactRequired": "Enter an email or phone number", "passwordTooShort": "Password must be at least 6 characters" },
+        "validation": { "nameRequired": "Name is required", "rolePermissionIdRequired": "At least one position is required", "contactRequired": "Enter an email or phone number", "passwordTooShort": "Password must be at least 6 characters" },
         "deleteDialog": { "title": "Delete staff member", "message": "Are you sure you want to delete this staff member? They will be moved to the archive and marked Inactive — you can restore them at any time from the Archive page.", "cancel": "Cancel", "confirm": "Delete" },
         "toast": { "created": "Staff member added", "updated": "Staff member updated", "deleted": "Staff member deleted", "statusToggled": "Status updated", "error": "Failed to complete the action. Please try again.", "deleteConflict": "This staff member is still assigned to a branch and can't be deleted.", "rolePermissionPartialError": "Staff member saved, but assigning/removing some positions failed." },
         "pagination": { "prev": "Prev", "next": "Next" }

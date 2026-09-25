@@ -25,6 +25,14 @@ interface RemoveStudentDialogProps {
   scope: "current" | "all";
   onScopeChange: (v: "current" | "all") => void;
   loading?: boolean;
+  // The "Recalculate the balance" + "Current group/All groups" block only
+  // makes sense when the caller is scoped to one specific group membership
+  // (SingleGroup). Callers with no such context (e.g. the flat Students
+  // list, where "delete" always targets the whole account) hide it.
+  showGroupScope?: boolean;
+  // Overrides the left/off-toggle label, which otherwise reads "Remove from
+  // group" — not accurate for a caller with no group context.
+  archiveLabel?: string;
 }
 
 export const RemoveStudentDialog = ({
@@ -36,6 +44,8 @@ export const RemoveStudentDialog = ({
   recalculate, onRecalculateChange,
   scope, onScopeChange,
   loading,
+  showGroupScope = true,
+  archiveLabel,
 }: RemoveStudentDialogProps) => {
   const { t } = useTranslation();
   if (!open) return null;
@@ -55,7 +65,7 @@ export const RemoveStudentDialog = ({
         </div>
         <div style={{ padding: "22px 34px 30px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 22 }}>
-            <span style={{ fontSize: 14, color: deleteMode ? "#7d7d7d" : "#5f9bb8" }}>{t("singleGroup.removeStudentDialog.removeFromGroup")}</span>
+            <span style={{ fontSize: 14, color: deleteMode ? "#7d7d7d" : "#5f9bb8" }}>{archiveLabel ?? t("singleGroup.removeStudentDialog.removeFromGroup")}</span>
             <Switch
               checked={deleteMode}
               onChange={(e) => onDeleteModeChange(e.target.checked)}
@@ -89,31 +99,37 @@ export const RemoveStudentDialog = ({
             />
           </div>
 
-          <div style={{ background: "#f7f8fa", border: "1px solid #ececec", borderRadius: 10, padding: "14px 16px", marginBottom: 22 }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={recalculate}
-                  onChange={(e) => onRecalculateChange(e.target.checked)}
-                  size="small"
-                />
-              }
-              label={<span style={{ fontSize: 14, color: "#3f3f3f" }}>{t("singleGroup.removeStudentDialog.recalculateBalance")}</span>}
-              sx={{ m: 0, mb: 1 }}
-            />
+          {showGroupScope && (
+            <div style={{ background: "#f7f8fa", border: "1px solid #ececec", borderRadius: 10, padding: "14px 16px", marginBottom: 22 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={recalculate}
+                    onChange={(e) => onRecalculateChange(e.target.checked)}
+                    size="small"
+                  />
+                }
+                label={<span style={{ fontSize: 14, color: "#3f3f3f" }}>{t("singleGroup.removeStudentDialog.recalculateBalance")}</span>}
+                sx={{ m: 0, mb: 1 }}
+              />
 
-            <FormControl component="fieldset" sx={{ display: "block" }}>
-              <RadioGroup
-                row
-                value={scope}
-                onChange={(e) => onScopeChange(e.target.value as "current" | "all")}
-                sx={{ gap: 2 }}
-              >
-                <FormControlLabel value="current" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{t("singleGroup.removeStudentDialog.currentGroup")}</span>} />
-                <FormControlLabel value="all" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{t("singleGroup.removeStudentDialog.allGroups")}</span>} />
-              </RadioGroup>
-            </FormControl>
-          </div>
+              {/* Deleting the student is account-wide — every membership
+                  ends regardless of this radio (handleRemoveStudent forces
+                  isAllGroup), so it's locked to "All groups" while deleteMode
+                  is on rather than showing a choice with no effect. */}
+              <FormControl component="fieldset" sx={{ display: "block" }} disabled={deleteMode}>
+                <RadioGroup
+                  row
+                  value={deleteMode ? "all" : scope}
+                  onChange={(e) => onScopeChange(e.target.value as "current" | "all")}
+                  sx={{ gap: 2 }}
+                >
+                  <FormControlLabel value="current" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{t("singleGroup.removeStudentDialog.currentGroup")}</span>} />
+                  <FormControlLabel value="all" control={<Radio size="small" />} label={<span style={{ fontSize: 14 }}>{t("singleGroup.removeStudentDialog.allGroups")}</span>} />
+                </RadioGroup>
+              </FormControl>
+            </div>
+          )}
 
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 26 }}>
             <button

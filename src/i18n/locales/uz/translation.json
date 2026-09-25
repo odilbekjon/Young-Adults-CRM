@@ -330,6 +330,10 @@
       "confirm": "O'chirish",
       "error": "O'quvchini arxivlashda xatolik yuz berdi"
     },
+    "removeDialog": {
+      "archiveLabel": "Arxivlash",
+      "deleteError": "O'quvchini o'chirishda xatolik yuz berdi"
+    },
     "addToGroup": {
       "title": "O'quvchini guruhga qo'shish",
       "studentsSelected_one": "{{count}} ta o'quvchi tanlandi",
@@ -1881,16 +1885,14 @@
         "form": {
           "title": "Yangi xodim qo'shish", "name": "Ism", "phone": "Telefon", "email": "Email", "emailPlaceholder": "email@example.com",
           "password": "Parol", "passwordPlaceholder": "Parolni kiriting", "setPasswordToggle": "+ Parol o'rnatish", "hidePasswordToggle": "− Parolni yashirish",
-          "role": "Tizim roli", "roleHelp": "Majburiy — bu hisobning kirish darajasini belgilaydi.",
           "rolePermissionId": "Lavozim",
-          "rolePermissionIdHelp": "Majburiy — Lavozimlar modulidagi lavozimlardan birini tanlang.",
-          "roleOptions": { "SUPERADMIN": "Super admin", "ADMIN": "Admin" },
+          "rolePermissionIdHelp": "Majburiy — bu hisobning kirish darajasini belgilaydi. Lavozimlar modulidagi lavozimlardan birini tanlang.",
           "branches": "Filiallar", "jobTitle": "Ish unvoni (faqat ko'rsatish uchun)", "jobTitlePlaceholder": "Masalan: Menejer", "jobTitleHelp": "Backend hali bu maydonni saqlamaydi — kiritilgan qiymat hozircha ko'rsatilmaydi.", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi", "male": "Erkak", "female": "Ayol",
           "photo": "Rasm", "noFileChosen": "Fayl tanlanmagan", "browse": "Tanlash", "submit": "Yuborish"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Filial direktori", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Cheklangan administrator", "teacher": "O'qituvchi", "marketer": "Marketolog", "cashier": "Kassir" },
         "gender": { "male": "Erkak", "female": "Ayol" },
-        "validation": { "nameRequired": "Ism kiritilishi shart", "rolePermissionIdRequired": "Kamida bitta lavozim tanlanishi shart", "roleRequired": "Tizim roli tanlanishi shart", "contactRequired": "Email yoki telefon raqamini kiriting", "passwordTooShort": "Parol kamida 6 ta belgidan iborat bo'lishi kerak" },
+        "validation": { "nameRequired": "Ism kiritilishi shart", "rolePermissionIdRequired": "Kamida bitta lavozim tanlanishi shart", "contactRequired": "Email yoki telefon raqamini kiriting", "passwordTooShort": "Parol kamida 6 ta belgidan iborat bo'lishi kerak" },
         "deleteDialog": { "title": "Xodimni o'chirish", "message": "Rostdan ham bu xodimni o'chirmoqchimisiz? U arxivga ko'chiriladi va \"Faol emas\" holatiga o'tkaziladi — istalgan vaqtda Arxiv sahifasidan qayta tiklashingiz mumkin.", "cancel": "Bekor qilish", "confirm": "O'chirish" },
         "toast": { "created": "Xodim qo'shildi", "updated": "Xodim ma'lumotlari yangilandi", "deleted": "Xodim o'chirildi", "statusToggled": "Status yangilandi", "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring.", "deleteConflict": "Bu xodim hali filialga biriktirilgan, shuning uchun o'chirib bo'lmaydi.", "rolePermissionPartialError": "Xodim saqlandi, lekin ba'zi qo'shimcha lavozimlarni biriktirish/olib tashlashda xatolik yuz berdi." },
         "pagination": { "prev": "Orqaga", "next": "Oldinga" }

@@ -1056,7 +1056,18 @@ export const SingleGroup = () => {
                   attendance/grades/discounts; this is the same filter the
                   roster panel itself already applies (plus its "show
                   archived" toggle) so both stay consistent. */}
-              {tabIndex === 0 && <Attendance groupId={id ?? ""} students={visibleStudents} />}
+              {tabIndex === 0 && (
+                <Attendance
+                  groupId={id ?? ""}
+                  students={visibleStudents}
+                  schedule={{
+                    daysType: groupDetailData.data.daysType,
+                    days: groupDetailData.data.days,
+                    trainingStart: groupDetailData.data.trainingStart,
+                    trainingEnd: groupDetailData.data.trainingEnd,
+                  }}
+                />
+              )}
               {tabIndex === 1 && <Grade students={visibleStudents} />}
               {tabIndex === 2 && <OnlineLessons />}
               {tabIndex === 3 && <DiscountPrices students={visibleStudents} />}

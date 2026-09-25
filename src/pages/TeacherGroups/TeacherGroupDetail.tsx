@@ -79,7 +79,12 @@ export const TeacherGroupDetail = () => {
       </Box>
 
       <Paper elevation={0} sx={{ border: "1px solid #e5e7eb", borderRadius: 2, p: 2.5 }}>
-        <Attendance groupId={group.id} students={attendanceStudents} restrictToToday />
+        <Attendance
+          groupId={group.id}
+          students={attendanceStudents}
+          restrictToToday
+          schedule={{ daysType: group.daysType, trainingStart: group.trainingStart, trainingEnd: group.trainingEnd }}
+        />
       </Paper>
     </Box>
   );

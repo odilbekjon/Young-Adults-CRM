@@ -35,6 +35,35 @@ export const formatTrainingDate = (value?: string | null): string => {
   return `${dd}.${mm}.${parsed.year}`;
 };
 
+// Same leading-prefix approach as parseTrainingDate, extended to also read
+// the HH:mm:ss that follows the date on a full ISO datetime string (e.g.
+// "2026-08-14T05:00:00+05:00") — used for timestamps (history/transaction
+// entries) where the time of day matters, not just the date.
+const DATETIME_PREFIX = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/;
+
+// DD.MM.YYYY HH:mm:ss when a time-of-day is present, otherwise falls back to
+// the date-only DD.MM.YYYY (formatTrainingDate) — matches the timestamp
+// format used across the app's history/transaction feeds.
+export const formatDateTime = (value?: string | null): string => {
+  if (!value) return "—";
+  const match = DATETIME_PREFIX.exec(value);
+  if (!match) return formatTrainingDate(value);
+  const [, y, m, d, hh, mm, ss] = match;
+  return `${d}.${m}.${y} ${hh}:${mm}:${ss}`;
+};
+
+// Normalizes a training-date value (plain "YYYY-MM-DD" or a full ISO
+// datetime with a "T.../offset" tail) down to its "YYYY-MM-DD" prefix —
+// the shape date-only inputs (DatePickerField, <input type="date">) need.
+// Passing a full datetime straight through to those (the previous behavior)
+// garbled the displayed date and broke the calendar's selected-day
+// highlighting once a value came back from the backend.
+export const toIsoDatePart = (value?: string | null): string => {
+  const parsed = parseTrainingDate(value);
+  if (!parsed) return "";
+  return `${parsed.year}-${String(parsed.month).padStart(2, "0")}-${String(parsed.day).padStart(2, "0")}`;
+};
+
 const daysInMonth = (year: number, month: number): number =>
   // month is 1-12; day 0 of the *next* month is the last day of this one.
   new Date(year, month, 0).getDate();

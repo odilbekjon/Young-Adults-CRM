@@ -3,6 +3,7 @@ import { MdOutlinePerson } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { useGroupHistoryQuery } from "../../../app/api/groupsApi";
 import type { GroupHistoryEntry } from "../../../app/api/groupsApi/types";
+import { formatDateTime } from "../../../utils";
 
 interface Props {
   groupId: string;
@@ -17,7 +18,13 @@ const humanizeType = (type: string) =>
     .map((w) => w[0].toUpperCase() + w.slice(1))
     .join(" ") || "—";
 
-const HistoryEntryRow = ({ entry, groupName }: { entry: GroupHistoryEntry; groupName: string }) => {
+const HistoryEntryRow = ({
+  entry, groupName, groupId,
+}: {
+  entry: GroupHistoryEntry;
+  groupName: string;
+  groupId: string;
+}) => {
   const { t } = useTranslation();
   const title = t(`singleGroup.tabs.history.types.${entry.type}`, {
     defaultValue: humanizeType(entry.type),
@@ -30,18 +37,18 @@ const HistoryEntryRow = ({ entry, groupName }: { entry: GroupHistoryEntry; group
         justifyContent: "space-between",
         alignItems: "flex-start",
         gap: 3,
-        py: 2.5,
+        py: 2.25,
         px: 0.5,
       }}
     >
-      <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
-        <Typography fontWeight={700} fontSize={15}>
+      <Stack spacing={0.6} sx={{ minWidth: 0, flex: 1 }}>
+        <Typography fontWeight={700} fontSize={15} color="#1a1a1a">
           {title}
         </Typography>
 
         {(entry.studentName || entry.studentPhone) && (
           <Stack direction="row" alignItems="center" spacing={0.75} flexWrap="wrap">
-            <MdOutlinePerson size={16} color="#757575" />
+            <MdOutlinePerson size={15} color="#9e9e9e" />
             {entry.studentName && (
               <Typography fontSize={13} color="text.secondary">
                 {entry.studentName}
@@ -62,13 +69,19 @@ const HistoryEntryRow = ({ entry, groupName }: { entry: GroupHistoryEntry; group
 
         <Typography fontSize={13} color="text.primary">
           {t("singleGroup.tabs.history.groupName")}:{" "}
-          <Box component="span" sx={{ color: "#1976d2" }}>
+          <Box component="span" sx={{ color: "#1976d2", fontWeight: 500 }}>
             {groupName}
           </Box>
         </Typography>
 
+        {groupId && (
+          <Typography fontSize={13} color="text.secondary">
+            {t("singleGroup.tabs.history.group")}: #{groupId}
+          </Typography>
+        )}
+
         {entry.detail && (
-          <Typography fontSize={13} color="text.primary">
+          <Typography fontSize={13} color="text.primary" sx={{ mt: 0.25 }}>
             {entry.detail}
           </Typography>
         )}
@@ -76,12 +89,12 @@ const HistoryEntryRow = ({ entry, groupName }: { entry: GroupHistoryEntry; group
 
       <Stack spacing={0.5} alignItems="flex-end" sx={{ flexShrink: 0 }}>
         {entry.createdAt && (
-          <Typography fontSize={12} color="text.secondary" whiteSpace="nowrap">
-            {new Date(entry.createdAt).toLocaleString()}
+          <Typography fontSize={12.5} color="text.secondary" whiteSpace="nowrap">
+            {formatDateTime(entry.createdAt)}
           </Typography>
         )}
         {entry.actor && (
-          <Typography fontSize={12} color="text.secondary" textAlign="right">
+          <Typography fontSize={12.5} color="text.secondary" textAlign="right" whiteSpace="nowrap">
             {entry.actor}
           </Typography>
         )}
@@ -123,7 +136,7 @@ export const History = ({ groupId, groupName }: Props) => {
         >
           {entries.map((entry, i) => (
             <Box key={entry.id}>
-              <HistoryEntryRow entry={entry} groupName={groupName} />
+              <HistoryEntryRow entry={entry} groupName={groupName} groupId={groupId} />
               {i < entries.length - 1 && <Divider />}
             </Box>
           ))}

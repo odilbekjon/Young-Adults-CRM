@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
+  Box,
   Button,
   Checkbox,
   CircularProgress,
@@ -381,7 +382,17 @@ export const Archive = () => {
           </div>
           <Button
             variant="contained"
-            onClick={() => { setNewReason(""); setReasonError(null); setAddOpen(true); }}
+            onClick={() => {
+              setNewReason("");
+              // POST /reasons requires a concrete branchId — surfacing this
+              // the moment the dialog opens (instead of only after Submit is
+              // clicked) means it can't be missed: with "All branches"
+              // selected, the create call was silently blocked client-side
+              // and the small post-submit error was easy to overlook, which
+              // looked like "I added a reason but it never showed up".
+              setReasonError(!selectedBranchId ? t("settings.office.archive.reasons.errors.branchRequired") : null);
+              setAddOpen(true);
+            }}
             sx={{
               backgroundColor: "#1e3a5f",
               "&:hover": { backgroundColor: "#162c47" },
@@ -516,14 +527,16 @@ export const Archive = () => {
               onKeyDown={(e) => e.key === "Enter" && handleAddReason()}
             />
             {reasonError && (
-              <Typography sx={{ mb: 2, color: "#ef5350", fontSize: "0.8125rem" }}>
-                {reasonError}
-              </Typography>
+              <Box sx={{ mb: 2, p: 1.25, borderRadius: "8px", bgcolor: "#fef2f2", border: "1px solid #fecaca" }}>
+                <Typography sx={{ color: "#dc2626", fontSize: "0.8125rem" }}>
+                  {reasonError}
+                </Typography>
+              </Box>
             )}
             <Button
               variant="contained"
               onClick={handleAddReason}
-              disabled={!newReason.trim() || isCreatingReason}
+              disabled={!newReason.trim() || isCreatingReason || !selectedBranchId}
               startIcon={isCreatingReason ? <CircularProgress size={16} color="inherit" /> : undefined}
               sx={{
                 backgroundColor: "#29b6f6",

@@ -1437,8 +1437,12 @@
       "note": "Eslatma",
       "notePlaceholder": "Eslatmani kiriting...",
       "save": "Saqlash",
+      "saving": "Saqlanmoqda...",
       "cancel": "Bekor qilish",
-      "notConnected": "Bu funksiya hali backend bilan bog'lanmagan — eslatma saqlanmaydi."
+      "toast": {
+        "success": "Izoh muvaffaqiyatli qo'shildi",
+        "error": "Izohni saqlab bo'lmadi"
+      }
     },
     "addPaymentDrawer": {
       "title": "To'lov qo'shish",

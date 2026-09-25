@@ -1437,8 +1437,12 @@
       "note": "Note",
       "notePlaceholder": "Enter note...",
       "save": "Save",
+      "saving": "Saving...",
       "cancel": "Cancel",
-      "notConnected": "This feature isn't connected to the backend yet — the note won't be saved."
+      "toast": {
+        "success": "Comment added successfully",
+        "error": "Failed to save the comment"
+      }
     },
     "addPaymentDrawer": {
       "title": "Add payment",

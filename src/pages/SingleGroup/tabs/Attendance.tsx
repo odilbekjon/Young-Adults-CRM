@@ -35,6 +35,7 @@ import {
 } from "../../../app/api/attendancesApi";
 import type { AttendanceStatus } from "../../../app/api/attendancesApi/types";
 import { useToast } from "../../../Context/ToastContext";
+import { getScheduledDaysInMonth, type GroupScheduleLike } from "../../../utils";
 
 type AttendanceStudent = Student & { realId: string };
 
@@ -46,6 +47,13 @@ interface Props {
   // months to check history is still allowed, only the edit picker/remove
   // button are gated per-cell.
   restrictToToday?: boolean;
+  // The group's own days/daysType + trainingStart/trainingEnd — used to
+  // compute this month's real lesson days client-side whenever the backend's
+  // /dates endpoint comes back empty, so the grid falls back to the group's
+  // actual schedule instead of showing every calendar day (which it did
+  // before, since an empty dates response looks identical to "no schedule
+  // restriction" without this).
+  schedule?: GroupScheduleLike;
 }
 
 const MONTH_KEYS = [
@@ -77,7 +85,7 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 
 type AttVal = "Was" | "Not" | null;
 
-export const Attendance = ({ groupId, students, restrictToToday }: Props) => {
+export const Attendance = ({ groupId, students, restrictToToday, schedule }: Props) => {
   const { t } = useTranslation();
   const toast = useToast();
   const now = new Date();
@@ -119,15 +127,23 @@ export const Attendance = ({ groupId, students, restrictToToday }: Props) => {
   const isCurrentMonth =
     year === now.getFullYear() && month === now.getMonth();
 
-  // If the backend hasn't returned any lesson dates for this month (e.g. no
-  // schedule set yet), fall back to showing every calendar day so the tab
-  // still stays usable instead of rendering an empty table.
+  // Lesson days shown as columns, in priority order:
+  // 1. The backend's own per-month dates list, when it returns any.
+  // 2. Computed from the group's actual schedule (days/daysType +
+  //    trainingStart/trainingEnd) — matches "only the group's real class
+  //    days" instead of every calendar day whenever #1 comes back empty
+  //    (no schedule set yet, or the endpoint has nothing for this month).
+  // 3. Every calendar day, only when neither of the above has anything to
+  //    go on (e.g. a group with no schedule at all) — keeps the tab usable
+  //    rather than rendering an empty table.
   const days = useMemo(() => {
     if (lessonDates.length > 0) {
       return [...lessonDates].sort().map((d) => Number(d.slice(-2)));
     }
+    const scheduled = schedule ? getScheduledDaysInMonth(year, month, schedule) : [];
+    if (scheduled.length > 0) return scheduled;
     return Array.from({ length: totalDays }, (_, i) => i + 1);
-  }, [lessonDates, totalDays]);
+  }, [lessonDates, totalDays, schedule, year, month]);
 
   const dateFor = (day: number) => `${year}-${pad2(month + 1)}-${pad2(day)}`;
 

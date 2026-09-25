@@ -25,7 +25,7 @@ import {
   useToggleStudentStatusMutation,
   useTransferStudentBranchMutation,
   useStudentCommentsQuery,
-  useStudentHistoryQuery,
+  useCreateStudentCommentMutation,
   useStudentSmsHistoryQuery,
   useStudentPaymentsQuery,
   useStudentFinanceHistoryQuery,
@@ -47,14 +47,16 @@ import { useSendSmsToStudentsMutation } from "../../app/api/smsApi";
 import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { extractApiError } from "../../utils/extractApiError";
+import { formatDateTime } from "../../utils/formatTrainingDate";
 import { AddPayment } from "../../components/AddPayment";
 import { PaymentReceiptModal } from "../../components/PaymentReceiptModal";
 import { DebtorReceiptModal } from "../../components/DebtorReceiptModal";
 import { FreezeModal } from "../SingleGroup/FreezeModal";
 import { ActivateModal } from "../SingleGroup/ActivateModal";
+import { StudentAttendanceTab } from "./tabs/Attendance";
 
 /* ─── TYPES ─────────────────────────────────────────── */
-const TABS = ["Groups", "Comments", "Call history", "SMS", "History", "Lead history"];
+const TABS = ["Groups", "Comments", "Attendance", "SMS", "History", "Lead history"];
 
 /* ─── BALANCE BADGE ──────────────────────────────────── */
 const BalanceBadge = ({ amount }: { amount: number }) => (
@@ -1654,6 +1656,171 @@ const TransactionsTable = ({
 // active. Keeps these three tabs, which previously showed a static "No data
 // available" with nothing wired up at all, visually consistent with each
 // other.
+/* ─── HISTORY TAB (balance events feed + Group History panel) ───────── */
+// Left column reuses the same PAYMENT/DEBT ledger already computed for the
+// Groups tab's TransactionsTable (transactions prop, from
+// normalizeFinanceTransactions) — no extra request, just a different, more
+// "event feed"-like presentation matching the reference design. Right
+// column lists every group the student has ever belonged to (active and
+// archived), reusing GroupCard's own status/schedule helpers.
+const TX_EVENT_LABEL: Record<"DEBT" | "PAYMENT", string> = {
+  PAYMENT: "Account replenished",
+  DEBT: "Taken money from user balance",
+};
+
+const TransactionEventCard = ({ tx }: { tx: StudentFinanceTransaction }) => {
+  const isPayment = tx.type === "PAYMENT";
+  return (
+    <div
+      style={{
+        background: "white", border: "1px solid #eaecf0", borderRadius: 10,
+        padding: "14px 16px", marginBottom: 10,
+        display: "flex", justifyContent: "space-between", gap: 16,
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{TX_EVENT_LABEL[tx.type]}</div>
+        {isPayment ? (
+          <>
+            <div style={{ fontSize: 13, color: "#111827", marginTop: 4 }}>{tx.amount.toLocaleString("ru-RU")} UZS</div>
+            <div style={{ fontSize: 12.5, color: "#6b7280", marginTop: 2 }}>
+              Transferred at: {tx.date ? formatDate(tx.date.slice(0, 10)) : "—"}
+            </div>
+            {tx.methodOrDescription && (
+              <div style={{ fontSize: 12.5, color: "#9ca3af", marginTop: 2 }}>{tx.methodOrDescription}</div>
+            )}
+          </>
+        ) : (
+          <>
+            {tx.groupName && (
+              <div style={{ fontSize: 12.5, color: "#111827", marginTop: 4 }}>
+                Group Name: <span style={{ color: "#1976d2" }}>{tx.groupName}</span>
+              </div>
+            )}
+            {tx.methodOrDescription && (
+              <div style={{ fontSize: 12.5, color: "#6b7280", marginTop: 2 }}>{tx.methodOrDescription}</div>
+            )}
+            <div style={{ fontSize: 12.5, color: "#6b7280", marginTop: 2 }}>Author: {tx.author || "System"}</div>
+            <div style={{ fontSize: 13, color: "#111827", marginTop: 2, fontWeight: 600 }}>
+              Amount: {tx.amount.toLocaleString("ru-RU")} UZS
+            </div>
+          </>
+        )}
+      </div>
+      <div style={{ textAlign: "right", flexShrink: 0 }}>
+        <div style={{ fontSize: 12, color: "#9ca3af", whiteSpace: "nowrap" }}>
+          {formatDateTime(tx.createdAt ?? tx.date)}
+        </div>
+        {tx.author && <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{tx.author}</div>}
+      </div>
+    </div>
+  );
+};
+
+const GroupHistoryCard = ({
+  membership, group, branchName,
+}: {
+  membership: StudentGroupMembership;
+  group?: Group;
+  branchName?: string | null;
+}) => {
+  const statusMeta = GROUP_STATUS_TEXT[membership.status] ?? { color: "#6b7280", fallback: membership.status };
+  const isEnded = membership.status === "INACTIVE" || membership.status === "DELETED";
+  const schedule = group ? `${formatDaysType(group.daysType)}${group.time ? ` • ${group.time}` : ""}` : null;
+
+  return (
+    <div
+      style={{
+        position: "relative", overflow: "hidden",
+        background: "white", border: "1px solid #eaecf0", borderRadius: 10,
+        padding: 14, marginBottom: 10,
+      }}
+    >
+      {isEnded && (
+        <div
+          style={{
+            position: "absolute", top: 12, right: -34, width: 130,
+            transform: "rotate(45deg)", background: "#111827", color: "white",
+            fontSize: 10, fontWeight: 700, textAlign: "center",
+            padding: "3px 0", letterSpacing: 0.5,
+          }}
+        >
+          ARCHIVE
+        </div>
+      )}
+      {branchName && (
+        <span
+          style={{
+            display: "inline-block", fontSize: 10.5, fontWeight: 700, color: "#6b7280",
+            background: "#f3f4f6", borderRadius: 4, padding: "2px 8px", marginBottom: 6,
+            textTransform: "uppercase", letterSpacing: 0.3,
+          }}
+        >
+          {branchName}
+        </span>
+      )}
+      <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{membership.courseName ?? membership.name}</div>
+      <div style={{ fontSize: 12.5, color: "#6b7280", marginTop: 4 }}>
+        {formatMembershipDate(membership.trainingStart)} — {formatMembershipDate(membership.trainingEnd)}
+      </div>
+      <div style={{ fontSize: 12.5, color: statusMeta.color, fontWeight: 600, marginTop: 2 }}>
+        Status: {statusMeta.fallback}
+      </div>
+      {schedule && <div style={{ fontSize: 12.5, color: "#6b7280", marginTop: 2 }}>{schedule}</div>}
+    </div>
+  );
+};
+
+const StudentHistoryTab = ({
+  transactions, isLoading, groupMemberships, groupsById, branchNameById,
+}: {
+  transactions: StudentFinanceTransaction[];
+  isLoading?: boolean;
+  groupMemberships: StudentGroupMembership[];
+  groupsById: Map<string, Group>;
+  branchNameById: Map<string, string>;
+}) => {
+  // Oldest membership first — reads as a join-order timeline, newest group
+  // at the bottom, matching the reference design's ordering.
+  const sortedGroups = useMemo(
+    () => [...groupMemberships].sort((a, b) => (a.trainingStart ?? "").localeCompare(b.trainingStart ?? "")),
+    [groupMemberships]
+  );
+
+  return (
+    <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" }, alignItems: "flex-start" }}>
+      <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+        {isLoading ? (
+          <div style={{ padding: 32, textAlign: "center", color: "#9ca3af", fontSize: 14 }}>Loading...</div>
+        ) : transactions.length === 0 ? (
+          <div style={{ padding: 32, textAlign: "center", color: "#9ca3af", fontSize: 14 }}>No history yet</div>
+        ) : (
+          transactions.map((tx) => <TransactionEventCard key={tx.key} tx={tx} />)
+        )}
+      </Box>
+      <Box sx={{ width: { xs: "100%", md: 320 }, flexShrink: 0 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 12 }}>Group History</div>
+        {sortedGroups.length === 0 ? (
+          <div style={{ fontSize: 13, color: "#9ca3af" }}>No groups yet</div>
+        ) : (
+          sortedGroups.map((m) => {
+            const g = groupsById.get(m.id);
+            const branchId = g?.course?.branchId ?? g?.room?.branchId ?? null;
+            return (
+              <GroupHistoryCard
+                key={m.id}
+                membership={m}
+                group={g}
+                branchName={branchId ? branchNameById.get(branchId) ?? null : null}
+              />
+            );
+          })
+        )}
+      </Box>
+    </Box>
+  );
+};
+
 const SimpleHistoryList = ({
   items, isLoading, isError, emptyLabel,
 }: {
@@ -1685,6 +1852,53 @@ const SimpleHistoryList = ({
           </div>
         </div>
       ))}
+    </div>
+  );
+};
+
+/* ─── ADD COMMENT BOX ────────────────────────────────── */
+// POST /students/{id}/comments — lets staff leave a new note directly from
+// the student's own profile (the same backend call SingleGroup's
+// AddNoteModal uses, reached from a group's roster instead).
+const AddCommentBox = ({ studentId }: { studentId: string }) => {
+  const toast = useToast();
+  const [text, setText] = useState("");
+  const [createComment, { isLoading }] = useCreateStudentCommentMutation();
+
+  const handleSubmit = async () => {
+    if (!text.trim() || isLoading) return;
+    try {
+      await createComment({ id: studentId, comment: text.trim() }).unwrap();
+      setText("");
+      toast.success("Comment added successfully");
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to save the comment: ${detail}` : "Failed to save the comment");
+    }
+  };
+
+  return (
+    <div style={{ background: "white", border: "1px solid #eaecf0", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+      <TextField
+        fullWidth
+        multiline
+        minRows={2}
+        placeholder="Write a comment about this student..."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        sx={{ "& .MuiOutlinedInput-root": { fontSize: 13.5 } }}
+      />
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+        <Button
+          size="small"
+          variant="contained"
+          disabled={!text.trim() || isLoading}
+          onClick={handleSubmit}
+          sx={{ textTransform: "none", background: "#1e3a5f", "&:hover": { background: "#1e40af" } }}
+        >
+          {isLoading ? "Saving..." : "Add comment"}
+        </Button>
+      </div>
     </div>
   );
 };
@@ -1795,17 +2009,16 @@ export const StudentProfile = () => {
   const [activateTarget, setActivateTarget] = useState<StudentGroupMembership | null>(null);
   const [archiveGroupTarget, setArchiveGroupTarget] = useState<StudentGroupMembership | null>(null);
 
-  // Tab content for Comments/SMS/History is only fetched once its tab is
-  // actually opened — no point firing three extra requests on every profile
-  // load for tabs the staff member may never click.
+  // Tab content for Comments/SMS is only fetched once its tab is actually
+  // opened — no point firing extra requests on every profile load for tabs
+  // the staff member may never click. History (activeTab 4) doesn't need
+  // its own skip-gated query: it's built entirely from data StudentProfile
+  // already loads eagerly for the Groups tab (transactions, groupMemberships).
   const { data: commentsData, isFetching: isCommentsLoading, isError: isCommentsError } = useStudentCommentsQuery(
     student?.uid ?? "", { skip: !student || activeTab !== 1 }
   );
   const { data: smsData, isFetching: isSmsLoading, isError: isSmsError } = useStudentSmsHistoryQuery(
     { id: student?.uid ?? "", page: 1, limit: 50 }, { skip: !student || activeTab !== 3 }
-  );
-  const { data: historyData, isFetching: isHistoryLoading, isError: isHistoryError } = useStudentHistoryQuery(
-    student?.uid ?? "", { skip: !student || activeTab !== 4 }
   );
 
   if (isLoading) {
@@ -2093,11 +2306,20 @@ export const StudentProfile = () => {
                   />
                 </>
               ) : activeTab === 1 ? (
-                <SimpleHistoryList
-                  isLoading={isCommentsLoading}
-                  isError={isCommentsError}
-                  emptyLabel="No comments yet"
-                  items={(commentsData ?? []).map((c) => ({ id: c.id, primary: c.text, secondary: c.author, date: c.createdAt }))}
+                <>
+                  <AddCommentBox studentId={student.uid} />
+                  <SimpleHistoryList
+                    isLoading={isCommentsLoading}
+                    isError={isCommentsError}
+                    emptyLabel="No comments yet"
+                    items={(commentsData ?? []).map((c) => ({ id: c.id, primary: c.text, secondary: c.author, date: c.createdAt }))}
+                  />
+                </>
+              ) : activeTab === 2 ? (
+                <StudentAttendanceTab
+                  studentId={student.uid}
+                  groups={(groupMemberships ?? []).map((m) => ({ id: m.id, name: m.name }))}
+                  groupsById={groupsById}
                 />
               ) : activeTab === 3 ? (
                 <SimpleHistoryList
@@ -2107,11 +2329,12 @@ export const StudentProfile = () => {
                   items={(smsData ?? []).map((s) => ({ id: s.id, primary: s.text, secondary: s.status, date: s.createdAt }))}
                 />
               ) : activeTab === 4 ? (
-                <SimpleHistoryList
-                  isLoading={isHistoryLoading}
-                  isError={isHistoryError}
-                  emptyLabel="No history yet"
-                  items={(historyData ?? []).map((h) => ({ id: h.id, primary: h.detail || h.type, secondary: h.actor, date: h.createdAt }))}
+                <StudentHistoryTab
+                  transactions={transactions}
+                  isLoading={isPaymentsLoading || isFinanceHistoryLoading}
+                  groupMemberships={groupMemberships ?? []}
+                  groupsById={groupsById}
+                  branchNameById={branchNameById}
                 />
               ) : (
                 <div

@@ -1,5 +1,5 @@
 // src/pages/groups/EditGroupDrawer.tsx
-import { CSSProperties, useEffect, useState } from "react";
+import { CSSProperties, useEffect, useRef, useState } from "react";
 import { HiChevronDown } from "react-icons/hi";
 import { useTranslation } from "react-i18next";
 import { Chip, Stack, CircularProgress } from "@mui/material";
@@ -7,7 +7,7 @@ import { RightDrawer } from "../../../components/RightDrawer";
 import { inputStyle, labelStyle, submitBtn, cancelBtn } from "../styles";
 import { DatePickerField } from "../DatePickerField";
 import { TimeSelectField } from "../TimeSelectField";
-import { DAYS_PRESETS, classifyDayList, addMonthsToIsoDate } from "../../../utils";
+import { DAYS_PRESETS, classifyDayList, addMonthsToIsoDate, toIsoDatePart } from "../../../utils";
 import type { GroupDay, GroupDetail, UpdateGroupRequest } from "../../../app/api/groupsApi/types";
 
 const ALL_DAYS: GroupDay[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
@@ -90,8 +90,12 @@ const toFormState = (group: GroupDetail): EditGroupFormState => ({
   roomId: group.roomId ?? "",
   days: group.days ?? [],
   time: group.time ?? "",
-  trainingStart: group.trainingStart ?? "",
-  trainingEnd: group.trainingEnd ?? "",
+  // The backend returns these as full ISO datetimes (e.g.
+  // "2026-08-14T05:00:00+05:00") — DatePickerField expects a plain
+  // "YYYY-MM-DD", and passing the raw value through garbled the displayed
+  // date and broke the calendar's selected-day highlighting.
+  trainingStart: toIsoDatePart(group.trainingStart),
+  trainingEnd: toIsoDatePart(group.trainingEnd),
 });
 
 export const EditGroupDrawer = ({
@@ -116,13 +120,23 @@ export const EditGroupDrawer = ({
   const { t } = useTranslation();
   const [form, setForm] = useState<EditGroupFormState>(() => toFormState(group));
   const [daysMode, setDaysMode] = useState<string>(() => classifyDayList(group.days ?? []));
+  const wasOpen = useRef(open);
 
-  // Har safar drawer ochilganda formani real guruh ma'lumotlari bilan qayta boshlaymiz.
+  // Formani faqat drawer YOPIQ -> OCHIQ holatga o'tganda real guruh
+  // ma'lumotlari bilan qayta boshlaymiz — har bir `group` obyekti yangilanishida
+  // emas. SingleGroup "Tahrirlash" tugmasi bosilganda ikkita so'rov birga
+  // ketadi: darhol mavjud bo'lgan GET /groups/{id} natijasi (to'liq `teachers`
+  // massivi bilan) va parallel ravishda lazy GET /groups/{id}/for-edit. Ikkinchisi
+  // hal bo'lganda `group` prop'i yangilanadi — agar effekt shu paytda ham
+  // qayta ishga tushsa va for-edit javobi tanlangan o'qituvchi(lar)ni boshqacha
+  // shaklda qaytarsa (yoki umuman qaytarmasa), forma drawer ochiq turgan
+  // holatda jimgina tozalanib, "o'qituvchi tanlash" bo'sh/tanlanmagan ko'rinardi.
   useEffect(() => {
-    if (open) {
+    if (open && !wasOpen.current) {
       setForm(toFormState(group));
       setDaysMode(classifyDayList(group.days ?? []));
     }
+    wasOpen.current = open;
   }, [open, group]);
 
   const toggleDay = (day: GroupDay) => {

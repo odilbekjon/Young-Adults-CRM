@@ -63,10 +63,16 @@ const appendPaymentFormData = (formData: FormData, data: Partial<CreatePaymentRe
     if (receiptUrl) formData.append("receiptUrl", receiptUrl);
 };
 
+// `isDefault` is never sent — confirmed live that this backend's validator
+// on both create and update rejects it outright ("isDefault must be a
+// boolean value") for ANY value, true or false, because multipart/form-data
+// can only carry it as a string. Omitting it entirely is the only request
+// that succeeds, and the backend then defaults it to false, so the "Set as
+// default" checkbox can't actually persist true until the backend accepts a
+// string/boolean-coerced value here.
 const appendPaymentMethodFormData = (formData: FormData, data: CreatePaymentMethodRequest) => {
     formData.append("name", data.name);
     if (data.code !== undefined && data.code !== null) formData.append("code", data.code);
-    if (data.isDefault !== undefined && data.isDefault !== null) formData.append("isDefault", String(data.isDefault));
     if (data.branchId) formData.append("branchId", data.branchId);
 };
 
@@ -75,7 +81,6 @@ const appendUpdatePaymentMethodFormData = (data: Omit<UpdatePaymentMethodRequest
     if (data.name !== undefined) formData.append("name", data.name);
     if (data.code !== undefined) formData.append("code", data.code);
     if (data.status !== undefined) formData.append("status", data.status);
-    if (data.isDefault !== undefined) formData.append("isDefault", String(data.isDefault));
     return formData;
 };
 

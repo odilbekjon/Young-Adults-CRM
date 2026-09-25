@@ -1699,20 +1699,22 @@ export const StudentProfile = () => {
   const { data, isLoading } = useStudentByIdQuery(id ?? "", { skip: !id });
   const student = data ? mapApiStudentToFlat(data.data) : undefined;
   const { data: groupMemberships } = useStudentGroupMembershipsQuery(id ?? "", { skip: !id });
-  // /students/{id}/groups (above) doesn't return the group's own id, only
-  // the membership id — /student-groups?studentId= (groupsApi) is the same
-  // underlying membership resource keyed by that same id, but does carry
-  // groupId, so it's used here purely to map membership -> real group id
-  // (for the "open group" link and to look up schedule/room from groupsData
-  // below, neither of which /students/{id}/groups exposes either). limit
-  // defaults to 10 — a student with more group-membership history than
-  // that (frozen/archived groups included) would silently lose the
-  // mapping for the rest, making those group cards not open on click. A
-  // high limit here mirrors SingleGroup's own studentGroups fetch.
+  // Confirmed live (2026-09-25): GET /students/{id}/groups' own `id` field
+  // IS the group's real id, not a separate membership-row id — a student
+  // can only have one membership per group, so the backend keys each entry
+  // by the group itself. freeze/unfreeze/PATCH .../status all need the
+  // *membership row's* id instead (StudentGroupRecord.id from GET
+  // /student-groups?studentId=, the same resource SingleGroup.tsx uses),
+  // so that list is cross-referenced here the other way round — groupId ->
+  // real membership id — to resolve the id those calls actually need.
+  // limit defaults to 10 — a student with more group-membership history
+  // than that (frozen/archived groups included) would silently lose the
+  // mapping for the rest. A high limit here mirrors SingleGroup's own
+  // studentGroups fetch.
   const { data: studentGroupRecords } = useStudentGroupsQuery({ studentId: id ?? "", limit: 500 }, { skip: !id });
-  const groupIdByMembershipId = useMemo(() => {
+  const realStudentGroupIdByGroupId = useMemo(() => {
     const map = new Map<string, string>();
-    (studentGroupRecords?.rows ?? []).forEach((r) => map.set(r.id, r.groupId));
+    (studentGroupRecords?.rows ?? []).forEach((r) => map.set(r.groupId, r.id));
     return map;
   }, [studentGroupRecords]);
 
@@ -1920,9 +1922,16 @@ export const StudentProfile = () => {
   // profile instead of that group's roster.
   const handleFreezeGroupConfirm = async (freezeData: { reason: string; startDate: string }) => {
     if (!freezeTarget) return;
+    // freezeTarget.id is the group's id (see realStudentGroupIdByGroupId's
+    // comment above), not the membership row id this call needs.
+    const realId = realStudentGroupIdByGroupId.get(freezeTarget.id);
+    if (!realId) {
+      toast.error("Failed to freeze: membership not found");
+      return;
+    }
     try {
       await freezeStudentGroup({
-        id: freezeTarget.id,
+        id: realId,
         startDate: freezeData.startDate,
         reason: freezeData.reason.trim() || undefined,
       }).unwrap();
@@ -1936,8 +1945,13 @@ export const StudentProfile = () => {
 
   const handleUnfreezeConfirm = async () => {
     if (!activateTarget) return;
+    const realId = realStudentGroupIdByGroupId.get(activateTarget.id);
+    if (!realId) {
+      toast.error("Failed to activate: membership not found");
+      return;
+    }
     try {
-      await unfreezeStudentGroup(activateTarget.id).unwrap();
+      await unfreezeStudentGroup(realId).unwrap();
       toast.success("Group membership activated");
       setActivateTarget(null);
     } catch (err) {
@@ -1952,8 +1966,13 @@ export const StudentProfile = () => {
   // scoped to a single group card here, so it doesn't).
   const handleArchiveGroupConfirm = async () => {
     if (!archiveGroupTarget) return;
+    const realId = realStudentGroupIdByGroupId.get(archiveGroupTarget.id);
+    if (!realId) {
+      toast.error("Failed to remove from the group: membership not found");
+      return;
+    }
     try {
-      await updateStudentGroupStatus({ id: archiveGroupTarget.id, status: "INACTIVE" }).unwrap();
+      await updateStudentGroupStatus({ id: realId, status: "INACTIVE" }).unwrap();
       toast.success("Removed from the group");
       setArchiveGroupTarget(null);
     } catch (err) {
@@ -2035,8 +2054,10 @@ export const StudentProfile = () => {
                 <>
                   {(groupMemberships ?? []).length > 0 ? (
                     (groupMemberships ?? []).map((m) => {
-                      const groupId = groupIdByMembershipId.get(m.id);
-                      const g = groupId ? groupsById.get(groupId) : undefined;
+                      // m.id IS the group's real id (see the comment on
+                      // realStudentGroupIdByGroupId above) — used directly
+                      // here, no indirection needed.
+                      const g = groupsById.get(m.id);
                       const branchId = g?.course?.branchId ?? g?.room?.branchId ?? null;
                       return (
                         <GroupCard
@@ -2045,7 +2066,7 @@ export const StudentProfile = () => {
                           group={g}
                           studentId={student.uid}
                           branchName={branchId ? branchNameById.get(branchId) ?? null : null}
-                          onOpenGroup={groupId ? () => navigate(`/groups/${groupId}`) : undefined}
+                          onOpenGroup={() => navigate(`/groups/${m.id}`)}
                           onPauseOrPlay={() => (m.status === "FROZEN" ? setActivateTarget(m) : setFreezeTarget(m))}
                           onArchive={() => setArchiveGroupTarget(m)}
                         />

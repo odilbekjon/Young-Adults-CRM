@@ -22,7 +22,7 @@ import {
   useGroupByIdQuery,
   useLazyGroupForEditQuery,
   useGroupsSelectQuery,
-  useAssignStudentsToGroupMutation,
+  useAddStudentToGroupMutation,
   useTransferStudentMutation,
   useUpdateGroupMutation,
   useToggleGroupStatusMutation,
@@ -123,9 +123,9 @@ const toRealStudents = (d: GroupDetail): RealGroupStudent[] =>
   }));
 
 // A student is archived-in-this-group if their /student-groups membership
-// row (studentGroupsData below — fetched with no status filter, so it
-// covers every status: PROBATION/ACTIVE/FROZEN/INACTIVE/DELETED) is
-// INACTIVE or DELETED and they're not among GroupDetail's currently-active
+// row (passed in already filtered to INACTIVE/DELETED — see the two
+// separate status-scoped queries in SingleGroup, since the unscoped list
+// excludes both) and they're not among GroupDetail's currently-active
 // students. This is the authoritative per-group membership status, unlike
 // the group history log (join/leave events), which only lets you infer
 // "probably left" indirectly and can miss/misdate entries.
@@ -164,11 +164,28 @@ export const SingleGroup = () => {
   const { data: allBranchesData } = useAllBranchesQuery();
   const { data: teacherSelectData } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" });
   const { data: reasonOptions } = useReasonsSelectQuery();
-  // Full membership roster for this group (every status: PROBATION/ACTIVE/
-  // FROZEN/INACTIVE/DELETED) — the authoritative source for each student's
-  // real status and their /student-groups row id (see combinedStudents).
+  // Full membership roster for this group — the authoritative source for
+  // each student's real status and their /student-groups row id (see
+  // combinedStudents). Confirmed live that omitting `status` does NOT
+  // return every status as this used to assume: the backend silently
+  // excludes INACTIVE/DELETED rows unless one of those is requested
+  // explicitly, so archived memberships need their own two calls below —
+  // without them deriveArchivedFromMemberships never has any real data to
+  // show, and "Arxivdagi o'quvchilarni ko'rsatish" (show archived
+  // students) always renders empty. Also confirmed live that combining
+  // `groupId` with an archived `status` returns nothing even when a
+  // matching row exists (the two filters don't appear to compose on this
+  // backend) — so these two are fetched unscoped (branch-wide, same as
+  // `studentId`+`status` does work) and filtered to this group client-side
+  // instead of via the `groupId` param.
   const { data: studentGroupsData } = useStudentGroupsQuery({ groupId: id ?? "", limit: 500 }, { skip: !id });
-  const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
+  const { data: inactiveStudentGroupsData } = useStudentGroupsQuery(
+    { status: "INACTIVE", limit: 500 }, { skip: !id }
+  );
+  const { data: deletedStudentGroupsData } = useStudentGroupsQuery(
+    { status: "DELETED", limit: 500 }, { skip: !id }
+  );
+  const [addStudentToGroup, { isLoading: isAssigning }] = useAddStudentToGroupMutation();
   const [transferStudent, { isLoading: isTransferring }] = useTransferStudentMutation();
   const [updateGroup, { isLoading: isSavingGroup }] = useUpdateGroupMutation();
   const [toggleGroupStatus] = useToggleGroupStatusMutation();
@@ -190,16 +207,33 @@ export const SingleGroup = () => {
   }, [groupDetailData]);
   const [showArchived, setShowArchived] = useState(false);
 
+  // Branch-wide (see the fetch comment above) — narrowed to this group here.
+  const archivedRowsForThisGroup = useMemo(
+    () => [
+      ...(inactiveStudentGroupsData?.rows ?? []),
+      ...(deletedStudentGroupsData?.rows ?? []),
+    ].filter((r) => r.groupId === id),
+    [inactiveStudentGroupsData, deletedStudentGroupsData, id]
+  );
+
   const archivedStudents = useMemo(() => {
     const activeIds = new Set(students.map((s) => s.realId));
-    return deriveArchivedFromMemberships(studentGroupsData?.rows ?? [], activeIds);
-  }, [studentGroupsData, students]);
+    return deriveArchivedFromMemberships(archivedRowsForThisGroup, activeIds);
+  }, [archivedRowsForThisGroup, students]);
 
   const membershipByStudentId = useMemo(() => {
     const map = new Map<string, StudentGroupRecord>();
-    (studentGroupsData?.rows ?? []).forEach((m) => { if (m.studentId) map.set(m.studentId, m); });
+    // A student removed via SingleGroup itself (status -> INACTIVE/DELETED)
+    // still lingers in GroupDetail.students (the legacy relation `students`
+    // above is built from) until that separately-cached query refetches —
+    // merging in the two archived-status queries here means this overlay
+    // still correctly marks them archived/frozen even during that window,
+    // instead of falling back to students' stale "active" default because
+    // the unfiltered query alone doesn't carry INACTIVE/DELETED rows.
+    [...(studentGroupsData?.rows ?? []), ...archivedRowsForThisGroup]
+      .forEach((m) => { if (m.studentId) map.set(m.studentId, m); });
     return map;
-  }, [studentGroupsData]);
+  }, [studentGroupsData, archivedRowsForThisGroup]);
 
   // GroupDetail.students has no balance field (see toRealStudents above,
   // which defaults everyone to 0) — GET /students does carry the real
@@ -622,7 +656,13 @@ export const SingleGroup = () => {
   const handleAddStudentSubmit = async (studentId: string) => {
     if (!id) return;
     try {
-      await assignStudentsToGroup({ id, studentIds: [studentId] }).unwrap();
+      // POST /student-groups (not POST /groups/{id}/students/assign):
+      // confirmed live that the assign endpoint never creates a row in the
+      // /student-groups membership table, so a student added through it has
+      // no studentGroupId — silently breaking freeze/unfreeze/status-change
+      // (all keyed on that id) for every student added this way. Only the
+      // /student-groups resource itself creates the row those calls need.
+      await addStudentToGroup({ studentId, groupId: id, status: "ACTIVE" }).unwrap();
       toast.success(t("singleGroup.addStudentDrawer.toast.success"));
       setAddStudentOpen(false);
     } catch (err) {

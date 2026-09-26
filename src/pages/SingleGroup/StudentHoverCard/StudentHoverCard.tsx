@@ -197,6 +197,35 @@ export const StudentHoverCard = ({
         </>
       )}
 
+      {student.comments && student.comments.length > 0 && (() => {
+        const sorted = [...student.comments].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+        const visible = sorted.slice(0, 2);
+        const extra = sorted.length - visible.length;
+        return (
+          <>
+            <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>{t("singleGroup.studentHoverCard.comments")}</div>
+              {visible.map((c) => (
+                <div key={c.id} style={{ marginBottom: 6 }}>
+                  <div style={{ fontSize: 13, color: "#1a1a1a", whiteSpace: "pre-wrap" }}>{c.text}</div>
+                  {(c.author || c.createdAt) && (
+                    <div style={{ fontSize: 11, color: "#aaa", marginTop: 1 }}>
+                      {[c.author, c.createdAt ? new Date(c.createdAt).toLocaleDateString() : null].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {extra > 0 && (
+                <div style={{ fontSize: 11.5, color: "#185FA5" }}>
+                  {t("singleGroup.studentHoverCard.moreComments", { count: extra })}
+                </div>
+              )}
+            </div>
+          </>
+        );
+      })()}
+
       <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
 
       {/* Coins aren't tracked by the backend anywhere in this app yet — shown

@@ -1438,8 +1438,10 @@
       "note": "Note",
       "notePlaceholder": "Enter note...",
       "save": "Save",
-      "cancel": "Cancel",
-      "notConnected": "This feature isn't connected to the backend yet — the note won't be saved."
+      "saving": "Saving...",
+      "saved": "Note added successfully",
+      "error": "Failed to save the note. Please try again.",
+      "cancel": "Cancel"
     },
     "addPaymentDrawer": {
       "title": "Add payment",
@@ -1626,6 +1628,8 @@
       "activatedAt": "Activated at",
       "joinedAt": "Joined date",
       "note": "Note",
+      "comments": "Comments",
+      "moreComments": "{{count}} more comment(s)",
       "allCoins": "All coins",
       "goToProfile": "Go to profile →"
     }
@@ -2322,6 +2326,23 @@
         "statusLabels": { "INACTIVE": "Removed", "DELETED": "Deleted" },
         "loadError": "Failed to load left students.",
         "oldTableUnavailable": "Historical data before 18.02.2025 is not available through this system."
+      },
+      "studentFreezes": {
+        "title": "Frozen students",
+        "quantity": "Quantity — {{count}}",
+        "filters": { "searchByNameOrPhone": "Search by name or phone", "allGroups": "All groups" },
+        "table": { "number": "#", "student": "Student", "group": "Group", "reason": "Reason", "frozenSince": "Frozen since", "processedBy": "Processed by", "actions": "Actions" },
+        "unfreeze": "Unfreeze",
+        "unfreezeConfirm": {
+          "title": "Cancel freeze",
+          "message": "Unfreeze \"{{name}}\"? They will be reactivated in the group.",
+          "cancel": "Cancel",
+          "confirm": "Yes, unfreeze",
+          "error": "Failed to unfreeze the student. Please try again."
+        },
+        "toast": { "unfrozen": "Student successfully unfrozen" },
+        "loadError": "Failed to load frozen students.",
+        "noData": "No frozen students yet"
       }
     },
     "forms": {

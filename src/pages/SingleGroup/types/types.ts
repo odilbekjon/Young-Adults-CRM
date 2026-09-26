@@ -25,6 +25,8 @@ export interface StudentCardData {
   frozenAt?: string;
   /** Date this student joined THIS group (their /student-groups membership joinedAt), distinct from addedAt (account creation) */
   joinedAt?: string;
-  /** Student.comment from GET /students/{id} — read-only, there is no backend endpoint to write it from this app */
+  /** Student.comment from GET /students/{id} — a single legacy free-text field, distinct from `comments` below */
   note?: string;
+  /** GET /students/{id}/comments — the actual comment log (AddNoteModal writes here via POST) */
+  comments?: { id: string; text: string; author: string | null; createdAt: string }[];
 }

@@ -12,8 +12,13 @@ import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useAllGroupsQuery } from "../../app/api/groupsApi";
 import { useTeacherSalariesQuery } from "../../app/api/salariesApi";
+import { useLazyStudentByIdQuery, useLazyStudentCommentsQuery } from "../../app/api/studentsApi";
+import type { StudentDetail, StudentComment } from "../../app/api/studentsApi/types";
 import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
+import { StudentHoverCard } from "../SingleGroup/StudentHoverCard";
+import type { StudentCardData } from "../SingleGroup/types";
+import { formatDate as formatFullDate } from "../../constants/FlatStudents";
 
 const BADGE_COLORS = [
   { bg: "#E6F1FB", color: "#185FA5", border: "#B5D4F4" },
@@ -238,90 +243,40 @@ const GroupCard = ({ group, index, isSelected, onSelect }: { group: ProfileGroup
   );
 };
 
-/* ── StudentTooltip ── */
-const StudentTooltip = ({
-  student, visible, position,
-}: {
-  student: ProfileGroupStudent | undefined;
-  visible: boolean;
-  position: { top: number; left: number };
-}) => {
-  if (!visible || !student) return null;
-
-  return (
-    <div style={{ position: "fixed", top: position.top, left: position.left, zIndex: 2000, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", padding: "16px", width: 240, pointerEvents: "none", animation: "tooltipFadeIn 0.15s ease" }}>
-      <style>{`@keyframes tooltipFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{student.name}</div>
-      </div>
-
-      <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "10px 0" }} />
-
-      <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>Phone</div>
-      <div style={{ fontSize: 13, color: "#1a1a1a", fontWeight: 500, marginBottom: 10 }}>{student.phone}</div>
-
-      <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 10, textAlign: "right" }}>
-        <span style={{ fontSize: 12, color: "#185FA5", fontWeight: 500 }}>Go to profile →</span>
-      </div>
-    </div>
-  );
-};
-
 /* ── StudentRow ── */
 const StudentRow = ({
-  student, isLast, onNavigate,
+  student, isLast, onNavigate, onHoverEnter, onHoverLeave,
 }: {
   student: ProfileGroupStudent;
   isLast: boolean;
   onNavigate: (id: string) => void;
+  onHoverEnter: (e: React.MouseEvent<HTMLElement>, student: ProfileGroupStudent) => void;
+  onHoverLeave: () => void;
 }) => {
   const [hovered, setHovered] = useState(false);
-  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
-  const rowRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleMouseEnter = () => {
-    if (rowRef.current) {
-      const rect = rowRef.current.getBoundingClientRect();
-      const leftCandidate = rect.left - 256;
-      setTooltipPos({
-        top: Math.min(rect.top, window.innerHeight - 380),
-        left: leftCandidate > 0 ? leftCandidate : rect.right + 8,
-      });
-    }
-    timerRef.current = setTimeout(() => setHovered(true), 200);
-  };
-
-  const handleMouseLeave = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setHovered(false);
-  };
 
   return (
-    <>
-      <div
-        ref={rowRef}
-        onClick={() => onNavigate(student.id)}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px", borderBottom: !isLast ? "1px solid #f5f5f5" : "none", cursor: "pointer", background: hovered ? "#f7fbff" : "transparent", transition: "background 0.12s" }}
-      >
-        <span style={{ fontSize: 12, color: hovered ? "#185FA5" : "#1a1a1a", fontWeight: hovered ? 500 : 400, transition: "color 0.12s" }}>{student.name}</span>
-        <span style={{ fontSize: 11, color: "#888" }}>{student.phone}</span>
-      </div>
-      <StudentTooltip student={student} visible={hovered} position={tooltipPos} />
-    </>
+    <div
+      onClick={() => onNavigate(student.id)}
+      onMouseEnter={(e) => { setHovered(true); onHoverEnter(e, student); }}
+      onMouseLeave={() => { setHovered(false); onHoverLeave(); }}
+      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px", borderBottom: !isLast ? "1px solid #f5f5f5" : "none", cursor: "pointer", background: hovered ? "#f7fbff" : "transparent", transition: "background 0.12s" }}
+    >
+      <span style={{ fontSize: 12, color: hovered ? "#185FA5" : "#1a1a1a", fontWeight: hovered ? 500 : 400, transition: "color 0.12s" }}>{student.name}</span>
+      <span style={{ fontSize: 11, color: "#888" }}>{student.phone}</span>
+    </div>
   );
 };
 
 /* ── StudentsList ── */
 const StudentsList = ({
-  group, onGoToGroup, onNavigateToStudent,
+  group, onGoToGroup, onNavigateToStudent, onHoverEnter, onHoverLeave,
 }: {
   group: ProfileGroup;
   onGoToGroup: () => void;
   onNavigateToStudent: (id: string) => void;
+  onHoverEnter: (e: React.MouseEvent<HTMLElement>, student: ProfileGroupStudent) => void;
+  onHoverLeave: () => void;
 }) => {
   return (
     <div style={{ border: "1px solid #e8e8e8", borderRadius: 12, overflow: "hidden", background: "#fff", display: "flex", flexDirection: "column" }}>
@@ -338,6 +293,8 @@ const StudentsList = ({
             student={s}
             isLast={idx === group.students.length - 1}
             onNavigate={onNavigateToStudent}
+            onHoverEnter={onHoverEnter}
+            onHoverLeave={onHoverLeave}
           />
         ))}
       </div>
@@ -546,6 +503,17 @@ export const TeacherProfile = () => {
   const [flagOpen, setFlagOpen] = useState(false);
   const flagAnchorRef = useRef<HTMLDivElement>(null);
 
+  // Student hover card (same shared component/pattern as SingleGroup) — the
+  // group roster here only carries id/name/phone, so balance/status/comments
+  // are lazy-fetched per student the moment a row is hovered.
+  const [hoverStudent, setHoverStudent] = useState<StudentCardData | null>(null);
+  const [hoverAnchorEl, setHoverAnchorEl] = useState<HTMLElement | null>(null);
+  const hoverRequestId = useRef<string | null>(null);
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [fetchStudentDetail] = useLazyStudentByIdQuery();
+  const [fetchStudentComments] = useLazyStudentCommentsQuery();
+
   const { data: teacherData, isLoading: teacherLoading } = useTeacherByIdQuery(id ?? "", { skip: !id });
   // Tahrirlash formasi ochilganda maxsus /for-edit endpointidan yangi
   // ma'lumot olamiz (profil ko'rish endpointidan farqli, tahrirlashga
@@ -597,6 +565,78 @@ export const TeacherProfile = () => {
     } catch {
       toast.error(t("teacherProfile.toast.error"));
     }
+  };
+
+  // `detail`/`comments` (GET /students/{id}, GET /students/{id}/comments)
+  // carry the real balance/status/comments this group roster doesn't —
+  // merged in once the hover fetch resolves, same pattern as SingleGroup's
+  // own StudentHoverCard wiring.
+  function buildHoverData(student: ProfileGroupStudent, detail?: StudentDetail | null, comments?: StudentComment[]): StudentCardData {
+    return {
+      id: hashIndex(student.id, 1000) + 1,
+      uid: student.id,
+      name: detail?.name ?? student.name,
+      phone: detail?.phone ?? student.phone,
+      active: detail ? detail.status === "ACTIVE" : true,
+      status: detail?.status,
+      balance: detail?.balance,
+      addedAt: detail?.createdAt ? formatFullDate(detail.createdAt) : undefined,
+      note: detail?.comment ?? undefined,
+      comments,
+    };
+  }
+
+  const handleStudentHoverEnter = (e: React.MouseEvent<HTMLElement>, student: ProfileGroupStudent) => {
+    if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    const target = e.currentTarget;
+    hoverTimeout.current = setTimeout(() => {
+      setHoverStudent(buildHoverData(student));
+      setHoverAnchorEl(target);
+      hoverRequestId.current = student.id;
+
+      let latestDetail: StudentDetail | null | undefined;
+      let latestComments: StudentComment[] | undefined;
+      const mergeIfCurrent = () => {
+        if (hoverRequestId.current !== student.id) return;
+        setHoverStudent(buildHoverData(student, latestDetail, latestComments));
+      };
+
+      fetchStudentDetail(student.id)
+        .then((res) => {
+          if (!res.data) return;
+          latestDetail = res.data.data;
+          mergeIfCurrent();
+        })
+        .catch(() => {});
+      fetchStudentComments(student.id)
+        .then((res) => {
+          if (!res.data) return;
+          latestComments = res.data;
+          mergeIfCurrent();
+        })
+        .catch(() => {});
+    }, 200);
+  };
+
+  const handleStudentHoverLeave = () => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    leaveTimeout.current = setTimeout(() => {
+      setHoverStudent(null);
+      setHoverAnchorEl(null);
+      hoverRequestId.current = null;
+    }, 300);
+  };
+
+  const handleHoverCardMouseEnter = () => {
+    if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
+  };
+
+  const handleHoverCardMouseLeave = () => {
+    leaveTimeout.current = setTimeout(() => {
+      setHoverStudent(null);
+      setHoverAnchorEl(null);
+    }, 250);
   };
 
   if (teacherLoading) {
@@ -705,6 +745,8 @@ export const TeacherProfile = () => {
               group={activeGroup}
               onGoToGroup={() => navigate(`/groups/${activeGroup.id}`)}
               onNavigateToStudent={(studentId) => navigate(`/students/${studentId}`)}
+              onHoverEnter={handleStudentHoverEnter}
+              onHoverLeave={handleStudentHoverLeave}
             />
           )}
         </div>
@@ -715,6 +757,21 @@ export const TeacherProfile = () => {
 
       <EditDrawer teacher={teacherForEditData?.data ?? teacher} open={editOpen} onClose={() => setEditOpen(false)} branches={branches} onSave={handleSaveTeacher} isSaving={isSaving} />
       <FlagDropdown open={flagOpen} onClose={() => setFlagOpen(false)} anchorRef={flagAnchorRef} />
+
+      <div onMouseEnter={handleHoverCardMouseEnter} onMouseLeave={handleHoverCardMouseLeave}>
+        <StudentHoverCard
+          student={hoverStudent}
+          anchorEl={hoverAnchorEl}
+          onClose={() => { setHoverStudent(null); setHoverAnchorEl(null); }}
+          onGoToProfile={() => {
+            if (hoverStudent) {
+              setHoverStudent(null);
+              setHoverAnchorEl(null);
+              navigate(`/students/${hoverStudent.uid}`);
+            }
+          }}
+        />
+      </div>
     </div>
   );
 };

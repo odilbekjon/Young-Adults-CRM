@@ -38,9 +38,10 @@ import {
   useAllStudentsQuery,
   useTransferStudentBranchMutation,
   useLazyStudentByIdQuery,
+  useLazyStudentCommentsQuery,
   useUpdateStudentStatusMutation,
 } from "../../app/api/studentsApi";
-import type { StudentDetail } from "../../app/api/studentsApi/types";
+import type { StudentDetail, StudentComment } from "../../app/api/studentsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
 import { useAllRoomsQuery } from "../../app/api/roomsApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
@@ -195,6 +196,7 @@ export const SingleGroup = () => {
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [updateStudentStatus, { isLoading: isArchivingStudent }] = useUpdateStudentStatusMutation();
   const [fetchStudentDetail] = useLazyStudentByIdQuery();
+  const [fetchStudentComments] = useLazyStudentCommentsQuery();
   const [fetchGroupExcel, { isFetching: isExportingExcel }] = useLazyGroupExcelQuery();
 
   const group = groupDetailData ? toLegacyGroup(groupDetailData.data) : undefined;
@@ -385,7 +387,7 @@ export const SingleGroup = () => {
   // `detail` (GET /students/{id}) carries the real balance/status/dates that
   // GroupDetail.students doesn't — when present, it takes priority over the
   // group-summary placeholder so the card shows real numbers instead of 0.
-  function buildHoverData(student: RealGroupStudent, detail?: StudentDetail | null) {
+  function buildHoverData(student: RealGroupStudent, detail?: StudentDetail | null, comments?: StudentComment[]) {
     // joinedAt comes from this group's own /student-groups membership row —
     // distinct from detail.groupsStart (activatedAt), which reflects the
     // student's earliest group across the whole account, not this group.
@@ -401,10 +403,10 @@ export const SingleGroup = () => {
       addedAt: detail?.createdAt ? formatDate(detail.createdAt) : student.addedAt,
       activatedAt: detail?.groupsStart ? formatDate(detail.groupsStart) : student.activatedAt,
       joinedAt: membership?.joinedAt ? formatDate(membership.joinedAt) : undefined,
-      // Read-only — GET /students/{id} returns this, but no endpoint in this
-      // app can write it, so "Add new note" (StudentActionsMenu) can't save
-      // to it yet.
+      // Student.comment — a single legacy free-text field, distinct from the
+      // `comments` log below (GET/POST /students/{id}/comments).
       note: detail?.comment ?? undefined,
+      comments,
       frozenAt: student.frozenAt,
     };
   }
@@ -417,10 +419,29 @@ export const SingleGroup = () => {
       setHoverStudent(buildHoverData(student));
       setHoverAnchorEl(target);
       hoverRequestId.current = student.realId;
+
+      // Detail and comments are two separate endpoints — merged into the
+      // same card as each resolves, whichever comes back first, using
+      // whatever the other one has resolved to so far.
+      let latestDetail: StudentDetail | null | undefined;
+      let latestComments: StudentComment[] | undefined;
+      const mergeIfCurrent = () => {
+        if (hoverRequestId.current !== student.realId) return;
+        setHoverStudent(buildHoverData(student, latestDetail, latestComments));
+      };
+
       fetchStudentDetail(student.realId)
         .then((res) => {
-          if (hoverRequestId.current !== student.realId || !res.data) return;
-          setHoverStudent(buildHoverData(student, res.data.data));
+          if (!res.data) return;
+          latestDetail = res.data.data;
+          mergeIfCurrent();
+        })
+        .catch(() => {});
+      fetchStudentComments(student.realId)
+        .then((res) => {
+          if (!res.data) return;
+          latestComments = res.data;
+          mergeIfCurrent();
         })
         .catch(() => {});
     }, student.active ? 200 : 80);
@@ -1033,7 +1054,14 @@ export const SingleGroup = () => {
                   attendance/grades/discounts; this is the same filter the
                   roster panel itself already applies (plus its "show
                   archived" toggle) so both stay consistent. */}
-              {tabIndex === 0 && <Attendance groupId={id ?? ""} students={visibleStudents} />}
+              {tabIndex === 0 && (
+                <Attendance
+                  groupId={id ?? ""}
+                  students={visibleStudents}
+                  scheduleDays={groupDetailData?.data.days}
+                  daysType={groupDetailData?.data.daysType}
+                />
+              )}
               {tabIndex === 1 && <Grade students={visibleStudents} />}
               {tabIndex === 2 && <OnlineLessons />}
               {tabIndex === 3 && <DiscountPrices students={visibleStudents} />}

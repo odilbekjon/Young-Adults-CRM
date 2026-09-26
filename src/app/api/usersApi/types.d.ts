@@ -22,6 +22,8 @@ export interface StaffUserBranchRef {
 // visible in the captured response, so pagination meta is treated as
 // optional/defensive like every other list endpoint in this app whose
 // envelope isn't fully documented.
+// jobTitle confirmed live (2026-09): GET /users does echo back the value
+// POST/PATCH /users was sent — the Staff page's table just wasn't reading it.
 export interface StaffUser {
   id: string;
   name: string;
@@ -30,6 +32,7 @@ export interface StaffUser {
   role: string;
   rolePermission: RolePermissionRef | null;
   photo: string | null;
+  jobTitle: string | null;
   status: UserStatus | string;
   createdAt: string | null;
   branches: StaffUserBranchRef[];
@@ -88,14 +91,7 @@ export interface CreateUserRequest {
   branchIds?: string[];
   birthdate?: string;
   gender?: string;
-  // Swagger now documents this field on POST /users (per a 2026-09 audit),
-  // but whether it round-trips (GET /users, GET /users/{id}, GET
-  // /users/{id}/for-edit) is unconfirmed as of this pass — an earlier check
-  // found it silently dropped, but that couldn't be re-verified live this
-  // time (no authenticated access to the deployed backend in this session).
-  // Sent anyway: harmless either way. StaffUser/StaffUserForEdit below
-  // intentionally have no read-side jobTitle yet — add it there once a real
-  // GET response is confirmed to carry it.
+  // Confirmed live (2026-09): GET /users echoes this back — see StaffUser.jobTitle.
   jobTitle?: string;
 }
 

@@ -58,6 +58,7 @@ const normalizeStaffUser = (r: Row): StaffUser => ({
     role: str(r.role).toUpperCase(),
     rolePermission: normalizeRolePermission(r.rolePermission),
     photo: strOrNull(r.photo),
+    jobTitle: strOrNull(r.jobTitle),
     status: str(r.status).toUpperCase() || "ACTIVE",
     createdAt: strOrNull(r.createdAt),
     branches: normalizeStaffUserBranches(r.branches),
@@ -146,14 +147,6 @@ export const usersApi = baseApi.injectEndpoints({
             transformResponse: (response: unknown) => normalizeUsersList(response),
             providesTags: ["staff"],
         }),
-        staffUserById: builder.query<StaffUser, string>({
-            query: (id) => ({
-                url: `${PATHS.USERS}/${id}`,
-                method: "GET",
-            }),
-            transformResponse: (response: unknown) => normalizeStaffUser(pickRow(response)),
-            providesTags: ["staff"],
-        }),
         // GET /users/{id}/for-edit — confirmed live (2026-09) to be a
         // DIFFERENT, flatter shape than GET /users/{id} (see StaffUserForEdit):
         // it's the one endpoint that actually returns branchIds/gender/
@@ -229,7 +222,6 @@ export const usersApi = baseApi.injectEndpoints({
 
 export const {
     useStaffUsersQuery,
-    useStaffUserByIdQuery,
     useLazyStaffUserForEditQuery,
     useLazyStaffUsersExcelQuery,
     useStaffUsersSelectQuery,

@@ -236,14 +236,28 @@ export interface UpdateStudentStatusResponse {
 
 // GET /students/{id}/comments — "Admin va ustozlar tomonidan talaba haqida
 // qoldirilgan ichki eslatmalar va izohlar" (internal notes/remarks left
-// about the student). Read-only: Swagger documents no POST for this
-// resource anywhere in the API, so there is currently no way for this app
-// to create a new entry here (see AddNoteModal).
+// about the student).
 export interface StudentComment {
   id: string;
   text: string;
   author: string | null;
   createdAt: string;
+}
+
+// POST /students/{id}/comments — "Admin va ustozlar tomonidan talaba haqida
+// yangi izoh yoki eslatma qoldirish", application/json body: {comment:
+// string}. Confirmed live (2026-09) — the resource used to be read-only
+// (see StudentComment above); this is the create side now that Swagger
+// documents it.
+export interface CreateStudentCommentRequest {
+  id: string;
+  comment: string;
+}
+
+export interface CreateStudentCommentResponse {
+  success?: boolean;
+  message?: string;
+  data?: unknown;
 }
 
 // GET /students/{id}/history — "Talaba bo'yicha sodir bo'lgan barcha

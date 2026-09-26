@@ -34,19 +34,35 @@ import {
   useLazyGroupAttendanceExcelQuery,
 } from "../../../app/api/attendancesApi";
 import type { AttendanceStatus } from "../../../app/api/attendancesApi/types";
+import type { GroupDay } from "../../../app/api/groupsApi/types";
 import { useToast } from "../../../Context/ToastContext";
+import { DAYS_PRESETS } from "../../../utils";
 
 type AttendanceStudent = Student & { realId: string };
 
 interface Props {
   groupId: string;
   students: AttendanceStudent[];
+  // The group's own weekly schedule (e.g. ["MONDAY","WEDNESDAY","FRIDAY"]),
+  // used to fill in every lesson day of the viewed month client-side — GET
+  // /attendances/group/{id}/dates alone was confirmed to under-report
+  // (future dates within the current month don't come back yet, since
+  // attendance can't be marked for a lesson that hasn't happened), which cut
+  // the grid off partway through the month instead of showing it in full.
+  scheduleDays?: GroupDay[];
+  // Fallback when scheduleDays is empty but the group's classifed schedule
+  // is a plain EVEN/ODD preset (see utils/groupDays.ts).
+  daysType?: string;
   // TEACHER-role sessions (SingleGroup passed via TeacherGroupDetail) can
   // only mark today's lesson, never a past or future date — viewing other
   // months to check history is still allowed, only the edit picker/remove
   // button are gated per-cell.
   restrictToToday?: boolean;
 }
+
+const WEEKDAY_TO_JS_DAY: Record<GroupDay, number> = {
+  SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6,
+};
 
 const MONTH_KEYS = [
   "jan", "feb", "mar", "apr", "may", "jun",
@@ -77,7 +93,7 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 
 type AttVal = "Was" | "Not" | null;
 
-export const Attendance = ({ groupId, students, restrictToToday }: Props) => {
+export const Attendance = ({ groupId, students, scheduleDays, daysType, restrictToToday }: Props) => {
   const { t } = useTranslation();
   const toast = useToast();
   const now = new Date();
@@ -119,15 +135,38 @@ export const Attendance = ({ groupId, students, restrictToToday }: Props) => {
   const isCurrentMonth =
     year === now.getFullYear() && month === now.getMonth();
 
-  // If the backend hasn't returned any lesson dates for this month (e.g. no
-  // schedule set yet), fall back to showing every calendar day so the tab
-  // still stays usable instead of rendering an empty table.
+  // The group's own weekly schedule, resolved the same way
+  // utils/groupDays.ts's classifyDays already does elsewhere: the explicit
+  // day list wins when set, EVEN/ODD is a fallback for groups whose days[]
+  // came back empty but daysType didn't.
+  const resolvedScheduleDays: GroupDay[] = useMemo(() => {
+    if (scheduleDays && scheduleDays.length > 0) return scheduleDays;
+    if (daysType === "EVEN") return DAYS_PRESETS["Even days"];
+    if (daysType === "ODD") return DAYS_PRESETS["Odd days"];
+    return [];
+  }, [scheduleDays, daysType]);
+
+  // Every calendar day this month that falls on one of the group's lesson
+  // weekdays — computed client-side so the full month shows up front
+  // (including days later this month), not just whatever the backend's
+  // /dates endpoint has recorded so far.
+  const scheduleDaysThisMonth = useMemo(() => {
+    if (resolvedScheduleDays.length === 0) return [];
+    const jsDays = new Set(resolvedScheduleDays.map((d) => WEEKDAY_TO_JS_DAY[d]));
+    return Array.from({ length: totalDays }, (_, i) => i + 1)
+      .filter((day) => jsDays.has(new Date(year, month, day).getDay()));
+  }, [resolvedScheduleDays, year, month, totalDays]);
+
+  // Union of the group's own schedule and whatever the backend already
+  // knows about (picks up one-off makeup lessons outside the regular
+  // weekday pattern too). Falls back to every calendar day only when
+  // neither source has anything, so the tab never renders empty.
   const days = useMemo(() => {
-    if (lessonDates.length > 0) {
-      return [...lessonDates].sort().map((d) => Number(d.slice(-2)));
-    }
+    const fromBackend = lessonDates.map((d) => Number(d.slice(-2)));
+    const merged = new Set([...scheduleDaysThisMonth, ...fromBackend]);
+    if (merged.size > 0) return Array.from(merged).sort((a, b) => a - b);
     return Array.from({ length: totalDays }, (_, i) => i + 1);
-  }, [lessonDates, totalDays]);
+  }, [scheduleDaysThisMonth, lessonDates, totalDays]);
 
   const dateFor = (day: number) => `${year}-${pad2(month + 1)}-${pad2(day)}`;
 

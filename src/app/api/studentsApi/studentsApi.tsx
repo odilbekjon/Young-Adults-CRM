@@ -17,6 +17,8 @@ import {
     UpdateStudentStatusRequest,
     UpdateStudentStatusResponse,
     StudentComment,
+    CreateStudentCommentRequest,
+    CreateStudentCommentResponse,
     StudentHistoryEntry,
     StudentSmsEntry,
     StudentSmsHistoryRequest,
@@ -432,8 +434,7 @@ export const studentsApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ["student", "archive"],
         }),
-        // GET /students/{id}/comments — read-only (Swagger documents no POST
-        // for this resource anywhere), see StudentComment's own doc comment.
+        // GET /students/{id}/comments — see StudentComment's own doc comment.
         studentComments: builder.query<StudentComment[], string>({
             query: (id) => ({
                 url: `${PATHS.STUDENTS}/${id}/comments`,
@@ -441,6 +442,16 @@ export const studentsApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: unknown) => normalizeStudentComments((response as { data?: unknown })?.data ?? response),
             providesTags: ["student"],
+        }),
+        // POST /students/{id}/comments — see CreateStudentCommentRequest's
+        // own doc comment.
+        createStudentComment: builder.mutation<CreateStudentCommentResponse, CreateStudentCommentRequest>({
+            query: ({ id, comment }) => ({
+                url: `${PATHS.STUDENTS}/${id}/comments`,
+                method: "POST",
+                body: { comment },
+            }),
+            invalidatesTags: ["student"],
         }),
         studentHistory: builder.query<StudentHistoryEntry[], string>({
             query: (id) => ({
@@ -512,6 +523,8 @@ export const {
     useTransferStudentBranchMutation,
     useUpdateStudentStatusMutation,
     useStudentCommentsQuery,
+    useLazyStudentCommentsQuery,
+    useCreateStudentCommentMutation,
     useStudentHistoryQuery,
     useStudentSmsHistoryQuery,
     useStudentPaymentsQuery,

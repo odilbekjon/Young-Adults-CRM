@@ -1438,8 +1438,10 @@
       "note": "Eslatma",
       "notePlaceholder": "Eslatmani kiriting...",
       "save": "Saqlash",
-      "cancel": "Bekor qilish",
-      "notConnected": "Bu funksiya hali backend bilan bog'lanmagan — eslatma saqlanmaydi."
+      "saving": "Saqlanmoqda...",
+      "saved": "Eslatma muvaffaqiyatli qo'shildi",
+      "error": "Eslatmani saqlab bo'lmadi. Qaytadan urinib ko'ring.",
+      "cancel": "Bekor qilish"
     },
     "addPaymentDrawer": {
       "title": "To'lov qo'shish",
@@ -1626,6 +1628,8 @@
       "activatedAt": "Faollashtirilgan",
       "joinedAt": "Guruhga qo'shilgan sana",
       "note": "Izoh",
+      "comments": "Izohlar",
+      "moreComments": "Yana {{count}} ta izoh",
       "allCoins": "Barcha tangalar",
       "goToProfile": "Profilga o'tish →"
     }
@@ -2322,6 +2326,23 @@
         "statusLabels": { "INACTIVE": "Chetlashtirilgan", "DELETED": "O'chirilgan" },
         "loadError": "Guruhni tark etgan o'quvchilarni yuklab bo'lmadi.",
         "oldTableUnavailable": "18.02.2025 sanasidan oldingi ma'lumotlar bu tizim orqali mavjud emas."
+      },
+      "studentFreezes": {
+        "title": "Muzlatilgan o'quvchilar",
+        "quantity": "Soni — {{count}}",
+        "filters": { "searchByNameOrPhone": "Ism yoki telefon bo'yicha qidirish", "allGroups": "Barcha guruhlar" },
+        "table": { "number": "#", "student": "O'quvchi", "group": "Guruh", "reason": "Sababi", "frozenSince": "Muzlatilgan sana", "processedBy": "Kim tomonidan", "actions": "Amallar" },
+        "unfreeze": "Faollashtirish",
+        "unfreezeConfirm": {
+          "title": "Muzlatishni bekor qilish",
+          "message": "\"{{name}}\"ni faollashtirishni xohlaysizmi? U guruhga qaytadan qo'shiladi.",
+          "cancel": "Bekor qilish",
+          "confirm": "Ha, faollashtirish",
+          "error": "Muzlatishni bekor qilib bo'lmadi. Qaytadan urinib ko'ring."
+        },
+        "toast": { "unfrozen": "O'quvchi muvaffaqiyatli faollashtirildi" },
+        "loadError": "Muzlatilgan o'quvchilarni yuklab bo'lmadi.",
+        "noData": "Hozircha muzlatilgan o'quvchilar yo'q"
       }
     },
     "forms": {

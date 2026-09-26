@@ -78,13 +78,6 @@ interface StaffForm {
   email: string;
   phone: string;
   password: string;
-  // Backend persistence unconfirmed as of this pass (2026-09): Swagger now
-  // documents this field on POST /users, but the round-trip (does it survive
-  // on GET /users, GET /users/{id}, GET /users/{id}/for-edit?) could not be
-  // re-tested live — this session had no authenticated access to the
-  // deployed backend. Sent anyway: harmless either way, and the read side
-  // (below) stays defensively "—" until someone can confirm a GET actually
-  // echoes it back and wires StaffUser/StaffUserForEdit accordingly.
   jobTitle: string;
   role: string;
   // A user can hold more than one lavozim (AUTH_ROLE_DOCS.md's
@@ -186,17 +179,13 @@ export const Staff = () => {
   const staffLoading = usersLoading;
   const staffError = usersError;
 
-  // GET /users still isn't typed to return jobTitle (see
-  // CreateUserRequest.jobTitle's comment) — unconfirmed, not disproven, as of
-  // this pass. Shown as "—" rather than inventing a value; wire this to the
-  // real field the moment someone confirms a GET response actually carries it.
   const unifiedRows: UnifiedStaffRow[] = useMemo(
     () =>
       (usersData?.rows ?? []).map((u) => ({
         id: u.id,
         name: u.name,
         roleTags: [u.role, u.rolePermission?.name].filter((v): v is string => Boolean(v)),
-        jobTitle: "—",
+        jobTitle: u.jobTitle || "—",
         phone: u.phone,
         email: u.email,
         status: u.status,
@@ -271,7 +260,9 @@ export const Staff = () => {
         email: member.email ?? "",
         phone: member.phone ?? "",
         password: "",
-        jobTitle: "",
+        // GET /users/{id}/for-edit doesn't carry jobTitle — prefilled from
+        // the already-cached list row instead (same as `role` just below).
+        jobTitle: usersData?.rows.find((u) => u.id === memberId)?.jobTitle ?? "",
         role: usersData?.rows.find((u) => u.id === memberId)?.role ?? "",
         rolePermissionIds: member.rolePermissionId ? [member.rolePermissionId] : [],
         branchIds: member.branchIds,

@@ -370,9 +370,6 @@ export const Archive = () => {
         return `/students/${r.id}`;
       case "TEACHER":
         return `/teachers/${r.id}`;
-      case "ADMIN":
-      case "SUPERADMIN":
-        return `/profile/${r.id}`;
       default:
         return null;
     }

@@ -15,6 +15,10 @@ export interface StudentCardData {
   name: string;
   phone: string;
   active: boolean;
+  /** Real account status (ACTIVE/INACTIVE/FROZEN/DEBTOR) from GET
+   * /students/{id} once it resolves — undefined during the brief pre-fetch
+   * window, when `active` above is the only signal available yet. */
+  status?: string;
   balance?: number;
   addedAt?: string;
   activatedAt?: string;

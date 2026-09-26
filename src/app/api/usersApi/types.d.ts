@@ -88,10 +88,14 @@ export interface CreateUserRequest {
   branchIds?: string[];
   birthdate?: string;
   gender?: string;
-  // NOT yet a real backend field — confirmed live (2026-09) that POST
-  // /users silently drops this (no error, but doesn't persist or come back
-  // on GET). Sent anyway: harmless today, and this field starts working
-  // the moment the backend adds it, with zero frontend changes needed.
+  // Swagger now documents this field on POST /users (per a 2026-09 audit),
+  // but whether it round-trips (GET /users, GET /users/{id}, GET
+  // /users/{id}/for-edit) is unconfirmed as of this pass — an earlier check
+  // found it silently dropped, but that couldn't be re-verified live this
+  // time (no authenticated access to the deployed backend in this session).
+  // Sent anyway: harmless either way. StaffUser/StaffUserForEdit below
+  // intentionally have no read-side jobTitle yet — add it there once a real
+  // GET response is confirmed to carry it.
   jobTitle?: string;
 }
 

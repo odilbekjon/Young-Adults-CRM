@@ -1,9 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import {
   Box, Typography, Avatar, Chip, Modal, TextField, Button, IconButton, CircularProgress,
 } from "@mui/material";
 import { FiFlag, FiEdit2, FiTrash2 } from "react-icons/fi";
 import { useGetMeQuery } from "../../app/api/authApi/authApi";
+import { useStaffUserByIdQuery } from "../../app/api/usersApi";
+
+interface ProfileDisplayUser {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  photo: string | null;
+  jobTitle: string | null;
+  roleTags: string[];
+  status: string;
+  branches: { branch: { id: string; name: string } }[];
+}
 
 // ─── Modal style ──────────────────────────────────────────────────────────────
 const modalStyle = {
@@ -20,8 +33,43 @@ const modalStyle = {
 
 // ─── ProfilePage ──────────────────────────────────────────────────────────────
 const ProfilePage = () => {
-  const { data, isLoading } = useGetMeQuery();
-  const user = data?.data;
+  const { id } = useParams<{ id?: string }>();
+  const isOtherProfile = Boolean(id);
+
+  const { data: meData, isLoading: meLoading } = useGetMeQuery(undefined, { skip: isOtherProfile });
+  const { data: staffUserData, isLoading: staffLoading } = useStaffUserByIdQuery(id ?? "", { skip: !isOtherProfile });
+  const isLoading = isOtherProfile ? staffLoading : meLoading;
+
+  // Memoized so its identity is stable across renders (only changes when the
+  // underlying query data actually changes) — the effect below keys off it.
+  const user: ProfileDisplayUser | undefined = useMemo(() => {
+    if (isOtherProfile) {
+      if (!staffUserData) return undefined;
+      return {
+        name: staffUserData.name,
+        email: staffUserData.email,
+        phone: staffUserData.phone,
+        photo: staffUserData.photo,
+        // StaffUser (GET /users/{id}) has no jobTitle field yet — see
+        // usersApi/types.d.ts's CreateUserRequest.jobTitle comment.
+        jobTitle: null,
+        roleTags: [staffUserData.role, staffUserData.rolePermission?.name].filter((v): v is string => Boolean(v)),
+        status: staffUserData.status,
+        branches: staffUserData.branches,
+      };
+    }
+    if (!meData?.data) return undefined;
+    return {
+      name: meData.data.name,
+      email: meData.data.email,
+      phone: meData.data.phone,
+      photo: meData.data.photo,
+      jobTitle: meData.data.jobTitle,
+      roleTags: [meData.data.role, ...meData.data.rolePermissions.map((rp) => rp.name)].filter((v): v is string => Boolean(v)),
+      status: meData.data.status,
+      branches: meData.data.branches,
+    };
+  }, [isOtherProfile, staffUserData, meData]);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -95,7 +143,9 @@ const ProfilePage = () => {
           position: "relative",
         }}
       >
-        {/* Action buttons — top right */}
+        {/* Action buttons — top right (self-account actions only; hidden
+            when viewing someone else's profile by id, e.g. from Archive) */}
+        {!isOtherProfile && (
         <Box
           sx={{
             position: "absolute",
@@ -150,6 +200,7 @@ const ProfilePage = () => {
             <FiTrash2 size={16} />
           </IconButton>
         </Box>
+        )}
 
         {/* Avatar + Name row */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2.5 }}>
@@ -235,9 +286,10 @@ const ProfilePage = () => {
             Role:
           </Typography>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-            {user?.role && (
+            {(user?.roleTags ?? []).map((tag) => (
               <Chip
-                label={user.role}
+                key={tag}
+                label={tag}
                 size="small"
                 variant="outlined"
                 sx={{
@@ -248,7 +300,7 @@ const ProfilePage = () => {
                   borderRadius: "20px",
                 }}
               />
-            )}
+            ))}
           </Box>
         </Box>
 

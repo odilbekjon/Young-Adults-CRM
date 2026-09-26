@@ -1150,6 +1150,7 @@
       "filters": {
         "dateFrom": "Sanadan",
         "dateTo": "Sanagacha",
+        "branch": "Filial",
         "course": "Kurs",
         "teachers": "O'qituvchilar",
         "reasons": "Arxivlash sabablari",
@@ -1613,6 +1614,7 @@
     "studentHoverCard": {
       "activeLearns": "Faol (o'qimoqda)",
       "frozenPaused": "Muzlatilgan (pauza)",
+      "inactiveArchived": "Faol emas (arxivda)",
       "debtor": "Qarzdor",
       "debt": "Qarzdorlik",
       "balance": "Balans",
@@ -1875,7 +1877,8 @@
         "title": "Xodimlar",
         "countSuffix": "xodim",
         "addNew": "QO'SHISH",
-        "import": "Import",
+        "exportExcel": "Excelga eksport",
+        "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring.",
         "search": { "placeholder": "Xodimni qidirish" },
         "filters": { "status": "Status", "allStatuses": "Barcha statuslar", "active": "Faol", "inactive": "Faol emas" },
         "table": { "id": "#", "name": "Ism", "role": "Rol", "jobTitle": "Lavozim", "phone": "Telefon", "status": "Status", "actions": "Amallar", "noData": "Xodimlar topilmadi", "loading": "Yuklanmoqda...", "loadError": "Xodimlar ro'yxatini yuklab bo'lmadi" },
@@ -2093,7 +2096,7 @@
         "balance": "Balans",
         "noData": "Ma'lumot yo'q",
         "loadError": "Arxivni yuklab bo'lmadi.",
-        "filters": { "namePhone": "Ism yoki telefon", "filterByRole": "Rol bo'yicha filtr", "student": "O'quvchi", "teacher": "O'qituvchi", "filterByReason": "Sabab bo'yicha filtr", "startDate": "Boshlanish sanasi" },
+        "filters": { "namePhone": "Ism yoki telefon", "filterByRole": "Rol bo'yicha filtr", "student": "O'quvchi", "teacher": "O'qituvchi", "admin": "Admin", "superadmin": "Super Admin", "filterByReason": "Sabab bo'yicha filtr", "startDate": "Boshlanish sanasi" },
         "actions": { "delete": "O'chirish", "reestablish": "Qayta tiklash" },
         "table": { "name": "Ism", "phone": "Telefon", "roles": "Rollar", "reasonsForRemoval": "O'chirish sabablari", "comment": "Izoh", "archived": "Arxivda", "actions": "Amallar" },
         "reasons": {
@@ -2142,6 +2145,16 @@
           "message": "\"{{name}}\"ni bazadan butunlay o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
           "error": "Butunlay o'chirib bo'lmadi. Qaytadan urinib ko'ring.",
           "unsupportedRole": "Bu yozuvning roli bu yerda butunlay o'chirilmaydi."
+        },
+        "bulkRestoreConfirm": {
+          "title": "Arxivdan tiklash",
+          "message": "Tanlangan {{count}} ta yozuvni tiklab, faol ro'yxatga qaytarishni xohlaysizmi?",
+          "error": "Tiklab bo'lmadi. Qaytadan urinib ko'ring."
+        },
+        "bulkPermanentDeleteConfirm": {
+          "title": "Butunlay o'chirish",
+          "message": "Tanlangan {{count}} ta yozuvni bazadan butunlay o'chirishga ishonchingiz komilmi? Bu amalni ortga qaytarib bo'lmaydi.",
+          "error": "Butunlay o'chirib bo'lmadi. Qaytadan urinib ko'ring."
         },
         "toast": {
           "restored": "Muvaffaqiyatli tiklandi",

@@ -1150,6 +1150,7 @@
       "filters": {
         "dateFrom": "Date from",
         "dateTo": "Date to",
+        "branch": "Branch",
         "course": "Course",
         "teachers": "Teachers",
         "reasons": "Reasons for archiving",
@@ -1613,6 +1614,7 @@
     "studentHoverCard": {
       "activeLearns": "Active (Learns)",
       "frozenPaused": "Frozen (paused)",
+      "inactiveArchived": "Inactive (archived)",
       "debtor": "Debtor",
       "debt": "Debt",
       "balance": "Balance",
@@ -1875,7 +1877,8 @@
         "title": "Staff",
         "countSuffix": "staff",
         "addNew": "ADD NEW",
-        "import": "Import",
+        "exportExcel": "Export to Excel",
+        "exportError": "Failed to export the list. Please try again.",
         "search": { "placeholder": "Search staff" },
         "filters": { "status": "Status", "allStatuses": "All statuses", "active": "Active", "inactive": "Inactive" },
         "table": { "id": "#", "name": "Name", "role": "Role", "jobTitle": "Position", "phone": "Phone", "status": "Status", "actions": "Actions", "noData": "No staff found", "loading": "Loading...", "loadError": "Failed to load staff" },
@@ -2093,7 +2096,7 @@
         "balance": "Balance",
         "noData": "No Data",
         "loadError": "Failed to load archive.",
-        "filters": { "namePhone": "Name or Phone", "filterByRole": "Filter by role", "student": "Student", "teacher": "Teacher", "filterByReason": "Filter by reason", "startDate": "Start date" },
+        "filters": { "namePhone": "Name or Phone", "filterByRole": "Filter by role", "student": "Student", "teacher": "Teacher", "admin": "Admin", "superadmin": "Super Admin", "filterByReason": "Filter by reason", "startDate": "Start date" },
         "actions": { "delete": "Delete", "reestablish": "Reestablish" },
         "table": { "name": "Name", "phone": "Phone", "roles": "Roles", "reasonsForRemoval": "Reasons for removal", "comment": "Comment", "archived": "Archived", "actions": "Actions" },
         "reasons": {
@@ -2142,6 +2145,16 @@
           "message": "Are you sure you want to permanently delete \"{{name}}\" from the database? This action cannot be undone.",
           "error": "Failed to permanently delete. Please try again.",
           "unsupportedRole": "This record's role can't be permanently deleted here."
+        },
+        "bulkRestoreConfirm": {
+          "title": "Restore from archive",
+          "message": "Restore {{count}} selected record(s) and move them back to the active list?",
+          "error": "Failed to restore. Please try again."
+        },
+        "bulkPermanentDeleteConfirm": {
+          "title": "Permanently delete",
+          "message": "Are you sure you want to permanently delete {{count}} selected record(s) from the database? This action cannot be undone.",
+          "error": "Failed to permanently delete. Please try again."
         },
         "toast": {
           "restored": "Restored successfully",

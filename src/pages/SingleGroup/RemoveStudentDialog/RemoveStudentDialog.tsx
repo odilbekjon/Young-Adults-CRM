@@ -1,5 +1,5 @@
 // src/pages/groups/RemoveStudentDialog.tsx
-import { Checkbox, FormControl, FormControlLabel, Radio, RadioGroup, Switch } from "@mui/material";
+import { Checkbox, FormControl, FormControlLabel, Radio, RadioGroup } from "@mui/material";
 import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { inputStyle } from "../styles";
@@ -13,8 +13,6 @@ interface RemoveStudentDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  deleteMode: boolean;
-  onDeleteModeChange: (v: boolean) => void;
   reasonId: string;
   onReasonIdChange: (v: string) => void;
   reasons: ReasonOption[];
@@ -37,7 +35,6 @@ interface RemoveStudentDialogProps {
 
 export const RemoveStudentDialog = ({
   open, onClose, onConfirm,
-  deleteMode, onDeleteModeChange,
   reasonId, onReasonIdChange,
   reasons,
   comment, onCommentChange,
@@ -64,17 +61,10 @@ export const RemoveStudentDialog = ({
           <MdClose size={22} style={{ cursor: "pointer", color: "#888" }} onClick={onClose} />
         </div>
         <div style={{ padding: "22px 34px 30px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 22 }}>
-            <span style={{ fontSize: 14, color: deleteMode ? "#7d7d7d" : "#5f9bb8" }}>{archiveLabel ?? t("singleGroup.removeStudentDialog.removeFromGroup")}</span>
-            <Switch
-              checked={deleteMode}
-              onChange={(e) => onDeleteModeChange(e.target.checked)}
-              sx={{
-                "& .MuiSwitch-switchBase.Mui-checked": { color: "#3d87ad" },
-                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#3d87ad" },
-              }}
-            />
-            <span style={{ fontSize: 14, color: deleteMode ? "#2f2f2f" : "#7d7d7d" }}>{t("singleGroup.removeStudentDialog.deleteStudent")}</span>
+          <div style={{ textAlign: "center", marginBottom: 22 }}>
+            <span style={{ fontSize: 14, color: "#5f9bb8", fontWeight: 500 }}>
+              {archiveLabel ?? t("singleGroup.removeStudentDialog.removeFromGroup")}
+            </span>
           </div>
 
           <div style={{ marginBottom: 14 }}>
@@ -113,14 +103,10 @@ export const RemoveStudentDialog = ({
                 sx={{ m: 0, mb: 1 }}
               />
 
-              {/* Deleting the student is account-wide — every membership
-                  ends regardless of this radio (handleRemoveStudent forces
-                  isAllGroup), so it's locked to "All groups" while deleteMode
-                  is on rather than showing a choice with no effect. */}
-              <FormControl component="fieldset" sx={{ display: "block" }} disabled={deleteMode}>
+              <FormControl component="fieldset" sx={{ display: "block" }}>
                 <RadioGroup
                   row
-                  value={deleteMode ? "all" : scope}
+                  value={scope}
                   onChange={(e) => onScopeChange(e.target.value as "current" | "all")}
                   sx={{ gap: 2 }}
                 >

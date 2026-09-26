@@ -15,12 +15,18 @@ import type { ReportBreakdownItem } from "../../../../app/api/reportsApi/types";
 import { useAllCoursesQuery } from "../../../../app/api/coursesApi";
 import { useAllTeachersQuery } from "../../../../app/api/teachersApi";
 import { useReasonsSelectQuery } from "../../../../app/api/reasonsApi";
+import { useAllBranchesQuery } from "../../../../app/api/branchesApi";
 import { useToast } from "../../../../Context/ToastContext";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 // ---------- SelectBox ----------
 const SelectBox = ({ value, onChange, options, placeholder }: {
-  value: string; onChange: (v: string) => void; options: string[]; placeholder?: string;
+  value: string; onChange: (v: string) => void; options: SelectOption[]; placeholder?: string;
 }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -29,11 +35,12 @@ const SelectBox = ({ value, onChange, options, placeholder }: {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+  const selectedLabel = options.find((o) => o.value === value)?.label;
   return (
     <div className="relative" ref={ref}>
       <button type="button" onClick={() => setOpen(o => !o)}
         className="flex items-center justify-between gap-2 border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-left hover:border-gray-400 transition-colors min-w-[130px]">
-        <span className={value ? "text-gray-700" : "text-gray-400"}>{value || placeholder}</span>
+        <span className={selectedLabel ? "text-gray-700" : "text-gray-400"}>{selectedLabel || placeholder}</span>
         <FiChevronDown size={13} className="text-gray-400 flex-shrink-0" />
       </button>
       {open && (
@@ -41,9 +48,9 @@ const SelectBox = ({ value, onChange, options, placeholder }: {
           <button className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:bg-gray-50"
             onClick={() => { onChange(""); setOpen(false); }}>{placeholder}</button>
           {options.map(opt => (
-            <button key={opt} type="button"
+            <button key={opt.value} type="button"
               className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-              onClick={() => { onChange(opt); setOpen(false); }}>{opt}</button>
+              onClick={() => { onChange(opt.value); setOpen(false); }}>{opt.label}</button>
           ))}
         </div>
       )}
@@ -80,11 +87,15 @@ export const StudentsLeftGroup = () => {
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [applied, setApplied] = useState({ startDate: "", endDate: "" });
+  const [branchId, setBranchId] = useState("");
+  const [applied, setApplied] = useState({ startDate: "", endDate: "", branchId: "" });
 
   // Swagger's /reports/left-students accepts only startDate/endDate/branchId/
   // groupId, so course/teacher/reason are applied to the returned breakdowns
-  // client-side rather than being invented as query parameters.
+  // client-side rather than being invented as query parameters. branchId is
+  // a distinct, report-specific filter — separate from the header's globally
+  // selected branch — so it's staged/applied on "Filter" like the dates,
+  // not applied immediately like course/teacher/reason below.
   const [course, setCourse] = useState("");
   const [teacher, setTeacher] = useState("");
   const [reason, setReason] = useState("");
@@ -93,6 +104,7 @@ export const StudentsLeftGroup = () => {
     () => ({
       startDate: applied.startDate || undefined,
       endDate: applied.endDate || undefined,
+      branchId: applied.branchId || undefined,
     }),
     [applied]
   );
@@ -105,10 +117,17 @@ export const StudentsLeftGroup = () => {
   const { data: coursesData } = useAllCoursesQuery();
   const { data: teachersData } = useAllTeachersQuery({ page: 1, limit: 100 });
   const { data: reasonOptions } = useReasonsSelectQuery();
+  const { data: branchesData } = useAllBranchesQuery();
 
-  const courseNames = useMemo(() => (coursesData?.data ?? []).map((c) => c.name), [coursesData]);
-  const teacherNames = useMemo(() => (teachersData?.data ?? []).map((tc) => tc.name), [teachersData]);
-  const reasonNames = useMemo(() => (reasonOptions ?? []).map((r) => r.name), [reasonOptions]);
+  const courseOptions = useMemo(() => (coursesData?.data ?? []).map((c) => ({ value: c.name, label: c.name })), [coursesData]);
+  const teacherOptions = useMemo(() => (teachersData?.data ?? []).map((tc) => ({ value: tc.name, label: tc.name })), [teachersData]);
+  const reasonOptionList = useMemo(() => (reasonOptions ?? []).map((r) => ({ value: r.name, label: r.name })), [reasonOptions]);
+  // Same convention as staff.tsx's own branch dropdown — exclude
+  // soft-deleted/deactivated branches from the picker.
+  const branchOptions = useMemo(
+    () => (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE").map((b) => ({ value: b.id, label: b.name })),
+    [branchesData]
+  );
 
   const only = (items: ReportBreakdownItem[], selected: string) =>
     selected ? items.filter((i) => i.name === selected) : items;
@@ -119,10 +138,10 @@ export const StudentsLeftGroup = () => {
   const byMonth = data?.byMonth ?? [];
   const total = data?.total ?? 0;
 
-  const handleFilter = () => setApplied({ startDate: dateFrom, endDate: dateTo });
+  const handleFilter = () => setApplied({ startDate: dateFrom, endDate: dateTo, branchId });
   const handleReset = () => {
-    setDateFrom(""); setDateTo(""); setCourse(""); setTeacher(""); setReason("");
-    setApplied({ startDate: "", endDate: "" });
+    setDateFrom(""); setDateTo(""); setCourse(""); setTeacher(""); setReason(""); setBranchId("");
+    setApplied({ startDate: "", endDate: "", branchId: "" });
   };
 
   const handleExportExcel = async () => {
@@ -166,9 +185,10 @@ export const StudentsLeftGroup = () => {
       <div className="flex items-center gap-2 flex-wrap mb-5">
         <DatePickerField value={dateFrom} onChange={setDateFrom} />
         <DatePickerField value={dateTo} onChange={setDateTo} />
-        <SelectBox value={course} onChange={setCourse} options={courseNames} placeholder={t("reports.studentsLeft.filters.course")} />
-        <SelectBox value={teacher} onChange={setTeacher} options={teacherNames} placeholder={t("reports.studentsLeft.filters.teachers")} />
-        <SelectBox value={reason} onChange={setReason} options={reasonNames} placeholder={t("reports.studentsLeft.filters.reasons")} />
+        <SelectBox value={branchId} onChange={setBranchId} options={branchOptions} placeholder={t("reports.studentsLeft.filters.branch")} />
+        <SelectBox value={course} onChange={setCourse} options={courseOptions} placeholder={t("reports.studentsLeft.filters.course")} />
+        <SelectBox value={teacher} onChange={setTeacher} options={teacherOptions} placeholder={t("reports.studentsLeft.filters.teachers")} />
+        <SelectBox value={reason} onChange={setReason} options={reasonOptionList} placeholder={t("reports.studentsLeft.filters.reasons")} />
         <button onClick={handleFilter}
           className="bg-blue-700 hover:bg-blue-800 text-white rounded px-5 py-1.5 text-sm font-medium transition-colors">
           {t("reports.studentsLeft.filters.filterBtn")}

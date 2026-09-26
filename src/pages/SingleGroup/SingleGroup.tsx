@@ -39,7 +39,6 @@ import {
   useTransferStudentBranchMutation,
   useLazyStudentByIdQuery,
   useUpdateStudentStatusMutation,
-  useDeleteStudentMutation,
 } from "../../app/api/studentsApi";
 import type { StudentDetail } from "../../app/api/studentsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
@@ -195,7 +194,6 @@ export const SingleGroup = () => {
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [updateStudentStatus, { isLoading: isArchivingStudent }] = useUpdateStudentStatusMutation();
-  const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
   const [fetchStudentDetail] = useLazyStudentByIdQuery();
   const [fetchGroupExcel, { isFetching: isExportingExcel }] = useLazyGroupExcelQuery();
 
@@ -321,20 +319,10 @@ export const SingleGroup = () => {
   const [removeOpen, setRemoveOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
-  const [removeDeleteMode, setRemoveDeleteMode] = useState(false);
   const [removeReasonId, setRemoveReasonId] = useState<string>("");
   const [removeComment, setRemoveComment] = useState("");
   const [removeRecalculate, setRemoveRecalculate] = useState(false);
   const [removeScope, setRemoveScope] = useState<"current" | "all">("current");
-
-  // "Delete student" always deletes the whole account (DELETE /students/{id}),
-  // which the backend rejects while ANY membership is still active — so
-  // switching into delete mode forces scope to "all" (handleRemoveStudent
-  // also enforces this server-side regardless of what's displayed here).
-  const handleRemoveDeleteModeChange = (v: boolean) => {
-    setRemoveDeleteMode(v);
-    if (v) setRemoveScope("all");
-  };
 
   if (groupLoading) {
     return (
@@ -408,6 +396,7 @@ export const SingleGroup = () => {
       name: detail?.name ?? student.name,
       phone: detail?.phone ?? student.phone,
       active: detail ? detail.status === "ACTIVE" : student.active,
+      status: detail?.status,
       balance: detail?.balance ?? student.balance,
       addedAt: detail?.createdAt ? formatDate(detail.createdAt) : student.addedAt,
       activatedAt: detail?.groupsStart ? formatDate(detail.groupsStart) : student.activatedAt,
@@ -592,7 +581,6 @@ export const SingleGroup = () => {
   };
 
   const resetRemoveState = () => {
-    setRemoveDeleteMode(false);
     setRemoveReasonId("");
     setRemoveComment("");
     setRemoveRecalculate(false);
@@ -627,35 +615,24 @@ export const SingleGroup = () => {
       // required; reason/reasonId/isAllGroup optional.
       await updateStudentGroupStatus({
         id: studentGroupId,
-        status: removeDeleteMode ? "DELETED" : "INACTIVE",
+        status: "INACTIVE",
         reasonId: removeReasonId || undefined,
         reason: removeComment.trim() || undefined,
-        // Deleting the student is account-wide, so every membership must be
-        // cleared here regardless of the scope radio — otherwise deleteStudent
-        // below 409s on whichever other group memberships are still active.
-        isAllGroup: removeDeleteMode || removeScope === "all",
+        isAllGroup: removeScope === "all",
       }).unwrap();
 
-      // Step 2 — the account-wide action: "Delete student" permanently
-      // deletes them (DELETE /students/{id}; the backend rejects this while
-      // any group membership is still active, which step 1 above has just
-      // cleared). Otherwise, only archive the student's whole account
-      // (POST /students/{id}/status, which also records the reason to their
+      // Step 2 — only archive the student's whole account (POST
+      // /students/{id}/status, which also records the reason to their
       // history — the source of the Archive page's reason/comment columns)
       // when they were removed from EVERY group (removeScope === "all") —
       // removing them from just the current group must leave their
       // account-wide status, and their other group memberships, untouched.
-      if (removeDeleteMode) {
-        await deleteStudent(studentId).unwrap();
-      } else if (removeScope === "all") {
+      // A permanent delete is only reachable from the Archive page itself.
+      if (removeScope === "all") {
         await updateStudentStatus({ id: studentId, status: "INACTIVE", reason: combinedReason }).unwrap();
       }
 
-      toast.success(
-        removeDeleteMode
-          ? t("singleGroup.removeStudentDialog.toast.deleted")
-          : t("singleGroup.removeStudentDialog.toast.removed")
-      );
+      toast.success(t("singleGroup.removeStudentDialog.toast.removed"));
       setRemoveOpen(false);
       resetRemoveState();
     } catch (err) {
@@ -1184,8 +1161,6 @@ export const SingleGroup = () => {
         open={removeOpen}
         onClose={handleCloseRemove}
         onConfirm={handleRemoveStudent}
-        deleteMode={removeDeleteMode}
-        onDeleteModeChange={handleRemoveDeleteModeChange}
         reasonId={removeReasonId}
         onReasonIdChange={setRemoveReasonId}
         reasons={reasonOptions ?? []}
@@ -1195,7 +1170,7 @@ export const SingleGroup = () => {
         onRecalculateChange={setRemoveRecalculate}
         scope={removeScope}
         onScopeChange={setRemoveScope}
-        loading={isChangingMembershipStatus || isArchivingStudent || isDeletingStudent}
+        loading={isChangingMembershipStatus || isArchivingStudent}
       />
 
       {/* ══ DELETE GROUP CONFIRM ══ */}

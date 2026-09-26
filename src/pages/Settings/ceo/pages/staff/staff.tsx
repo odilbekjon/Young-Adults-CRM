@@ -32,12 +32,12 @@ import {
 import {
   MdOutlineEmail,
   MdClose,
-  MdCloudUpload,
   MdDelete,
 } from "react-icons/md";
 import { IoSearchOutline } from "react-icons/io5";
 import { GoPlus } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { PiMicrosoftExcelLogoFill } from "react-icons/pi";
 import { HiEye, HiEyeOff } from "react-icons/hi";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useSelector } from "react-redux";
@@ -53,6 +53,7 @@ import {
   useUpdateStaffUserMutation,
   useToggleStaffUserStatusMutation,
   useLazyStaffUserForEditQuery,
+  useLazyStaffUsersExcelQuery,
 } from "../../../../../app/api/usersApi";
 import type { UserStatus } from "../../../../../app/api/usersApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi";
@@ -77,9 +78,13 @@ interface StaffForm {
   email: string;
   phone: string;
   password: string;
-  // Not yet a real backend field on POST/PATCH /users (confirmed live,
-  // 2026-09 — silently dropped, doesn't 400). Sent anyway: harmless today,
-  // starts working the moment the backend adds it.
+  // Backend persistence unconfirmed as of this pass (2026-09): Swagger now
+  // documents this field on POST /users, but the round-trip (does it survive
+  // on GET /users, GET /users/{id}, GET /users/{id}/for-edit?) could not be
+  // re-tested live — this session had no authenticated access to the
+  // deployed backend. Sent anyway: harmless either way, and the read side
+  // (below) stays defensively "—" until someone can confirm a GET actually
+  // echoes it back and wires StaffUser/StaffUserForEdit accordingly.
   jobTitle: string;
   role: string;
   // A user can hold more than one lavozim (AUTH_ROLE_DOCS.md's
@@ -176,13 +181,15 @@ export const Staff = () => {
   const [isSavingRoles, setIsSavingRoles] = useState(false);
   const [toggleStaffUserStatus] = useToggleStaffUserStatusMutation();
   const [fetchStaffUserForEdit, { isFetching: isLoadingForEdit }] = useLazyStaffUserForEditQuery();
+  const [fetchStaffUsersExcel, { isFetching: isExportingExcel }] = useLazyStaffUsersExcelQuery();
 
   const staffLoading = usersLoading;
   const staffError = usersError;
 
-  // Job title has no real backend field yet (confirmed live — see
-  // CreateUserRequest.jobTitle's comment), so GET /users never returns one;
-  // shown as "—" rather than inventing a value until the backend adds it.
+  // GET /users still isn't typed to return jobTitle (see
+  // CreateUserRequest.jobTitle's comment) — unconfirmed, not disproven, as of
+  // this pass. Shown as "—" rather than inventing a value; wire this to the
+  // real field the moment someone confirms a GET response actually carries it.
   const unifiedRows: UnifiedStaffRow[] = useMemo(
     () =>
       (usersData?.rows ?? []).map((u) => ({
@@ -391,6 +398,20 @@ export const Staff = () => {
 
   const handleSmsOpen = () => { setSmsOpen(true); handleCloseMenu(); };
 
+  const handleExportExcel = async () => {
+    try {
+      const blob = await fetchStaffUsersExcel().unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "staff.xlsx";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(extractApiError(err) || t("settings.ceo.staff.exportError"));
+    }
+  };
+
   // The only "remove" action on this list: PATCH .../{id}/toggle-status
   // flips ACTIVE <-> INACTIVE without deleting the record. A real DELETE
   // isn't exposed from here — Swagger documents it as a hard delete
@@ -446,7 +467,9 @@ export const Staff = () => {
           </Button>
           <Button
             variant="outlined"
-            startIcon={<MdCloudUpload />}
+            onClick={handleExportExcel}
+            disabled={isExportingExcel}
+            startIcon={isExportingExcel ? <CircularProgress size={16} /> : <PiMicrosoftExcelLogoFill size={18} />}
             sx={{
               borderRadius: 5,
               px: 2.5,
@@ -456,7 +479,7 @@ export const Staff = () => {
               color: "var(--color-text-secondary)",
             }}
           >
-            {t("settings.ceo.staff.import")}
+            {t("settings.ceo.staff.exportExcel")}
           </Button>
         </Stack>
       </Stack>

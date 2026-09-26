@@ -12,11 +12,10 @@ import { DebtorReceiptModal } from "../../../../components/DebtorReceiptModal";
 import { useDebtorsQuery, useDebtorsTotalQuery, useLazyDebtorsExcelQuery } from "../../../../app/api/financeApi";
 import { useToast } from "../../../../Context/ToastContext";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
+import { formatUZS } from "../../../../utils";
 import type { RootState } from "../../../../app/store";
 
 const PAGE_SIZE_OPTIONS = [20, 25, 50];
-
-const formatUZS = (n: number) => n.toLocaleString("uz-UZ") + " UZS";
 
 interface AppliedFilters {
   search: string;

@@ -22,7 +22,7 @@ import {
   useStudentByIdQuery,
   useStudentGroupMembershipsQuery,
   useUpdateStudentMutation,
-  useToggleStudentStatusMutation,
+  useUpdateStudentStatusMutation,
   useTransferStudentBranchMutation,
   useStudentCommentsQuery,
   useStudentHistoryQuery,
@@ -44,8 +44,10 @@ import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useDeletePaymentMutation, isCompletedPaymentStatus } from "../../app/api/financeApi";
 import { useAttendanceReportQuery } from "../../app/api/attendancesApi";
 import { useSendSmsToStudentsMutation } from "../../app/api/smsApi";
+import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
 import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
+import { RemoveStudentDialog } from "../SingleGroup/RemoveStudentDialog";
 import { extractApiError } from "../../utils/extractApiError";
 import { AddPayment } from "../../components/AddPayment";
 import { PaymentReceiptModal } from "../../components/PaymentReceiptModal";
@@ -1719,7 +1721,8 @@ export const StudentProfile = () => {
   }, [studentGroupRecords]);
 
   const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
-  const [toggleStudentStatus, { isLoading: isArchivingStudent }] = useToggleStudentStatusMutation();
+  const [updateStudentStatus, { isLoading: isArchivingStudent }] = useUpdateStudentStatusMutation();
+  const { data: archiveReasonOptions } = useReasonsSelectQuery();
   const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [freezeStudentGroup, { isLoading: isFreezingGroup }] = useFreezeStudentGroupMutation();
@@ -1778,13 +1781,14 @@ export const StudentProfile = () => {
   );
 
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [archiveError, setArchiveError] = useState<string | null>(null);
   const toast = useToast();
 
   const [activeTab, setActiveTab] = useState(0);
   const [editOpen, setEditOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveReasonId, setArchiveReasonId] = useState("");
+  const [archiveComment, setArchiveComment] = useState("");
   const [addToGroupOpen, setAddToGroupOpen] = useState(false);
   const [moveBranchOpen, setMoveBranchOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
@@ -1869,22 +1873,24 @@ export const StudentProfile = () => {
     }
   };
 
-  // The only "remove student" action on this page: PATCH
-  // /students/{id}/toggle-status flips the status to INACTIVE without
-  // deleting the record. A real DELETE /students/{id} isn't exposed here —
-  // it's the Archive page's permanent-delete action, since the backend
-  // rejects it outright while the student still has group memberships.
+  // Archives the student (POST /students/{id}/status -> INACTIVE, with the
+  // picked reason recorded — same call Students.tsx/SingleGroup.tsx's own
+  // archive dialogs use, so the reason/comment show up on the Archive page).
+  // A real DELETE /students/{id} isn't exposed here — permanent delete is
+  // only reachable from the Archive page itself.
   const handleArchive = async () => {
-    setArchiveError(null);
+    const reasonName = archiveReasonOptions?.find((r) => r.id === archiveReasonId)?.name;
+    const combinedReason = [reasonName, archiveComment.trim()].filter(Boolean).join(" — ") || undefined;
     try {
-      await toggleStudentStatus(student.uid).unwrap();
+      await updateStudentStatus({ id: student.uid, status: "INACTIVE", reason: combinedReason }).unwrap();
       toast.success("Student moved to archive");
       setArchiveOpen(false);
+      setArchiveReasonId("");
+      setArchiveComment("");
       navigate(-1);
     } catch (err) {
       const detail = extractApiError(err);
       const message = detail ? `Failed to archive the student: ${detail}` : "Failed to archive the student";
-      setArchiveError(message);
       toast.error(message);
     }
   };
@@ -2005,7 +2011,7 @@ export const StudentProfile = () => {
           <SideCard
             student={student}
             onEdit={() => setEditOpen(true)}
-            onArchive={() => { setArchiveError(null); setArchiveOpen(true); }}
+            onArchive={() => setArchiveOpen(true)}
             onSms={() => setSmsOpen(true)}
             onAddToGroup={() => setAddToGroupOpen(true)}
             onOpenAddToGroupMenu={(e) => setGroupMenuAnchor(e.currentTarget)}
@@ -2147,34 +2153,23 @@ export const StudentProfile = () => {
       />
 
 
-      <Dialog
+      <RemoveStudentDialog
         open={archiveOpen}
-        onClose={() => setArchiveOpen(false)}
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Archive student</DialogTitle>
-        <DialogContent>
-          <div style={{ fontSize: 14, color: "#6b7280" }}>
-            Move {student.name} to the archive? They will stay in the database, only their status becomes "Inactive" — they can be reactivated at any time.
-          </div>
-          {archiveError && (
-            <div style={{ marginTop: 12, fontSize: 13, color: "#ef4444" }}>{archiveError}</div>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setArchiveOpen(false)} disabled={isArchivingStudent} sx={{ color: "#6b7280" }}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            disabled={isArchivingStudent}
-            onClick={handleArchive}
-            sx={{ borderRadius: 2, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" } }}
-          >
-            Archive
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onClose={() => { setArchiveOpen(false); setArchiveReasonId(""); setArchiveComment(""); }}
+        onConfirm={handleArchive}
+        reasonId={archiveReasonId}
+        onReasonIdChange={setArchiveReasonId}
+        reasons={archiveReasonOptions ?? []}
+        comment={archiveComment}
+        onCommentChange={setArchiveComment}
+        recalculate={false}
+        onRecalculateChange={() => {}}
+        scope="all"
+        onScopeChange={() => {}}
+        showGroupScope={false}
+        archiveLabel="Archive student"
+        loading={isArchivingStudent}
+      />
 
       <AddToGroupModal
         open={addToGroupOpen}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
@@ -58,6 +59,7 @@ const REASONS_LIMIT = 200;
 export const Archive = () => {
   const { t } = useTranslation();
   const toast = useToast();
+  const navigate = useNavigate();
   // POST /reasons requires a concrete branchId query param — the real branch
   // UUID lives in the Redux branch slice (the same source baseApi uses for the
   // x-branch-id header); BranchContext only carries display labels.
@@ -91,6 +93,8 @@ export const Archive = () => {
   const [permDeleteError, setPermDeleteError] = useState<string | null>(null);
   const [bulkActionError, setBulkActionError] = useState<string | null>(null);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [bulkRestoreConfirmOpen, setBulkRestoreConfirmOpen] = useState(false);
+  const [bulkPermDeleteConfirmOpen, setBulkPermDeleteConfirmOpen] = useState(false);
 
   // ── Server-side query ───────────────────────────────────────────────────────
   // Debounced the same way as Header's student search bar (350ms) so we don't
@@ -100,6 +104,13 @@ export const Archive = () => {
     const handle = setTimeout(() => setDebouncedSearch(search.trim()), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [search]);
+
+  // Every local filter already resets `page` inline on change (see the
+  // Select/DatePickerField onChange handlers below) — only the globally
+  // selected branch was missing a reset.
+  useEffect(() => {
+    setPage(1);
+  }, [selectedBranchId]);
 
   const { data, isLoading, isError } = useAllArchivesQuery({
     page,
@@ -220,9 +231,10 @@ export const Archive = () => {
       );
       toast.success(t("settings.office.archive.toast.restored"));
       setSelected([]);
+      setBulkRestoreConfirmOpen(false);
     } catch (err) {
       const detail = extractApiError(err);
-      const generic = t("settings.office.archive.restoreConfirm.error");
+      const generic = t("settings.office.archive.bulkRestoreConfirm.error");
       const message = detail ? `${generic}: ${detail}` : generic;
       setBulkActionError(message);
       toast.error(message);
@@ -245,9 +257,10 @@ export const Archive = () => {
       );
       toast.success(t("settings.office.archive.toast.permanentlyDeleted"));
       setSelected([]);
+      setBulkPermDeleteConfirmOpen(false);
     } catch (err) {
       const detail = extractApiError(err);
-      const generic = t("settings.office.archive.permanentDeleteConfirm.error");
+      const generic = t("settings.office.archive.bulkPermanentDeleteConfirm.error");
       const message = detail ? `${generic}: ${detail}` : generic;
       setBulkActionError(message);
       toast.error(message);
@@ -346,6 +359,24 @@ export const Archive = () => {
   // ── Helpers ─────────────────────────────────────────────────────────────────
   const balanceColor = (b: number | null | undefined) =>
     !b ? "text-gray-500" : b > 0 ? "text-green-600" : "text-red-500";
+
+  // Each archived record already carries the real underlying student/teacher/
+  // staff id (the restore/permanent-delete actions above forward this same
+  // r.id straight into toggleStudentStatus(id)/deleteStudent(id) etc., which
+  // only works because it already is that id) — reused here for navigation.
+  const archiveRowPath = (r: ArchiveRecord): string | null => {
+    switch ((r.role ?? "").toUpperCase()) {
+      case "STUDENT":
+        return `/students/${r.id}`;
+      case "TEACHER":
+        return `/teachers/${r.id}`;
+      case "ADMIN":
+      case "SUPERADMIN":
+        return `/profile/${r.id}`;
+      default:
+        return null;
+    }
+  };
 
   const inputSx = {
     "& .MuiOutlinedInput-root": {
@@ -700,6 +731,8 @@ export const Archive = () => {
           <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.archive.filters.filterByRole")}</em></MenuItem>
           <MenuItem value="STUDENT">{t("settings.office.archive.filters.student")}</MenuItem>
           <MenuItem value="TEACHER">{t("settings.office.archive.filters.teacher")}</MenuItem>
+          <MenuItem value="ADMIN">{t("settings.office.archive.filters.admin")}</MenuItem>
+          <MenuItem value="SUPERADMIN">{t("settings.office.archive.filters.superadmin")}</MenuItem>
         </Select>
 
         <Select
@@ -729,7 +762,7 @@ export const Archive = () => {
         <div className="flex items-center gap-3 ml-2">
           <button
             type="button"
-            onClick={handleBulkPermanentDelete}
+            onClick={() => { setBulkActionError(null); setBulkPermDeleteConfirmOpen(true); }}
             disabled={selected.length === 0 || isPermDeleting}
             className="flex items-center gap-1 text-red-500 hover:text-red-600 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -737,7 +770,7 @@ export const Archive = () => {
           </button>
           <button
             type="button"
-            onClick={handleBulkRestore}
+            onClick={() => { setBulkActionError(null); setBulkRestoreConfirmOpen(true); }}
             disabled={selected.length === 0 || isRestoring}
             className="flex items-center gap-1 text-green-600 hover:text-green-700 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -812,7 +845,13 @@ export const Archive = () => {
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-blue-500 cursor-pointer hover:underline text-sm">
+                    <div
+                      className="font-medium text-blue-500 cursor-pointer hover:underline text-sm"
+                      onClick={() => {
+                        const path = archiveRowPath(r);
+                        if (path) navigate(path);
+                      }}
+                    >
                       {r.name}
                     </div>
                     {r.branch?.name && (
@@ -948,6 +987,88 @@ export const Archive = () => {
           </Button>
           <Button
             onClick={handlePermanentDelete}
+            variant="contained"
+            color="error"
+            disabled={isPermDeleting}
+            startIcon={isPermDeleting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
+          >
+            {t("settings.office.archive.actions.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk restore confirmation */}
+      <Dialog
+        open={bulkRestoreConfirmOpen}
+        onClose={() => { setBulkRestoreConfirmOpen(false); setBulkActionError(null); }}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.office.archive.bulkRestoreConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.office.archive.bulkRestoreConfirm.message", { count: selected.length })}
+          </DialogContentText>
+          {bulkActionError && (
+            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
+              {bulkActionError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => { setBulkRestoreConfirmOpen(false); setBulkActionError(null); }}
+            variant="outlined"
+            disabled={isRestoring}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.archive.reasons.deleteConfirm.cancel")}
+          </Button>
+          <Button
+            onClick={handleBulkRestore}
+            variant="contained"
+            color="success"
+            disabled={isRestoring}
+            startIcon={isRestoring ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
+          >
+            {t("settings.office.archive.actions.reestablish")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk permanent delete confirmation */}
+      <Dialog
+        open={bulkPermDeleteConfirmOpen}
+        onClose={() => { setBulkPermDeleteConfirmOpen(false); setBulkActionError(null); }}
+        PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t("settings.office.archive.bulkPermanentDeleteConfirm.title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.office.archive.bulkPermanentDeleteConfirm.message", { count: selected.length })}
+          </DialogContentText>
+          {bulkActionError && (
+            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
+              {bulkActionError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => { setBulkPermDeleteConfirmOpen(false); setBulkActionError(null); }}
+            variant="outlined"
+            disabled={isPermDeleting}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.archive.reasons.deleteConfirm.cancel")}
+          </Button>
+          <Button
+            onClick={handleBulkPermanentDelete}
             variant="contained"
             color="error"
             disabled={isPermDeleting}

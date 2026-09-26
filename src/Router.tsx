@@ -155,6 +155,11 @@ export const AppRouter = () => {
                 </Route>
 
             </Route>
+
+            {/* Viewing another staff member's profile by id (from Archive)
+                requires the same access as Staff/Archive themselves — plain
+                "/profile" above (viewing your own) stays open to everyone. */}
+            <Route path="/profile/:id" element={<Layout><Profile/></Layout>} />
             </Route>
 
             {/* FINANCE bundles FINANCE/PAYMENTS/EXPENSES/SALARIES — entry only

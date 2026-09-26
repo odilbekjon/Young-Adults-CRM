@@ -54,7 +54,6 @@ import {
   useUpdateStudentMutation,
   useToggleStudentStatusMutation,
   useUpdateStudentStatusMutation,
-  useDeleteStudentMutation,
   useLazyStudentsExcelQuery,
 } from "../../app/api/studentsApi";
 import { useAllGroupsQuery, useAddStudentToGroupMutation } from "../../app/api/groupsApi";
@@ -490,7 +489,6 @@ export const Students = () => {
   const [updateStudent, { isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
   const [toggleStudentStatus, { isLoading: isArchivingStudent }] = useToggleStudentStatusMutation();
   const [updateStudentStatus, { isLoading: isUpdatingStudentStatus }] = useUpdateStudentStatusMutation();
-  const [deleteStudent, { isLoading: isDeletingStudent }] = useDeleteStudentMutation();
   const { data: reasonOptions } = useReasonsSelectQuery();
   const [fetchStudentsExcel, { isFetching: isExportingExcel }] = useLazyStudentsExcelQuery();
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
@@ -506,9 +504,6 @@ export const Students = () => {
   const [columnsAnchor,     setColumnsAnchor]     = useState<null | HTMLElement>(null);
   const [actionMenu,        setActionMenu]        = useState<{ el: HTMLElement; uid: string } | null>(null);
   const [archiveUid,        setArchiveUid]        = useState<string | null>(null);
-  // "Delete student" (vs. the default "Archive") on the same dialog — see
-  // handleArchiveConfirm. Mirrors SingleGroup's RemoveStudentDialog state.
-  const [archiveDeleteMode, setArchiveDeleteMode] = useState(false);
   const [archiveReasonId,   setArchiveReasonId]   = useState("");
   const [archiveComment,    setArchiveComment]    = useState("");
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
@@ -543,12 +538,13 @@ export const Students = () => {
     if (studentsData) setStudents(studentsData.data.map(mapApiStudentToFlat));
   }, [studentsData]);
 
-  // Changing the status filter re-queries the backend with a different
-  // result set (see above) — reset to page 1 so the user isn't stranded on a
-  // page number that no longer exists for the new filter.
+  // Changing the status filter or the globally-selected branch re-queries the
+  // backend with a different result set (see above) — reset to page 1 so the
+  // user isn't stranded on a page number that no longer exists for the new
+  // filter/branch.
   useEffect(() => {
     setPage(1);
-  }, [filters.status]);
+  }, [filters.status, selectedBranchId]);
 
   const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) =>
     setFilters((p) => ({ ...p, [key]: val }));
@@ -642,35 +638,27 @@ export const Students = () => {
 
   const resetArchiveState = () => {
     setArchiveUid(null);
-    setArchiveDeleteMode(false);
     setArchiveReasonId("");
     setArchiveComment("");
   };
 
-  // The row-level dialog offers two distinct actions (RemoveStudentDialog's
-  // deleteMode toggle): archive (POST /students/{id}/status -> INACTIVE,
-  // with the picked reason recorded — same call SingleGroup's own "remove
-  // student" dialog uses, so the reason/comment show up on the Archive
-  // page) or a real, permanent DELETE /students/{id}. The backend rejects
-  // the latter while the student still has active group memberships.
+  // Archives the student (POST /students/{id}/status -> INACTIVE, with the
+  // picked reason recorded — same call SingleGroup's own "remove student"
+  // dialog uses, so the reason/comment show up on the Archive page). A real
+  // permanent delete is only reachable from the Archive page itself.
   const handleArchiveConfirm = async () => {
     if (!archiveUid) return;
     setActionError(null);
     const reasonName = reasonOptions?.find((r) => r.id === archiveReasonId)?.name;
     const combinedReason = [reasonName, archiveComment.trim()].filter(Boolean).join(" — ") || undefined;
     try {
-      if (archiveDeleteMode) {
-        await deleteStudent(archiveUid).unwrap();
-      } else {
-        await updateStudentStatus({ id: archiveUid, status: "INACTIVE", reason: combinedReason }).unwrap();
-      }
+      await updateStudentStatus({ id: archiveUid, status: "INACTIVE", reason: combinedReason }).unwrap();
       setSelected((p) => p.filter((x) => x !== archiveUid));
       resetArchiveState();
-      toast.success(archiveDeleteMode ? t("students.toast.deleted") : t("students.toast.archived"));
+      toast.success(t("students.toast.archived"));
     } catch (err) {
       const detail = extractApiError(err);
-      const genericKey = archiveDeleteMode ? "students.removeDialog.deleteError" : "students.archiveDialog.error";
-      const message = detail ? `${t(genericKey)}: ${detail}` : t(genericKey);
+      const message = detail ? `${t("students.archiveDialog.error")}: ${detail}` : t("students.archiveDialog.error");
       setActionError(message);
       toast.error(message);
     }
@@ -1116,7 +1104,7 @@ export const Students = () => {
                           </>
                         )}
                         <Divider sx={{ my: 0.5 }} />
-                        <MenuItem onClick={() => { setActionMenu(null); setActionError(null); setArchiveDeleteMode(false); setArchiveReasonId(""); setArchiveComment(""); setArchiveUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-danger)" }}>
+                        <MenuItem onClick={() => { setActionMenu(null); setActionError(null); setArchiveReasonId(""); setArchiveComment(""); setArchiveUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-danger)" }}>
                           <MdDelete size={16} /> {t("students.actions.archive")}
                         </MenuItem>
                       </Menu>
@@ -1213,8 +1201,6 @@ export const Students = () => {
         open={Boolean(archiveUid)}
         onClose={resetArchiveState}
         onConfirm={handleArchiveConfirm}
-        deleteMode={archiveDeleteMode}
-        onDeleteModeChange={setArchiveDeleteMode}
         reasonId={archiveReasonId}
         onReasonIdChange={setArchiveReasonId}
         reasons={reasonOptions ?? []}
@@ -1226,7 +1212,7 @@ export const Students = () => {
         onScopeChange={() => {}}
         showGroupScope={false}
         archiveLabel={t("students.removeDialog.archiveLabel")}
-        loading={isUpdatingStudentStatus || isDeletingStudent}
+        loading={isUpdatingStudentStatus}
       />
 
       {/* Bulk archive confirm — toggleStudentStatus applied to every selected row */}

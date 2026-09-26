@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
@@ -112,11 +112,23 @@ export const StudentLeft = () => {
     setPage(1);
   };
 
+  // Changing the globally-selected branch re-queries the backend with a
+  // different result set — reset to page 1 so the user isn't stranded on a
+  // page number that no longer exists for the new branch.
+  useEffect(() => {
+    setPage(1);
+  }, [selectedBranchId]);
+
   // GET /student-groups — branchId/search/groupId are supported server-side
   // (same query the SingleGroup page uses for its own roster); course/
   // teacher/date-range aren't documented params on this endpoint, so those
   // are applied client-side below, same as Groups.tsx already does for its
-  // own branch-name filter on top of a server page.
+  // own branch-name filter on top of a server page. Real page/limit are sent
+  // (rather than a fixed large limit sliced client-side) so rows beyond a
+  // single page are actually reachable — this does mean a given page can mix
+  // in non-"left" memberships that the LEFT_STATUSES filter below then
+  // excludes, so a page can render fewer than PAGE_SIZE rows; there's no
+  // documented way to filter by multiple statuses server-side to avoid that.
   const {
     data: studentGroupsData,
     isLoading,
@@ -127,8 +139,8 @@ export const StudentLeft = () => {
       branchId: selectedBranchId ?? undefined,
       groupId: applied.groupId || undefined,
       search: applied.search || undefined,
-      page: 1,
-      limit: 200,
+      page,
+      limit: PAGE_SIZE,
     },
     { skip: tab === "old" }
   );
@@ -188,8 +200,10 @@ export const StudentLeft = () => {
     );
   });
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-  const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // `filtered` is already just this one server page's rows narrowed to the
+  // LEFT_STATUSES/course/teacher/reason/date filters — no further slicing.
+  const totalPages = studentGroupsData?.meta?.totalPages ?? 1;
+  const pageData = filtered;
   const busy = tab === "new" && (isLoading || isFetching);
   const statusLabel = (s: string) => t(`settings.office.studentLeft.statusLabels.${s}`, s);
 

@@ -32,10 +32,10 @@ import { useAllBranchesQuery } from "../../../../app/api/branchesApi/branchesApi
 import { PaymentMethodPicker } from "../../../../components/PaymentMethodPicker";
 import { useToast } from "../../../../Context/ToastContext";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
+import { formatUZS } from "../../../../utils";
 import type { RootState } from "../../../../app/store";
 
 // ---------- Helpers ----------
-const formatUZS = (n: number) => n.toLocaleString("uz-UZ") + " UZS";
 const fmtDate = (d: string | null) => (d ? d.split("-").reverse().join(".") : "—");
 const todayISO = () => new Date().toISOString().split("T")[0];
 

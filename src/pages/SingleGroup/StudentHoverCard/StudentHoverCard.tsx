@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StudentCardData } from "../types";
+import { BALANCE_STATUS_COLOR, classifyBalance } from "../../../utils";
 
 export const StudentHoverCard = ({
   student,
@@ -16,14 +17,17 @@ export const StudentHoverCard = ({
 }) => {
   const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 300 });
 
   useEffect(() => {
     if (!anchorEl || !student) return;
     const rect = anchorEl.getBoundingClientRect();
-    const cardWidth = 300;
+    const cardWidth = Math.min(300, window.innerWidth - 24);
     let left = rect.right + 10;
     if (left + cardWidth > window.innerWidth - 12) left = rect.left - cardWidth - 10;
+    // Clamp horizontally too — the flip-left branch above can still run off
+    // the left edge on a narrow viewport.
+    left = Math.max(12, Math.min(left, window.innerWidth - cardWidth - 12));
 
     // Clamp vertically too — anchoring to the hovered row's own top edge
     // (as before) pushes the card off the bottom of the screen for rows
@@ -34,7 +38,7 @@ export const StudentHoverCard = ({
     const maxTop = window.innerHeight - estimatedCardHeight - 12;
     const top = Math.max(12, Math.min(rect.top, maxTop));
 
-    setPos({ top, left });
+    setPos({ top, left, width: cardWidth });
   }, [anchorEl, student]);
 
   useEffect(() => {
@@ -51,8 +55,18 @@ export const StudentHoverCard = ({
 
   if (!student || !anchorEl) return null;
 
+  const balanceColor = BALANCE_STATUS_COLOR[classifyBalance(student.balance)];
   const isDebtor = student.balance !== undefined && student.balance < 0;
-  const isFrozen = !student.active;
+  // Real account status (ACTIVE/INACTIVE/FROZEN/DEBTOR) once GET
+  // /students/{id} resolves — a DEBTOR is still "active" (matches the
+  // reference design: a debtor shows "Active (Learns)" plus a separate red
+  // Debtor badge, not a distinct status label). Falls back to the group's
+  // own `active` boolean during the brief pre-fetch window before real
+  // status is known.
+  const realStatus = student.status;
+  const isFrozenStatus = realStatus ? realStatus === "FROZEN" : !student.active;
+  const isInactiveStatus = realStatus === "INACTIVE";
+  const showStatusBox = isFrozenStatus || isInactiveStatus;
 
   return (
     <div
@@ -61,7 +75,7 @@ export const StudentHoverCard = ({
         position: "fixed",
         top: pos.top, left: pos.left,
         zIndex: 9999,
-        width: 300,
+        width: pos.width,
         background: "#fff",
         border: "1px solid #e8e8e8",
         borderRadius: 12,
@@ -84,14 +98,16 @@ export const StudentHoverCard = ({
           <span style={{ fontSize: 12, color: "#aaa" }}>(id:{student.id})</span>
         </div>
         <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
-          {student.active
-            ? t("singleGroup.studentHoverCard.activeLearns")
-            : t("singleGroup.studentHoverCard.frozenPaused")}
+          {isInactiveStatus
+            ? t("singleGroup.studentHoverCard.inactiveArchived")
+            : isFrozenStatus
+            ? t("singleGroup.studentHoverCard.frozenPaused")
+            : t("singleGroup.studentHoverCard.activeLearns")}
         </div>
         {isDebtor && (
           <span style={{
             display: "inline-block", marginTop: 6,
-            background: "#e53935", color: "#fff",
+            background: BALANCE_STATUS_COLOR.debtor, color: "#fff",
             fontSize: 11, fontWeight: 600, borderRadius: 20, padding: "3px 10px",
           }}>
             {t("singleGroup.studentHoverCard.debtor")}
@@ -99,7 +115,7 @@ export const StudentHoverCard = ({
         )}
       </div>
 
-      {isFrozen && (
+      {showStatusBox && (
         <>
           <div style={{
             background: isDebtor ? "#fff5f5" : "#f1faf4",
@@ -113,13 +129,13 @@ export const StudentHoverCard = ({
             </div>
             <div style={{
               fontSize: 18, fontWeight: 700,
-              color: isDebtor ? "#c62828" : "#2e7d32",
+              color: balanceColor,
             }}>
               {student.balance !== undefined
                 ? `${student.balance > 0 ? "+" : ""}${student.balance.toLocaleString()} UZS`
                 : "—"}
             </div>
-            {student.frozenAt && (
+            {isFrozenStatus && student.frozenAt && (
               <div style={{ fontSize: 11, color: "#888", marginTop: 6 }}>
                 {t("singleGroup.studentHoverCard.frozenAt")}: {student.frozenAt}
               </div>
@@ -138,13 +154,13 @@ export const StudentHoverCard = ({
 
       <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
 
-      {!isFrozen && (
+      {!showStatusBox && (
         <div style={{ marginBottom: 10 }}>
           <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>{t("singleGroup.studentHoverCard.balance")}</div>
           {student.balance !== undefined && student.balance !== 0 ? (
             <span style={{
               display: "inline-block",
-              background: isDebtor ? "#e53935" : "#43a047",
+              background: balanceColor,
               color: "#fff", fontSize: 12, fontWeight: 600,
               borderRadius: 20, padding: "3px 10px",
             }}>

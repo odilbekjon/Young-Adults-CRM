@@ -1188,7 +1188,7 @@ export const Students = () => {
       <SendSmsModal
         open={sendSmsOpen}
         onClose={() => setSendSmsOpen(false)}
-        selectedCount={selected.length}
+        studentIds={selected}
       />
 
       {/* Delete/archive dialog — optional reason + an "Archive" vs "Delete

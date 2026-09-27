@@ -41,6 +41,14 @@ export const Debtors = () => {
   });
 
   const [selected, setSelected] = useState<string[]>([]); // uid based
+  // DebtorRow.id (the row/uid key `selected` above tracks) is a different
+  // value from DebtorRow.studentId (what POST /sms/send/students actually
+  // needs) — and `selected` persists across pagination while `rows` only
+  // ever holds the current page, so the studentId has to be captured at
+  // select-time into this parallel map rather than re-derived from `rows`
+  // when the SMS drawer opens (a debtor selected on an earlier page would
+  // otherwise silently drop out of the send).
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Record<string, string>>({});
   const [sendSmsOpen, setSendSmsOpen] = useState(false);
   const [receiptStudentId, setReceiptStudentId] = useState<string | null>(null);
 
@@ -92,11 +100,34 @@ export const Debtors = () => {
 
   const allChecked = rows.length > 0 && rows.every((d) => selected.includes(d.id));
   const toggleAll = () => {
-    if (allChecked) setSelected((s) => s.filter((id) => !rows.find((d) => d.id === id)));
-    else setSelected((s) => [...new Set([...s, ...rows.map((d) => d.id)])]);
+    if (allChecked) {
+      setSelected((s) => s.filter((id) => !rows.find((d) => d.id === id)));
+      setSelectedStudentIds((m) => {
+        const next = { ...m };
+        rows.forEach((d) => { delete next[d.id]; });
+        return next;
+      });
+    } else {
+      setSelected((s) => [...new Set([...s, ...rows.map((d) => d.id)])]);
+      setSelectedStudentIds((m) => {
+        const next = { ...m };
+        rows.forEach((d) => { if (d.studentId) next[d.id] = d.studentId; });
+        return next;
+      });
+    }
   };
-  const toggleOne = (id: string) =>
+  const toggleOne = (id: string) => {
     setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
+    setSelectedStudentIds((m) => {
+      if (selected.includes(id)) {
+        const next = { ...m };
+        delete next[id];
+        return next;
+      }
+      const row = rows.find((d) => d.id === id);
+      return row?.studentId ? { ...m, [id]: row.studentId } : m;
+    });
+  };
 
   const goToStudent = (studentId: string | null) => {
     if (studentId) navigate(`/students/${studentId}`);
@@ -308,7 +339,7 @@ export const Debtors = () => {
       <SendSmsModal
         open={sendSmsOpen}
         onClose={() => setSendSmsOpen(false)}
-        selectedCount={selected.length}
+        studentIds={selected.map((id) => selectedStudentIds[id]).filter((v): v is string => Boolean(v))}
       />
 
       <DebtorReceiptModal

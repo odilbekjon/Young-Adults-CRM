@@ -592,7 +592,8 @@
       "submit": "Yuborish"
     },
     "sms": {
-      "recipientLabel": "o'quvchi"
+      "recipientLabel": "o'quvchi",
+      "rosterError": "O'quvchilar ro'yxatini yuklab bo'lmadi"
     },
     "filters": {
       "status": "Holat",

@@ -592,7 +592,8 @@
       "submit": "Submit"
     },
     "sms": {
-      "recipientLabel": "student"
+      "recipientLabel": "student",
+      "rosterError": "Failed to load the student list"
     },
     "filters": {
       "status": "Status",

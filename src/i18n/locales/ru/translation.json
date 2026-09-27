@@ -592,7 +592,8 @@
       "submit": "Отправить"
     },
     "sms": {
-      "recipientLabel": "ученик"
+      "recipientLabel": "ученик",
+      "rosterError": "Не удалось загрузить список учеников"
     },
     "filters": {
       "status": "Статус",

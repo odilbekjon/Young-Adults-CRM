@@ -587,10 +587,14 @@ export const Staff = () => {
         </Stack>
       )}
 
+      {/* POST /sms/send/students is the only send endpoint this backend
+          exposes — there's no way to actually message a staff member yet,
+          so this stays permanently empty (Send disabled) rather than
+          sending to the wrong recipient. */}
       <SendSmsModal
         open={smsOpen}
         onClose={() => { setSmsOpen(false); setSelectedMember(null); }}
-        selectedCount={1}
+        studentIds={[]}
         recipientLabel={t("settings.ceo.staff.sms.recipientLabel")}
         sender="3700"
       />

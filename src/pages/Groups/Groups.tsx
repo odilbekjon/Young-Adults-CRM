@@ -22,7 +22,7 @@ import { useSelector }                   from "react-redux";
 
 import {
   useAllGroupsQuery, useCreateGroupMutation, useUpdateGroupMutation,
-  useToggleGroupStatusMutation, useLazyGroupsExcelQuery,
+  useToggleGroupStatusMutation, useLazyGroupsExcelQuery, useLazyStudentGroupsQuery,
 } from "../../app/api/groupsApi";
 import type { Group, GroupDay } from "../../app/api/groupsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
@@ -337,6 +337,22 @@ export const Groups = () => {
   const [updateGroup, { isLoading: isUpdating }] = useUpdateGroupMutation();
   const [toggleGroupStatus] = useToggleGroupStatusMutation();
   const [fetchGroupsExcel, { isFetching: isExportingExcel }] = useLazyGroupsExcelQuery();
+  const [fetchGroupRoster, { isFetching: isLoadingSmsRoster }] = useLazyStudentGroupsQuery();
+
+  // The list only carries each group's studentCount, not the member ids
+  // POST /sms/send/students needs — fetched on demand right before the SMS
+  // drawer opens (same unscoped-list convention SingleGroup's own roster
+  // fetch uses: no status filter excludes INACTIVE/DELETED memberships).
+  const handleOpenGroupSms = async (groupId: string) => {
+    setActionMenuAnchor(null);
+    try {
+      const result = await fetchGroupRoster({ groupId, limit: 500 }).unwrap();
+      setSmsStudentIds(result.rows.map((r) => r.studentId).filter(Boolean));
+      setSmsGroupId(groupId);
+    } catch (err) {
+      toast.error(extractApiError(err) || t("groups.sms.rosterError"));
+    }
+  };
 
   const WEEKDAY_LABELS: Record<GroupDay, string> = {
     MONDAY:    t("groups.weekdays.monday"),
@@ -433,6 +449,7 @@ export const Groups = () => {
   const [actionMenuAnchor,  setActionMenuAnchor]  = useState<{ el: HTMLElement; id: string } | null>(null);
   const [deleteConfirmId,   setDeleteConfirmId]   = useState<string | null>(null);
   const [smsGroupId,        setSmsGroupId]        = useState<string | null>(null);
+  const [smsStudentIds,     setSmsStudentIds]     = useState<string[]>([]);
   const [sortKey,           setSortKey]           = useState<SortKey>("");
   const [sortDir,           setSortDir]           = useState<SortDir>("asc");
   const [visibleCols,       setVisibleCols]       = useState<string[]>(ALL_COLUMNS.map((c) => c.key));
@@ -957,7 +974,8 @@ export const Groups = () => {
                         <MdEdit size={15} /> {t("groups.actions.edit")}
                       </MenuItem>
                       <MenuItem
-                        onClick={() => { setSmsGroupId(g.id); setActionMenuAnchor(null); }}
+                        onClick={() => handleOpenGroupSms(g.id)}
+                        disabled={isLoadingSmsRoster}
                         sx={{ fontSize: 13, gap: 1 }}
                       >
                         <MdSms size={15} /> {t("groups.actions.sms")}
@@ -1243,8 +1261,8 @@ export const Groups = () => {
       {/* SMS DRAWER */}
       <SendSmsModal
         open={smsGroupId !== null}
-        onClose={() => setSmsGroupId(null)}
-        selectedCount={allGroups.find((g) => g.id === smsGroupId)?.studentCount ?? 0}
+        onClose={() => { setSmsGroupId(null); setSmsStudentIds([]); }}
+        studentIds={smsStudentIds}
         recipientLabel={t("groups.sms.recipientLabel")}
         sender="3700"
       />

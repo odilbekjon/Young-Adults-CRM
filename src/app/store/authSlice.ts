@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { useStorage } from "../../utils/store/store";
+import { baseApi } from "../api/baseApi";
 import { changeSelectedBranch } from "./branchSlice";
 import type { AppDispatch } from "./index";
 
@@ -57,4 +58,10 @@ export const logout = () => (dispatch: AppDispatch) => {
   useStorage.removeCredentials();
   dispatch(setToken(null));
   dispatch(setRole(null));
+  // Otherwise a cached /auth/me, /auth/sidebar, or any other query from this
+  // session lingers in the store and can flash stale data (or a previous
+  // account's data) for whoever logs in next on this same browser tab —
+  // same reasoning changeSelectedBranch (branchSlice.ts) already applies
+  // when the active branch changes.
+  dispatch(baseApi.util.resetApiState());
 };

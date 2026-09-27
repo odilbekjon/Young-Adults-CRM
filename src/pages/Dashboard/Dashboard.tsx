@@ -123,11 +123,18 @@ export const Dashboard = () => {
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const branchId = selectedBranchId ?? undefined;
 
-  const { data: statsData } = useDashboardStatsQuery();
-  const { data: scheduleData, isLoading: scheduleLoading, isError: scheduleError } = useDashboardScheduleQuery();
-  const { data: attendanceData, isLoading: attendanceLoading, isError: attendanceError } = useDashboardAttendanceStatsQuery();
-  const { data: activitiesData, isLoading: activitiesLoading, isError: activitiesError } = useDashboardRecentActivitiesQuery();
-  const { data: teacherPerfData, isLoading: teacherPerfLoading, isError: teacherPerfError } = useDashboardTeacherPerformanceQuery();
+  // No mutation anywhere in the app invalidates the "dashboard" tag (these
+  // five queries are the only providers of it), so without forcing a
+  // refetch on mount, these numbers would only ever update on a full page
+  // reload or after the ~60s unused-cache window lapses — stale after any
+  // student/payment/attendance/group action taken elsewhere and then
+  // navigated back from.
+  const refetchOnMount = { refetchOnMountOrArgChange: true };
+  const { data: statsData } = useDashboardStatsQuery(undefined, refetchOnMount);
+  const { data: scheduleData, isLoading: scheduleLoading, isError: scheduleError } = useDashboardScheduleQuery(undefined, refetchOnMount);
+  const { data: attendanceData, isLoading: attendanceLoading, isError: attendanceError } = useDashboardAttendanceStatsQuery(undefined, refetchOnMount);
+  const { data: activitiesData, isLoading: activitiesLoading, isError: activitiesError } = useDashboardRecentActivitiesQuery(undefined, refetchOnMount);
+  const { data: teacherPerfData, isLoading: teacherPerfLoading, isError: teacherPerfError } = useDashboardTeacherPerformanceQuery(undefined, refetchOnMount);
 
   // "Active leads" — GET /leads?status=ACTIVE (leadsApi's own definition of
   // an active lead, same enum the Leads Kanban board and Reports use).

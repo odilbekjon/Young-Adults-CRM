@@ -10,7 +10,6 @@ import {
 } from "@reduxjs/toolkit/query/react";
 import i18n from "../../../i18n";
 import { logout, setToken } from "../../store/authSlice";
-
 // The project migrated off the old Render-hosted backend
 // (young-adults-dj7r.onrender.com) to this dedicated host (confirmed live,
 // 2026-09-24: nginx/Ubuntu, not Render — real login, /courses, /auth/me,
@@ -21,8 +20,9 @@ import { logout, setToken } from "../../store/authSlice";
 // TIMEOUT_ERROR) for up to ~70s — originally to survive Render's free-tier
 // cold starts, which don't apply to this host, but harmless to keep as a
 // general resilience margin against transient network errors.
+
 const fetchQuery = fetchBaseQuery({
-  baseUrl:"https://api.youngadults-crm.uz/api/v1/",
+  baseUrl: import.meta.env.VITE_API_URL || "https://api.youngadults-crm.uz/api/v1",
   credentials: 'include',
   prepareHeaders: (headers, { getState }) => {
     const token = useStorage.getTokens()?.accessToken;

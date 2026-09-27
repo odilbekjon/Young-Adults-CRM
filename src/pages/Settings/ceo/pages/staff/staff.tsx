@@ -41,6 +41,7 @@ import { PiMicrosoftExcelLogoFill } from "react-icons/pi";
 import { HiEye, HiEyeOff } from "react-icons/hi";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SendSmsModal } from "../../../../../components/SendSmsModal";
 import { useToast } from "../../../../../Context/ToastContext";
@@ -135,6 +136,7 @@ interface UnifiedStaffRow {
 export const Staff = () => {
   const { t } = useTranslation();
   const toast = useToast();
+  const navigate = useNavigate();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const [searchValue, setSearchValue] = useState("");
@@ -509,7 +511,11 @@ export const Staff = () => {
           <Table>
             <TableBody>
               {rows.map((member, i) => (
-                <TableRow key={member.id} sx={{ "&:hover": { bgcolor: "var(--color-surface-hover)" } }}>
+                <TableRow
+                  key={member.id}
+                  onClick={() => navigate(`/profile/${member.id}`)}
+                  sx={{ cursor: "pointer", "&:hover": { bgcolor: "var(--color-surface-hover)" } }}
+                >
                   <TableCell sx={{ fontSize: 13, color: "var(--color-text-muted)", verticalAlign: "top", pt: 2, width: 40 }}>
                     {(page - 1) * PAGE_SIZE + i + 1}
                   </TableCell>
@@ -536,7 +542,7 @@ export const Staff = () => {
                   <TableCell sx={{ fontSize: 13, verticalAlign: "top", pt: 2 }}>
                     {member.phone || member.email || "—"}
                   </TableCell>
-                  <TableCell align="right" sx={{ verticalAlign: "top", pt: 1.5 }}>
+                  <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ verticalAlign: "top", pt: 1.5 }}>
                     <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
                       <IconButton size="small" sx={{ color: "#f0a500" }} onClick={() => { setSelectedMember({ id: member.id }); handleSmsOpen(); }}>
                         <MdOutlineEmail size={20} />

@@ -1890,7 +1890,7 @@
           "password": "Password", "passwordPlaceholder": "Enter password", "setPasswordToggle": "+ Set password", "hidePasswordToggle": "− Hide password",
           "rolePermissionId": "Position",
           "rolePermissionIdHelp": "Required — controls what this account can access. Pick one of the positions defined in the Positions module.",
-          "branches": "Branches", "jobTitle": "Job title (display only)", "jobTitlePlaceholder": "e.g. Manager", "jobTitleHelp": "The backend doesn't store this field yet — the value entered here won't be shown anywhere until it does.", "dateOfBirth": "Date of birth", "gender": "Gender", "male": "Male", "female": "Female",
+          "branches": "Branches", "jobTitle": "Job title", "jobTitlePlaceholder": "e.g. Manager", "jobTitleHelp": "Shown in the staff list — free text, distinct from \"Position\" above (the access role).", "dateOfBirth": "Date of birth", "gender": "Gender", "male": "Male", "female": "Female",
           "photo": "Photo", "noFileChosen": "No file chosen", "browse": "Browse", "submit": "Submit"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Branch Director", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Limited Administrator", "teacher": "Teacher", "marketer": "Marketer", "cashier": "Cashier" },

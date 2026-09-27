@@ -1890,7 +1890,7 @@
           "password": "Parol", "passwordPlaceholder": "Parolni kiriting", "setPasswordToggle": "+ Parol o'rnatish", "hidePasswordToggle": "− Parolni yashirish",
           "rolePermissionId": "Lavozim",
           "rolePermissionIdHelp": "Majburiy — bu hisobning kirish darajasini belgilaydi. Lavozimlar modulidagi lavozimlardan birini tanlang.",
-          "branches": "Filiallar", "jobTitle": "Ish unvoni (faqat ko'rsatish uchun)", "jobTitlePlaceholder": "Masalan: Menejer", "jobTitleHelp": "Backend hali bu maydonni saqlamaydi — kiritilgan qiymat hozircha ko'rsatilmaydi.", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi", "male": "Erkak", "female": "Ayol",
+          "branches": "Filiallar", "jobTitle": "Ish unvoni", "jobTitlePlaceholder": "Masalan: Menejer", "jobTitleHelp": "Xodimlar ro'yxatida shu unvon ko'rsatiladi — yuqoridagi \"Lavozim\" (ruxsatlar profili)dan farqli, erkin matn.", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi", "male": "Erkak", "female": "Ayol",
           "photo": "Rasm", "noFileChosen": "Fayl tanlanmagan", "browse": "Tanlash", "submit": "Yuborish"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Filial direktori", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Cheklangan administrator", "teacher": "O'qituvchi", "marketer": "Marketolog", "cashier": "Kassir" },

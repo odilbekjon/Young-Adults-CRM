@@ -34,6 +34,7 @@ import { useBranch } from "../../../../../Context/BranchContext";
 import { useToast } from "../../../../../Context/ToastContext";
 import type { RootState } from "../../../../../app/store";
 import { CARD_COLORS } from "../../../../../constants/CardColors";
+import { extractApiError } from "../../../../../utils";
 
 export const BookIllustration = () => (
   <svg viewBox="0 0 160 100" width="100%" height="100%" style={{ position: "absolute", bottom: 0, left: 0 }}>
@@ -149,9 +150,12 @@ export const Courses = () => {
       await deleteCourse(deleteTarget.id).unwrap();
       setDeleteTarget(null);
       toast.success(t("settings.office.courses.toast.deleted"));
-    } catch {
-      setDeleteError(t("settings.office.courses.deleteConfirm.error"));
-      toast.error(t("settings.office.courses.deleteConfirm.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.office.courses.deleteConfirm.error");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setDeleteError(message);
+      toast.error(message);
     }
   };
 
@@ -171,9 +175,12 @@ export const Courses = () => {
       await toggleCourseStatus(archiveTarget.id).unwrap();
       setArchiveTarget(null);
       toast.success(t("settings.office.courses.toast.archived"));
-    } catch {
-      setArchiveError(t("settings.office.courses.archiveConfirm.error"));
-      toast.error(t("settings.office.courses.archiveConfirm.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.office.courses.archiveConfirm.error");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setArchiveError(message);
+      toast.error(message);
     }
   };
 
@@ -193,9 +200,12 @@ export const Courses = () => {
       await toggleCourseStatus(restoreTarget.id).unwrap();
       setRestoreTarget(null);
       toast.success(t("settings.office.courses.toast.restored"));
-    } catch {
-      setRestoreError(t("settings.office.courses.restoreConfirm.error"));
-      toast.error(t("settings.office.courses.restoreConfirm.error"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.office.courses.restoreConfirm.error");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setRestoreError(message);
+      toast.error(message);
     }
   };
 
@@ -232,9 +242,12 @@ export const Courses = () => {
         toast.success(t("settings.office.courses.toast.created"));
       }
       setDrawerOpen(false);
-    } catch {
-      setSaveError(t("settings.office.courses.form.errors.save"));
-      toast.error(t("settings.office.courses.form.errors.save"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("settings.office.courses.form.errors.save");
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setSaveError(message);
+      toast.error(message);
     }
   };
 

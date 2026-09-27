@@ -41,6 +41,7 @@ import { PiMicrosoftExcelLogoFill } from "react-icons/pi";
 import { HiEye, HiEyeOff } from "react-icons/hi";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SendSmsModal } from "../../../../../components/SendSmsModal";
 import { useToast } from "../../../../../Context/ToastContext";
@@ -78,13 +79,6 @@ interface StaffForm {
   email: string;
   phone: string;
   password: string;
-  // Backend persistence unconfirmed as of this pass (2026-09): Swagger now
-  // documents this field on POST /users, but the round-trip (does it survive
-  // on GET /users, GET /users/{id}, GET /users/{id}/for-edit?) could not be
-  // re-tested live — this session had no authenticated access to the
-  // deployed backend. Sent anyway: harmless either way, and the read side
-  // (below) stays defensively "—" until someone can confirm a GET actually
-  // echoes it back and wires StaffUser/StaffUserForEdit accordingly.
   jobTitle: string;
   role: string;
   // A user can hold more than one lavozim (AUTH_ROLE_DOCS.md's
@@ -142,6 +136,7 @@ interface UnifiedStaffRow {
 export const Staff = () => {
   const { t } = useTranslation();
   const toast = useToast();
+  const navigate = useNavigate();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const [searchValue, setSearchValue] = useState("");
@@ -186,17 +181,13 @@ export const Staff = () => {
   const staffLoading = usersLoading;
   const staffError = usersError;
 
-  // GET /users still isn't typed to return jobTitle (see
-  // CreateUserRequest.jobTitle's comment) — unconfirmed, not disproven, as of
-  // this pass. Shown as "—" rather than inventing a value; wire this to the
-  // real field the moment someone confirms a GET response actually carries it.
   const unifiedRows: UnifiedStaffRow[] = useMemo(
     () =>
       (usersData?.rows ?? []).map((u) => ({
         id: u.id,
         name: u.name,
         roleTags: [u.role, u.rolePermission?.name].filter((v): v is string => Boolean(v)),
-        jobTitle: "—",
+        jobTitle: u.jobTitle || "—",
         phone: u.phone,
         email: u.email,
         status: u.status,
@@ -271,7 +262,7 @@ export const Staff = () => {
         email: member.email ?? "",
         phone: member.phone ?? "",
         password: "",
-        jobTitle: "",
+        jobTitle: member.jobTitle ?? usersData?.rows.find((u) => u.id === memberId)?.jobTitle ?? "",
         role: usersData?.rows.find((u) => u.id === memberId)?.role ?? "",
         rolePermissionIds: member.rolePermissionId ? [member.rolePermissionId] : [],
         branchIds: member.branchIds,
@@ -520,7 +511,11 @@ export const Staff = () => {
           <Table>
             <TableBody>
               {rows.map((member, i) => (
-                <TableRow key={member.id} sx={{ "&:hover": { bgcolor: "var(--color-surface-hover)" } }}>
+                <TableRow
+                  key={member.id}
+                  onClick={() => navigate(`/profile/${member.id}`)}
+                  sx={{ cursor: "pointer", "&:hover": { bgcolor: "var(--color-surface-hover)" } }}
+                >
                   <TableCell sx={{ fontSize: 13, color: "var(--color-text-muted)", verticalAlign: "top", pt: 2, width: 40 }}>
                     {(page - 1) * PAGE_SIZE + i + 1}
                   </TableCell>
@@ -547,7 +542,7 @@ export const Staff = () => {
                   <TableCell sx={{ fontSize: 13, verticalAlign: "top", pt: 2 }}>
                     {member.phone || member.email || "—"}
                   </TableCell>
-                  <TableCell align="right" sx={{ verticalAlign: "top", pt: 1.5 }}>
+                  <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ verticalAlign: "top", pt: 1.5 }}>
                     <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
                       <IconButton size="small" sx={{ color: "#f0a500" }} onClick={() => { setSelectedMember({ id: member.id }); handleSmsOpen(); }}>
                         <MdOutlineEmail size={20} />
@@ -598,10 +593,14 @@ export const Staff = () => {
         </Stack>
       )}
 
+      {/* POST /sms/send/students is the only send endpoint this backend
+          exposes — there's no way to actually message a staff member yet,
+          so this stays permanently empty (Send disabled) rather than
+          sending to the wrong recipient. */}
       <SendSmsModal
         open={smsOpen}
         onClose={() => { setSmsOpen(false); setSelectedMember(null); }}
-        selectedCount={1}
+        studentIds={[]}
         recipientLabel={t("settings.ceo.staff.sms.recipientLabel")}
         sender="3700"
       />

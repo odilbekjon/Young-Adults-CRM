@@ -1,11 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import {
   Box, Typography, Avatar, Chip, Modal, TextField, Button, IconButton, CircularProgress,
 } from "@mui/material";
 import { FiFlag, FiEdit2, FiTrash2 } from "react-icons/fi";
 import { useGetMeQuery } from "../../app/api/authApi/authApi";
-import { useStaffUserByIdQuery } from "../../app/api/usersApi";
+import { useStaffUserByIdQuery, useUpdateStaffUserMutation, useToggleStaffUserStatusMutation } from "../../app/api/usersApi";
+import { logout } from "../../app/store/authSlice";
+import type { AppDispatch } from "../../app/store";
+import { useToast } from "../../Context/ToastContext";
+import { extractApiError } from "../../utils";
 
 interface ProfileDisplayUser {
   name: string | null;
@@ -34,11 +39,17 @@ const modalStyle = {
 // ─── ProfilePage ──────────────────────────────────────────────────────────────
 const ProfilePage = () => {
   const { id } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const toast = useToast();
   const isOtherProfile = Boolean(id);
 
-  const { data: meData, isLoading: meLoading } = useGetMeQuery(undefined, { skip: isOtherProfile });
+  const { data: meData, isLoading: meLoading, refetch: refetchMe } = useGetMeQuery(undefined, { skip: isOtherProfile });
   const { data: staffUserData, isLoading: staffLoading } = useStaffUserByIdQuery(id ?? "", { skip: !isOtherProfile });
   const isLoading = isOtherProfile ? staffLoading : meLoading;
+
+  const [updateStaffUser, { isLoading: isSaving }] = useUpdateStaffUserMutation();
+  const [toggleStaffUserStatus, { isLoading: isDeactivating }] = useToggleStaffUserStatusMutation();
 
   // Memoized so its identity is stable across renders (only changes when the
   // underlying query data actually changes) — the effect below keys off it.
@@ -50,9 +61,7 @@ const ProfilePage = () => {
         email: staffUserData.email,
         phone: staffUserData.phone,
         photo: staffUserData.photo,
-        // StaffUser (GET /users/{id}) has no jobTitle field yet — see
-        // usersApi/types.d.ts's CreateUserRequest.jobTitle comment.
-        jobTitle: null,
+        jobTitle: staffUserData.jobTitle,
         roleTags: [staffUserData.role, staffUserData.rolePermission?.name].filter((v): v is string => Boolean(v)),
         status: staffUserData.status,
         branches: staffUserData.branches,
@@ -73,11 +82,18 @@ const ProfilePage = () => {
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: "", phone: "" });
+  const [formData, setFormData] = useState({ name: "", phone: "", email: "", jobTitle: "" });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [deactivateError, setDeactivateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
-      setFormData({ name: user.name ?? "", phone: user.phone ?? "" });
+      setFormData({
+        name: user.name ?? "",
+        phone: user.phone ?? "",
+        email: user.email ?? "",
+        jobTitle: user.jobTitle ?? "",
+      });
     }
   }, [user]);
 
@@ -85,13 +101,62 @@ const ProfilePage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSave = () => {
-    setEditOpen(false);
+  // PATCH /users/{id} — the same endpoint the Staff (admin) page uses, called
+  // here with the logged-in user's own id (GET /auth/me). Only the safe,
+  // self-editable fields are ever sent — role, rolePermissionId, branchIds,
+  // status and password are simply never included in this payload, so this
+  // can't touch permissions/branches/account status no matter what the form
+  // does. Backend authorization still applies on top of this either way.
+  const handleSave = async () => {
+    if (!meData?.data?.id) return;
+    if (!formData.name.trim()) {
+      setFormError("Name is required");
+      return;
+    }
+    setFormError(null);
+    try {
+      await updateStaffUser({
+        id: meData.data.id,
+        name: formData.name.trim(),
+        phone: formData.phone.trim() || undefined,
+        email: formData.email.trim() || undefined,
+        jobTitle: formData.jobTitle.trim() || undefined,
+      }).unwrap();
+      // updateStaffUser only invalidates the "staff" tag (the admin Staff
+      // list) — GET /auth/me is cached under "user" and won't refetch on
+      // its own, so this page would otherwise keep showing the pre-edit
+      // values until an unrelated refresh.
+      await refetchMe();
+      toast.success("Profile updated");
+      setEditOpen(false);
+    } catch (err) {
+      const detail = extractApiError(err);
+      const message = detail ? `Failed to update profile: ${detail}` : "Failed to update profile";
+      setFormError(message);
+      toast.error(message);
+    }
   };
 
-  const handleDelete = () => {
-    console.log("Profile deleted");
-    setDeleteOpen(false);
+  // PATCH /users/{id}/toggle-status — the same reversible ACTIVE<->INACTIVE
+  // flip the Staff page uses for archiving, applied to the logged-in user's
+  // own id. There is no real DELETE here, matching the project-wide
+  // archive/toggle-status convention. A deactivated account can't stay
+  // usefully "logged in", so this always finishes with a full logout.
+  const handleDeactivateSelf = async () => {
+    if (!meData?.data?.id) return;
+    setDeactivateError(null);
+    try {
+      await toggleStaffUserStatus(meData.data.id).unwrap();
+      setDeleteOpen(false);
+      toast.success("Your account has been deactivated");
+      dispatch(logout());
+      navigate("/login", { replace: true });
+    } catch (err) {
+      const detail = extractApiError(err);
+      const message = detail ? `Failed to deactivate account: ${detail}` : "Failed to deactivate account";
+      setDeactivateError(message);
+      toast.error(message);
+    }
   };
 
   if (isLoading) {
@@ -173,7 +238,7 @@ const ProfilePage = () => {
           {/* Edit */}
           <IconButton
             size="small"
-            onClick={() => setEditOpen(true)}
+            onClick={() => { setFormError(null); setEditOpen(true); }}
             sx={{
               border: "1.5px solid #003366",
               color: "#003366",
@@ -188,7 +253,7 @@ const ProfilePage = () => {
           {/* Delete */}
           <IconButton
             size="small"
-            onClick={() => setDeleteOpen(true)}
+            onClick={() => { setDeactivateError(null); setDeleteOpen(true); }}
             sx={{
               border: "1.5px solid #e53935",
               color: "#e53935",
@@ -335,14 +400,23 @@ const ProfilePage = () => {
             Edit Profile
           </Typography>
 
-          <TextField fullWidth label="Name"  name="name"  value={formData.name}  onChange={handleChange} margin="normal" size="small" />
-          <TextField fullWidth label="Phone" name="phone" value={formData.phone} onChange={handleChange} margin="normal" size="small" />
+          <TextField fullWidth label="Name"  name="name"  value={formData.name}  onChange={handleChange} margin="normal" size="small" disabled={isSaving} />
+          <TextField fullWidth label="Phone" name="phone" value={formData.phone} onChange={handleChange} margin="normal" size="small" disabled={isSaving} />
+          <TextField fullWidth label="Email" name="email" value={formData.email} onChange={handleChange} margin="normal" size="small" disabled={isSaving} />
+          <TextField fullWidth label="Job title" name="jobTitle" value={formData.jobTitle} onChange={handleChange} margin="normal" size="small" disabled={isSaving} />
+
+          {formError && (
+            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+              {formError}
+            </Typography>
+          )}
 
           <Box sx={{ display: "flex", gap: 1.5, mt: 3 }}>
             <Button
               variant="outlined"
               fullWidth
               onClick={() => setEditOpen(false)}
+              disabled={isSaving}
               sx={{ textTransform: "none", borderRadius: 1.5 }}
             >
               Cancel
@@ -351,6 +425,8 @@ const ProfilePage = () => {
               variant="contained"
               fullWidth
               onClick={handleSave}
+              disabled={isSaving}
+              startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : undefined}
               sx={{ textTransform: "none", borderRadius: 1.5, bgcolor: "#003366" }}
             >
               Save
@@ -359,20 +435,26 @@ const ProfilePage = () => {
         </Box>
       </Modal>
 
-      {/* ══════════ DELETE CONFIRM MODAL ══════════ */}
+      {/* ══════════ DEACTIVATE ACCOUNT CONFIRM MODAL ══════════ */}
       <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)}>
         <Box sx={{ ...modalStyle, width: 360 }}>
           <Typography variant="h6" fontWeight={600} gutterBottom>
-            Delete Profile
+            Deactivate account
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Are you sure you want to delete this profile? This action cannot be undone.
+            Your account will be set to inactive and you'll be signed out immediately. Your data isn't deleted — an administrator can reactivate the account later.
           </Typography>
+          {deactivateError && (
+            <Typography variant="body2" color="error" sx={{ mb: 2 }}>
+              {deactivateError}
+            </Typography>
+          )}
           <Box sx={{ display: "flex", gap: 1.5 }}>
             <Button
               variant="outlined"
               fullWidth
               onClick={() => setDeleteOpen(false)}
+              disabled={isDeactivating}
               sx={{ textTransform: "none", borderRadius: 1.5 }}
             >
               Cancel
@@ -381,10 +463,12 @@ const ProfilePage = () => {
               variant="contained"
               color="error"
               fullWidth
-              onClick={handleDelete}
+              onClick={handleDeactivateSelf}
+              disabled={isDeactivating}
+              startIcon={isDeactivating ? <CircularProgress size={16} color="inherit" /> : undefined}
               sx={{ textTransform: "none", borderRadius: 1.5 }}
             >
-              Delete
+              Deactivate
             </Button>
           </Box>
         </Box>

@@ -592,7 +592,8 @@
       "submit": "Отправить"
     },
     "sms": {
-      "recipientLabel": "ученик"
+      "recipientLabel": "ученик",
+      "rosterError": "Не удалось загрузить список учеников"
     },
     "filters": {
       "status": "Статус",
@@ -1438,8 +1439,9 @@
       "note": "Заметка",
       "notePlaceholder": "Введите заметку...",
       "save": "Сохранить",
+      "saving": "Сохранение...",
       "cancel": "Отмена",
-      "notConnected": "Эта функция пока не подключена к бэкенду — заметка не будет сохранена."
+      "toast": { "success": "Заметка сохранена", "error": "Не удалось сохранить заметку" }
     },
     "addPaymentDrawer": {
       "title": "Добавить платёж",
@@ -1892,7 +1894,7 @@
           "rolePermissionId": "Должность",
           "rolePermissionIdHelp": "Обязательно — выберите одну из должностей модуля \"Должности\".",
           "roleOptions": { "SUPERADMIN": "Супер админ", "ADMIN": "Админ" },
-          "branches": "Филиалы", "jobTitle": "Должность (для отображения)", "jobTitlePlaceholder": "Например: Менеджер", "jobTitleHelp": "Бэкенд пока не сохраняет это поле — введённое значение пока не будет отображаться.", "dateOfBirth": "Дата рождения", "gender": "Пол", "male": "Мужской", "female": "Женский",
+          "branches": "Филиалы", "jobTitle": "Название должности", "jobTitlePlaceholder": "Например: Менеджер", "jobTitleHelp": "Отображается в списке сотрудников — не путать с полем «Должность» выше (роль доступа), это свободный текст.", "dateOfBirth": "Дата рождения", "gender": "Пол", "male": "Мужской", "female": "Женский",
           "photo": "Фото", "noFileChosen": "Файл не выбран", "browse": "Обзор", "submit": "Отправить"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Директор филиала", "administrator": "Администратор", "administrator2": "Администратор2", "limitedAdministrator": "Ограниченный администратор", "teacher": "Учитель", "marketer": "Маркетолог", "cashier": "Кассир" },

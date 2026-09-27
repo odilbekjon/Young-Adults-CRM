@@ -3,19 +3,45 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TopModal } from "../../../components/TopModal";
 import { inputStyle, labelStyle, paymentSubmitBtn, cancelBtn } from "../styles";
-import { Student } from "../../../constants/Teachers";
+import { useCreateStudentCommentMutation } from "../../../app/api/studentsApi";
+import { useToast } from "../../../Context/ToastContext";
+import { extractApiError } from "../../../utils";
+
+interface NoteStudent {
+  realId: string;
+  name: string;
+}
 
 export const AddNoteModal = ({
   open, onClose, student,
 }: {
-  open: boolean; onClose: () => void; student: Student | null;
+  open: boolean; onClose: () => void; student: NoteStudent | null;
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
+  const [createStudentComment, { isLoading: isSaving }] = useCreateStudentCommentMutation();
   const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const handleClose = () => {
     setNote("");
+    setError(null);
     onClose();
+  };
+
+  const handleSave = async () => {
+    if (!student || !note.trim() || isSaving) return;
+    setError(null);
+    try {
+      await createStudentComment({ id: student.realId, comment: note.trim() }).unwrap();
+      toast.success(t("singleGroup.addNoteModal.toast.success"));
+      handleClose();
+    } catch (err) {
+      const detail = extractApiError(err);
+      const message = detail ? `${t("singleGroup.addNoteModal.toast.error")}: ${detail}` : t("singleGroup.addNoteModal.toast.error");
+      setError(message);
+      toast.error(message);
+    }
   };
 
   return (
@@ -34,19 +60,19 @@ export const AddNoteModal = ({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder={t("singleGroup.addNoteModal.notePlaceholder")}
+            disabled={isSaving}
           />
         </div>
-        {/* No POST endpoint for student notes exists anywhere in Swagger
-            (see studentsApi/types.d.ts's StudentComment doc comment) — Save
-            used to silently discard the typed note, which looked like it
-            worked. Disabled instead of faking success until the backend
-            adds a create endpoint for this. */}
-        <div style={{ fontSize: 12.5, color: "#b45309" }}>{t("singleGroup.addNoteModal.notConnected")}</div>
+        {error && <div style={{ fontSize: 12.5, color: "#dc2626" }}>{error}</div>}
         <div style={{ display: "flex", gap: 10 }}>
-          <button style={{ ...paymentSubmitBtn, opacity: 0.5, cursor: "not-allowed" }} disabled>
-            {t("singleGroup.addNoteModal.save")}
+          <button
+            style={{ ...paymentSubmitBtn, opacity: !note.trim() || isSaving ? 0.6 : 1, cursor: !note.trim() || isSaving ? "not-allowed" : "pointer" }}
+            onClick={handleSave}
+            disabled={!note.trim() || isSaving}
+          >
+            {isSaving ? t("singleGroup.addNoteModal.saving") : t("singleGroup.addNoteModal.save")}
           </button>
-          <button style={cancelBtn} onClick={handleClose}>{t("singleGroup.addNoteModal.cancel")}</button>
+          <button style={cancelBtn} onClick={handleClose} disabled={isSaving}>{t("singleGroup.addNoteModal.cancel")}</button>
         </div>
       </div>
     </TopModal>

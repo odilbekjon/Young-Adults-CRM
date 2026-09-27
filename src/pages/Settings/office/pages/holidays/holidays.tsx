@@ -40,7 +40,16 @@ const formatDate = (dateStr?: string | null) => {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 };
 
-const today = new Date().toISOString().split("T")[0];
+// Local calendar date, not UTC — `date` values are plain YYYY-MM-DD (no
+// time/zone component), so comparing them against a UTC-derived "today"
+// (new Date().toISOString()) misclassifies upcoming/past for several hours
+// around local midnight in any timezone ahead of UTC (e.g. Tashkent, UTC+5).
+const today = (() => {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+})();
 
 export const Holidays = () => {
   const { t } = useTranslation();
@@ -55,7 +64,7 @@ export const Holidays = () => {
   const [deleteTarget, setDeleteTarget] = useState<Holiday | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const { data, isLoading, isError } = useAllHolidaysQuery();
+  const { data, isLoading, isError, error } = useAllHolidaysQuery();
   const [fetchHolidayForEdit, { isFetching: isLoadingForEdit }] = useLazyHolidayForEditQuery();
   const [createHoliday, { isLoading: isCreating }] = useCreateHolidayMutation();
   const [updateHoliday, { isLoading: isUpdating }] = useUpdateHolidayMutation();
@@ -215,7 +224,11 @@ export const Holidays = () => {
               ) : isError ? (
                 <tr>
                   <td colSpan={5} className="text-center py-10 text-red-500">
-                    {t("settings.office.holidays.loadError")}
+                    {(() => {
+                      const detail = extractApiError(error);
+                      const generic = t("settings.office.holidays.loadError");
+                      return detail ? `${generic}: ${detail}` : generic;
+                    })()}
                   </td>
                 </tr>
               ) : displayed.length === 0 ? (

@@ -32,6 +32,7 @@ import {
   useUnfreezeStudentGroupMutation,
   useUpdateStudentGroupStatusMutation,
   useUpdateStudentGroupMutation,
+  useGraduateTrialStudentGroupMutation,
 } from "../../app/api/groupsApi";
 import type { GroupDetail, StudentGroupRecord, UpdateGroupRequest } from "../../app/api/groupsApi/types";
 import {
@@ -192,6 +193,7 @@ export const SingleGroup = () => {
   const [unfreezeStudentGroup, { isLoading: isUnfreezing }] = useUnfreezeStudentGroupMutation();
   const [updateStudentGroupStatus, { isLoading: isChangingMembershipStatus }] = useUpdateStudentGroupStatusMutation();
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
+  const [graduateTrialStudentGroup] = useGraduateTrialStudentGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [updateStudentStatus, { isLoading: isArchivingStudent }] = useUpdateStudentStatusMutation();
   const [fetchStudentDetail] = useLazyStudentByIdQuery();
@@ -555,13 +557,15 @@ export const SingleGroup = () => {
     }
   };
 
-  // Promotes a currently-active PROBATION (trial-lesson) membership to
-  // ACTIVE so payment starts being calculated. Two documented calls in
-  // sequence: PATCH /student-groups/{id}/status (status is the only field
-  // that endpoint accepts) sets ACTIVE, then PATCH /student-groups/{id}
-  // (which does accept paymentStartDate) records when billing should start —
-  // same two resources handleActivateArchived/handleFreezeConfirm already
-  // use elsewhere in this file, just composed together here.
+  // Promotes a PROBATION (trial-lesson) membership to ACTIVE via the
+  // dedicated POST /student-groups/{id}/graduate-trial (Swagger: no request
+  // body) — unlike the two-step PATCH .../status + PATCH .../{id} this used
+  // to do by hand, this endpoint also activates the student's account if it
+  // was inactive and converts their lead to CONVERTED when they came in
+  // through one, neither of which the manual version ever did. Swagger
+  // shows no body for graduate-trial itself, so the admin-picked
+  // paymentStartDate is still applied as a follow-up PATCH /student-groups/
+  // {id} (same call as before) once the promotion itself has gone through.
   const handleGraduateTrialConfirm = async (paymentStartDate: string) => {
     const target = selectedStudent;
     setGraduateTrialOpen(false);
@@ -570,7 +574,7 @@ export const SingleGroup = () => {
       return;
     }
     try {
-      await updateStudentGroupStatus({ id: target.studentGroupId, status: "ACTIVE" }).unwrap();
+      await graduateTrialStudentGroup(target.studentGroupId).unwrap();
       await updateStudentGroup({ id: target.studentGroupId, paymentStartDate }).unwrap();
       toast.success(t("singleGroup.graduateTrialModal.toast.success"));
     } catch (err) {
@@ -651,7 +655,11 @@ export const SingleGroup = () => {
       // no studentGroupId — silently breaking freeze/unfreeze/status-change
       // (all keyed on that id) for every student added this way. Only the
       // /student-groups resource itself creates the row those calls need.
-      await addStudentToGroup({ studentId, groupId: id, status: "ACTIVE" }).unwrap();
+      // Starts on PROBATION (trial lesson), not ACTIVE — POST
+      // /student-groups/{id}/graduate-trial is the dedicated, documented way
+      // to promote a trial membership to ACTIVE (see handleGraduateTrialConfirm
+      // below); a new student shouldn't skip straight past that.
+      await addStudentToGroup({ studentId, groupId: id, status: "PROBATION" }).unwrap();
       toast.success(t("singleGroup.addStudentDrawer.toast.success"));
       setAddStudentOpen(false);
     } catch (err) {

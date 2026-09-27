@@ -9,14 +9,24 @@ import {
   TextField,
   Button,
   Divider,
+  CircularProgress,
 } from "@mui/material";
 import { MdClose } from "react-icons/md";
+import { useSendSmsToStudentsMutation } from "../../app/api/smsApi";
+import { useToast } from "../../Context/ToastContext";
+import { extractApiError } from "../../utils";
 
 interface SendSmsModalProps {
   open: boolean;
   onClose: () => void;
-  /** Nechta student/recipient tanlangan */
-  selectedCount?: number;
+  /**
+   * Real backend student ids this SMS will be sent to — POST /sms/send/
+   * students (the only send endpoint this backend exposes) requires them.
+   * Pass an empty array for a recipient type that endpoint can't target
+   * (e.g. a teacher/staff row); Send stays disabled rather than silently
+   * no-oping.
+   */
+  studentIds: string[];
   /** Kimga yuborilayapti (ixtiyoriy, title uchun) */
   recipientLabel?: string; // e.g. "student" | "staff" | "debtor"
   sender?: string;
@@ -27,26 +37,33 @@ const SMS_PER_CHAR = 160;
 export const SendSmsModal = ({
   open,
   onClose,
-  selectedCount = 1,
+  studentIds,
   recipientLabel = "student",
   sender = "3700",
 }: SendSmsModalProps) => {
+  const toast = useToast();
+  const [sendSms, { isLoading }] = useSendSmsToStudentsMutation();
   const [message, setMessage] = useState("");
 
   const symbolCount = message.length;
   const smsCount = symbolCount === 0 ? 1 : Math.ceil(symbolCount / SMS_PER_CHAR);
-
-  const handleSend = () => {
-    if (!message.trim()) return;
-    // TODO: real API call
-    console.log("Sending SMS:", { message, selectedCount, sender });
-    setMessage("");
-    onClose();
-  };
+  const canSend = message.trim().length > 0 && studentIds.length > 0 && !isLoading;
 
   const handleClose = () => {
     setMessage("");
     onClose();
+  };
+
+  const handleSend = async () => {
+    if (!canSend) return;
+    try {
+      await sendSms({ studentIds, text: message.trim() }).unwrap();
+      toast.success("SMS sent");
+      handleClose();
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to send SMS: ${detail}` : "Failed to send SMS");
+    }
   };
 
   return (
@@ -100,6 +117,7 @@ export const SendSmsModal = ({
           placeholder="Enter a message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
+          disabled={isLoading}
           sx={{
             "& .MuiOutlinedInput-root": {
               fontSize: 14,
@@ -114,8 +132,8 @@ export const SendSmsModal = ({
             {symbolCount} symbols ( ~ {smsCount} SMS )
           </Typography>
           <Typography fontSize={12} color="text.secondary">
-            {selectedCount} selected {recipientLabel}
-            {selectedCount !== 1 ? "s" : ""}
+            {studentIds.length} selected {recipientLabel}
+            {studentIds.length !== 1 ? "s" : ""}
           </Typography>
         </Box>
 
@@ -123,7 +141,8 @@ export const SendSmsModal = ({
         <Button
           variant="contained"
           onClick={handleSend}
-          disabled={!message.trim()}
+          disabled={!canSend}
+          startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
           sx={{
             alignSelf: "flex-start",
             bgcolor: "#4a7fa5",

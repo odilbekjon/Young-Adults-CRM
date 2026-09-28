@@ -112,11 +112,17 @@ export interface DebtorsResult {
   meta: DebtorsMeta;
 }
 
-// GET /finance/payment-methods
+// GET /finance/payment-methods — response shape confirmed live (2026-09).
 export interface PaymentMethod {
   id: string;
   name: string;
+  code?: string | null;
   status?: string;
+  isDefault?: boolean;
+  branchId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
 }
 
 export interface PaymentMethodsResponse {
@@ -158,11 +164,15 @@ export interface FinanceDeleteResponse {
   message?: string;
 }
 
-// GET /finance/expense-categories
+// GET /finance/expense-categories — response shape confirmed live (2026-09).
 export interface ExpenseCategory {
   id: string;
   name: string;
   status?: string;
+  branchId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
 }
 
 export interface ExpenseCategoriesResponse {
@@ -350,16 +360,35 @@ export interface FinanceTotalResult {
   total: number;
 }
 
-// GET /finance/debtors/{studentId}/receipt — "student's full current debt
-// and payment balance, for printing". Row shape isn't documented beyond the
-// description, so it's read defensively from plausible field-name variants,
-// same approach as DebtorRow/PaymentDetail.
-export interface DebtorReceipt {
-  studentId: string | null;
+// GET /finance/debtors/{studentId}/receipt — response shape confirmed live
+// (2026-09): nested student/branch objects, a `groups` array (each group the
+// student is enrolled in, with its price) rather than a single group name,
+// and a full charged/paid/debt breakdown rather than just a balance.
+export interface DebtorReceiptStudent {
+  id: string;
   name: string;
   phone: string;
-  groupName: string;
+}
+
+export interface DebtorReceiptBranch {
+  id: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+}
+
+export interface DebtorReceiptGroup {
+  name: string;
+  price: number;
+}
+
+export interface DebtorReceipt {
+  student: DebtorReceiptStudent;
+  branch: DebtorReceiptBranch | null;
+  date: string | null;
+  totalPaid: number;
+  totalCharged: number;
+  debtAmount: number;
   balance: number;
-  branchName: string | null;
-  createdAt?: string;
+  groups: DebtorReceiptGroup[];
 }

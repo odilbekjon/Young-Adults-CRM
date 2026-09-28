@@ -119,6 +119,8 @@
     "phone": "Phone",
     "group": "Group",
     "branch": "Branch",
+    "totalCharged": "Total charged",
+    "totalPaid": "Total paid",
     "balance": "Amount outstanding",
     "issuedAt": "Issued at"
   },

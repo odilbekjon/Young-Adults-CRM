@@ -365,17 +365,32 @@ const normalizeFinanceTotal = (raw: unknown): FinanceTotalResult => {
 const normalizeDebtorReceipt = (raw: unknown): DebtorReceipt => {
     const obj = (raw ?? {}) as Record<string, unknown>;
     const student = (obj.student ?? {}) as Record<string, unknown>;
-    const group = (obj.group ?? {}) as Record<string, unknown>;
-    const branch = (obj.branch ?? {}) as Record<string, unknown>;
+    const branch = obj.branch as Record<string, unknown> | null | undefined;
+    const groups = Array.isArray(obj.groups) ? (obj.groups as Record<string, unknown>[]) : [];
 
     return {
-        studentId: asId(obj.studentId ?? student.id ?? obj.id) || null,
-        name: asString(obj.name ?? student.name ?? obj.studentName),
-        phone: asString(obj.phone ?? student.phone ?? obj.studentPhone),
-        groupName: asString(obj.groupName ?? group.name ?? (typeof obj.group === "string" ? obj.group : "")),
-        balance: asMoney(obj.balance ?? obj.debt ?? obj.amount),
-        branchName: asString(obj.branchName ?? branch.name) || null,
-        createdAt: obj.createdAt ? asString(obj.createdAt) : undefined,
+        student: {
+            id: asString(student.id),
+            name: asString(student.name),
+            phone: asString(student.phone),
+        },
+        branch: branch
+            ? {
+                id: asString(branch.id),
+                name: asString(branch.name),
+                phone: branch.phone ? asString(branch.phone) : null,
+                address: branch.address ? asString(branch.address) : null,
+            }
+            : null,
+        date: obj.date ? asString(obj.date) : null,
+        totalPaid: asMoney(obj.totalPaid),
+        totalCharged: asMoney(obj.totalCharged),
+        debtAmount: asMoney(obj.debtAmount),
+        balance: asMoney(obj.balance),
+        groups: groups.map((g) => ({
+            name: asString(g.name),
+            price: asMoney(g.price),
+        })),
     };
 };
 

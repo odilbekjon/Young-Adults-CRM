@@ -119,6 +119,8 @@
     "phone": "Telefon",
     "group": "Guruh",
     "branch": "Filial",
+    "totalCharged": "Jami hisoblangan",
+    "totalPaid": "Jami to'langan",
     "balance": "Qarz summasi",
     "issuedAt": "Berilgan sana"
   },

@@ -187,6 +187,36 @@ const normalizeList = <T,>(data: unknown): T[] => {
     return [];
 };
 
+// The paginated finance list endpoints (debtors/expenses/payments/
+// withdrawals) were built assuming `response.data` is always the flat row
+// array with pagination in a sibling top-level `meta` — the shape this
+// app's other paginated endpoints (tags, reasons, student-freezes) use.
+// `/finance/debtors` in particular is documented as "dynamically computed"
+// rather than a plain CRUD list, so its actual envelope may instead nest
+// the rows (and/or pagination) one level deeper under `data` — the same
+// ambiguity studentFreezesApi's `pickList` already defends against. This
+// tries the flat shape first, then falls back to a nested one, so it keeps
+// working either way instead of silently returning zero rows.
+const pickRows = (raw: unknown): unknown[] => {
+    if (Array.isArray(raw)) return raw;
+    if (!raw || typeof raw !== "object") return [];
+    const obj = raw as Record<string, unknown>;
+    for (const key of ["rows", "items", "data", "list"]) {
+        if (Array.isArray(obj[key])) return obj[key] as unknown[];
+    }
+    return [];
+};
+
+const pickMeta = (topMeta: unknown, data: unknown): unknown => {
+    if (topMeta && typeof topMeta === "object") return topMeta;
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+        const obj = data as Record<string, unknown>;
+        if (obj.meta && typeof obj.meta === "object") return obj.meta;
+        if ("total" in obj || "totalPages" in obj) return obj;
+    }
+    return topMeta;
+};
+
 // Query-string builder shared by the paginated finance list endpoints
 // (expenses, payments registry, withdrawals) — same param set as debtors.
 const buildFinanceListQueryString = (args: FinanceListQueryArgs): string => {
@@ -409,8 +439,8 @@ export const financeApi = baseApi.injectEndpoints({
                 // TEMP DEBUG — remove once the real row shape is confirmed.
                 if (import.meta.env.DEV) console.log("[financeApi] debtors raw response:", response);
                 return {
-                    rows: normalizeDebtorRows(response?.data),
-                    meta: normalizeListMeta(response?.meta),
+                    rows: normalizeDebtorRows(pickRows(response?.data)),
+                    meta: normalizeListMeta(pickMeta(response?.meta, response?.data)),
                 };
             },
             providesTags: ["payment", "student"],
@@ -557,8 +587,8 @@ export const financeApi = baseApi.injectEndpoints({
                 method: "GET",
             }),
             transformResponse: (response: { success: boolean; data: unknown; meta?: unknown }) => ({
-                rows: normalizeExpenseRows(response?.data),
-                meta: normalizeListMeta(response?.meta),
+                rows: normalizeExpenseRows(pickRows(response?.data)),
+                meta: normalizeListMeta(pickMeta(response?.meta, response?.data)),
             }),
             providesTags: ["payment"],
         }),
@@ -586,8 +616,8 @@ export const financeApi = baseApi.injectEndpoints({
                 method: "GET",
             }),
             transformResponse: (response: { success: boolean; data: unknown; meta?: unknown }) => ({
-                rows: normalizePaymentRows(response?.data),
-                meta: normalizeListMeta(response?.meta),
+                rows: normalizePaymentRows(pickRows(response?.data)),
+                meta: normalizeListMeta(pickMeta(response?.meta, response?.data)),
             }),
             providesTags: ["payment"],
         }),
@@ -660,8 +690,8 @@ export const financeApi = baseApi.injectEndpoints({
                 method: "GET",
             }),
             transformResponse: (response: { success: boolean; data: unknown; meta?: unknown }) => ({
-                rows: normalizeWithdrawalRows(response?.data),
-                meta: normalizeListMeta(response?.meta),
+                rows: normalizeWithdrawalRows(pickRows(response?.data)),
+                meta: normalizeListMeta(pickMeta(response?.meta, response?.data)),
             }),
             providesTags: ["payment"],
         }),

@@ -63,8 +63,8 @@ export const PaymentMethodPicker = ({ value, onChange, loadingLabel, errorLabel,
     e.stopPropagation();
     setEditingId(m.id);
     setName(m.name);
-    setCode("");
-    setIsDefault(false);
+    setCode(m.code ?? "");
+    setIsDefault(m.isDefault ?? false);
     setBranchId("");
     setError(null);
     setOpen(true);

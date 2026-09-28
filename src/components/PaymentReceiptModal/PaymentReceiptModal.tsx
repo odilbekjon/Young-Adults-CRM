@@ -1,20 +1,9 @@
 import { Dialog, DialogTitle, DialogContent, IconButton, CircularProgress, Button, Box } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { FiX, FiPrinter } from "react-icons/fi";
-import { usePaymentReceiptQuery, isCompletedPaymentStatus } from "../../app/api/financeApi";
+import { usePaymentReceiptQuery } from "../../app/api/financeApi";
 import { formatDate } from "../../constants/FlatStudents";
 import logo from "../../assets/logo_ya_black.png";
-
-const formatMoney = (amount?: number | null) =>
-  amount === null || amount === undefined ? null : `${amount.toLocaleString("ru-RU")} UZS`;
-
-const formatDateTime = (iso?: string) => {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
 
 const ReceiptRow = ({ label, value }: { label: string; value?: string | null }) => {
   if (!value) return null;
@@ -77,36 +66,18 @@ export const PaymentReceiptModal = ({
             <Box sx={{ px: 3, py: 2.5, border: "1px solid #eee", borderTop: "none", borderBottom: "none" }}>
               <img src={logo} alt="Young Adults" width={100} style={{ display: "block", margin: "0 auto 16px" }} />
 
-              {!isCompletedPaymentStatus(payment.status) && (
-                <Box
-                  sx={{
-                    bgcolor: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca",
-                    borderRadius: 1, px: 1.5, py: 1, mb: 1.5, fontSize: 12, fontWeight: 700, textAlign: "center",
-                  }}
-                >
-                  {t("paymentReceipt.notCompletedWarning", { status: payment.status })}
-                </Box>
-              )}
-
-              <ReceiptRow label={`${t("settings.ceo.general.invoice.preview.checkNumber")}`} value={payment.checkNumber ? `№${payment.checkNumber}` : null} />
+              <ReceiptRow label={t("settings.ceo.general.invoice.preview.checkNumber")} value={payment.receiptNumber ? `№${payment.receiptNumber}` : null} />
               <ReceiptRow label={t("settings.ceo.general.invoice.preview.company")} value="Young Adults" />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.branch")} value={payment.branchName} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.student")} value={payment.studentName} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.studentId")} value={payment.studentId} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.phone")} value={payment.studentPhone} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.balance")} value={formatMoney(payment.balance)} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.group")} value={payment.groupName} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.coursePrice")} value={formatMoney(payment.coursePrice)} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.teacher")} value={payment.teacherName} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.type")} value={payment.paymentMethodName} />
+              <ReceiptRow label={t("settings.ceo.general.invoice.preview.branch")} value={payment.branch?.name ?? null} />
+              <ReceiptRow label={t("settings.ceo.general.invoice.preview.student")} value={payment.student.name} />
+              <ReceiptRow label={t("settings.ceo.general.invoice.preview.studentId")} value={payment.student.id} />
+              <ReceiptRow label={t("settings.ceo.general.invoice.preview.phone")} value={payment.student.phone} />
+              <ReceiptRow label={t("settings.ceo.general.invoice.preview.group")} value={payment.group?.name ?? null} />
+              <ReceiptRow label={t("settings.ceo.general.invoice.preview.type")} value={payment.paymentMethod} />
               <ReceiptRow label={t("settings.ceo.general.invoice.preview.paymentAmount")} value={`${payment.amount.toLocaleString("ru-RU")} UZS`} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.status")} value={payment.status} />
+              <ReceiptRow label={t("settings.ceo.general.invoice.preview.paidMonths")} value={payment.paidMonths.join(", ")} />
+              <ReceiptRow label={t("settings.ceo.general.invoice.preview.notes")} value={payment.notes} />
               <ReceiptRow label={t("settings.ceo.general.invoice.preview.date")} value={payment.date ? formatDate(payment.date) : null} />
-
-              <Box sx={{ mt: 2, "& > div": { fontSize: 11, color: "#888" } }}>
-                <ReceiptRow label={t("settings.ceo.general.invoice.preview.creator")} value={payment.createdBy} />
-                <ReceiptRow label={t("settings.ceo.general.invoice.preview.time")} value={formatDateTime(payment.createdAt) || null} />
-              </Box>
             </Box>
           </Box>
         )}

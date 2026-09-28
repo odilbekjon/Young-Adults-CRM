@@ -21,6 +21,7 @@ import {
     PaymentRow,
     PaymentsListResult,
     PaymentDetail,
+    PaymentReceipt,
     FinanceStats,
     WithdrawalRow,
     WithdrawalsResult,
@@ -246,13 +247,13 @@ const normalizeExpenseRows = (raw: unknown): ExpenseRow[] => {
     return list.map((item, index) => normalizeExpenseRow(item, index));
 };
 
-// Backend's exact row shape for GET /finance/payments (registry) isn't
-// documented beyond the endpoint description, so it's read defensively —
-// same approach as normalizeDebtorRow.
+// GET /finance/payments (registry) row shape confirmed live (2026-09):
+// nested student/group/branch/paymentMethod/createdBy objects.
 const normalizePaymentRow = (raw: unknown, index: number): PaymentRow => {
     const obj = (raw ?? {}) as Record<string, unknown>;
     const student = (obj.student ?? {}) as Record<string, unknown>;
     const group = (obj.group ?? {}) as Record<string, unknown>;
+    const branch = (obj.branch ?? {}) as Record<string, unknown>;
     const method = (obj.paymentMethod ?? {}) as Record<string, unknown>;
     const creator = (obj.createdBy ?? obj.creator ?? {}) as Record<string, unknown>;
 
@@ -266,9 +267,13 @@ const normalizePaymentRow = (raw: unknown, index: number): PaymentRow => {
         groupName: asString(obj.groupName ?? group.name ?? (typeof obj.group === "string" ? obj.group : "")),
         paymentMethodId: asId(obj.paymentMethodId ?? method.id) || null,
         paymentMethodName: asString(obj.paymentMethodName ?? method.name),
-        branchId: asId(obj.branchId) || null,
+        branchId: asId(obj.branchId ?? branch.id) || null,
+        branchName: asString(obj.branchName ?? branch.name) || null,
         date: obj.date ? asString(obj.date).slice(0, 10) : null,
         notes: asString(obj.notes ?? obj.comment),
+        provider: (obj.provider ? asString(obj.provider) : null) as PaymentRow["provider"],
+        transactionId: obj.transactionId ? asString(obj.transactionId) : null,
+        receiptUrl: obj.receiptUrl ? asString(obj.receiptUrl) : null,
         createdBy: asString(creator.name ?? obj.createdBy) || null,
         createdAt: obj.createdAt ? asString(obj.createdAt) : undefined,
         status: obj.status ? asString(obj.status) : null,
@@ -304,18 +309,58 @@ const normalizePaymentDetail = (raw: unknown): PaymentDetail => {
     };
 };
 
-// Backend's exact row shape for /finance/withdrawals isn't documented
-// beyond the endpoint description, so it's read defensively.
+// GET /finance/payments/{id}/receipt row shape confirmed live (2026-09) —
+// see PaymentReceipt's doc comment for how it differs from PaymentDetail.
+const normalizePaymentReceipt = (raw: unknown): PaymentReceipt => {
+    const obj = (raw ?? {}) as Record<string, unknown>;
+    const student = (obj.student ?? {}) as Record<string, unknown>;
+    const group = obj.group as Record<string, unknown> | null | undefined;
+    const branch = obj.branch as Record<string, unknown> | null | undefined;
+    const paidMonths = Array.isArray(obj.paidMonths) ? obj.paidMonths : [];
+
+    return {
+        receiptNumber: obj.receiptNumber ? asString(obj.receiptNumber) : null,
+        date: obj.date ? asString(obj.date) : null,
+        amount: asMoney(obj.amount),
+        paymentMethod: asString(obj.paymentMethod),
+        student: {
+            id: asString(student.id),
+            name: asString(student.name),
+            phone: asString(student.phone),
+        },
+        group: group ? { id: asString(group.id), name: asString(group.name) } : null,
+        branch: branch
+            ? {
+                id: asString(branch.id),
+                name: asString(branch.name),
+                phone: branch.phone ? asString(branch.phone) : null,
+                address: branch.address ? asString(branch.address) : null,
+            }
+            : null,
+        notes: obj.notes ? asString(obj.notes) : null,
+        paidMonths: paidMonths.map((m) => asString(m)).filter(Boolean),
+    };
+};
+
+// GET /finance/withdrawals row shape confirmed live (2026-09): recipientName
+// + reason (not comment/notes/description), nested paymentMethod/branch/
+// createdBy objects.
 const normalizeWithdrawalRow = (raw: unknown, index: number): WithdrawalRow => {
     const obj = (raw ?? {}) as Record<string, unknown>;
+    const method = (obj.paymentMethod ?? {}) as Record<string, unknown>;
+    const branch = (obj.branch ?? {}) as Record<string, unknown>;
     const creator = (obj.createdBy ?? obj.creator ?? {}) as Record<string, unknown>;
 
     return {
         id: asString(obj.id ?? `row-${index}`),
         amount: asMoney(obj.amount),
-        branchId: asId(obj.branchId) || null,
+        recipientName: asString(obj.recipientName),
+        reason: asString(obj.reason ?? obj.comment ?? obj.notes),
+        paymentMethodId: asId(obj.paymentMethodId ?? method.id) || null,
+        paymentMethodName: asString(obj.paymentMethodName ?? method.name),
+        branchId: asId(obj.branchId ?? branch.id) || null,
+        branchName: asString(obj.branchName ?? branch.name) || null,
         date: obj.date ? asString(obj.date).slice(0, 10) : null,
-        comment: asString(obj.comment ?? obj.notes ?? obj.description),
         createdBy: asString(creator.name ?? obj.createdBy) || null,
         createdAt: obj.createdAt ? asString(obj.createdAt) : undefined,
     };
@@ -335,17 +380,32 @@ const normalizeFinanceTotal = (raw: unknown): FinanceTotalResult => {
 const normalizeDebtorReceipt = (raw: unknown): DebtorReceipt => {
     const obj = (raw ?? {}) as Record<string, unknown>;
     const student = (obj.student ?? {}) as Record<string, unknown>;
-    const group = (obj.group ?? {}) as Record<string, unknown>;
-    const branch = (obj.branch ?? {}) as Record<string, unknown>;
+    const branch = obj.branch as Record<string, unknown> | null | undefined;
+    const groups = Array.isArray(obj.groups) ? (obj.groups as Record<string, unknown>[]) : [];
 
     return {
-        studentId: asId(obj.studentId ?? student.id ?? obj.id) || null,
-        name: asString(obj.name ?? student.name ?? obj.studentName),
-        phone: asString(obj.phone ?? student.phone ?? obj.studentPhone),
-        groupName: asString(obj.groupName ?? group.name ?? (typeof obj.group === "string" ? obj.group : "")),
-        balance: asMoney(obj.balance ?? obj.debt ?? obj.amount),
-        branchName: asString(obj.branchName ?? branch.name) || null,
-        createdAt: obj.createdAt ? asString(obj.createdAt) : undefined,
+        student: {
+            id: asString(student.id),
+            name: asString(student.name),
+            phone: asString(student.phone),
+        },
+        branch: branch
+            ? {
+                id: asString(branch.id),
+                name: asString(branch.name),
+                phone: branch.phone ? asString(branch.phone) : null,
+                address: branch.address ? asString(branch.address) : null,
+            }
+            : null,
+        date: obj.date ? asString(obj.date) : null,
+        totalPaid: asMoney(obj.totalPaid),
+        totalCharged: asMoney(obj.totalCharged),
+        debtAmount: asMoney(obj.debtAmount),
+        balance: asMoney(obj.balance),
+        groups: groups.map((g) => ({
+            name: asString(g.name),
+            price: asMoney(g.price),
+        })),
     };
 };
 
@@ -355,6 +415,7 @@ const normalizeFinanceStats = (raw: unknown): FinanceStats => {
         totalIncomeThisMonth: asMoney(obj.totalIncomeThisMonth),
         totalExpensesThisMonth: asMoney(obj.totalExpensesThisMonth),
         totalSalariesThisMonth: asMoney(obj.totalSalariesThisMonth),
+        totalWithdrawalsThisMonth: asMoney(obj.totalWithdrawalsThisMonth),
         netProfitThisMonth: asMoney(obj.netProfitThisMonth),
     };
 };
@@ -405,14 +466,15 @@ export const financeApi = baseApi.injectEndpoints({
                 url: `${PATHS.DEBTORS}?${buildFinanceListQueryString(args)}`,
                 method: "GET",
             }),
-            transformResponse: (response: { success: boolean; data: unknown; meta?: unknown }) => {
-                // TEMP DEBUG — remove once the real row shape is confirmed.
-                if (import.meta.env.DEV) console.log("[financeApi] debtors raw response:", response);
-                return {
-                    rows: normalizeDebtorRows(response?.data),
-                    meta: normalizeListMeta(response?.meta),
-                };
-            },
+            transformResponse: (response: { success: boolean; data: unknown; meta?: unknown }) => ({
+                // Envelope confirmed live (2026-09): a flat `data` array with
+                // pagination in a sibling `meta`, same as every other list
+                // endpoint here — an empty result for a given branchId/date
+                // range means the backend genuinely found no debtors
+                // matching those filters, not a parsing issue.
+                rows: normalizeDebtorRows(response?.data),
+                meta: normalizeListMeta(response?.meta),
+            }),
             providesTags: ["payment", "student"],
         }),
         debtorsTotal: builder.query<FinanceTotalResult, DebtorsQueryArgs>({
@@ -607,13 +669,13 @@ export const financeApi = baseApi.injectEndpoints({
         // ("bitta to'lov bo'yicha chop etish uchun kerakli barcha
         // ma'lumotlarni qaytaradi"), distinct from the plain detail endpoint
         // above. This is what PaymentReceiptModal is backed by.
-        paymentReceipt: builder.query<PaymentDetail, string>({
+        paymentReceipt: builder.query<PaymentReceipt, string>({
             query: (id) => ({
                 url: `${PATHS.PAYMENTS}/${id}/receipt`,
                 method: "GET",
             }),
             transformResponse: (response: { success: boolean; data: unknown }) =>
-                normalizePaymentDetail(response?.data),
+                normalizePaymentReceipt(response?.data),
             providesTags: ["payment"],
         }),
         paymentsTotal: builder.query<FinanceTotalResult, FinanceListQueryArgs>({

@@ -112,11 +112,17 @@ export interface DebtorsResult {
   meta: DebtorsMeta;
 }
 
-// GET /finance/payment-methods
+// GET /finance/payment-methods — response shape confirmed live (2026-09).
 export interface PaymentMethod {
   id: string;
   name: string;
+  code?: string | null;
   status?: string;
+  isDefault?: boolean;
+  branchId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
 }
 
 export interface PaymentMethodsResponse {
@@ -158,11 +164,15 @@ export interface FinanceDeleteResponse {
   message?: string;
 }
 
-// GET /finance/expense-categories
+// GET /finance/expense-categories — response shape confirmed live (2026-09).
 export interface ExpenseCategory {
   id: string;
   name: string;
   status?: string;
+  branchId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
 }
 
 export interface ExpenseCategoriesResponse {
@@ -254,7 +264,9 @@ export interface ExpensesResult {
 }
 
 // GET /finance/payments — the full payments registry (list), distinct from
-// the single POST /finance/payments mutation above.
+// the single POST /finance/payments mutation above. Row shape confirmed
+// live (2026-09): nested student/group/branch/paymentMethod/createdBy
+// objects, plus provider/transactionId/receiptUrl alongside status.
 export interface PaymentRow {
   id: string;
   amount: number;
@@ -266,15 +278,14 @@ export interface PaymentRow {
   paymentMethodId: string | null;
   paymentMethodName: string;
   branchId: string | null;
+  branchName: string | null;
   date: string | null;
   notes: string;
+  provider: PaymentProvider | null;
+  transactionId: string | null;
+  receiptUrl: string | null;
   createdBy: string | null;
   createdAt?: string;
-  // Not documented in Swagger beyond DELETE /finance/payments/{id}'s own
-  // description ("marks the payment REFUNDED"), which confirms payments do
-  // carry a status field — read defensively; null on a backend that doesn't
-  // return it, in which case the row is treated as a normal completed
-  // payment (the overwhelmingly common case) rather than assuming a value.
   status: string | null;
 }
 
@@ -283,29 +294,57 @@ export interface PaymentsListResult {
   meta: FinanceListMeta;
 }
 
-// GET /finance/payments/{id} — description confirms this includes receipt
-// info ("chek ma'lumotlarini qaytaradi") beyond the list registry row, but
-// the exact field name isn't shown in Swagger beyond that description, so
-// `checkNumber`/`branchName` are read defensively (see normalizePaymentDetail).
-// teacherName/coursePrice/balance are the same kind of defensive read — the
-// Invoice settings preview (Settings > General > Invoice) already has
-// unused i18n labels for Balance/Group/Course price/Teacher, confirming the
-// receipt is meant to carry them; they're null when the backend doesn't
-// return them rather than guessed.
+// GET /finance/payments/{id} — plain detail row. Not yet confirmed live
+// against a real response (only the list and the /receipt variant below
+// have been); kept as a defensive superset of PaymentRow until confirmed.
 export interface PaymentDetail extends PaymentRow {
-  receiptUrl: string | null;
   checkNumber: string | null;
-  branchName: string | null;
   teacherName: string | null;
   coursePrice: number | null;
   balance: number | null;
 }
 
-// GET /finance/stats
+// GET /finance/payments/{id}/receipt — the dedicated print endpoint,
+// confirmed live (2026-09): a much smaller, print-oriented shape than
+// PaymentDetail — no status/teacher/course-price/balance, but a
+// receiptNumber, the payment method as a plain name string, a `cashier`
+// (creator id only, no name), and a `paidMonths` list.
+export interface PaymentReceiptStudent {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+export interface PaymentReceiptGroup {
+  id: string;
+  name: string;
+}
+
+export interface PaymentReceiptBranch {
+  id: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+}
+
+export interface PaymentReceipt {
+  receiptNumber: string | null;
+  date: string | null;
+  amount: number;
+  paymentMethod: string;
+  student: PaymentReceiptStudent;
+  group: PaymentReceiptGroup | null;
+  branch: PaymentReceiptBranch | null;
+  notes: string | null;
+  paidMonths: string[];
+}
+
+// GET /finance/stats — response shape confirmed live (2026-09).
 export interface FinanceStats {
   totalIncomeThisMonth: number;
   totalExpensesThisMonth: number;
   totalSalariesThisMonth: number;
+  totalWithdrawalsThisMonth: number;
   netProfitThisMonth: number;
 }
 
@@ -325,13 +364,20 @@ export interface CreateWithdrawalResponse {
   data: unknown;
 }
 
-// GET /finance/withdrawals
+// GET /finance/withdrawals — row shape confirmed live (2026-09): the field
+// guessed as `comment`/`notes`/`description` is actually `reason`, and a
+// `recipientName` (who the cash was paid out to) exists but wasn't
+// captured at all before.
 export interface WithdrawalRow {
   id: string;
   amount: number;
+  recipientName: string;
+  reason: string;
+  paymentMethodId: string | null;
+  paymentMethodName: string;
   branchId: string | null;
+  branchName: string | null;
   date: string | null;
-  comment: string;
   createdBy: string | null;
   createdAt?: string;
 }
@@ -350,16 +396,35 @@ export interface FinanceTotalResult {
   total: number;
 }
 
-// GET /finance/debtors/{studentId}/receipt — "student's full current debt
-// and payment balance, for printing". Row shape isn't documented beyond the
-// description, so it's read defensively from plausible field-name variants,
-// same approach as DebtorRow/PaymentDetail.
-export interface DebtorReceipt {
-  studentId: string | null;
+// GET /finance/debtors/{studentId}/receipt — response shape confirmed live
+// (2026-09): nested student/branch objects, a `groups` array (each group the
+// student is enrolled in, with its price) rather than a single group name,
+// and a full charged/paid/debt breakdown rather than just a balance.
+export interface DebtorReceiptStudent {
+  id: string;
   name: string;
   phone: string;
-  groupName: string;
+}
+
+export interface DebtorReceiptBranch {
+  id: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+}
+
+export interface DebtorReceiptGroup {
+  name: string;
+  price: number;
+}
+
+export interface DebtorReceipt {
+  student: DebtorReceiptStudent;
+  branch: DebtorReceiptBranch | null;
+  date: string | null;
+  totalPaid: number;
+  totalCharged: number;
+  debtAmount: number;
   balance: number;
-  branchName: string | null;
-  createdAt?: string;
+  groups: DebtorReceiptGroup[];
 }

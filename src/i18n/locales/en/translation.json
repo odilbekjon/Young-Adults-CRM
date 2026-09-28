@@ -119,6 +119,8 @@
     "phone": "Phone",
     "group": "Group",
     "branch": "Branch",
+    "totalCharged": "Total charged",
+    "totalPaid": "Total paid",
     "balance": "Amount outstanding",
     "issuedAt": "Issued at"
   },
@@ -726,6 +728,7 @@
           "income": "Income",
           "expenses": "Expenses",
           "salaries": "Salaries",
+          "withdrawals": "Withdrawals",
           "netProfit": "Net profit"
         }
       },
@@ -2042,7 +2045,9 @@
             "status": "Status:",
             "date": "Date:",
             "creator": "Creator:",
-            "time": "Time:"
+            "time": "Time:",
+            "notes": "Notes:",
+            "paidMonths": "Paid months:"
           }
         },
         "landingPage": {

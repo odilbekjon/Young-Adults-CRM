@@ -119,6 +119,8 @@
     "phone": "Telefon",
     "group": "Guruh",
     "branch": "Filial",
+    "totalCharged": "Jami hisoblangan",
+    "totalPaid": "Jami to'langan",
     "balance": "Qarz summasi",
     "issuedAt": "Berilgan sana"
   },
@@ -733,6 +735,7 @@
           "income": "Daromad",
           "expenses": "Xarajatlar",
           "salaries": "Maoshlar",
+          "withdrawals": "Yechib olingan",
           "netProfit": "Sof foyda"
         }
       },
@@ -2042,7 +2045,9 @@
             "paymentAmount": "To'lov summasi:",
             "date": "Sana:",
             "creator": "Yaratuvchi:",
-            "time": "Vaqt:"
+            "time": "Vaqt:",
+            "notes": "Izoh:",
+            "paidMonths": "To'langan oylar:"
           }
         },
         "landingPage": {

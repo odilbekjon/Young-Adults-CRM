@@ -80,12 +80,14 @@ export const DebtorReceiptModal = ({
                 {t("debtorReceipt.status")}
               </Box>
 
-              <ReceiptRow label={t("debtorReceipt.name")} value={receipt.name} />
-              <ReceiptRow label={t("debtorReceipt.studentId")} value={receipt.studentId} />
-              <ReceiptRow label={t("debtorReceipt.phone")} value={receipt.phone} />
-              <ReceiptRow label={t("debtorReceipt.group")} value={receipt.groupName} />
-              <ReceiptRow label={t("debtorReceipt.branch")} value={receipt.branchName} />
-              <ReceiptRow label={t("debtorReceipt.balance")} value={`${Math.abs(receipt.balance).toLocaleString("ru-RU")} UZS`} />
+              <ReceiptRow label={t("debtorReceipt.name")} value={receipt.student.name} />
+              <ReceiptRow label={t("debtorReceipt.studentId")} value={receipt.student.id} />
+              <ReceiptRow label={t("debtorReceipt.phone")} value={receipt.student.phone} />
+              <ReceiptRow label={t("debtorReceipt.group")} value={receipt.groups.map((g) => g.name).join(", ")} />
+              <ReceiptRow label={t("debtorReceipt.branch")} value={receipt.branch?.name ?? null} />
+              <ReceiptRow label={t("debtorReceipt.totalCharged")} value={`${receipt.totalCharged.toLocaleString("ru-RU")} UZS`} />
+              <ReceiptRow label={t("debtorReceipt.totalPaid")} value={`${receipt.totalPaid.toLocaleString("ru-RU")} UZS`} />
+              <ReceiptRow label={t("debtorReceipt.balance")} value={`${Math.abs(receipt.debtAmount).toLocaleString("ru-RU")} UZS`} />
               <ReceiptRow label={t("debtorReceipt.issuedAt")} value={formatIssuedAt()} />
 
               <Box sx={{ mt: 1.5, fontSize: 11, color: "#888", fontStyle: "italic" }}>

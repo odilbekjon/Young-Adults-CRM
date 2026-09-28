@@ -30,11 +30,13 @@ import {
 } from "../../../../../app/api/branchesApi/branchesApi";
 import type { Branch } from "../../../../../app/api/branchesApi/types";
 import { useToast } from "../../../../../Context/ToastContext";
+import { useBranch } from "../../../../../Context/BranchContext";
 import { extractApiError } from "../../../../../utils";
 
 export const Branches = () => {
   const { t } = useTranslation();
   const toast = useToast();
+  const { branch: selectedBranch } = useBranch();
 
   const { data, isLoading, isError, refetch, isFetching } = useAllBranchesQuery();
   const [createBranch, { isLoading: isCreating }] = useCreateBranchMutation();
@@ -189,9 +191,11 @@ export const Branches = () => {
     }
   };
 
-  const visibleBranches = branches.filter((b) =>
-    tab === "faol" ? b.status === "ACTIVE" : b.status !== "ACTIVE"
-  );
+  // Same client-side branch-scoping pattern as Rooms/Courses: the header's
+  // selected branch narrows the list to just that branch's own row.
+  const visibleBranches = branches
+    .filter((b) => (tab === "faol" ? b.status === "ACTIVE" : b.status !== "ACTIVE"))
+    .filter((b) => selectedBranch === "all" || b.name === selectedBranch);
 
   const isSaving = isCreating || isUpdating;
 

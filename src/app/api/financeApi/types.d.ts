@@ -294,22 +294,49 @@ export interface PaymentsListResult {
   meta: FinanceListMeta;
 }
 
-// GET /finance/payments/{id} — description confirms this includes receipt
-// info ("chek ma'lumotlarini qaytaradi") beyond the list registry row, but
-// the exact field name isn't shown in Swagger beyond that description, so
-// `checkNumber`/`branchName` are read defensively (see normalizePaymentDetail).
-// teacherName/coursePrice/balance are the same kind of defensive read — the
-// Invoice settings preview (Settings > General > Invoice) already has
-// unused i18n labels for Balance/Group/Course price/Teacher, confirming the
-// receipt is meant to carry them; they're null when the backend doesn't
-// return them rather than guessed.
+// GET /finance/payments/{id} — plain detail row. Not yet confirmed live
+// against a real response (only the list and the /receipt variant below
+// have been); kept as a defensive superset of PaymentRow until confirmed.
 export interface PaymentDetail extends PaymentRow {
-  receiptUrl: string | null;
   checkNumber: string | null;
-  branchName: string | null;
   teacherName: string | null;
   coursePrice: number | null;
   balance: number | null;
+}
+
+// GET /finance/payments/{id}/receipt — the dedicated print endpoint,
+// confirmed live (2026-09): a much smaller, print-oriented shape than
+// PaymentDetail — no status/teacher/course-price/balance, but a
+// receiptNumber, the payment method as a plain name string, a `cashier`
+// (creator id only, no name), and a `paidMonths` list.
+export interface PaymentReceiptStudent {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+export interface PaymentReceiptGroup {
+  id: string;
+  name: string;
+}
+
+export interface PaymentReceiptBranch {
+  id: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+}
+
+export interface PaymentReceipt {
+  receiptNumber: string | null;
+  date: string | null;
+  amount: number;
+  paymentMethod: string;
+  student: PaymentReceiptStudent;
+  group: PaymentReceiptGroup | null;
+  branch: PaymentReceiptBranch | null;
+  notes: string | null;
+  paidMonths: string[];
 }
 
 // GET /finance/stats — response shape confirmed live (2026-09).

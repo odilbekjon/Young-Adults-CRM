@@ -2,7 +2,7 @@
 // Branch filtering useBranch() orqali avtomatik ishlaydi
 
 import {
-  Box, Button, Chip, CircularProgress,
+  Box, Button, CircularProgress,
   Divider, IconButton, Menu, MenuItem, Paper, Stack, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
   TextField, Tooltip, Typography, Drawer,
@@ -29,6 +29,7 @@ import { useAllCoursesQuery } from "../../app/api/coursesApi";
 import { useAllRoomsQuery } from "../../app/api/roomsApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useTeachersSelectQuery } from "../../app/api/teachersApi";
+import { useTagsSelectQuery } from "../../app/api/tagsApi";
 import type { RootState } from "../../app/store";
 import { useBranch } from "../../Context/BranchContext";
 import { useToast } from "../../Context/ToastContext";
@@ -61,7 +62,6 @@ interface GroupRow {
   studentCount: number;
   studentIds: string[];
   status: string;
-  tags: string[];
   createdAt: string;
 }
 
@@ -87,7 +87,6 @@ interface FormState {
 }
 
 /* ─── static ─────────────────────────────────────────────── */
-const TAGS = ["New", "Popular", "VIP", "Trial"];
 const WEEKDAY_VALUES: GroupDay[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
 const ALL_COLUMNS = [
@@ -97,7 +96,6 @@ const ALL_COLUMNS = [
   { key: "training",     label: "Training dates" },
   { key: "week",         label: "Week of study" },
   { key: "room",         label: "Room" },
-  { key: "tags",         label: "Tags" },
   { key: "studentCount", label: "Students" },
 ];
 
@@ -134,17 +132,6 @@ const toDaysType = (days: string): string | undefined => {
   return undefined;
 };
 
-const deriveTags = (g: Group): string[] => {
-  const tags: string[] = [];
-  const studentCount = g.students?.length ?? 0;
-  const isNew = g.createdAt && Date.now() - new Date(g.createdAt).getTime() < 30 * 24 * 60 * 60 * 1000;
-  if (isNew)                tags.push("New");
-  if (studentCount >= 8)    tags.push("Popular");
-  if (studentCount >= 10)   tags.push("VIP");
-  if (studentCount <= 4)    tags.push("Trial");
-  return [...new Set(tags)];
-};
-
 const toGroupRow = (g: Group): GroupRow => ({
   id: g.id,
   name: g.name,
@@ -164,16 +151,17 @@ const toGroupRow = (g: Group): GroupRow => ({
   studentCount: g.students?.length ?? 0,
   studentIds: g.students?.map((s) => s.id) ?? [],
   status: g.status,
-  tags: deriveTags(g),
   createdAt: g.createdAt,
 });
 
+// Tag filtering itself is applied server-side (tagId forwarded to
+// useAllGroupsQuery below) — groups carry no per-row tag list to re-check
+// client-side against.
 const matchesFilters = (g: GroupRow, filters: Filters): boolean => {
   if (filters.status  && g.status !== filters.status) return false;
   if (filters.teacher && !g.teacherNames.includes(filters.teacher)) return false;
   if (filters.course  && g.course !== filters.course)  return false;
   if (filters.days    && g.days   !== filters.days)     return false;
-  if (filters.tags.length > 0 && !filters.tags.some((t) => g.tags.includes(t))) return false;
   if (filters.startDate && g.startDate && g.startDate < filters.startDate) return false;
   if (filters.endDate   && g.endDate   && g.endDate   > filters.endDate)   return false;
   return true;
@@ -321,7 +309,17 @@ export const Groups = () => {
   const { branch: selectedBranch, branchLabel } = useBranch();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
-  const { data: groupsData, isLoading: groupsLoading, isError: groupsError } = useAllGroupsQuery({ page: 1, limit: 100 });
+  // Declared ahead of useAllGroupsQuery below so filters.tags[0] can be
+  // forwarded to it as a real server-side tagId filter.
+  const [filters, setFilters] = useState<Filters>({
+    status: "", teacher: "", course: "", days: "", tags: [], startDate: "", endDate: "",
+  });
+
+  const { data: groupsData, isLoading: groupsLoading, isError: groupsError } = useAllGroupsQuery({
+    page: 1,
+    limit: 100,
+    tagId: filters.tags[0] || undefined,
+  });
   const { data: coursesData } = useAllCoursesQuery();
   const { data: roomsData } = useAllRoomsQuery();
   const { data: branchesData } = useAllBranchesQuery();
@@ -332,6 +330,9 @@ export const Groups = () => {
   // because its client-side branch-name filter depended on a `branches`
   // shape that endpoint doesn't reliably return.
   const { data: teacherOptions } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" });
+  // GET /tags/select?type=GROUP — real, admin-managed tags for the Groups
+  // "Tags" filter (previously a hardcoded New/Popular/VIP/Trial heuristic).
+  const { data: tagOptions } = useTagsSelectQuery({ type: "GROUP" });
 
   const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [updateGroup, { isLoading: isUpdating }] = useUpdateGroupMutation();
@@ -370,13 +371,6 @@ export const Groups = () => {
     COMPLETED: t("groups.options.status.completed"),
   };
 
-  const TAG_LABELS: Record<string, string> = {
-    New:     t("groups.options.tags.new"),
-    Popular: t("groups.options.tags.popular"),
-    VIP:     t("groups.options.tags.vip"),
-    Trial:   t("groups.options.tags.trial"),
-  };
-
   const FILTER_TOGGLES: { key: string; label: string }[] = [
     { key: "status",  label: t("groups.filters.panel.groupStatus") },
     { key: "teacher", label: t("groups.filters.panel.teachers") },
@@ -393,7 +387,6 @@ export const Groups = () => {
     training:     t("groups.table.trainingDates"),
     week:         t("groups.table.weekOfStudy"),
     room:         t("groups.table.room"),
-    tags:         t("groups.table.tags"),
     studentCount: t("groups.table.students"),
   };
 
@@ -454,9 +447,6 @@ export const Groups = () => {
   const [sortDir,           setSortDir]           = useState<SortDir>("asc");
   const [visibleCols,       setVisibleCols]       = useState<string[]>(ALL_COLUMNS.map((c) => c.key));
   const [columnsAnchor,     setColumnsAnchor]     = useState<null | HTMLElement>(null);
-  const [filters,           setFilters]           = useState<Filters>({
-    status: "", teacher: "", course: "", days: "", tags: [], startDate: "", endDate: "",
-  });
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
   const [visibleFilters,   setVisibleFilters]   = useState<string[]>(["status", "teacher", "course", "days", "tags", "date"]);
 
@@ -704,7 +694,7 @@ export const Groups = () => {
           <DropdownFilter
             label={t("groups.filters.tags")}
             value={filters.tags[0] || ""}
-            options={TAGS.map((tag) => ({ value: tag, label: TAG_LABELS[tag] ?? tag }))}
+            options={(tagOptions ?? []).map((tag) => ({ value: tag.id, label: tag.name }))}
             onChange={(v) => setFilter("tags", [v])}
             onClear={() => setFilter("tags", [])}
           />
@@ -892,7 +882,6 @@ export const Groups = () => {
                 {col("training")     && <TableCell><TableSortLabel active={sortKey === "startDate"}    direction={sortDir} onClick={() => handleSort("startDate")}>{t("groups.table.trainingDates")}</TableSortLabel></TableCell>}
                 {col("week")         && <TableCell>{t("groups.table.weekOfStudy")}</TableCell>}
                 {col("room")         && <TableCell>{t("groups.table.room")}</TableCell>}
-                {col("tags")         && <TableCell>{t("groups.table.tags")}</TableCell>}
                 {col("studentCount") && <TableCell><TableSortLabel active={sortKey === "studentCount"} direction={sortDir} onClick={() => handleSort("studentCount")}>{t("groups.table.students")}</TableSortLabel></TableCell>}
                 <TableCell align="right">{t("groups.table.actions")}</TableCell>
               </TableRow>
@@ -932,18 +921,6 @@ export const Groups = () => {
                   )}
                   {col("week")         && <TableCell>{g.weekOfStudy || "—"}</TableCell>}
                   {col("room")         && <TableCell>{g.room}</TableCell>}
-                  {col("tags")         && (
-                    <TableCell>
-                      <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                        {g.tags.map((tag) => (
-                          <Chip
-                            key={tag} label={TAG_LABELS[tag] ?? tag} size="small"
-                            sx={{ fontSize: 10, height: 20, bgcolor: "#f3f4f6", color: "#374151" }}
-                          />
-                        ))}
-                      </Stack>
-                    </TableCell>
-                  )}
                   {col("studentCount") && <TableCell sx={{ fontWeight: 500 }}>{g.studentCount}</TableCell>}
 
                   <TableCell align="right" onClick={(e) => e.stopPropagation()}>

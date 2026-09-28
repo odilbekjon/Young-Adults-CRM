@@ -73,6 +73,7 @@ export interface Group {
 export interface groupsRequest {
   page?: number;
   limit?: number;
+  tagId?: string;
 }
 
 export interface groupsResponse {

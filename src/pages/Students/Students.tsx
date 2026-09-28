@@ -58,6 +58,7 @@ import {
 } from "../../app/api/studentsApi";
 import { useAllGroupsQuery, useAddStudentToGroupMutation } from "../../app/api/groupsApi";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
+import { useTagsSelectQuery } from "../../app/api/tagsApi";
 import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { RemoveStudentDialog } from "../SingleGroup/RemoveStudentDialog";
@@ -79,6 +80,7 @@ interface Filters {
   groupCount: string;
   fromCreated: string;
   toCreatedDate: string;
+  tags: string;
 }
 
 /* ─── STYLES ─────────────────────────────────────────── */
@@ -490,6 +492,10 @@ export const Students = () => {
   const [toggleStudentStatus, { isLoading: isArchivingStudent }] = useToggleStudentStatusMutation();
   const [updateStudentStatus, { isLoading: isUpdatingStudentStatus }] = useUpdateStudentStatusMutation();
   const { data: reasonOptions } = useReasonsSelectQuery();
+  // GET /tags/select?type=STUDENT — real, admin-managed tags for the "Tags"
+  // filter, replacing the disabled placeholder (students had no tags
+  // relationship to filter by until this Tags feature existed).
+  const { data: tagOptions } = useTagsSelectQuery({ type: "STUDENT" });
   const [fetchStudentsExcel, { isFetching: isExportingExcel }] = useLazyStudentsExcelQuery();
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
   const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
@@ -516,7 +522,7 @@ export const Students = () => {
 
   const EMPTY_FILTERS: Filters = {
     search: "", teacher: "", course: "", status: "", financial: "",
-    groupCount: "", fromCreated: "", toCreatedDate: "",
+    groupCount: "", fromCreated: "", toCreatedDate: "", tags: "",
   };
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [advancedAnchor, setAdvancedAnchor] = useState<null | HTMLElement>(null);
@@ -532,6 +538,7 @@ export const Students = () => {
     page, limit,
     branchId: selectedBranchId ?? undefined,
     status: filters.status === "active" ? "ACTIVE" : filters.status === "inactive" ? "INACTIVE" : undefined,
+    tagId: filters.tags || undefined,
   });
 
   useEffect(() => {
@@ -544,7 +551,7 @@ export const Students = () => {
   // filter/branch.
   useEffect(() => {
     setPage(1);
-  }, [filters.status, selectedBranchId]);
+  }, [filters.status, filters.tags, selectedBranchId]);
 
   const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) =>
     setFilters((p) => ({ ...p, [key]: val }));
@@ -858,13 +865,12 @@ export const Students = () => {
           onChange={(v) => setFilter("financial", v)} onClear={() => setFilter("financial", "")}
         />
 
-        {/* No tags relationship exists on students in the backend yet — kept
-            visible for layout parity but disabled rather than faked. */}
-        <TextFilterInput
-          placeholder={t("students.filters.byTags")}
-          value="" onChange={() => {}} disabled
-          disabledTitle={t("students.filters.tagsUnavailable")}
-          minWidth={130}
+        <DropdownFilter
+          label={t("students.filters.byTags")}
+          value={filters.tags}
+          options={(tagOptions ?? []).map((tag) => ({ value: tag.id, label: tag.name }))}
+          onChange={(v) => setFilter("tags", v)}
+          onClear={() => setFilter("tags", "")}
         />
 
         {/* No externalId field exists on students in the backend yet —

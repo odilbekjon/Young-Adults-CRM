@@ -239,10 +239,15 @@ const buildGroupsExcelQueryString = (args: GroupsExcelQueryArgs = {}): string =>
 export const groupsApi = baseApi.injectEndpoints({
     endpoints: (builder) =>  ({
         allGroups: builder.query<groupsResponse, groupsRequest>({
-            query: ({ page = 1, limit = 10 } = {}) => ({
-                url: `${PATHS.GROUPS}?page=${page}&limit=${limit}`,
-                method: "GET",
-            }),
+            query: ({ page = 1, limit = 10, tagId } = {}) => {
+                const params = new URLSearchParams();
+                params.set("page", String(page));
+                params.set("limit", String(limit));
+                // Same tagId convention as studentsApi's allStudents, for the
+                // Tags filter on the Groups list.
+                if (tagId) params.set("tagId", tagId);
+                return { url: `${PATHS.GROUPS}?${params.toString()}`, method: "GET" };
+            },
             transformResponse: (response: groupsResponse) => ({
                 ...response,
                 data: normalizeList<groupsResponse["data"][number]>(response.data),

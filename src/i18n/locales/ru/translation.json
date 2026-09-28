@@ -1728,10 +1728,31 @@
     "tags": {
       "tag": {
         "title": "Теги",
+        "refresh": "Обновить",
         "addNew": "Добавить",
-        "table": { "id": "id", "name": "Название", "fromWhere": "Откуда", "actions": "Действия" },
-        "drawer": { "title": "Добавить новый тег" },
-        "form": { "name": "Название", "fromWhere": "Откуда", "optionStudents": "Студенты", "optionTeachers": "Учителя", "submit": "Отправить" }
+        "table": { "name": "Название", "type": "Тип", "createdBy": "Кем создано", "createdAt": "Дата создания", "actions": "Действия" },
+        "typeOptions": { "all": "Все", "student": "Студент", "group": "Группа" },
+        "loadError": "Ошибка загрузки тегов",
+        "emptyState": "Теги не найдены",
+        "edit": "Редактировать",
+        "delete": "Удалить",
+        "drawer": { "addTitle": "Добавить новый тег", "editTitle": "Редактировать тег" },
+        "form": {
+          "name": "Название",
+          "namePlaceholder": "Например: Лучший студент",
+          "type": "Тип",
+          "typePlaceholder": "Выберите тип",
+          "cancel": "Отмена",
+          "save": "Сохранить",
+          "errors": { "name": "Введите название", "type": "Выберите тип", "save": "Ошибка сохранения" }
+        },
+        "deleteConfirm": {
+          "title": "Удалить тег",
+          "message": "Вы уверены, что хотите удалить тег \"{{name}}\"?",
+          "error": "Ошибка удаления"
+        },
+        "toast": { "created": "Тег успешно создан", "updated": "Тег обновлён", "deleted": "Тег удалён" },
+        "pagination": { "range": "{{from}}–{{to}} из {{total}}" }
       }
     },
     "ceo": {
@@ -2093,6 +2114,42 @@
       }
     },
     "office": {
+      "studentFreezes": {
+        "title": "Заморозка студентов",
+        "addNew": "Добавить",
+        "filters": { "allStudents": "Все студенты", "allGroups": "Все группы", "allStatuses": "Все статусы" },
+        "table": { "student": "Студент", "group": "Группа", "startDate": "Дата начала", "endDate": "Дата окончания", "reason": "Причина", "status": "Статус", "actions": "Действия" },
+        "status": { "active": "Активна", "expired": "Истекла", "cancelled": "Отменена" },
+        "loadError": "Не удалось загрузить данные",
+        "noData": "Данные не найдены",
+        "edit": "Редактировать",
+        "delete": "Удалить",
+        "createTitle": "Новая заморозка",
+        "editTitle": "Редактировать заморозку",
+        "form": {
+          "student": "Студент",
+          "selectStudent": "Выберите студента",
+          "group": "Группа",
+          "selectGroup": "Выберите группу",
+          "startDate": "Дата начала",
+          "endDate": "Дата окончания",
+          "reason": "Причина",
+          "submit": "Отправить",
+          "save": "Сохранить"
+        },
+        "toast": {
+          "created": "Заморозка успешно добавлена",
+          "updated": "Заморозка обновлена",
+          "deleted": "Заморозка удалена",
+          "error": "Произошла ошибка"
+        },
+        "deleteConfirm": {
+          "title": "Удалить заморозку",
+          "message": "Вы уверены, что хотите удалить заморозку для \"{{name}}\"?",
+          "cancel": "Отмена",
+          "error": "Ошибка удаления"
+        }
+      },
       "archive": {
         "title": "Архив",
         "quantity": "Количество — {{count}}",

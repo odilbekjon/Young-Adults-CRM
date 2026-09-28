@@ -77,6 +77,7 @@ export interface studentsRequest {
   search?: string;
   branchId?: string;
   status?: StudentExcelStatus;
+  tagId?: string;
 }
 
 // GET /students/excel query params — confirmed against Swagger: search,

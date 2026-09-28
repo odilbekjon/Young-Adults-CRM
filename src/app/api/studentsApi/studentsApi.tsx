@@ -289,7 +289,7 @@ const appendStudentFormData = (formData: FormData, data: Partial<CreateStudentRe
 export const studentsApi = baseApi.injectEndpoints({
     endpoints: (builder) =>  ({
         allStudents: builder.query<studentsResponse, studentsRequest>({
-            query: ({ page = 1, limit = 10, search, branchId, status }) => {
+            query: ({ page = 1, limit = 10, search, branchId, status, tagId }) => {
                 const params = new URLSearchParams();
                 params.set("page", String(page));
                 params.set("limit", String(limit));
@@ -310,6 +310,9 @@ export const studentsApi = baseApi.injectEndpoints({
                 // students, so this must be sent explicitly whenever the caller
                 // wants archived (INACTIVE) students to show up at all.
                 if (status) params.set("status", status);
+                // GET /tags/select's own filter-by-id convention (tagId), reused
+                // here to narrow students by an assigned tag from the Tags filter.
+                if (tagId) params.set("tagId", tagId);
                 return {
                     url: `${PATHS.STUDENTS}?${params.toString()}`,
                     method: "GET"

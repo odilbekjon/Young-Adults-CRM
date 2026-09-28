@@ -1728,10 +1728,31 @@
     "tags": {
       "tag": {
         "title": "Tags",
+        "refresh": "Refresh",
         "addNew": "Add new",
-        "table": { "id": "id", "name": "Name", "fromWhere": "From Where", "actions": "Actions" },
-        "drawer": { "title": "Add new tags" },
-        "form": { "name": "Name", "fromWhere": "From Where", "optionStudents": "Students", "optionTeachers": "Teachers", "submit": "Submit" }
+        "table": { "name": "Name", "type": "Type", "createdBy": "Created by", "createdAt": "Created at", "actions": "Actions" },
+        "typeOptions": { "all": "All", "student": "Student", "group": "Group" },
+        "loadError": "Failed to load tags",
+        "emptyState": "No tags found",
+        "edit": "Edit",
+        "delete": "Delete",
+        "drawer": { "addTitle": "Add new tag", "editTitle": "Edit tag" },
+        "form": {
+          "name": "Name",
+          "namePlaceholder": "e.g. Top student",
+          "type": "Type",
+          "typePlaceholder": "Select type",
+          "cancel": "Cancel",
+          "save": "Save",
+          "errors": { "name": "Enter a name", "type": "Select a type", "save": "Failed to save" }
+        },
+        "deleteConfirm": {
+          "title": "Delete tag",
+          "message": "Are you sure you want to delete the tag \"{{name}}\"?",
+          "error": "Failed to delete"
+        },
+        "toast": { "created": "Tag created successfully", "updated": "Tag updated", "deleted": "Tag deleted" },
+        "pagination": { "range": "{{from}}–{{to}} of {{total}}" }
       }
     },
     "ceo": {
@@ -2091,6 +2112,42 @@
       }
     },
     "office": {
+      "studentFreezes": {
+        "title": "Student freezes",
+        "addNew": "Add new",
+        "filters": { "allStudents": "All students", "allGroups": "All groups", "allStatuses": "All statuses" },
+        "table": { "student": "Student", "group": "Group", "startDate": "Start date", "endDate": "End date", "reason": "Reason", "status": "Status", "actions": "Actions" },
+        "status": { "active": "Active", "expired": "Expired", "cancelled": "Cancelled" },
+        "loadError": "Failed to load data",
+        "noData": "No data found",
+        "edit": "Edit",
+        "delete": "Delete",
+        "createTitle": "New freeze",
+        "editTitle": "Edit freeze",
+        "form": {
+          "student": "Student",
+          "selectStudent": "Select a student",
+          "group": "Group",
+          "selectGroup": "Select a group",
+          "startDate": "Start date",
+          "endDate": "End date",
+          "reason": "Reason",
+          "submit": "Submit",
+          "save": "Save"
+        },
+        "toast": {
+          "created": "Freeze created successfully",
+          "updated": "Freeze updated",
+          "deleted": "Freeze deleted",
+          "error": "Something went wrong"
+        },
+        "deleteConfirm": {
+          "title": "Delete freeze",
+          "message": "Are you sure you want to delete the freeze for \"{{name}}\"?",
+          "cancel": "Cancel",
+          "error": "Failed to delete"
+        }
+      },
       "archive": {
         "title": "Archive",
         "quantity": "Quantity — {{count}}",

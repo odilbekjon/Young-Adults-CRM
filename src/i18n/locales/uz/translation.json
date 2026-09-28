@@ -1728,10 +1728,31 @@
     "tags": {
       "tag": {
         "title": "Teglar",
+        "refresh": "Yangilash",
         "addNew": "Qo'shish",
-        "table": { "id": "id", "name": "Nomi", "fromWhere": "Qayerdan", "actions": "Amallar" },
-        "drawer": { "title": "Yangi teg qo'shish" },
-        "form": { "name": "Nomi", "fromWhere": "Qayerdan", "optionStudents": "O'quvchilar", "optionTeachers": "O'qituvchilar", "submit": "Yuborish" }
+        "table": { "name": "Nomi", "type": "Turi", "createdBy": "Kim yaratdi", "createdAt": "Yaratilgan sana", "actions": "Amallar" },
+        "typeOptions": { "all": "Barchasi", "student": "O'quvchi", "group": "Guruh" },
+        "loadError": "Teglarni yuklashda xatolik",
+        "emptyState": "Teglar topilmadi",
+        "edit": "Tahrirlash",
+        "delete": "O'chirish",
+        "drawer": { "addTitle": "Yangi teg qo'shish", "editTitle": "Tegni tahrirlash" },
+        "form": {
+          "name": "Nomi",
+          "namePlaceholder": "Masalan: Top o'quvchi",
+          "type": "Turi",
+          "typePlaceholder": "Turini tanlang",
+          "cancel": "Bekor qilish",
+          "save": "Saqlash",
+          "errors": { "name": "Nomini kiriting", "type": "Turini tanlang", "save": "Saqlashda xatolik" }
+        },
+        "deleteConfirm": {
+          "title": "Tegni o'chirish",
+          "message": "\"{{name}}\" tegini o'chirishga ishonchingiz komilmi?",
+          "error": "O'chirishda xatolik"
+        },
+        "toast": { "created": "Teg muvaffaqiyatli yaratildi", "updated": "Teg yangilandi", "deleted": "Teg o'chirildi" },
+        "pagination": { "range": "{{from}}–{{to}} / {{total}}" }
       }
     },
     "ceo": {
@@ -2091,6 +2112,42 @@
       }
     },
     "office": {
+      "studentFreezes": {
+        "title": "Talabalarni muzlatish",
+        "addNew": "Qo'shish",
+        "filters": { "allStudents": "Barcha o'quvchilar", "allGroups": "Barcha guruhlar", "allStatuses": "Barcha holatlar" },
+        "table": { "student": "O'quvchi", "group": "Guruh", "startDate": "Boshlanish sanasi", "endDate": "Tugash sanasi", "reason": "Sababi", "status": "Holati", "actions": "Amallar" },
+        "status": { "active": "Faol", "expired": "Muddati tugagan", "cancelled": "Bekor qilingan" },
+        "loadError": "Ma'lumotlarni yuklab bo'lmadi",
+        "noData": "Ma'lumot topilmadi",
+        "edit": "Tahrirlash",
+        "delete": "O'chirish",
+        "createTitle": "Yangi muzlatish",
+        "editTitle": "Muzlatishni tahrirlash",
+        "form": {
+          "student": "O'quvchi",
+          "selectStudent": "O'quvchini tanlang",
+          "group": "Guruh",
+          "selectGroup": "Guruhni tanlang",
+          "startDate": "Boshlanish sanasi",
+          "endDate": "Tugash sanasi",
+          "reason": "Sababi",
+          "submit": "Yuborish",
+          "save": "Saqlash"
+        },
+        "toast": {
+          "created": "Muzlatish muvaffaqiyatli qo'shildi",
+          "updated": "Muzlatish yangilandi",
+          "deleted": "Muzlatish o'chirildi",
+          "error": "Xatolik yuz berdi"
+        },
+        "deleteConfirm": {
+          "title": "Muzlatishni o'chirish",
+          "message": "\"{{name}}\" uchun muzlatishni o'chirishga ishonchingiz komilmi?",
+          "cancel": "Bekor qilish",
+          "error": "O'chirishda xatolik"
+        }
+      },
       "archive": {
         "title": "Arxiv",
         "quantity": "Soni — {{count}}",

@@ -142,6 +142,6 @@ export const baseApi = createApi({
   reducerPath: "baseApi",
   baseQuery: baseQueryWithReauth,
   endpoints: () => ({}),
-  tagTypes: ["user", "course", "branch", "room", "dashboard", "student", "group", "studentGroup", "attendance", "teacher", "leadColumn", "leadForm", "lead", "leadSection", "leadSource", "payment", "smsAutoSetting", "smsTemplate", "archive", "holiday", "reason", "report", "salary", "generalSettings", "studentFreeze", "studentPortal", "staff", "teacherPortal"],
+  tagTypes: ["user", "course", "branch", "room", "dashboard", "student", "group", "studentGroup", "attendance", "teacher", "leadColumn", "leadForm", "lead", "leadSection", "leadSource", "payment", "smsAutoSetting", "smsTemplate", "archive", "holiday", "reason", "report", "salary", "generalSettings", "studentFreeze", "studentPortal", "staff", "teacherPortal", "tag"],
 });
 export default baseApi;

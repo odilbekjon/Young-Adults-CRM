@@ -2045,7 +2045,9 @@
             "status": "Status:",
             "date": "Date:",
             "creator": "Creator:",
-            "time": "Time:"
+            "time": "Time:",
+            "notes": "Notes:",
+            "paidMonths": "Paid months:"
           }
         },
         "landingPage": {

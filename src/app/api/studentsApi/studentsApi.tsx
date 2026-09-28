@@ -133,6 +133,7 @@ const normalizeStudentPayments = (raw: unknown): StudentPaymentsResult => {
         const student = (r.student ?? {}) as Record<string, unknown>;
         const group = (r.group ?? {}) as Record<string, unknown>;
         const method = (r.paymentMethod ?? {}) as Record<string, unknown>;
+        const branch = (r.branch ?? {}) as Record<string, unknown>;
         return {
             id: String(r.id ?? r._id ?? i),
             amount: asMoney(r.amount),
@@ -143,9 +144,13 @@ const normalizeStudentPayments = (raw: unknown): StudentPaymentsResult => {
             groupName: String(r.groupName ?? group.name ?? ""),
             paymentMethodId: asString(r.paymentMethodId ?? method.id),
             paymentMethodName: String(r.paymentMethodName ?? method.name ?? ""),
-            branchId: asString(r.branchId),
+            branchId: asString(r.branchId ?? branch.id),
+            branchName: r.branchName ? String(r.branchName) : (branch.name ? String(branch.name) : null),
             date: (r.date as string | undefined) ?? null,
             notes: String(r.notes ?? r.comment ?? ""),
+            provider: (r.provider ? String(r.provider) : null) as PaymentRow["provider"],
+            transactionId: r.transactionId ? String(r.transactionId) : null,
+            receiptUrl: r.receiptUrl ? String(r.receiptUrl) : null,
             createdBy: asString(r.createdBy),
             createdAt: r.createdAt as string | undefined,
             status: asString(r.status),

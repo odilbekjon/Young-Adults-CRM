@@ -199,11 +199,12 @@ export const AllPayments = () => {
       {monthStats && (
         <>
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{t("finance.allPayments.stats.thisMonth.title")}</p>
-        <div className="grid grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-5 gap-3 mb-5">
           {[
             { label: t("finance.allPayments.stats.thisMonth.income"), value: monthStats.totalIncomeThisMonth },
             { label: t("finance.allPayments.stats.thisMonth.expenses"), value: monthStats.totalExpensesThisMonth },
             { label: t("finance.allPayments.stats.thisMonth.salaries"), value: monthStats.totalSalariesThisMonth },
+            { label: t("finance.allPayments.stats.thisMonth.withdrawals"), value: monthStats.totalWithdrawalsThisMonth },
             { label: t("finance.allPayments.stats.thisMonth.netProfit"), value: monthStats.netProfitThisMonth },
           ].map((s) => (
             <div key={s.label} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] px-4 py-3 shadow-sm">

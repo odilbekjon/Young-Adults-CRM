@@ -728,6 +728,7 @@
           "income": "Income",
           "expenses": "Expenses",
           "salaries": "Salaries",
+          "withdrawals": "Withdrawals",
           "netProfit": "Net profit"
         }
       },

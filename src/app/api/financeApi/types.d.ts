@@ -264,7 +264,9 @@ export interface ExpensesResult {
 }
 
 // GET /finance/payments — the full payments registry (list), distinct from
-// the single POST /finance/payments mutation above.
+// the single POST /finance/payments mutation above. Row shape confirmed
+// live (2026-09): nested student/group/branch/paymentMethod/createdBy
+// objects, plus provider/transactionId/receiptUrl alongside status.
 export interface PaymentRow {
   id: string;
   amount: number;
@@ -276,15 +278,14 @@ export interface PaymentRow {
   paymentMethodId: string | null;
   paymentMethodName: string;
   branchId: string | null;
+  branchName: string | null;
   date: string | null;
   notes: string;
+  provider: PaymentProvider | null;
+  transactionId: string | null;
+  receiptUrl: string | null;
   createdBy: string | null;
   createdAt?: string;
-  // Not documented in Swagger beyond DELETE /finance/payments/{id}'s own
-  // description ("marks the payment REFUNDED"), which confirms payments do
-  // carry a status field — read defensively; null on a backend that doesn't
-  // return it, in which case the row is treated as a normal completed
-  // payment (the overwhelmingly common case) rather than assuming a value.
   status: string | null;
 }
 
@@ -311,11 +312,12 @@ export interface PaymentDetail extends PaymentRow {
   balance: number | null;
 }
 
-// GET /finance/stats
+// GET /finance/stats — response shape confirmed live (2026-09).
 export interface FinanceStats {
   totalIncomeThisMonth: number;
   totalExpensesThisMonth: number;
   totalSalariesThisMonth: number;
+  totalWithdrawalsThisMonth: number;
   netProfitThisMonth: number;
 }
 
@@ -335,13 +337,20 @@ export interface CreateWithdrawalResponse {
   data: unknown;
 }
 
-// GET /finance/withdrawals
+// GET /finance/withdrawals — row shape confirmed live (2026-09): the field
+// guessed as `comment`/`notes`/`description` is actually `reason`, and a
+// `recipientName` (who the cash was paid out to) exists but wasn't
+// captured at all before.
 export interface WithdrawalRow {
   id: string;
   amount: number;
+  recipientName: string;
+  reason: string;
+  paymentMethodId: string | null;
+  paymentMethodName: string;
   branchId: string | null;
+  branchName: string | null;
   date: string | null;
-  comment: string;
   createdBy: string | null;
   createdAt?: string;
 }

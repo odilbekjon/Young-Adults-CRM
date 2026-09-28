@@ -735,6 +735,7 @@
           "income": "Доход",
           "expenses": "Расходы",
           "salaries": "Зарплаты",
+          "withdrawals": "Снято",
           "netProfit": "Чистая прибыль"
         }
       },

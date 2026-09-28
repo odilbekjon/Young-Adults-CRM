@@ -259,6 +259,7 @@ export const Withdraw = () => {
               <TableRow sx={{ backgroundColor: "#f9fafb" }}>
                 {[
                   t("finance.withdraw.table.date"),
+                  t("finance.withdraw.table.name"),
                   t("finance.withdraw.table.sum"),
                   t("finance.withdraw.table.comment"),
                   t("finance.withdraw.table.creator"),
@@ -284,13 +285,13 @@ export const Withdraw = () => {
             <TableBody>
               {withdrawalsLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                     <CircularProgress size={22} />
                   </TableCell>
                 </TableRow>
               ) : withdrawalsError ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                     <div className="flex flex-col items-center gap-2 text-gray-500">
                       <FiAlertCircle size={20} className="text-red-400" />
                       <span className="text-sm">{t("finance.withdraw.table.loadError")}</span>
@@ -302,7 +303,7 @@ export const Withdraw = () => {
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4, color: "#9ca3af", fontSize: 13 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: "#9ca3af", fontSize: 13 }}>
                     {t("finance.withdraw.table.empty")}
                   </TableCell>
                 </TableRow>
@@ -320,12 +321,15 @@ export const Withdraw = () => {
                       <TableCell sx={{ fontSize: 12, py: 1.5, whiteSpace: "nowrap", fontWeight: 500, color: "#374151", minWidth: 110 }}>
                         {rowNum}. {fmtDate(w.date)}
                       </TableCell>
+                      <TableCell sx={{ fontSize: 12, py: 1.5, whiteSpace: "nowrap", minWidth: 160 }}>
+                        {w.recipientName || <span className="text-gray-400 italic text-xs">—</span>}
+                      </TableCell>
                       <TableCell sx={{ fontSize: 12, py: 1.5, whiteSpace: "nowrap", minWidth: 130 }}>
                         <span className="font-bold text-gray-900 text-sm">{fmt(w.amount)}</span>
                         <span className="text-[11px] text-gray-400 ml-1">UZS</span>
                       </TableCell>
                       <TableCell sx={{ fontSize: 12, py: 1.5, minWidth: 200 }}>
-                        {w.comment || <span className="text-gray-400 italic text-xs">—</span>}
+                        {w.reason || <span className="text-gray-400 italic text-xs">—</span>}
                       </TableCell>
                       <TableCell sx={{ fontSize: 12, py: 1.5, minWidth: 160 }}>
                         <span className="text-gray-700 text-xs">{w.createdBy || "—"}</span>

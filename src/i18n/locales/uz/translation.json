@@ -1914,14 +1914,16 @@
         "form": {
           "title": "Yangi xodim qo'shish", "name": "Ism", "phone": "Telefon", "email": "Email", "emailPlaceholder": "email@example.com",
           "password": "Parol", "passwordPlaceholder": "Parolni kiriting", "setPasswordToggle": "+ Parol o'rnatish", "hidePasswordToggle": "− Parolni yashirish",
+          "role": "Systemli rol", "roleHelp": "Majburiy — bu hisobning kirish darajasini belgilaydi.",
           "rolePermissionId": "Lavozim",
-          "rolePermissionIdHelp": "Majburiy — bu hisobning kirish darajasini belgilaydi. Lavozimlar modulidagi lavozimlardan birini tanlang.",
+          "rolePermissionIdHelp": "Majburiy — \"Lavozimlar\" moduli lavozimlaridan birini tanlang.",
+          "roleOptions": { "SUPERADMIN": "Super admin", "ADMIN": "Admin" },
           "branches": "Filiallar", "jobTitle": "Ish unvoni", "jobTitlePlaceholder": "Masalan: Menejer", "jobTitleHelp": "Xodimlar ro'yxatida shu unvon ko'rsatiladi — yuqoridagi \"Lavozim\" (ruxsatlar profili)dan farqli, erkin matn.", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi", "male": "Erkak", "female": "Ayol",
           "photo": "Rasm", "noFileChosen": "Fayl tanlanmagan", "browse": "Tanlash", "submit": "Yuborish"
         },
         "roles": { "ceo": "CEO", "branchDirector": "Filial direktori", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Cheklangan administrator", "teacher": "O'qituvchi", "marketer": "Marketolog", "cashier": "Kassir" },
         "gender": { "male": "Erkak", "female": "Ayol" },
-        "validation": { "nameRequired": "Ism kiritilishi shart", "rolePermissionIdRequired": "Kamida bitta lavozim tanlanishi shart", "contactRequired": "Email yoki telefon raqamini kiriting", "passwordTooShort": "Parol kamida 6 ta belgidan iborat bo'lishi kerak" },
+        "validation": { "nameRequired": "Ism kiritilishi shart", "rolePermissionIdRequired": "Kamida bitta lavozim tanlanishi shart", "roleRequired": "Systemli rol kiritilishi shart", "contactRequired": "Email yoki telefon raqamini kiriting", "passwordTooShort": "Parol kamida 6 ta belgidan iborat bo'lishi kerak" },
         "deleteDialog": { "title": "Xodimni o'chirish", "message": "Rostdan ham bu xodimni o'chirmoqchimisiz? U arxivga ko'chiriladi va \"Faol emas\" holatiga o'tkaziladi — istalgan vaqtda Arxiv sahifasidan qayta tiklashingiz mumkin.", "cancel": "Bekor qilish", "confirm": "O'chirish" },
         "toast": { "created": "Xodim qo'shildi", "updated": "Xodim ma'lumotlari yangilandi", "deleted": "Xodim o'chirildi", "statusToggled": "Status yangilandi", "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring.", "deleteConflict": "Bu xodim hali filialga biriktirilgan, shuning uchun o'chirib bo'lmaydi.", "rolePermissionPartialError": "Xodim saqlandi, lekin ba'zi qo'shimcha lavozimlarni biriktirish/olib tashlashda xatolik yuz berdi." },
         "pagination": { "prev": "Orqaga", "next": "Oldinga" }
@@ -2045,7 +2047,9 @@
             "paymentAmount": "To'lov summasi:",
             "date": "Sana:",
             "creator": "Yaratuvchi:",
-            "time": "Vaqt:"
+            "time": "Vaqt:",
+            "notes": "Izoh:",
+            "paidMonths": "To'langan oylar:"
           }
         },
         "landingPage": {
@@ -2372,7 +2376,7 @@
       "studentLeft": {
         "title": "Guruhni tark etgan o'quvchilar",
         "quantity": "Soni — {{count}}",
-        "noData": "Ma'lumot yo'q",
+        "noData": "Net ma'lumot",
         "attentionBanner": {
           "title": "Diqqat!",
           "message": "O'quv markazini tark etgan o'quvchilar hisobotidagi muammolar tuzatildi. Bundan tashqari, jadvalga yangi zarur ustunlar va filtrlar qo'shildi. 18.02.2025 sanasidan boshlab, guruhdan o'chirilgan barcha o'quvchilar \"Yangi jadval\"da qayd etiladi va endi eski jadvalga qo'shilmaydi. 18.02.2025 dan oldingi ma'lumotlarni ko'rish uchun eski jadvalga o'ting."

@@ -21,6 +21,7 @@ import {
     PaymentRow,
     PaymentsListResult,
     PaymentDetail,
+    PaymentReceipt,
     FinanceStats,
     WithdrawalRow,
     WithdrawalsResult,
@@ -305,6 +306,39 @@ const normalizePaymentDetail = (raw: unknown): PaymentDetail => {
         teacherName: asString(obj.teacherName ?? teacher.name ?? groupTeachers[0]?.name) || null,
         coursePrice: coursePriceRaw !== undefined ? asMoney(coursePriceRaw) : null,
         balance: balanceRaw !== undefined ? asMoney(balanceRaw) : null,
+    };
+};
+
+// GET /finance/payments/{id}/receipt row shape confirmed live (2026-09) —
+// see PaymentReceipt's doc comment for how it differs from PaymentDetail.
+const normalizePaymentReceipt = (raw: unknown): PaymentReceipt => {
+    const obj = (raw ?? {}) as Record<string, unknown>;
+    const student = (obj.student ?? {}) as Record<string, unknown>;
+    const group = obj.group as Record<string, unknown> | null | undefined;
+    const branch = obj.branch as Record<string, unknown> | null | undefined;
+    const paidMonths = Array.isArray(obj.paidMonths) ? obj.paidMonths : [];
+
+    return {
+        receiptNumber: obj.receiptNumber ? asString(obj.receiptNumber) : null,
+        date: obj.date ? asString(obj.date) : null,
+        amount: asMoney(obj.amount),
+        paymentMethod: asString(obj.paymentMethod),
+        student: {
+            id: asString(student.id),
+            name: asString(student.name),
+            phone: asString(student.phone),
+        },
+        group: group ? { id: asString(group.id), name: asString(group.name) } : null,
+        branch: branch
+            ? {
+                id: asString(branch.id),
+                name: asString(branch.name),
+                phone: branch.phone ? asString(branch.phone) : null,
+                address: branch.address ? asString(branch.address) : null,
+            }
+            : null,
+        notes: obj.notes ? asString(obj.notes) : null,
+        paidMonths: paidMonths.map((m) => asString(m)).filter(Boolean),
     };
 };
 
@@ -635,13 +669,13 @@ export const financeApi = baseApi.injectEndpoints({
         // ("bitta to'lov bo'yicha chop etish uchun kerakli barcha
         // ma'lumotlarni qaytaradi"), distinct from the plain detail endpoint
         // above. This is what PaymentReceiptModal is backed by.
-        paymentReceipt: builder.query<PaymentDetail, string>({
+        paymentReceipt: builder.query<PaymentReceipt, string>({
             query: (id) => ({
                 url: `${PATHS.PAYMENTS}/${id}/receipt`,
                 method: "GET",
             }),
             transformResponse: (response: { success: boolean; data: unknown }) =>
-                normalizePaymentDetail(response?.data),
+                normalizePaymentReceipt(response?.data),
             providesTags: ["payment"],
         }),
         paymentsTotal: builder.query<FinanceTotalResult, FinanceListQueryArgs>({

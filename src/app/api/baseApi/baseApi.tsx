@@ -22,16 +22,15 @@ import { logout, setToken } from "../../store/authSlice";
 // general resilience margin against transient network errors.
 
 const fetchQuery = fetchBaseQuery({
-  baseUrl: import.meta.env.VITE_API_URL || "https://api.youngadults-crm.uz/api/v1",
+  // baseUrl: import.meta.env.VITE_API_URL || "https://api.youngadults-crm.uz/api/v1",
+  baseUrl: "https://young-adults-dj7r.onrender.com/api/v1/",
   credentials: 'include',
   prepareHeaders: (headers, { getState }) => {
     const token = useStorage.getTokens()?.accessToken;
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
     }
-    // Centralized branch scoping: every request (GET, POST, PUT, DELETE)
-    // picks up the currently selected branch from Redux, so individual API
-    // files don't each need to thread a branchId param through.
+  
     const state = getState() as { branch?: { selectedBranchId?: string | null } };
     const branchId = state.branch?.selectedBranchId;
     if (branchId) {

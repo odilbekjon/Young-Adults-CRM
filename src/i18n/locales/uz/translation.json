@@ -2376,7 +2376,7 @@
       "studentLeft": {
         "title": "Guruhni tark etgan o'quvchilar",
         "quantity": "Soni — {{count}}",
-        "noData": "Net ma'lumot",
+        "noData": "Ma'lumot yo'q",
         "attentionBanner": {
           "title": "Diqqat!",
           "message": "O'quv markazini tark etgan o'quvchilar hisobotidagi muammolar tuzatildi. Bundan tashqari, jadvalga yangi zarur ustunlar va filtrlar qo'shildi. 18.02.2025 sanasidan boshlab, guruhdan o'chirilgan barcha o'quvchilar \"Yangi jadval\"da qayd etiladi va endi eski jadvalga qo'shilmaydi. 18.02.2025 dan oldingi ma'lumotlarni ko'rish uchun eski jadvalga o'ting."

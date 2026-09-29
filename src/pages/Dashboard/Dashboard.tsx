@@ -559,23 +559,28 @@ export const Dashboard = () => {
                 background: "var(--color-surface-alt)",
               }}>
                 <Box sx={{ borderRight: "1px solid var(--color-border)", py: 1 }} />
-                <Box sx={{ position: "relative", height: 32 }}>
-                  {TIME_LABELS.map((t, i) => (
-                    <Typography
-                      key={t}
-                      sx={{
-                        position: "absolute",
-                        left: `${(i / (TIME_LABELS.length - 1)) * 100}%`,
-                        transform: "translateX(-50%)",
-                        top: "50%", mt: "-9px",
-                        fontSize: 10, whiteSpace: "nowrap",
-                        fontWeight: 500,
-                        color: (t === "10:30" || t === "11:00") ? "#f97316" : "var(--color-text-muted)",
-                      }}
-                    >
-                      {t}
-                    </Typography>
-                  ))}
+                <Box sx={{ position: "relative", height: 30 }}>
+                  {TIME_LABELS.map((t, i) => {
+                    const isHourMark = t.endsWith(":00");
+                    return (
+                      <Typography
+                        key={t}
+                        sx={{
+                          position: "absolute",
+                          left: `${(i / (TIME_LABELS.length - 1)) * 100}%`,
+                          transform: "translateX(-50%)",
+                          top: "50%", mt: "-9px",
+                          fontSize: isHourMark ? 11 : 9.5, whiteSpace: "nowrap",
+                          fontWeight: isHourMark ? 700 : 400,
+                          color: (t === "10:30" || t === "11:00")
+                            ? "#f97316"
+                            : isHourMark ? "var(--color-text-secondary)" : "var(--color-text-muted)",
+                        }}
+                      >
+                        {t}
+                      </Typography>
+                    );
+                  })}
                 </Box>
               </Box>
 
@@ -589,7 +594,7 @@ export const Dashboard = () => {
                       display: "grid",
                       gridTemplateColumns: "110px 1fr",
                       borderBottom: "1px solid var(--color-border-subtle)",
-                      minHeight: 68,
+                      minHeight: 56,
                       "&:hover": { background: "var(--color-surface-hover)" },
                     }}
                   >
@@ -601,7 +606,7 @@ export const Dashboard = () => {
                         {room}
                       </Typography>
                     </Box>
-                    <Box sx={{ position: "relative", minHeight: 68 }}>
+                    <Box sx={{ position: "relative", minHeight: 56 }}>
                       {/* Grid lines */}
                       {TIME_LABELS.map((t, i) => (
                         <Box key={t} sx={{
@@ -626,10 +631,11 @@ export const Dashboard = () => {
                                 position: "absolute",
                                 left: pct(startOff),
                                 width: pct(ev.duration),
-                                top: 8, bottom: 8,
+                                top: 4, bottom: 4,
                                 backgroundColor: ev.color,
                                 borderRadius: "8px",
-                                px: 1, py: 0.5,
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                                px: 1.1, py: 0.6,
                                 overflow: "hidden",
                                 cursor: "pointer",
                                 transition: "filter 0.15s",
@@ -640,17 +646,17 @@ export const Dashboard = () => {
                                 {ev.tag && (
                                   <Box sx={{
                                     background: ev.tagColor, borderRadius: "3px",
-                                    px: 0.6, fontSize: 9, fontWeight: 700,
+                                    px: 0.6, fontSize: 9.5, fontWeight: 700,
                                     color: "var(--color-surface)", lineHeight: 1.5,
                                   }}>
                                     {ev.tag}
                                   </Box>
                                 )}
-                                <Typography sx={{ fontSize: 10, fontWeight: 700, color: "var(--color-surface)", lineHeight: 1.3 }}>
+                                <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--color-surface)", lineHeight: 1.3 }}>
                                   {ev.groupName}
                                 </Typography>
                               </Box>
-                              <Typography sx={{ fontSize: 9, color: "rgba(255,255,255,0.9)", lineHeight: 1.3 }}>
+                              <Typography sx={{ fontSize: 10.5, color: "rgba(255,255,255,0.9)", lineHeight: 1.3 }}>
                                 {ev.courseName}
                               </Typography>
                               {ev.dateRange && (
@@ -709,6 +715,8 @@ export const Dashboard = () => {
                 // For each time slot row, find events that START in this 30-min window
                 const slotStart = TIME_START + tIdx * 30;
                 const slotEnd   = slotStart + 30;
+                const isHourMark = timeLabel.endsWith(":00");
+                const rowHeight = 40;
 
                 return (
                   <Box
@@ -717,18 +725,20 @@ export const Dashboard = () => {
                       display: "grid",
                       gridTemplateColumns: `80px repeat(${rooms.length}, 1fr)`,
                       borderBottom: "1px solid var(--color-border-subtle)",
-                      minHeight: 48,
+                      minHeight: rowHeight,
                     }}
                   >
                     {/* Time label */}
                     <Box sx={{
                       px: 1.5,
-                      display: "flex", alignItems: "flex-start", pt: 1,
+                      display: "flex", alignItems: "flex-start", pt: 0.75,
                       borderRight: "1px solid var(--color-border)",
                     }}>
                       <Typography sx={{
-                        fontSize: 10, fontWeight: 500,
-                        color: (timeLabel === "10:30" || timeLabel === "11:00") ? "#f97316" : "var(--color-text-muted)",
+                        fontSize: isHourMark ? 11 : 9.5, fontWeight: isHourMark ? 700 : 500,
+                        color: (timeLabel === "10:30" || timeLabel === "11:00")
+                          ? "#f97316"
+                          : isHourMark ? "var(--color-text-secondary)" : "var(--color-text-muted)",
                         whiteSpace: "nowrap",
                       }}>
                         {timeLabel}
@@ -754,7 +764,7 @@ export const Dashboard = () => {
                           key={room}
                           sx={{
                             borderRight: "1px solid var(--color-border)",
-                            p: 0.5, minHeight: 48,
+                            p: 0.4, minHeight: rowHeight,
                             background: tIdx % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-alt)",
                           }}
                         >
@@ -768,32 +778,33 @@ export const Dashboard = () => {
                                 sx={{
                                   backgroundColor: ev.color,
                                   borderRadius: "6px",
+                                  boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
                                   px: 1, py: 0.5,
-                                  mb: 0.5,
+                                  mb: 0.4,
                                   cursor: "pointer",
                                   transition: "filter 0.15s",
                                   "&:hover": { filter: "brightness(0.9)" },
                                   // span multiple rows via minHeight proportional to duration
-                                  minHeight: Math.max(40, (ev.duration / 30) * 48 - 4),
+                                  minHeight: Math.max(34, (ev.duration / 30) * rowHeight - 4),
                                 }}
                               >
                                 {ev.tag && (
                                   <Box sx={{
                                     background: ev.tagColor, borderRadius: "3px",
                                     px: 0.5, mb: 0.25, display: "inline-block",
-                                    fontSize: 8, fontWeight: 700, color: "var(--color-surface)",
+                                    fontSize: 8.5, fontWeight: 700, color: "var(--color-surface)",
                                   }}>
                                     {ev.tag}
                                   </Box>
                                 )}
-                                <Typography sx={{ fontSize: 9, fontWeight: 700, color: "var(--color-surface)", lineHeight: 1.3 }}>
+                                <Typography sx={{ fontSize: 10.5, fontWeight: 700, color: "var(--color-surface)", lineHeight: 1.25 }}>
                                   {ev.groupName}
                                 </Typography>
-                                <Typography sx={{ fontSize: 8, color: "rgba(255,255,255,0.85)", lineHeight: 1.2 }}>
+                                <Typography sx={{ fontSize: 9, color: "rgba(255,255,255,0.85)", lineHeight: 1.2 }}>
                                   {ev.courseName}
                                 </Typography>
                                 {ev.students > 0 && (
-                                  <Typography sx={{ fontSize: 8, color: "rgba(255,255,255,0.8)", mt: 0.25 }}>
+                                  <Typography sx={{ fontSize: 8.5, color: "rgba(255,255,255,0.8)", mt: 0.25 }}>
                                     {t("dashboard.schedule.studentsCountSuffix", { count: ev.students, max: ev.maxStudents })}
                                   </Typography>
                                 )}
@@ -806,7 +817,7 @@ export const Dashboard = () => {
                               background: spanningEvents[0].color,
                               opacity: 0.3,
                               borderRadius: "4px",
-                              height: 40,
+                              height: 32,
                             }} />
                           )}
                         </Box>

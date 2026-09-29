@@ -15,7 +15,7 @@ import { PiMicrosoftExcelLogoFill }      from "react-icons/pi";
 import { IoClose }                       from "react-icons/io5";
 import { TbAdjustmentsHorizontal, TbColumns3, TbCalendar } from "react-icons/tb";
 import { HiChevronDown }                 from "react-icons/hi";
-import { useEffect, useMemo, useRef, useState }     from "react";
+import { useMemo, useRef, useState }     from "react";
 import { useNavigate }                   from "react-router-dom";
 import { useTranslation }                from "react-i18next";
 import { useSelector }                   from "react-redux";
@@ -32,6 +32,7 @@ import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useTeachersSelectQuery } from "../../app/api/teachersApi";
 import { useTagsSelectQuery } from "../../app/api/tagsApi";
 import type { RootState } from "../../app/store";
+import { PortalPopover } from "../../components/common/PortalPopover";
 import { useBranch } from "../../Context/BranchContext";
 import { useToast } from "../../Context/ToastContext";
 import { Calendar } from "../SingleGroup/Calendar";
@@ -247,15 +248,6 @@ const DateFilter = ({ label, value, onChange, onClear, minWidth = 200 }: DateFil
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
       <Button
@@ -285,13 +277,12 @@ const DateFilter = ({ label, value, onChange, onClear, minWidth = 200 }: DateFil
           </Stack>
         ) : label}
       </Button>
-      {open && (
+      <PortalPopover open={open} onClose={() => setOpen(false)} anchorRef={wrapRef}>
         <div
           style={{
-            position: "absolute", top: "calc(100% + 8px)", left: 0,
             width: 300, background: "#fff", border: "1px solid #eee",
             borderRadius: 12, boxShadow: "0 12px 32px rgba(0,0,0,0.14)",
-            padding: 16, zIndex: 50,
+            padding: 16,
           }}
         >
           <Calendar
@@ -305,7 +296,7 @@ const DateFilter = ({ label, value, onChange, onClear, minWidth = 200 }: DateFil
             }}
           />
         </div>
-      )}
+      </PortalPopover>
     </div>
   );
 };

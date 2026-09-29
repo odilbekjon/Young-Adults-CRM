@@ -45,7 +45,7 @@ import { PiMicrosoftExcelLogoFill } from "react-icons/pi";
 
 import { FlatStudent, mapApiStudentToFlat, formatDate } from "../../constants/FlatStudents";
 import { ALL_COLUMNS, CONTACT_ICONS, BADGE_COLORS } from "../../constants/StudentsTable";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { AddStudent } from "../../components/AddStudent";
 import { AddPayment } from "../../components/AddPayment";
@@ -185,7 +185,7 @@ const TextFilterInput = ({ placeholder, value, onChange, disabled, disabledTitle
 
 /* ─── DATE FILTER BOX (From/To created) ─────────────────── */
 const DateFilterInput = ({ placeholder, value, onChange }: { placeholder: string; value: string; onChange: (val: string) => void }) => (
-  <Box sx={{ minWidth: 150 }}>
+  <Box sx={{ minWidth: 132, flexShrink: 0 }}>
     <DatePickerField value={value} onChange={onChange} placeholder={placeholder} />
   </Box>
 );
@@ -524,8 +524,26 @@ export const Students = () => {
     search: "", teacher: "", course: "", status: "", financial: "",
     groupCount: "", fromCreated: "", toCreatedDate: "", tags: "",
   };
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  // Read once on mount so a link like /students?status=active opens
+  // pre-filtered — same "read once into initial state" convention already
+  // used by Finance > All Payments for its Dashboard-driven date range.
+  const [searchParams] = useSearchParams();
+  const initialStatusParam = searchParams.get("status");
+  const initialStatus = initialStatusParam === "active" || initialStatusParam === "inactive" ? initialStatusParam : "";
+  const [filters, setFilters] = useState<Filters>({ ...EMPTY_FILTERS, status: initialStatus });
   const [advancedAnchor, setAdvancedAnchor] = useState<null | HTMLElement>(null);
+
+  // Financial situation (With debt/positive/zero balance) has no backend
+  // query param on GET /students (confirmed: studentsRequest carries no
+  // balance/debt field) — filtering it against only the current page's 20
+  // rows would silently miss matching students on other pages. So while
+  // that filter is active, this fetches a large batch instead of the normal
+  // page (covers the branch's full roster with headroom) and filters/
+  // paginates it client-side — a real filter over the real data, not a
+  // page-scoped approximation. Outside that filter, normal server-side
+  // pagination is unchanged.
+  const FULL_FETCH_LIMIT = 3000;
+  const hasFinancialFilter = Boolean(filters.financial);
 
   // GET /students only returns ACTIVE students unless `status` is sent
   // explicitly (Swagger: status query param, ACTIVE/INACTIVE) — an archived
@@ -535,7 +553,8 @@ export const Students = () => {
   // instead of being applied client-side (list rows carry no status field to
   // filter by locally in the first place).
   const { data: studentsData, isLoading: studentsLoading } = useAllStudentsQuery({
-    page, limit,
+    page: hasFinancialFilter ? 1 : page,
+    limit: hasFinancialFilter ? FULL_FETCH_LIMIT : limit,
     branchId: selectedBranchId ?? undefined,
     status: filters.status === "active" ? "ACTIVE" : filters.status === "inactive" ? "INACTIVE" : undefined,
     tagId: filters.tags || undefined,
@@ -545,13 +564,13 @@ export const Students = () => {
     if (studentsData) setStudents(studentsData.data.map(mapApiStudentToFlat));
   }, [studentsData]);
 
-  // Changing the status filter or the globally-selected branch re-queries the
-  // backend with a different result set (see above) — reset to page 1 so the
-  // user isn't stranded on a page number that no longer exists for the new
-  // filter/branch.
+  // Changing the status/financial filter or the globally-selected branch
+  // re-queries the backend with a different result set (see above) — reset
+  // to page 1 so the user isn't stranded on a page number that no longer
+  // exists for the new filter/branch.
   useEffect(() => {
     setPage(1);
-  }, [filters.status, filters.tags, selectedBranchId]);
+  }, [filters.status, filters.tags, filters.financial, selectedBranchId]);
 
   const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) =>
     setFilters((p) => ({ ...p, [key]: val }));
@@ -582,20 +601,6 @@ export const Students = () => {
     () => (groupsData?.data ?? []).map((g) => ({ id: g.id, name: g.name })),
     [groupsData]
   );
-
-  // Backend hozircha sahifalash meta'sini qaytarmaydi; shu sababli joriy
-  // sahifa hajmidan taxminiy meta hosil qilamiz, chunki bu maydon kelib
-  // qolsa (studentsData.meta) to'g'ridan-to'g'ri ishlatiladi.
-  const pageMeta = useMemo(() => {
-    if (studentsData?.meta) return studentsData.meta;
-    const count = studentsData?.data.length ?? 0;
-    return {
-      total: count,
-      page,
-      limit,
-      totalPages: count < limit ? page : page + 1,
-    };
-  }, [studentsData, page, limit]);
 
   const filtered = useMemo(() => {
     return students
@@ -633,13 +638,50 @@ export const Students = () => {
       });
   }, [students, filters, sortKey, sortDir]);
 
+  // Backend hozircha sahifalash meta'sini qaytarmaydi; shu sababli joriy
+  // sahifa hajmidan taxminiy meta hosil qilamiz, chunki bu maydon kelib
+  // qolsa (studentsData.meta) to'g'ridan-to'g'ri ishlatiladi.
+  //
+  // In financial-filter mode the "page" fetched from the backend is really
+  // the whole batch (see FULL_FETCH_LIMIT above) — total/totalPages need to
+  // describe the client-side-paginated `filtered` result instead of that
+  // batch's own (irrelevant) size.
+  const pageMeta = useMemo(() => {
+    if (hasFinancialFilter) {
+      return {
+        total: filtered.length,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(filtered.length / limit)),
+      };
+    }
+    if (studentsData?.meta) return studentsData.meta;
+    const count = studentsData?.data.length ?? 0;
+    return {
+      total: count,
+      page,
+      limit,
+      totalPages: count < limit ? page : page + 1,
+    };
+  }, [studentsData, page, limit, hasFinancialFilter, filtered]);
+
+  // Outside financial-filter mode `filtered` is already just the current
+  // server-fetched page (≤ limit rows), same as before. In financial-filter
+  // mode `filtered` can be the whole matching set, so it's sliced down to
+  // one page here for display/selection — "select all" then only selects
+  // what's visible, not every matching row across the full result.
+  const pageRows = useMemo(
+    () => (hasFinancialFilter ? filtered.slice((page - 1) * limit, page * limit) : filtered),
+    [filtered, hasFinancialFilter, page, limit]
+  );
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("asc"); }
   };
 
-  const allSelected = filtered.length > 0 && filtered.every((s) => selected.includes(s.uid));
-  const toggleAll   = () => setSelected(allSelected ? [] : filtered.map((s) => s.uid));
+  const allSelected = pageRows.length > 0 && pageRows.every((s) => selected.includes(s.uid));
+  const toggleAll   = () => setSelected(allSelected ? [] : pageRows.map((s) => s.uid));
   const toggleOne   = (uid: string) =>
     setSelected((p) => p.includes(uid) ? p.filter((x) => x !== uid) : [...p, uid]);
 
@@ -815,17 +857,18 @@ export const Students = () => {
         </Stack>
       </Stack>
 
-      {/* FILTER ROW */}
+      {/* FILTER ROW — compact controls sized to fit one row on normal
+          desktop widths; still wraps naturally on narrower screens. */}
       <Stack
-        direction="row" flexWrap="wrap" gap={1} mb={1.5}
-        sx={{ bgcolor: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "8px", p: 1.5 }}
+        direction="row" flexWrap="wrap" gap={0.75} mb={1.5} alignItems="center"
+        sx={{ bgcolor: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "8px", p: 1.25 }}
       >
         {/* Search */}
         <Box
           sx={{
             display: "flex", alignItems: "center", gap: 0.5,
             border: "1px solid var(--color-border)", borderRadius: "6px",
-            px: 1.2, py: 0.6, bgcolor: "var(--color-surface)", minWidth: 220,
+            px: 1.2, py: 0.6, bgcolor: "var(--color-surface)", minWidth: 180, flexShrink: 0,
           }}
         >
           <IoSearchOutline size={15} color="var(--color-text-muted)" />
@@ -879,14 +922,14 @@ export const Students = () => {
           placeholder={t("students.filters.externalId")}
           value="" onChange={() => {}} disabled
           disabledTitle={t("students.filters.externalIdUnavailable")}
-          minWidth={130}
+          minWidth={110}
         />
 
         <TextFilterInput
           placeholder={t("students.filters.groupCount")}
           value={filters.groupCount}
           onChange={(v) => setFilter("groupCount", v.replace(/[^0-9]/g, ""))}
-          type="number" minWidth={110}
+          type="number" minWidth={95}
         />
 
         <DateFilterInput
@@ -1022,7 +1065,7 @@ export const Students = () => {
             </TableHead>
 
             <TableBody>
-              {filtered.map((s, i) => {
+              {pageRows.map((s, i) => {
                 const badge      = BADGE_COLORS[s.groupBadgeColor] ?? BADGE_COLORS.blue;
                 const isSelected = selected.includes(s.uid);
                 return (

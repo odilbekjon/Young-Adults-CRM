@@ -1,7 +1,8 @@
 // src/pages/groups/TimeSelectField.tsx
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { MdAccessTime } from "react-icons/md";
 import { TIME_OPTIONS } from "../../../utils";
+import { PortalPopover } from "../../../components/common/PortalPopover";
 
 interface TimeSelectFieldProps {
   value: string;
@@ -13,38 +14,28 @@ export const TimeSelectField = ({ value, onChange, placeholder }: TimeSelectFiel
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
       <div
         onClick={() => setOpen((p) => !p)}
         style={{
           display: "flex", alignItems: "center", gap: 10,
-          border: "1px solid #e0e0e0", borderRadius: 10,
-          padding: "12px 14px", cursor: "pointer", background: "#fff",
+          border: "1px solid var(--color-border)", borderRadius: 10,
+          padding: "12px 14px", cursor: "pointer", background: "var(--color-surface)",
         }}
       >
-        <MdAccessTime size={17} color="#9e9e9e" />
-        <span style={{ fontSize: 14, color: value ? "#1a1a1a" : "#b0b0b0" }}>
+        <MdAccessTime size={17} color="var(--color-text-muted)" />
+        <span style={{ fontSize: 14, color: value ? "var(--color-text-primary)" : "var(--color-text-muted)" }}>
           {value || placeholder}
         </span>
       </div>
-      {open && (
+      <PortalPopover open={open} onClose={() => setOpen(false)} anchorRef={wrapRef} matchAnchorWidth>
         <div
           style={{
-            position: "absolute", top: "calc(100% + 8px)", left: 0,
-            width: "100%", minWidth: 160, maxHeight: 240, overflowY: "auto",
-            background: "#fff", border: "1px solid #eee",
-            borderRadius: 12, boxShadow: "0 12px 32px rgba(0,0,0,0.14)",
-            padding: 6, zIndex: 50,
+            minWidth: 160, maxHeight: 240, overflowY: "auto",
+            background: "var(--color-surface)", border: "1px solid var(--color-border)",
+            borderRadius: 12, boxShadow: "0 12px 32px var(--color-shadow)",
+            padding: 6,
           }}
         >
           {TIME_OPTIONS.map((time) => (
@@ -53,18 +44,18 @@ export const TimeSelectField = ({ value, onChange, placeholder }: TimeSelectFiel
               onClick={() => { onChange(time); setOpen(false); }}
               style={{
                 padding: "9px 12px", fontSize: 13, borderRadius: 8, cursor: "pointer",
-                color: time === value ? "#185FA5" : "#1a1a1a",
+                color: time === value ? "var(--color-primary)" : "var(--color-text-primary)",
                 fontWeight: time === value ? 700 : 400,
-                background: time === value ? "#E6F1FB" : "transparent",
+                background: time === value ? "var(--color-primary-surface)" : "transparent",
               }}
-              onMouseEnter={(e) => { if (time !== value) e.currentTarget.style.background = "#f3f4f6"; }}
+              onMouseEnter={(e) => { if (time !== value) e.currentTarget.style.background = "var(--color-surface-hover)"; }}
               onMouseLeave={(e) => { if (time !== value) e.currentTarget.style.background = "transparent"; }}
             >
               {time}
             </div>
           ))}
         </div>
-      )}
+      </PortalPopover>
     </div>
   );
 };

@@ -28,6 +28,7 @@ import {
   useToggleGroupStatusMutation,
   useLazyGroupExcelQuery,
   useStudentGroupsQuery,
+  useLazyStudentGroupsQuery,
   useFreezeStudentGroupMutation,
   useUnfreezeStudentGroupMutation,
   useUpdateStudentGroupStatusMutation,
@@ -186,6 +187,7 @@ export const SingleGroup = () => {
     { status: "DELETED", limit: 500 }, { skip: !id }
   );
   const [addStudentToGroup, { isLoading: isAssigning }] = useAddStudentToGroupMutation();
+  const [fetchNewMembership] = useLazyStudentGroupsQuery();
   const [transferStudent, { isLoading: isTransferring }] = useTransferStudentMutation();
   const [updateGroup, { isLoading: isSavingGroup }] = useUpdateGroupMutation();
   const [toggleGroupStatus] = useToggleGroupStatusMutation();
@@ -655,16 +657,44 @@ export const SingleGroup = () => {
       // no studentGroupId — silently breaking freeze/unfreeze/status-change
       // (all keyed on that id) for every student added this way. Only the
       // /student-groups resource itself creates the row those calls need.
-      // Starts on PROBATION (trial lesson), not ACTIVE — POST
-      // /student-groups/{id}/graduate-trial is the dedicated, documented way
-      // to promote a trial membership to ACTIVE (see handleGraduateTrialConfirm
-      // below); a new student shouldn't skip straight past that.
+      // Starts on PROBATION rather than ACTIVE so the immediate freeze
+      // below (not this call itself) is what puts them in the requested
+      // "added → frozen, not active yet" state — going through ACTIVE even
+      // briefly would risk triggering PATCH .../status's documented "payment
+      // accounting starts" side effect before a staff member meant it to.
       // joinedAt ("since when") is already one of this endpoint's own
       // optional fields per Swagger — the Add student modal's date picker
       // just wasn't wired to it before.
       await addStudentToGroup({ studentId, groupId: id, status: "PROBATION", joinedAt }).unwrap();
-      toast.success(t("singleGroup.addStudentDrawer.toast.success"));
       setAddStudentOpen(false);
+
+      // A newly added student shouldn't read as active right away — they
+      // should land FROZEN, with a staff member explicitly activating them
+      // afterwards (the same "Activate" action StudentActionsMenu already
+      // exposes for any frozen member, which unfreezes them). Creation
+      // itself only documents PROBATION/ACTIVE as initial statuses, so this
+      // freezes the brand-new membership as an immediate follow-up via the
+      // one endpoint that IS documented for FROZEN (POST /student-groups/
+      // {id}/freeze, startDate required) — looking its id up via GET
+      // /student-groups since the create response doesn't confirm carrying
+      // it back.
+      try {
+        const created = await fetchNewMembership({ groupId: id, studentId, limit: 1 }).unwrap();
+        const newMembershipId = created.rows[0]?.id;
+        if (newMembershipId) {
+          await freezeStudentGroup({
+            id: newMembershipId,
+            startDate: joinedAt || new Date().toISOString().split("T")[0],
+          }).unwrap();
+        }
+        toast.success(t("singleGroup.addStudentDrawer.toast.success"));
+      } catch {
+        // The student WAS added — only the follow-up freeze failed — so this
+        // is a distinct, narrower warning rather than the generic
+        // add-failed error below.
+        toast.success(t("singleGroup.addStudentDrawer.toast.success"));
+        toast.error(t("singleGroup.addStudentDrawer.toast.freezeError"));
+      }
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("singleGroup.addStudentDrawer.toast.error");
@@ -1139,7 +1169,7 @@ export const SingleGroup = () => {
         onClose={() => setAddStudentOpen(false)}
         students={addStudentCandidates}
         onSubmit={handleAddStudentSubmit}
-        isSubmitting={isAssigning}
+        isSubmitting={isAssigning || isFreezing}
       />
 
       {/* ══ ADD NOTE MODAL (top) ══ */}

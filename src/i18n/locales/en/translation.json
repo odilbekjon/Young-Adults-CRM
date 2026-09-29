@@ -1495,7 +1495,8 @@
       "cancel": "Cancel",
       "toast": {
         "success": "Student added to the group",
-        "error": "Failed to add student. Please try again."
+        "error": "Failed to add student. Please try again.",
+        "freezeError": "Student added, but couldn't be set to frozen — check their status manually"
       }
     },
     "deleteDropdown": {

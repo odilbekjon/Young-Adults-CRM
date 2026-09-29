@@ -1495,7 +1495,8 @@
       "cancel": "Bekor qilish",
       "toast": {
         "success": "O'quvchi guruhga qo'shildi",
-        "error": "O'quvchini qo'shib bo'lmadi. Qaytadan urinib ko'ring."
+        "error": "O'quvchini qo'shib bo'lmadi. Qaytadan urinib ko'ring.",
+        "freezeError": "O'quvchi qo'shildi, lekin uni muzlatib qo'yib bo'lmadi — holatini qo'lda tekshiring"
       }
     },
     "deleteDropdown": {

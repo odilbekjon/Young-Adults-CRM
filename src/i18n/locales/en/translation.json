@@ -86,6 +86,7 @@
     "paymentMethodError": "Failed to load payment methods",
     "amount": "Amount",
     "date": "Date",
+    "forMonth": "For month",
     "comment": "Comment",
     "submit": "Submit",
     "saving": "Saving...",

@@ -18,6 +18,12 @@ export interface CreatePaymentRequest {
   branchId: string;
   groupId?: string;
   date?: string;
+  // "Qaysi oy uchun to'lov qilinmoqda (YYYY-MM-DD)" per Swagger — distinct
+  // from `date` (when the payment was made). This is what backend's
+  // GET /finance/payments/{id}/receipt paidMonths is computed from, so
+  // omitting it (as this app previously did) leaves that receipt field
+  // permanently empty/wrong for every new payment.
+  forMonth?: string;
   notes?: string;
   receiptUrl?: File;
   provider?: PaymentProvider;

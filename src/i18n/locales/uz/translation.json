@@ -86,6 +86,7 @@
     "paymentMethodError": "To'lov usullarini yuklab bo'lmadi",
     "amount": "Summa",
     "date": "Sana",
+    "forMonth": "Qaysi oy uchun",
     "comment": "Izoh",
     "submit": "Yuborish",
     "saving": "Saqlanmoqda...",

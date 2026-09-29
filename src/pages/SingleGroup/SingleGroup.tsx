@@ -646,7 +646,7 @@ export const SingleGroup = () => {
     }
   };
 
-  const handleAddStudentSubmit = async (studentId: string) => {
+  const handleAddStudentSubmit = async (studentId: string, joinedAt?: string) => {
     if (!id) return;
     try {
       // POST /student-groups (not POST /groups/{id}/students/assign):
@@ -659,7 +659,10 @@ export const SingleGroup = () => {
       // /student-groups/{id}/graduate-trial is the dedicated, documented way
       // to promote a trial membership to ACTIVE (see handleGraduateTrialConfirm
       // below); a new student shouldn't skip straight past that.
-      await addStudentToGroup({ studentId, groupId: id, status: "PROBATION" }).unwrap();
+      // joinedAt ("since when") is already one of this endpoint's own
+      // optional fields per Swagger — the Add student modal's date picker
+      // just wasn't wired to it before.
+      await addStudentToGroup({ studentId, groupId: id, status: "PROBATION", joinedAt }).unwrap();
       toast.success(t("singleGroup.addStudentDrawer.toast.success"));
       setAddStudentOpen(false);
     } catch (err) {

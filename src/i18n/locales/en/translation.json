@@ -1487,8 +1487,10 @@
       "title": "Add Student",
       "searchStudent": "Search student",
       "searchPlaceholder": "Name or phone...",
+      "selectStudent": "Select student",
+      "selectPlaceholder": "Select",
       "noStudentsFound": "No students found",
-      "startDate": "Start date",
+      "startDate": "Date from",
       "submit": "Add Student",
       "cancel": "Cancel",
       "toast": {

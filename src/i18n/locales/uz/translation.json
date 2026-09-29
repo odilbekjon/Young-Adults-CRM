@@ -1487,8 +1487,10 @@
       "title": "O'quvchi qo'shish",
       "searchStudent": "O'quvchini qidirish",
       "searchPlaceholder": "Ism yoki telefon...",
+      "selectStudent": "O'quvchini tanlang",
+      "selectPlaceholder": "Tanlang",
       "noStudentsFound": "O'quvchilar topilmadi",
-      "startDate": "Boshlanish sanasi",
+      "startDate": "Qachondan",
       "submit": "O'quvchi qo'shish",
       "cancel": "Bekor qilish",
       "toast": {

@@ -1487,8 +1487,10 @@
       "title": "Добавить студента",
       "searchStudent": "Поиск студента",
       "searchPlaceholder": "Имя или телефон...",
+      "selectStudent": "Выберите студента",
+      "selectPlaceholder": "Выберите",
       "noStudentsFound": "Студенты не найдены",
-      "startDate": "Дата начала",
+      "startDate": "Дата с",
       "submit": "Добавить студента",
       "cancel": "Отмена",
       "toast": {

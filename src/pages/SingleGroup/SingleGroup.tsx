@@ -480,7 +480,7 @@ export const SingleGroup = () => {
     }
   };
 
-  const handleActivateConfirm = async () => {
+  const handleActivateConfirm = async (paymentStartDate: string) => {
     if (!selectedStudent) return;
     const studentGroupId = selectedStudent.studentGroupId;
     if (!studentGroupId) {
@@ -489,8 +489,13 @@ export const SingleGroup = () => {
     }
     try {
       // POST /student-groups/{id}/unfreeze — same membership id as freeze,
-      // no request body.
+      // no request body. Followed by PATCH /student-groups/{id}
+      // {paymentStartDate} — same combo handleGraduateTrialConfirm already
+      // uses to record which date the backend should calculate this
+      // membership's payment/debt accounting from (per PATCH .../status's
+      // own doc comment: "Agar ACTIVE qilinsa, to'lov hisobi boshlanadi").
       await unfreezeStudentGroup(studentGroupId).unwrap();
+      await updateStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
       toast.success(t("singleGroup.activateModal.toast.success"));
       setActivateOpen(false);
     } catch (err) {
@@ -1138,7 +1143,7 @@ export const SingleGroup = () => {
         open={activateOpen}
         onClose={() => setActivateOpen(false)}
         onConfirm={handleActivateConfirm}
-        isSaving={isUnfreezing}
+        isSaving={isUnfreezing || isSavingMembershipDates}
       />
 
       <GraduateTrialModal

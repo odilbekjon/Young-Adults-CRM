@@ -1,20 +1,36 @@
 // src/pages/groups/ActivateModal.tsx
+// Unfreezes a FROZEN membership (POST /student-groups/{id}/unfreeze, no
+// request body) and lets staff pick the date payment calculation should
+// start from — PATCH /student-groups/{id} {paymentStartDate} as a follow-up
+// (see handleActivateConfirm in SingleGroup.tsx), same combo GraduateTrialModal
+// already uses for PROBATION -> ACTIVE.
+import { useEffect, useState } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton, Button } from "@mui/material";
 import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
+import { DatePickerField } from "../DatePickerField";
 
-// POST /student-groups/{id}/unfreeze takes no request body (Swagger) — this
-// is a plain confirm, not a date picker. `onConfirm` no longer takes a
-// date; SingleGroup.tsx stamps "Activated at" with today's date locally.
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
 export const ActivateModal = ({
   open, onClose, onConfirm, isSaving,
 }: {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (paymentStartDate: string) => void;
   isSaving?: boolean;
 }) => {
   const { t } = useTranslation();
+  const [paymentStartDate, setPaymentStartDate] = useState(todayISO());
+
+  useEffect(() => {
+    if (open) setPaymentStartDate(todayISO());
+  }, [open]);
+
+  const handleSubmit = () => {
+    if (!paymentStartDate) return;
+    onConfirm(paymentStartDate);
+  };
 
   return (
     <Dialog
@@ -32,27 +48,28 @@ export const ActivateModal = ({
       </DialogTitle>
 
       <DialogContent sx={{ px: 2.5, pt: 1, pb: 2 }}>
-        <Typography fontSize={13} color="#6b7280">
+        <Typography fontSize={13} color="#6b7280" mb={1.5}>
           {t("singleGroup.activateModal.description")}
         </Typography>
+        <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} />
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: "center", pb: 3, px: 2.5 }}>
         <Button
           variant="contained"
-          onClick={onConfirm}
-          disabled={isSaving}
+          onClick={handleSubmit}
+          disabled={!paymentStartDate || isSaving}
           sx={{
             borderRadius: 999,
             textTransform: "none",
-            bgcolor: "#7a8fa6",
+            bgcolor: paymentStartDate ? "#7a8fa6" : "#c5cdd8",
             fontSize: 14,
             fontWeight: 600,
             px: 5,
             py: 1.2,
             minWidth: 140,
             boxShadow: "none",
-            "&:hover": { bgcolor: "#6b7f96", boxShadow: "none" },
+            "&:hover": { bgcolor: paymentStartDate ? "#6b7f96" : "#c5cdd8", boxShadow: "none" },
           }}
         >
           {isSaving ? t("singleGroup.activateModal.saving") : t("singleGroup.activateModal.submit")}

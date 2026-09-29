@@ -1433,11 +1433,11 @@
     },
     "activateModal": {
       "title": "Activate student",
-      "description": "Unfreeze this student and resume their attendance in this group?",
+      "description": "The student will be moved to ACTIVE status, and payment will start being calculated from the selected date.",
       "submit": "Submit",
       "saving": "Activating...",
       "toast": {
-        "success": "Student activated",
+        "success": "Student activated, payment calculation started",
         "error": "Failed to activate the student",
         "notFound": "No active freeze record found for this student"
       }

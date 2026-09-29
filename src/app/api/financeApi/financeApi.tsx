@@ -14,6 +14,8 @@ import {
     PaymentMethodsResponse,
     ExpenseCategory,
     ExpenseCategoriesResponse,
+    UpdateDebtRequest,
+    UpdateDebtResponse,
     FinanceListQueryArgs,
     FinanceListMeta,
     ExpenseRow,
@@ -507,6 +509,18 @@ export const financeApi = baseApi.injectEndpoints({
                 normalizeDebtorReceipt(response?.data),
             providesTags: ["payment", "student"],
         }),
+        // PATCH /finance/debt/{studentId}/{groupId} — plain JSON body per
+        // Swagger, unlike every other Finance mutation here (all
+        // multipart/form-data), so this is the one endpoint that doesn't go
+        // through a FormData builder.
+        updateDebt: builder.mutation<UpdateDebtResponse, UpdateDebtRequest>({
+            query: ({ studentId, groupId, ...body }) => ({
+                url: `${PATHS.DEBT}/${studentId}/${groupId}`,
+                method: "PATCH",
+                body,
+            }),
+            invalidatesTags: ["payment", "student", "group"],
+        }),
         paymentMethods: builder.query<PaymentMethod[], void>({
             query: () => ({
                 url: PATHS.PAYMENT_METHODS,
@@ -774,6 +788,7 @@ export const {
     useDebtorsTotalQuery,
     useLazyDebtorsExcelQuery,
     useDebtorReceiptQuery,
+    useUpdateDebtMutation,
     usePaymentMethodsQuery,
     useCreatePaymentMethodMutation,
     useUpdatePaymentMethodMutation,

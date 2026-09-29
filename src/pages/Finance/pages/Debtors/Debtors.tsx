@@ -2,15 +2,20 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { BsCashStack } from "react-icons/bs";
-import { FiMail, FiAlertCircle, FiDownload, FiFileText } from "react-icons/fi";
+import { FiMail, FiAlertCircle, FiDownload, FiFileText, FiEdit2 } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
-import { CircularProgress, IconButton, Tooltip } from "@mui/material";
+import {
+  CircularProgress, IconButton, Tooltip,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
+} from "@mui/material";
 
 // Reuse the SAME SMS drawer/modal used on the Students page
 import { SendSmsModal } from "../../../../components/SendSmsModal";
 import { DebtorReceiptModal } from "../../../../components/DebtorReceiptModal";
-import { useDebtorsQuery, useDebtorsTotalQuery, useLazyDebtorsExcelQuery } from "../../../../app/api/financeApi";
+import { useDebtorsQuery, useDebtorsTotalQuery, useLazyDebtorsExcelQuery, useUpdateDebtMutation } from "../../../../app/api/financeApi";
+import type { DebtorRow } from "../../../../app/api/financeApi/types";
 import { useToast } from "../../../../Context/ToastContext";
+import { extractApiError } from "../../../../utils/extractApiError";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import { formatUZS } from "../../../../utils";
 import type { RootState } from "../../../../app/store";
@@ -51,6 +56,51 @@ export const Debtors = () => {
   const [selectedStudentIds, setSelectedStudentIds] = useState<Record<string, string>>({});
   const [sendSmsOpen, setSendSmsOpen] = useState(false);
   const [receiptStudentId, setReceiptStudentId] = useState<string | null>(null);
+
+  // PATCH /finance/debt/{studentId}/{groupId} — edit a debtor's custom
+  // debt/group price. DebtorRow only carries one groupId even when a
+  // student is enrolled in several groups (see normalizeDebtorRow's own
+  // comment on that), so this targets whichever group the row shows.
+  const [debtEditTarget, setDebtEditTarget] = useState<DebtorRow | null>(null);
+  const [debtAmount, setDebtAmount] = useState("");
+  const [debtReason, setDebtReason] = useState("");
+  const [debtEditError, setDebtEditError] = useState<string | null>(null);
+  const [updateDebt, { isLoading: isSavingDebt }] = useUpdateDebtMutation();
+
+  const openDebtEdit = (d: DebtorRow) => {
+    setDebtEditTarget(d);
+    setDebtAmount(String(d.balance ?? 0));
+    setDebtReason("");
+    setDebtEditError(null);
+  };
+
+  const closeDebtEdit = () => {
+    setDebtEditTarget(null);
+    setDebtAmount("");
+    setDebtReason("");
+    setDebtEditError(null);
+  };
+
+  const confirmDebtEdit = async () => {
+    if (!debtEditTarget?.studentId || !debtEditTarget.groupId) return;
+    if (!debtAmount || Number.isNaN(Number(debtAmount))) {
+      setDebtEditError(t("finance.debtors.editDebt.errors.amount"));
+      return;
+    }
+    setDebtEditError(null);
+    try {
+      await updateDebt({
+        studentId: debtEditTarget.studentId,
+        groupId: debtEditTarget.groupId,
+        amount: Number(debtAmount),
+        reason: debtReason.trim() || undefined,
+      }).unwrap();
+      toast.success(t("finance.debtors.editDebt.toast.updated"));
+      closeDebtEdit();
+    } catch (err) {
+      setDebtEditError(extractApiError(err) || t("finance.debtors.editDebt.errors.save"));
+    }
+  };
 
   const queryArgs = useMemo(
     () => ({
@@ -224,6 +274,7 @@ export const Debtors = () => {
               <th className="px-3 py-3 text-left text-gray-500 dark:text-gray-400 font-medium">{t("finance.debtors.table.group")}</th>
               <th className="px-3 py-3 text-left text-gray-500 dark:text-gray-400 font-medium">{t("finance.debtors.table.status")}</th>
               <th className="px-3 py-3 w-8" />
+              <th className="px-3 py-3 w-8" />
               <th className="px-3 py-3 w-8">
                 <button
                   type="button"
@@ -240,13 +291,13 @@ export const Debtors = () => {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={9} className="text-center py-10">
+                <td colSpan={10} className="text-center py-10">
                   <CircularProgress size={22} />
                 </td>
               </tr>
             ) : isError ? (
               <tr>
-                <td colSpan={9} className="text-center py-10">
+                <td colSpan={10} className="text-center py-10">
                   <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
                     <FiAlertCircle size={20} className="text-red-400" />
                     <span className="text-sm">{t("finance.debtors.table.loadError")}</span>
@@ -258,7 +309,7 @@ export const Debtors = () => {
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center py-10 text-gray-400 dark:text-gray-500">{t("finance.debtors.table.noData")}</td>
+                <td colSpan={10} className="text-center py-10 text-gray-400 dark:text-gray-500">{t("finance.debtors.table.noData")}</td>
               </tr>
             ) : (
               rows.map((d, i) => (
@@ -291,7 +342,15 @@ export const Debtors = () => {
                       </Tooltip>
                     )}
                   </td>
-                  <td className="px-3 py-3" />
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    {d.studentId && d.groupId && (
+                      <Tooltip title={t("finance.debtors.table.editDebt")} placement="top" arrow>
+                        <IconButton size="small" onClick={() => openDebtEdit(d)}>
+                          <FiEdit2 size={13} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
@@ -347,6 +406,43 @@ export const Debtors = () => {
         onClose={() => setReceiptStudentId(null)}
         studentId={receiptStudentId}
       />
+
+      {/* Edit debt (real: PATCH /finance/debt/{studentId}/{groupId}) */}
+      <Dialog open={!!debtEditTarget} onClose={closeDebtEdit} PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}>
+        <DialogTitle sx={{ fontWeight: 600 }}>{t("finance.debtors.editDebt.title")}</DialogTitle>
+        <DialogContent>
+          <div className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            {debtEditTarget?.name} — {debtEditTarget?.groupName}
+          </div>
+          <TextField
+            fullWidth
+            size="small"
+            type="number"
+            label={t("finance.debtors.editDebt.amount")}
+            value={debtAmount}
+            onChange={(e) => setDebtAmount(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            size="small"
+            multiline
+            minRows={2}
+            label={t("finance.debtors.editDebt.reason")}
+            value={debtReason}
+            onChange={(e) => setDebtReason(e.target.value)}
+          />
+          {debtEditError && <div className="mt-3 text-sm text-red-500">{debtEditError}</div>}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={closeDebtEdit} disabled={isSavingDebt} sx={{ textTransform: "none" }}>
+            {t("finance.debtors.editDebt.cancel")}
+          </Button>
+          <Button onClick={confirmDebtEdit} disabled={isSavingDebt} variant="contained" sx={{ textTransform: "none" }}>
+            {isSavingDebt ? "…" : t("finance.debtors.editDebt.save")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

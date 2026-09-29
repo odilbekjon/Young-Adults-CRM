@@ -18,6 +18,12 @@ export interface CreatePaymentRequest {
   branchId: string;
   groupId?: string;
   date?: string;
+  // "Qaysi oy uchun to'lov qilinmoqda (YYYY-MM-DD)" per Swagger — distinct
+  // from `date` (when the payment was made). This is what backend's
+  // GET /finance/payments/{id}/receipt paidMonths is computed from, so
+  // omitting it (as this app previously did) leaves that receipt field
+  // permanently empty/wrong for every new payment.
+  forMonth?: string;
   notes?: string;
   receiptUrl?: File;
   provider?: PaymentProvider;
@@ -110,6 +116,23 @@ export interface DebtorsMeta {
 export interface DebtorsResult {
   rows: DebtorRow[];
   meta: DebtorsMeta;
+}
+
+// PATCH /finance/debt/{studentId}/{groupId} — "Maxsus qarz yoki joriy guruh
+// oylik to'lov miqdorini tahrirlaydi." The one Finance endpoint whose
+// Swagger body is application/json (not multipart/form-data) — a plain
+// {amount, reason} object, both path ids carried in the URL instead.
+export interface UpdateDebtRequest {
+  studentId: string;
+  groupId: string;
+  amount: number;
+  reason?: string;
+}
+
+export interface UpdateDebtResponse {
+  success: boolean;
+  message?: string;
+  data?: unknown;
 }
 
 // GET /finance/payment-methods — response shape confirmed live (2026-09).

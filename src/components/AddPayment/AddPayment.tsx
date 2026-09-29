@@ -69,6 +69,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
   const [provider, setProvider] = useState<PaymentProvider>("MANUAL");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayISO());
+  const [forMonth, setForMonth] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +95,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
 
   const handleClose = () => {
     setPaymentMethodId(""); setProvider("MANUAL"); setAmount(""); setNotes("");
-    setSelectedStudentId(""); setDate(todayISO()); setError(null);
+    setSelectedStudentId(""); setDate(todayISO()); setForMonth(""); setError(null);
     onClose();
   };
 
@@ -118,6 +119,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
           amount: Number(amount),
           paymentMethodId: paymentMethodId.trim(),
           date: date || undefined,
+          forMonth: forMonth || undefined,
           notes: notes.trim() || undefined,
         }).unwrap();
         toast.success(t("addPayment.toast.updated"));
@@ -131,6 +133,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
         branchId: selectedBranchId,
         groupId: groupId || undefined,
         date: date || undefined,
+        forMonth: forMonth || undefined,
         notes: notes.trim() || undefined,
         provider,
       }).unwrap();
@@ -236,6 +239,13 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
         <div>
           <label style={labelStyle}>{t("addPayment.date")}</label>
           <DatePickerField value={date} onChange={setDate} />
+        </div>
+
+        {/* For month — which month this payment covers (distinct from the
+            date above, which is when it was made); optional per Swagger */}
+        <div>
+          <label style={labelStyle}>{t("addPayment.forMonth")}</label>
+          <DatePickerField value={forMonth} onChange={setForMonth} />
         </div>
 
         {/* Comment / notes */}

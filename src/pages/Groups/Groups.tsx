@@ -23,6 +23,7 @@ import { useSelector }                   from "react-redux";
 import {
   useAllGroupsQuery, useCreateGroupMutation, useUpdateGroupMutation,
   useToggleGroupStatusMutation, useLazyGroupsExcelQuery, useLazyStudentGroupsQuery,
+  useStudentGroupsQuery,
 } from "../../app/api/groupsApi";
 import type { Group, GroupDay } from "../../app/api/groupsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
@@ -132,7 +133,16 @@ const toDaysType = (days: string): string | undefined => {
   return undefined;
 };
 
-const toGroupRow = (g: Group): GroupRow => ({
+// g.students is GET /groups' legacy relation — it keeps listing a student
+// even after they've been removed from the group (status moved to
+// INACTIVE/DELETED on their /student-groups membership), since that removal
+// doesn't touch this relation. SingleGroup already works around the same
+// quirk (see its toLegacyGroup/combinedStudents comments) by treating
+// /student-groups as the authoritative membership list. archivedMembershipKeys
+// (studentId|groupId pairs explicitly confirmed INACTIVE/DELETED via GET
+// /student-groups?status=...) is used here to strip those stale members back
+// out of the legacy relation, rather than trusting its raw length.
+const toGroupRow = (g: Group, archivedMembershipKeys: Set<string>): GroupRow => ({
   id: g.id,
   name: g.name,
   courseId: g.courseId,
@@ -148,7 +158,7 @@ const toGroupRow = (g: Group): GroupRow => ({
   weekOfStudy: g.weekOfStudy ?? "",
   startDate: g.trainingStart ?? "",
   endDate: g.trainingEnd ?? "",
-  studentCount: g.students?.length ?? 0,
+  studentCount: (g.students ?? []).filter((s) => !archivedMembershipKeys.has(`${s.id}|${g.id}`)).length,
   studentIds: g.students?.map((s) => s.id) ?? [],
   status: g.status,
   createdAt: g.createdAt,
@@ -320,6 +330,27 @@ export const Groups = () => {
     limit: 100,
     tagId: filters.tags[0] || undefined,
   });
+  // GET /student-groups, explicitly scoped to status=INACTIVE and
+  // status=DELETED (branch-wide, same two calls SingleGroup already relies
+  // on for its own "archived students" section — confirmed live there that
+  // omitting `status` does NOT reliably exclude these on every query shape,
+  // so an explicit status filter is the only thing trusted to work). Used
+  // below to strip removed members out of each row's "Students" count,
+  // since GET /groups' own `students` relation keeps listing them even
+  // after their membership moved to INACTIVE/DELETED.
+  const { data: inactiveStudentGroupsData } = useStudentGroupsQuery({
+    branchId: selectedBranchId ?? undefined, status: "INACTIVE", limit: 1000,
+  });
+  const { data: deletedStudentGroupsData } = useStudentGroupsQuery({
+    branchId: selectedBranchId ?? undefined, status: "DELETED", limit: 1000,
+  });
+  const archivedMembershipKeys = useMemo(() => {
+    const set = new Set<string>();
+    [...(inactiveStudentGroupsData?.rows ?? []), ...(deletedStudentGroupsData?.rows ?? [])].forEach((r) => {
+      if (r.studentId && r.groupId) set.add(`${r.studentId}|${r.groupId}`);
+    });
+    return set;
+  }, [inactiveStudentGroupsData, deletedStudentGroupsData]);
   const { data: coursesData } = useAllCoursesQuery();
   const { data: roomsData } = useAllRoomsQuery();
   const { data: branchesData } = useAllBranchesQuery();
@@ -407,8 +438,8 @@ export const Groups = () => {
   );
 
   const allGroups: GroupRow[] = useMemo(
-    () => branchFilteredGroups.map(toGroupRow),
-    [branchFilteredGroups]
+    () => branchFilteredGroups.map((g) => toGroupRow(g, archivedMembershipKeys)),
+    [branchFilteredGroups, archivedMembershipKeys]
   );
 
   const activeCourses = (coursesData?.data ?? [])

@@ -86,6 +86,7 @@
     "paymentMethodError": "Failed to load payment methods",
     "amount": "Amount",
     "date": "Date",
+    "forMonth": "For month",
     "comment": "Comment",
     "submit": "Submit",
     "saving": "Saving...",
@@ -828,10 +829,25 @@
         "noData": "No Data",
         "loadError": "Failed to load debtors.",
         "retry": "Retry",
-        "receipt": "Receipt"
+        "receipt": "Receipt",
+        "editDebt": "Edit debt"
       },
       "pagination": {
         "of": "of"
+      },
+      "editDebt": {
+        "title": "Edit debt",
+        "amount": "Amount",
+        "reason": "Reason",
+        "save": "Save",
+        "cancel": "Cancel",
+        "toast": {
+          "updated": "Debt updated successfully"
+        },
+        "errors": {
+          "amount": "Enter a valid amount",
+          "save": "Failed to update the debt"
+        }
       }
     },
     "salaries": {
@@ -1471,8 +1487,10 @@
       "title": "Add Student",
       "searchStudent": "Search student",
       "searchPlaceholder": "Name or phone...",
+      "selectStudent": "Select student",
+      "selectPlaceholder": "Select",
       "noStudentsFound": "No students found",
-      "startDate": "Start date",
+      "startDate": "Date from",
       "submit": "Add Student",
       "cancel": "Cancel",
       "toast": {

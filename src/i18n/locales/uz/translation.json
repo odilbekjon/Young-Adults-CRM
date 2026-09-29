@@ -86,6 +86,7 @@
     "paymentMethodError": "To'lov usullarini yuklab bo'lmadi",
     "amount": "Summa",
     "date": "Sana",
+    "forMonth": "Qaysi oy uchun",
     "comment": "Izoh",
     "submit": "Yuborish",
     "saving": "Saqlanmoqda...",
@@ -828,10 +829,25 @@
         "noData": "Ma'lumot yo'q",
         "loadError": "Qarzdorlar ro'yxatini yuklab bo'lmadi.",
         "retry": "Qayta urinish",
-        "receipt": "Chek"
+        "receipt": "Chek",
+        "editDebt": "Qarzni tahrirlash"
       },
       "pagination": {
         "of": "/"
+      },
+      "editDebt": {
+        "title": "Qarzni tahrirlash",
+        "amount": "Summa",
+        "reason": "Sabab",
+        "save": "Saqlash",
+        "cancel": "Bekor qilish",
+        "toast": {
+          "updated": "Qarz muvaffaqiyatli yangilandi"
+        },
+        "errors": {
+          "amount": "To'g'ri summa kiriting",
+          "save": "Qarzni yangilashda xatolik yuz berdi"
+        }
       }
     },
     "salaries": {
@@ -1471,8 +1487,10 @@
       "title": "O'quvchi qo'shish",
       "searchStudent": "O'quvchini qidirish",
       "searchPlaceholder": "Ism yoki telefon...",
+      "selectStudent": "O'quvchini tanlang",
+      "selectPlaceholder": "Tanlang",
       "noStudentsFound": "O'quvchilar topilmadi",
-      "startDate": "Boshlanish sanasi",
+      "startDate": "Qachondan",
       "submit": "O'quvchi qo'shish",
       "cancel": "Bekor qilish",
       "toast": {

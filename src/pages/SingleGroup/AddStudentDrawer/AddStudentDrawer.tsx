@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { MdClose, MdSearch } from "react-icons/md";
+import { MdClose, MdKeyboardArrowDown } from "react-icons/md";
 import { useTranslation } from "react-i18next";
+import { DatePickerField } from "../DatePickerField";
 
 export interface AddStudentOption {
   id: string;
@@ -30,72 +31,64 @@ const labelStyle: React.CSSProperties = {
 };
 
 const submitBtn: React.CSSProperties = {
-  background: "#1a3a5c",
+  background: "#4a90c4",
   color: "#fff",
   border: "none",
-  borderRadius: 10,
-  padding: "11px 24px",
+  borderRadius: 22,
+  padding: "11px 32px",
   fontSize: 14,
   fontWeight: 600,
   cursor: "pointer",
 };
 
-const cancelBtn: React.CSSProperties = {
-  background: "#fff",
-  color: "#666",
-  border: "1px solid #e0e0e0",
-  borderRadius: 10,
-  padding: "11px 24px",
-  fontSize: 14,
-  cursor: "pointer",
-};
-
-const RightDrawer = ({
-  open, onClose, title, width = 480, children,
+// Centered modal (not a side drawer) — matches the reference "Add student"
+// design: title + close icon, fields stacked below, single pill submit
+// button, no separate cancel button (the X covers that).
+const CenterModal = ({
+  open, onClose, title, children,
 }: {
-  open: boolean; onClose: () => void; title: string; width?: number; children: React.ReactNode;
-}) => (
-  <>
+  open: boolean; onClose: () => void; title: string; children: React.ReactNode;
+}) => {
+  if (!open) return null;
+  return (
     <div
       onClick={onClose}
       style={{
         position: "fixed", inset: 0,
-        background: "rgba(0,0,0,0.18)",
-        zIndex: 1200,
-        opacity: open ? 1 : 0,
-        pointerEvents: open ? "auto" : "none",
-        transition: "opacity 0.25s",
+        background: "rgba(0,0,0,0.35)",
+        zIndex: 1300,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16,
       }}
-    />
-    <div style={{
-      position: "fixed", top: 0, right: 0,
-      width, height: "100vh",
-      background: "#fff",
-      zIndex: 1300,
-      boxShadow: "-4px 0 24px rgba(0,0,0,0.12)",
-      transform: open ? "translateX(0)" : "translateX(100%)",
-      transition: "transform 0.28s cubic-bezier(.4,0,.2,1)",
-      display: "flex", flexDirection: "column",
-      overflowY: "auto",
-    }}>
-      <div style={{
-        display: "flex", alignItems: "center",
-        justifyContent: "space-between",
-        padding: "20px 24px 16px",
-        borderBottom: "1px solid #f0f0f0",
-        flexShrink: 0,
-      }}>
-        <span style={{ fontSize: 17, fontWeight: 600, color: "#1a1a1a" }}>{title}</span>
-        <div onClick={onClose} style={{ cursor: "pointer", color: "#888", fontSize: 20, display: "flex" }}>
-          <MdClose />
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: 14,
+          width: 420,
+          maxWidth: "100%",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+        }}
+      >
+        <div style={{
+          display: "flex", alignItems: "center",
+          justifyContent: "space-between",
+          padding: "20px 24px",
+          borderBottom: "1px solid #f0f0f0",
+        }}>
+          <span style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a" }}>{title}</span>
+          <div onClick={onClose} style={{ cursor: "pointer", color: "#888", fontSize: 20, display: "flex" }}>
+            <MdClose />
+          </div>
+        </div>
+        <div style={{ padding: 24 }}>
+          {children}
         </div>
       </div>
-      <div style={{ padding: 24, flex: 1, overflowY: "auto" }}>
-        {children}
-      </div>
     </div>
-  </>
-);
+  );
+};
 
 export const AddStudentDrawer = ({
   open, onClose, students, onSubmit, isSubmitting,
@@ -103,81 +96,68 @@ export const AddStudentDrawer = ({
   open: boolean;
   onClose: () => void;
   students: AddStudentOption[];
-  onSubmit: (studentId: string) => void;
+  // joinedAt is an optional ISO date ("since when" this student joined) —
+  // POST /student-groups already accepts it (see AddStudentToGroupRequest),
+  // it just wasn't exposed in this modal before.
+  onSubmit: (studentId: string, joinedAt?: string) => void;
   isSubmitting?: boolean;
 }) => {
   const { t } = useTranslation();
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<AddStudentOption | null>(null);
+  const [selectedId, setSelectedId] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
 
   useEffect(() => {
-    if (!open) { setQuery(""); setSelected(null); }
+    if (!open) { setSelectedId(""); setDateFrom(""); }
   }, [open]);
 
-  const filtered = query.length > 0
-    ? students.filter(
-        (s) => s.name.toLowerCase().includes(query.toLowerCase()) || s.phone.includes(query)
-      )
-    : [];
-
   const handleAdd = () => {
-    if (!selected || isSubmitting) return;
-    onSubmit(selected.id);
+    if (!selectedId || isSubmitting) return;
+    onSubmit(selectedId, dateFrom || undefined);
   };
 
   return (
-    <RightDrawer open={open} onClose={onClose} title={t("singleGroup.addStudentDrawer.title")} width={440}>
+    <CenterModal open={open} onClose={onClose} title={t("singleGroup.addStudentDrawer.title")}>
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <div>
-          <label style={labelStyle}>{t("singleGroup.addStudentDrawer.searchStudent")}</label>
+          <label style={labelStyle}>{t("singleGroup.addStudentDrawer.selectStudent")}</label>
           <div style={{ position: "relative" }}>
-            <MdSearch size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#aaa" }} />
-            <input
-              style={{ ...inputStyle, paddingLeft: 36 }}
-              placeholder={t("singleGroup.addStudentDrawer.searchPlaceholder")}
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
+            <select
+              value={selectedId}
+              onChange={(e) => setSelectedId(e.target.value)}
               disabled={isSubmitting}
-            />
-          </div>
-          {filtered.length > 0 && !selected && (
-            <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, marginTop: 4, background: "#fff", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", overflow: "hidden" }}>
-              {filtered.map((s) => (
-                <div
-                  key={s.id}
-                  onClick={() => { setSelected(s); setQuery(s.name); }}
-                  style={{ padding: "10px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", fontSize: 13, borderBottom: "1px solid #f5f5f5" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f7fbff")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
-                >
-                  <span style={{ fontWeight: 500 }}>{s.name}</span>
-                  <span style={{ color: "#888" }}>{s.phone}</span>
-                </div>
+              style={{
+                ...inputStyle, appearance: "none",
+                color: selectedId ? "#1a1a1a" : "#aaa", paddingRight: 36,
+              }}
+            >
+              <option value="">{t("singleGroup.addStudentDrawer.selectPlaceholder")}</option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}{s.phone ? ` — ${s.phone}` : ""}</option>
               ))}
-            </div>
-          )}
-          {query.length > 0 && filtered.length === 0 && !selected && (
+            </select>
+            <MdKeyboardArrowDown size={18} style={{
+              position: "absolute", right: 12, top: "50%",
+              transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
+            }} />
+          </div>
+          {students.length === 0 && (
             <div style={{ fontSize: 12, color: "#aaa", marginTop: 6 }}>{t("singleGroup.addStudentDrawer.noStudentsFound")}</div>
           )}
         </div>
-        {selected && (
-          <div style={{ background: "#f7fbff", border: "1px solid #B5D4F4", borderRadius: 8, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: 13 }}>{selected.name}</div>
-              <div style={{ fontSize: 12, color: "#888" }}>{selected.phone}</div>
-            </div>
-            <div onClick={() => { setSelected(null); setQuery(""); }} style={{ cursor: "pointer", color: "#aaa" }}>
-              <MdClose size={16} />
-            </div>
-          </div>
-        )}
-        <div style={{ display: "flex", gap: 10 }}>
-          <button style={{ ...submitBtn, opacity: selected && !isSubmitting ? 1 : 0.5 }} onClick={handleAdd} disabled={!selected || isSubmitting}>
-            {isSubmitting ? "…" : t("singleGroup.addStudentDrawer.submit")}
-          </button>
-          <button style={cancelBtn} onClick={onClose} disabled={isSubmitting}>{t("singleGroup.addStudentDrawer.cancel")}</button>
+
+        <div>
+          <label style={labelStyle}>{t("singleGroup.addStudentDrawer.startDate")}</label>
+          <DatePickerField value={dateFrom} onChange={setDateFrom} disabled={isSubmitting} />
         </div>
+
+        <button
+          style={{ ...submitBtn, opacity: selectedId && !isSubmitting ? 1 : 0.5, alignSelf: "flex-start" }}
+          onClick={handleAdd}
+          disabled={!selectedId || isSubmitting}
+        >
+          {isSubmitting ? "…" : t("singleGroup.addStudentDrawer.submit")}
+        </button>
       </div>
-    </RightDrawer>
+    </CenterModal>
   );
 };

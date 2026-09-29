@@ -86,6 +86,7 @@
     "paymentMethodError": "Не удалось загрузить способы оплаты",
     "amount": "Сумма",
     "date": "Дата",
+    "forMonth": "За какой месяц",
     "comment": "Комментарий",
     "submit": "Отправить",
     "saving": "Сохранение...",
@@ -828,10 +829,25 @@
         "noData": "Нет данных",
         "loadError": "Не удалось загрузить список должников.",
         "retry": "Повторить",
-        "receipt": "Чек"
+        "receipt": "Чек",
+        "editDebt": "Редактировать долг"
       },
       "pagination": {
         "of": "из"
+      },
+      "editDebt": {
+        "title": "Редактировать долг",
+        "amount": "Сумма",
+        "reason": "Причина",
+        "save": "Сохранить",
+        "cancel": "Отмена",
+        "toast": {
+          "updated": "Долг успешно обновлён"
+        },
+        "errors": {
+          "amount": "Введите корректную сумму",
+          "save": "Не удалось обновить долг"
+        }
       }
     },
     "salaries": {
@@ -1471,8 +1487,10 @@
       "title": "Добавить студента",
       "searchStudent": "Поиск студента",
       "searchPlaceholder": "Имя или телефон...",
+      "selectStudent": "Выберите студента",
+      "selectPlaceholder": "Выберите",
       "noStudentsFound": "Студенты не найдены",
-      "startDate": "Дата начала",
+      "startDate": "Дата с",
       "submit": "Добавить студента",
       "cancel": "Отмена",
       "toast": {

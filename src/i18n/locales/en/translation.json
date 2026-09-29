@@ -829,10 +829,25 @@
         "noData": "No Data",
         "loadError": "Failed to load debtors.",
         "retry": "Retry",
-        "receipt": "Receipt"
+        "receipt": "Receipt",
+        "editDebt": "Edit debt"
       },
       "pagination": {
         "of": "of"
+      },
+      "editDebt": {
+        "title": "Edit debt",
+        "amount": "Amount",
+        "reason": "Reason",
+        "save": "Save",
+        "cancel": "Cancel",
+        "toast": {
+          "updated": "Debt updated successfully"
+        },
+        "errors": {
+          "amount": "Enter a valid amount",
+          "save": "Failed to update the debt"
+        }
       }
     },
     "salaries": {

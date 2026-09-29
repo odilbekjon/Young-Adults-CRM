@@ -829,10 +829,25 @@
         "noData": "Ma'lumot yo'q",
         "loadError": "Qarzdorlar ro'yxatini yuklab bo'lmadi.",
         "retry": "Qayta urinish",
-        "receipt": "Chek"
+        "receipt": "Chek",
+        "editDebt": "Qarzni tahrirlash"
       },
       "pagination": {
         "of": "/"
+      },
+      "editDebt": {
+        "title": "Qarzni tahrirlash",
+        "amount": "Summa",
+        "reason": "Sabab",
+        "save": "Saqlash",
+        "cancel": "Bekor qilish",
+        "toast": {
+          "updated": "Qarz muvaffaqiyatli yangilandi"
+        },
+        "errors": {
+          "amount": "To'g'ri summa kiriting",
+          "save": "Qarzni yangilashda xatolik yuz berdi"
+        }
       }
     },
     "salaries": {

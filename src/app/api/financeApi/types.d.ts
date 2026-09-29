@@ -118,6 +118,23 @@ export interface DebtorsResult {
   meta: DebtorsMeta;
 }
 
+// PATCH /finance/debt/{studentId}/{groupId} — "Maxsus qarz yoki joriy guruh
+// oylik to'lov miqdorini tahrirlaydi." The one Finance endpoint whose
+// Swagger body is application/json (not multipart/form-data) — a plain
+// {amount, reason} object, both path ids carried in the URL instead.
+export interface UpdateDebtRequest {
+  studentId: string;
+  groupId: string;
+  amount: number;
+  reason?: string;
+}
+
+export interface UpdateDebtResponse {
+  success: boolean;
+  message?: string;
+  data?: unknown;
+}
+
 // GET /finance/payment-methods — response shape confirmed live (2026-09).
 export interface PaymentMethod {
   id: string;

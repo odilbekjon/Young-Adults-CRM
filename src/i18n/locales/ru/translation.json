@@ -241,8 +241,9 @@
       "horizontal": "Горизонтально",
       "verticalViewTitle": "Вертикальный вид",
       "vertical": "Вертикально",
-      "studentsFractionSlash": "{{count}} ст./{{max}}",
-      "studentsCountSuffix": "{{count}}/{{max}} ст.",
+      "studentsFractionSlash": "{{count}} ст. / {{max}}",
+      "studentsCountSuffix": "{{count}} / {{max}} ст.",
+      "daysLeft": "Осталось {{count}} дн.",
       "emptyState": "Для этого типа дня расписание отсутствует"
     },
     "chart": {

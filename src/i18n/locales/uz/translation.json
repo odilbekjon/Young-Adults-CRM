@@ -241,8 +241,9 @@
       "horizontal": "Gorizontal",
       "verticalViewTitle": "Vertikal ko'rinish",
       "vertical": "Vertikal",
-      "studentsFractionSlash": "{{count}} o'q./{{max}}",
-      "studentsCountSuffix": "{{count}}/{{max}} o'q.",
+      "studentsFractionSlash": "{{count}} o'q. / {{max}}",
+      "studentsCountSuffix": "{{count}} / {{max}} o'q.",
+      "daysLeft": "{{count}} kun qoldi",
       "emptyState": "Bu kun turi uchun jadval mavjud emas"
     },
     "chart": {

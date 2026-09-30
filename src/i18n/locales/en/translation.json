@@ -241,8 +241,9 @@
       "horizontal": "Horizontal",
       "verticalViewTitle": "Vertical view",
       "vertical": "Vertical",
-      "studentsFractionSlash": "{{count}} st./{{max}}",
-      "studentsCountSuffix": "{{count}}/{{max}} st.",
+      "studentsFractionSlash": "{{count}} st. / {{max}}",
+      "studentsCountSuffix": "{{count}} / {{max}} st.",
+      "daysLeft": "{{count}} days left",
       "emptyState": "No schedule available for this day type"
     },
     "chart": {

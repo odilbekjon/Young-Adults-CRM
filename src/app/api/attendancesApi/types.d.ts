@@ -92,3 +92,24 @@ export interface AttendanceReportResult {
   rows: AttendanceReportRow[];
   meta: AttendanceReportMeta;
 }
+
+// One lesson day of a single student in a single group for a given month —
+// built by attendancesApi's `studentMonthAttendance` from
+// GET /attendances/group/{id}/dates + GET /attendances/group/{id} (filtered
+// to the student's own row). `status` is null when the lesson is scheduled
+// but no mark exists for the student.
+export type StudentAttendanceDayStatus = "PRESENT" | "ABSENT" | "EXCUSED";
+
+export interface StudentAttendanceDay {
+  groupId: string;
+  date: string; // YYYY-MM-DD
+  status: StudentAttendanceDayStatus | null;
+  reason: string | null;
+  updatedBy: string | null;
+}
+
+export interface StudentMonthAttendanceArgs {
+  studentId: string;
+  groupIds: string[];
+  month: string; // YYYY-MM
+}

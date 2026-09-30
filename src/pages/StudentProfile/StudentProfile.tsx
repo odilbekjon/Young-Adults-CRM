@@ -1,7 +1,7 @@
 // src/pages/StudentProfile.tsx
 import { useState, useEffect, useMemo } from "react";
 import {
-  FiEdit2, FiMail, FiFlag, FiPrinter,
+  FiEdit2, FiMail, FiFlag,
   FiChevronDown, FiUsers, FiDollarSign, FiPhone,
   FiCalendar, FiGitBranch, FiPause, FiPlay, FiUser, FiX,
   FiMessageSquare, FiArchive,
@@ -27,13 +27,9 @@ import {
   useStudentCommentsQuery,
   useStudentHistoryQuery,
   useStudentSmsHistoryQuery,
-  useStudentPaymentsQuery,
-  useStudentFinanceHistoryQuery,
-  normalizeFinanceTransactions,
 } from "../../app/api/studentsApi";
 import type {
-  StudentGender, StudentGroupMembership, StudentFinanceHistoryEntry, StudentFinanceTransaction,
-  StudentPaymentsSummary,
+  StudentGender, StudentGroupMembership,
 } from "../../app/api/studentsApi/types";
 import {
   useAllGroupsQuery, useAddStudentToGroupMutation, useStudentGroupsQuery,
@@ -41,7 +37,6 @@ import {
 } from "../../app/api/groupsApi";
 import type { Group } from "../../app/api/groupsApi/types";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
-import { useDeletePaymentMutation, isCompletedPaymentStatus } from "../../app/api/financeApi";
 import { useAttendanceReportQuery } from "../../app/api/attendancesApi";
 import { useSendSmsToStudentsMutation } from "../../app/api/smsApi";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
@@ -50,13 +45,13 @@ import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { RemoveStudentDialog } from "../SingleGroup/RemoveStudentDialog";
 import { extractApiError } from "../../utils/extractApiError";
 import { AddPayment } from "../../components/AddPayment";
-import { PaymentReceiptModal } from "../../components/PaymentReceiptModal";
-import { DebtorReceiptModal } from "../../components/DebtorReceiptModal";
+import { StudentPaymentsSection } from "./payments/StudentPaymentsSection";
 import { FreezeModal } from "../SingleGroup/FreezeModal";
 import { ActivateModal } from "../SingleGroup/ActivateModal";
+import { AttendanceTab } from "./attendance";
 
 /* ─── TYPES ─────────────────────────────────────────── */
-const TABS = ["Groups", "Comments", "Call history", "SMS", "History", "Lead history"];
+const TABS = ["Groups", "Comments", "Attendance", "SMS", "History", "Lead history"];
 
 /* ─── BALANCE BADGE ──────────────────────────────────── */
 const BalanceBadge = ({ amount }: { amount: number }) => (
@@ -1240,416 +1235,6 @@ const GroupCard = ({
   );
 };
 
-/* ─── OUTSTANDING BALANCE ────────────────────────────── */
-// student.balance (StudentDetail — the same authoritative figure the
-// sidebar's BalanceBadge already shows) is the single source of truth for
-// whether the student owes money, kept consistent with the sidebar rather
-// than re-deriving a second balance from totalCharged/totalPaid that could
-// disagree with it. totalCharged/totalPaid (GET /students/{id}/payments'
-// own `summary` block) are shown purely as a breakdown alongside it, never
-// as an independent balance calculation — avoids the duplicate-counting/
-// conflicting-numbers trap the task explicitly warns about.
-const OutstandingBalanceCard = ({
-  balance, summary, isLoading, onPrintNotice,
-}: {
-  balance: number;
-  summary?: StudentPaymentsSummary;
-  isLoading?: boolean;
-  onPrintNotice: () => void;
-}) => {
-  if (isLoading) return null;
-
-  const isDebt = balance < 0;
-  const isCredit = balance > 0;
-  const hasBreakdown = summary && (summary.totalCharged > 0 || summary.totalPaid > 0);
-
-  return (
-    <div style={{ margin: "20px 0 12px" }}>
-      <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", marginBottom: 12 }}>
-        Balance
-      </div>
-      <div
-        style={{
-          background: isDebt ? "#fef2f2" : "#f0fdf4",
-          border: `1px solid ${isDebt ? "#fecaca" : "#bbf7d0"}`,
-          borderRadius: 12,
-          padding: 16,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 12,
-        }}
-      >
-        <div>
-          <div style={{ fontSize: 12, color: isDebt ? "#b91c1c" : "#15803d", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>
-            {isDebt ? "Outstanding balance" : isCredit ? "Credit balance" : "Fully paid"}
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: isDebt ? "#dc2626" : "#16a34a", marginTop: 4 }}>
-            {moneyOrDash(Math.abs(balance))}
-          </div>
-          {hasBreakdown && (
-            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
-              Total due: <strong style={{ color: "#111827" }}>{moneyOrDash(summary!.totalCharged)}</strong>
-              {"   ·   "}Already paid: <strong style={{ color: "#111827" }}>{moneyOrDash(summary!.totalPaid)}</strong>
-            </div>
-          )}
-        </div>
-        {isDebt && (
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<FiPrinter size={13} />}
-            onClick={onPrintNotice}
-            sx={{
-              textTransform: "none",
-              fontWeight: 600,
-              fontSize: 12,
-              borderRadius: 999,
-              borderColor: "#ef4444",
-              color: "#dc2626",
-              "&:hover": { borderColor: "#dc2626", bgcolor: "#fef2f2" },
-            }}
-          >
-            Print Payment Notice
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/* ─── MONTHLY BALANCE ────────────────────────────────── */
-// Backed by GET /students/{id}/finance-history — confirmed live to be a
-// per-month ledger of `debts`/`payments` arrays plus running totals (see
-// StudentFinanceHistoryEntry's doc comment in studentsApi/types.d.ts) —
-// this strip summarizes each month's net (monthBalance); the combined
-// system/payment transaction list below it is built from the same data.
-type MonthlyBalanceEntry = { key: string; label: string; amount: number; color: "green" | "red" | "yellow" };
-
-const MONTH_BALANCE_COLORS: Record<MonthlyBalanceEntry["color"], { border: string; text: string }> = {
-  green:  { border: "#34d399", text: "#16a34a" },
-  red:    { border: "#f87171", text: "#ef4444" },
-  yellow: { border: "#fbbf24", text: "#b45309" },
-};
-
-const MonthlyBalance = ({
-  rows, isLoading,
-}: {
-  rows: StudentFinanceHistoryEntry[];
-  isLoading?: boolean;
-}) => {
-  const entries: MonthlyBalanceEntry[] = useMemo(
-    () => rows.map((r, i) => ({
-      key: `${r.month}-${i}`,
-      label: r.month,
-      amount: r.monthBalance,
-      color: r.totalDebt === 0 ? "yellow" : r.monthBalance >= 0 ? "green" : "red",
-    })),
-    [rows]
-  );
-
-  if (isLoading) return null;
-  if (entries.length === 0) return null;
-
-  return (
-    <div>
-      <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: "20px 0 12px" }}>
-        Monthly balance status
-      </div>
-      <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 6 }}>
-        {entries.map((entry) => {
-          const c = MONTH_BALANCE_COLORS[entry.color];
-          return (
-            <div
-              key={entry.key}
-              style={{
-                border: `2px solid ${c.border}`,
-                borderRadius: 12,
-                padding: "12px 20px",
-                minWidth: 120,
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ fontSize: 11, color: c.border, fontWeight: 500, marginBottom: 4 }}>
-                {entry.label}
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: c.text }}>
-                {entry.amount.toLocaleString("ru-RU")}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-/* ─── TRANSACTIONS TABLE (system charges + real payments, combined) ──── */
-// Built from GET /students/{id}/finance-history's debts+payments (system
-// monthly charges vs. real payments — see normalizeFinanceTransactions in
-// studentsApi.tsx), matching the reference design's "system"/"payment" type
-// badges. Only PAYMENT rows (which carry a real paymentId) get Print/Edit/
-// Remove actions — a DEBT row is a computed monthly charge with no backing
-// record to act on.
-const TX_TYPE_BADGE: Record<"DEBT" | "PAYMENT", { label: string; bg: string; color: string }> = {
-  PAYMENT: { label: "payment", bg: "#dcfce7", color: "#15803d" },
-  DEBT:    { label: "system",  bg: "#374151", color: "#ffffff" },
-};
-
-const TransactionsTable = ({
-  transactions,
-  studentId,
-  studentName,
-  isLoading,
-  isError,
-}: {
-  transactions: StudentFinanceTransaction[];
-  // GET /students/{id}/payments doesn't embed the student on each row
-  // (redundant — you already know which student you asked about), so the
-  // transaction rows' own studentId/studentName are usually empty; this
-  // page always renders for one already-known student, so its real
-  // identity is passed down directly for the Edit flow instead.
-  studentId: string;
-  studentName: string;
-  isLoading?: boolean;
-  isError?: boolean;
-}) => {
-  const toast = useToast();
-  const [receiptId, setReceiptId] = useState<string | null>(null);
-  const [menuFor, setMenuFor] = useState<{ el: HTMLElement; tx: StudentFinanceTransaction } | null>(null);
-  const [editTarget, setEditTarget] = useState<StudentFinanceTransaction | null>(null);
-  // DELETE /finance/payments/{id} — the backend marks the payment REFUNDED
-  // (not a hard delete, per financeApi's own comment on this mutation).
-  const [deletePayment, { isLoading: isRemoving }] = useDeletePaymentMutation();
-  const [removeTarget, setRemoveTarget] = useState<string | null>(null);
-  const [removeError, setRemoveError] = useState<string | null>(null);
-
-  const confirmRemove = async () => {
-    if (!removeTarget) return;
-    setRemoveError(null);
-    try {
-      await deletePayment(removeTarget).unwrap();
-      toast.success("Payment removed");
-      setRemoveTarget(null);
-    } catch (err) {
-      const detail = extractApiError(err);
-      const message = detail ? `Failed to remove the payment: ${detail}` : "Failed to remove the payment";
-      setRemoveError(message);
-      toast.error(message);
-    }
-  };
-
-  return (
-  <div>
-    <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: "20px 0 12px" }}>
-      Payments
-    </div>
-    <div
-      style={{
-        background: "white",
-        border: "1px solid #eaecf0",
-        borderRadius: 12,
-        overflowX: "auto",
-      }}
-    >
-      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
-        <thead>
-          <tr style={{ borderBottom: "1px solid #f3f4f6" }}>
-            {["Date", "Type", "Amount", "Comment", "Creator", ""].map((h) => (
-              <th
-                key={h}
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "#6b7280",
-                  padding: "12px 16px",
-                  textAlign: "left",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {transactions.map((tx) => {
-            const isDebt = tx.type === "DEBT";
-            // A payment whose own status is REFUNDED/CANCELLED/etc is no
-            // longer real money received — shown as its own status instead
-            // of the green "payment" badge, muted like a DEBT row, and with
-            // no Print/Edit/Remove actions, so a voided payment can never
-            // produce a "paid" receipt.
-            const isVoidedPayment = tx.type === "PAYMENT" && !isCompletedPaymentStatus(tx.paymentStatus);
-            const badge = isVoidedPayment
-              ? { label: (tx.paymentStatus ?? "").toLowerCase(), bg: "#fee2e2", color: "#b91c1c" }
-              : TX_TYPE_BADGE[tx.type];
-            return (
-              <tr key={tx.key} style={{ borderBottom: "1px solid #f9fafb" }}>
-                <td style={{ padding: "14px 16px", fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>
-                  {formatDate((tx.date ?? "").slice(0, 10))}
-                </td>
-                <td style={{ padding: "14px 16px" }}>
-                  <span style={{ background: badge.bg, color: badge.color, borderRadius: 4, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>
-                    {badge.label}
-                  </span>
-                </td>
-                <td style={{ padding: "14px 16px", fontWeight: 600, color: isDebt || isVoidedPayment ? "#6b7280" : "#16a34a", whiteSpace: "nowrap" }}>
-                  {isDebt ? "−" : isVoidedPayment ? "" : "+"}{tx.amount.toLocaleString("ru-RU")} UZS
-                </td>
-                <td style={{ padding: "14px 16px", fontSize: 13, color: "#374151" }}>
-                  {tx.groupName && (
-                    <span style={{ display: "inline-block", background: "#f3f4f6", color: "#374151", borderRadius: 4, padding: "1px 8px", fontSize: 11, fontWeight: 600, marginRight: 6 }}>
-                      {tx.groupName}
-                    </span>
-                  )}
-                  <span>{tx.methodOrDescription || "—"}</span>
-                  {tx.notes && (
-                    <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{tx.notes}</div>
-                  )}
-                </td>
-                <td style={{ padding: "14px 16px", fontSize: 13 }}>
-                  <div style={{ fontWeight: 500, color: "#111827" }}>{tx.author || "—"}</div>
-                  {tx.createdAt && (
-                    <div style={{ fontSize: 12, color: "#9ca3af" }}>{formatDate(tx.createdAt.slice(0, 10))}</div>
-                  )}
-                </td>
-                <td style={{ padding: "14px 16px", whiteSpace: "nowrap" }}>
-                  {!isDebt && !isVoidedPayment && tx.paymentId ? (
-                    <>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<FiPrinter size={12} />}
-                        onClick={() => setReceiptId(tx.paymentId)}
-                        sx={{
-                          textTransform: "none",
-                          fontSize: 12,
-                          borderColor: "#d1d5db",
-                          color: "#374151",
-                          borderTopRightRadius: 0,
-                          borderBottomRightRadius: 0,
-                          borderRight: "none",
-                        }}
-                      >
-                        Print out
-                      </Button>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => setMenuFor({ el: e.currentTarget, tx })}
-                        sx={{
-                          border: "1px solid #d1d5db",
-                          borderLeft: "none",
-                          borderTopLeftRadius: 0,
-                          borderBottomLeftRadius: 0,
-                          borderTopRightRadius: "4px",
-                          borderBottomRightRadius: "4px",
-                          width: 30,
-                          height: 30,
-                        }}
-                      >
-                        <FiChevronDown size={14} />
-                      </IconButton>
-                    </>
-                  ) : (
-                    <span style={{ fontSize: 12, color: "#9ca3af" }}>—</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-          {isLoading && (
-            <tr>
-              <td colSpan={6} style={{ textAlign: "center", padding: 32, color: "#9ca3af", fontSize: 14 }}>
-                Loading...
-              </td>
-            </tr>
-          )}
-          {!isLoading && isError && (
-            <tr>
-              <td colSpan={6} style={{ textAlign: "center", padding: 32, color: "#ef4444", fontSize: 14 }}>
-                Failed to load payments
-              </td>
-            </tr>
-          )}
-          {!isLoading && !isError && transactions.length === 0 && (
-            <tr>
-              <td
-                colSpan={6}
-                style={{ textAlign: "center", padding: 32, color: "#9ca3af", fontSize: 14 }}
-              >
-                No payments yet
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-
-    <PaymentReceiptModal open={Boolean(receiptId)} onClose={() => setReceiptId(null)} paymentId={receiptId} />
-
-    <Menu
-      anchorEl={menuFor?.el ?? null}
-      open={Boolean(menuFor)}
-      onClose={() => setMenuFor(null)}
-      transformOrigin={{ horizontal: "right", vertical: "top" }}
-      anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-    >
-      <MenuItem
-        onClick={() => { if (menuFor) setEditTarget(menuFor.tx); setMenuFor(null); }}
-        sx={{ fontSize: 13 }}
-      >
-        <FiEdit2 size={13} style={{ marginRight: 8 }} /> Edit
-      </MenuItem>
-      <MenuItem
-        onClick={() => { if (menuFor?.tx.paymentId) { setRemoveError(null); setRemoveTarget(menuFor.tx.paymentId); } setMenuFor(null); }}
-        sx={{ fontSize: 13, color: "#ef4444" }}
-      >
-        Remove
-      </MenuItem>
-    </Menu>
-
-    <Dialog open={Boolean(removeTarget)} onClose={() => setRemoveTarget(null)} PaperProps={{ sx: { borderRadius: 3, width: 380 } }}>
-      <DialogTitle sx={{ fontWeight: 600 }}>Remove payment</DialogTitle>
-      <DialogContent>
-        <div style={{ fontSize: 14, color: "#6b7280" }}>
-          Are you sure you want to remove this payment? It will be marked as refunded and removed from the student's balance.
-        </div>
-        {removeError && <div style={{ marginTop: 12, fontSize: 13, color: "#ef4444" }}>{removeError}</div>}
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={() => setRemoveTarget(null)} disabled={isRemoving} sx={{ color: "#6b7280", textTransform: "none" }}>
-          Cancel
-        </Button>
-        <Button variant="contained" color="error" disabled={isRemoving} onClick={confirmRemove} sx={{ borderRadius: 2, textTransform: "none" }}>
-          {isRemoving ? "…" : "Remove"}
-        </Button>
-      </DialogActions>
-    </Dialog>
-
-    <AddPayment
-      open={Boolean(editTarget)}
-      onClose={() => setEditTarget(null)}
-      editPayment={
-        editTarget?.paymentId
-          ? {
-              id: editTarget.paymentId,
-              amount: editTarget.amount,
-              paymentMethodId: editTarget.paymentMethodId ?? "",
-              date: (editTarget.date ?? "").slice(0, 10) || null,
-              notes: editTarget.notes,
-              studentId,
-              studentName,
-            }
-          : null
-      }
-    />
-  </div>
-  );
-};
-
 /* ─── SIMPLE HISTORY / COMMENTS / SMS LIST ───────────── */
 // Shared renderer for the Comments/SMS/History tabs — same envelope
 // (id/primary text/secondary line/date), just fed by whichever endpoint is
@@ -1700,7 +1285,7 @@ export const StudentProfile = () => {
   // ✅ uid (string) — real API id orqali topiladi, navigate('/students/:id') bilan mos
   const { data, isLoading } = useStudentByIdQuery(id ?? "", { skip: !id });
   const student = data ? mapApiStudentToFlat(data.data) : undefined;
-  const { data: groupMemberships } = useStudentGroupMembershipsQuery(id ?? "", { skip: !id });
+  const { data: groupMemberships, isLoading: isGroupMembershipsLoading } = useStudentGroupMembershipsQuery(id ?? "", { skip: !id });
   // Confirmed live (2026-09-25): GET /students/{id}/groups' own `id` field
   // IS the group's real id, not a separate membership-row id — a student
   // can only have one membership per group, so the backend keys each entry
@@ -1760,25 +1345,8 @@ export const StudentProfile = () => {
     return map;
   }, [branchesData]);
 
-  // GET /students/{id}/payments — the student's own payment registry,
-  // scoped server-side by id (replaces the previous approach of name-
-  // searching the whole-branch GET /finance/payments registry client-side,
-  // which risked showing another same-named student's payments).
-  const {
-    data: studentPaymentsData, isFetching: isPaymentsLoading, isError: isPaymentsError,
-  } = useStudentPaymentsQuery({ id: student?.uid ?? "", page: 1, limit: 50 }, { skip: !student });
-  const payments = useMemo(() => studentPaymentsData?.rows ?? [], [studentPaymentsData]);
-
-  const { data: financeHistoryData, isFetching: isFinanceHistoryLoading } = useStudentFinanceHistoryQuery(
-    student?.uid ?? "", { skip: !student }
-  );
-  // Flattens finance-history's per-month debts (system charges)/payments
-  // into one chronological list, matched against the real payments
-  // registry so PAYMENT rows carry a real id for Print/Edit/Remove.
-  const transactions = useMemo(
-    () => normalizeFinanceTransactions(financeHistoryData ?? [], payments),
-    [financeHistoryData, payments]
-  );
+  // Payments/balance/receipts data lives in ./payments/StudentPaymentsSection
+  // (it fetches GET /students/{id}/payments + /finance-history itself).
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const toast = useToast();
@@ -1792,7 +1360,6 @@ export const StudentProfile = () => {
   const [addToGroupOpen, setAddToGroupOpen] = useState(false);
   const [moveBranchOpen, setMoveBranchOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
-  const [debtorReceiptOpen, setDebtorReceiptOpen] = useState(false);
   const [groupMenuAnchor, setGroupMenuAnchor] = useState<null | HTMLElement>(null);
   const [paymentMenuAnchor, setPaymentMenuAnchor] = useState<null | HTMLElement>(null);
   const [freezeTarget, setFreezeTarget] = useState<StudentGroupMembership | null>(null);
@@ -2083,19 +1650,10 @@ export const StudentProfile = () => {
                       No groups yet
                     </div>
                   )}
-                  <OutstandingBalanceCard
-                    balance={student.balance ?? 0}
-                    summary={studentPaymentsData?.summary}
-                    isLoading={isPaymentsLoading}
-                    onPrintNotice={() => setDebtorReceiptOpen(true)}
-                  />
-                  <MonthlyBalance rows={financeHistoryData ?? []} isLoading={isFinanceHistoryLoading} />
-                  <TransactionsTable
-                    transactions={transactions}
+                  <StudentPaymentsSection
                     studentId={student.uid}
                     studentName={student.name}
-                    isLoading={isPaymentsLoading || isFinanceHistoryLoading}
-                    isError={isPaymentsError}
+                    balance={student.balance ?? 0}
                   />
                 </>
               ) : activeTab === 1 ? (
@@ -2104,6 +1662,13 @@ export const StudentProfile = () => {
                   isError={isCommentsError}
                   emptyLabel="No comments yet"
                   items={(commentsData ?? []).map((c) => ({ id: c.id, primary: c.text, secondary: c.author, date: c.createdAt }))}
+                />
+              ) : activeTab === 2 ? (
+                <AttendanceTab
+                  studentId={student.uid}
+                  memberships={groupMemberships ?? []}
+                  membershipsLoading={isGroupMembershipsLoading}
+                  groupsById={groupsById}
                 />
               ) : activeTab === 3 ? (
                 <SimpleHistoryList
@@ -2201,12 +1766,6 @@ export const StudentProfile = () => {
         onClose={() => setAddPaymentOpen(false)}
         initialStudentId={student.uid}
         initialStudentName={student.name}
-      />
-
-      <DebtorReceiptModal
-        open={debtorReceiptOpen}
-        onClose={() => setDebtorReceiptOpen(false)}
-        studentId={student.uid}
       />
 
       <Menu

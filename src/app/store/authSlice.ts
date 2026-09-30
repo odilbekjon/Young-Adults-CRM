@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { useStorage } from "../../utils/store/store";
 import { baseApi } from "../api/baseApi";
+import { normalizeRole } from "../../utils/permissions";
 import { changeSelectedBranch } from "./branchSlice";
 import type { AppDispatch } from "./index";
 
@@ -49,9 +50,21 @@ export const loginSuccess = (token: string, refreshToken?: string, role?: string
   // token), but x-branch-id is still attached to every request centrally
   // (baseApi), so a stale selection could otherwise scope their own data to
   // the wrong branch.
-  if (role?.toUpperCase() === "STUDENT") {
+  // Same for TEACHER: their header has no branch picker (see Header.tsx), so
+  // a branch left selected by an earlier admin session would silently keep
+  // scoping their requests with no way to change it.
+  const normalizedRole = normalizeRole(role);
+  if (normalizedRole === "STUDENT" || normalizedRole === "TEACHER") {
     dispatch(changeSelectedBranch(null));
   }
+};
+
+// Corrects the persisted role when GET /auth/me reports a different one than
+// what was stored at login (see useAuth) — writes both storage and Redux.
+export const syncRole = (role: string) => (dispatch: AppDispatch, getState: () => { auth: AuthState }) => {
+  const token = getState().auth.token;
+  if (token) useStorage.setCredentials({ token, role });
+  dispatch(setRole(role));
 };
 
 export const logout = () => (dispatch: AppDispatch) => {

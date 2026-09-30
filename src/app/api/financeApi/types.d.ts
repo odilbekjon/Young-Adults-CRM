@@ -353,6 +353,13 @@ export interface PaymentReceiptBranch {
 export interface PaymentReceipt {
   receiptNumber: string | null;
   date: string | null;
+  // Optional print fields — null whenever the backend response omits them
+  // (see normalizePaymentReceipt); the receipt modal then falls back to the
+  // caller-provided payments-list row or hides the line.
+  createdAt: string | null;
+  creatorName: string | null;
+  teacherName: string | null;
+  coursePrice: number | null;
   amount: number;
   paymentMethod: string;
   student: PaymentReceiptStudent;

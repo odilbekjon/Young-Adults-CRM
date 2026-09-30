@@ -5,7 +5,9 @@
   },
   "accessDenied": {
     "message": "You don't have access to this page.",
-    "backHome": "Back to home"
+    "backHome": "Back to home",
+    "loadError": "Couldn't load your permissions. Please try again.",
+    "retry": "Retry"
   },
   "header": {
     "search": "Search",
@@ -78,6 +80,18 @@
     "selectStudent": "Select user",
     "studentLoading": "Loading students...",
     "studentError": "Failed to load students",
+    "changeStudent": "Change",
+    "searchPlaceholder": "Search student by name or phone...",
+    "searching": "Searching...",
+    "noStudentsFound": "No students found",
+    "group": "Group",
+    "groupsLoading": "Loading groups...",
+    "groupsError": "Failed to load the student's groups",
+    "noGroups": "This student is not in any active group",
+    "groupHint": "Select the group this payment is for",
+    "thisGroup": "This group",
+    "customPrice": "Custom price",
+    "groupStatus": { "ACTIVE": "Active", "PROBATION": "Trial", "FROZEN": "Frozen" },
     "balance": "Balance",
     "methodPay": "Method pay",
     "paymentMethodId": "Payment method",
@@ -124,6 +138,67 @@
     "totalPaid": "Total paid",
     "balance": "Amount outstanding",
     "issuedAt": "Issued at"
+  },
+  "studentPayments": {
+    "balanceTitle": "Balance",
+    "outstanding": "Outstanding balance",
+    "credit": "Credit balance",
+    "fullyPaid": "Fully paid",
+    "totalDue": "Total due",
+    "alreadyPaid": "Already paid",
+    "printNotice": "Print Payment Notice",
+    "charged": "Charged",
+    "paid": "Paid",
+    "monthlyTitle": "Monthly balance status",
+    "monthlyError": "Failed to load the monthly balance",
+    "monthlyEmpty": "No monthly data yet",
+    "title": "Payments",
+    "typePayment": "payment",
+    "typeSystem": "system",
+    "more": "more",
+    "less": "less",
+    "printOut": "Print out",
+    "moreActions": "More actions",
+    "col": {
+      "date": "Date",
+      "type": "Type",
+      "amount": "Amount",
+      "comment": "Comment",
+      "creator": "Creator"
+    },
+    "loading": "Loading...",
+    "loadError": "Failed to load payments",
+    "empty": "No payments yet",
+    "menu": {
+      "refund": "Refund",
+      "edit": "Edit",
+      "remove": "Remove"
+    },
+    "refundTitle": "Refund payment",
+    "removeTitle": "Remove payment",
+    "refundMessage": "This payment will be cancelled and marked as refunded. It no longer counts toward the student's balance.",
+    "removeMessage": "Are you sure you want to remove this payment? It will be marked as refunded and removed from the student's balance.",
+    "cancel": "Cancel",
+    "toast": {
+      "refunded": "Payment refunded",
+      "removed": "Payment removed",
+      "debtUpdated": "Amount updated"
+    },
+    "errors": {
+      "refund": "Failed to refund the payment",
+      "remove": "Failed to remove the payment",
+      "debtSave": "Failed to update the amount"
+    },
+    "edit": {
+      "noChanges": "Nothing was changed",
+      "group": "Group"
+    },
+    "debt": {
+      "title": "Edit amount",
+      "reason": "Reason",
+      "reasonRequired": "Enter the reason for the change",
+      "hint": "This changes the student's special debt / the group's monthly payment amount, not a single past charge."
+    }
   },
   "addWithdrawal": {
     "title": "Add withdrawal",
@@ -173,7 +248,8 @@
       "attendanceReports": "Attendance reports",
       "finance": "Finance",
       "reports": "Reports",
-      "settings": "Settings"
+      "settings": "Settings",
+      "salary": "Salary"
     },
     "finance": {
       "allPayments": "All payments",
@@ -272,7 +348,8 @@
     "toast": {
       "updated": "Student updated successfully",
       "deleted": "Student permanently deleted",
-      "archived": "Student moved to archive"
+      "archived": "Student moved to archive",
+      "archivePartial": "Archived {{done}} of {{total}} student(s), the rest failed"
     },
     "header": {
       "title": "Students",
@@ -368,12 +445,16 @@
         "activeHint": "Active — payment is calculated from the selected date"
       },
       "paymentStartDate": "Payment start date",
+      "joinedAt": "Joined on",
+      "frozenHint": "Added students start as Frozen — activate them later from the group (you will be asked since when).",
       "submit": "Add student to group",
       "submitting": "Adding...",
       "toast": {
         "success": "Student(s) added to the group",
         "error": "Failed to add student(s) to the group",
-        "alreadyInGroup": "Selected student(s) are already in this group"
+        "alreadyInGroup": "Selected student(s) are already in this group",
+        "freezeError": "Student(s) added, but couldn't be set to frozen — check their status manually",
+        "partialError": "Added {{done}} of {{total}} student(s), the rest failed"
       }
     },
     "editDrawer": {
@@ -2578,7 +2659,84 @@
     "backToGroups": "Back to my groups",
     "attendanceOnlyNote": "You can only mark attendance for today's lesson in this group.",
     "roster": "Students",
-    "schedule": "Schedule"
+    "rosterName": "Student",
+    "rosterPhone": "Phone",
+    "rosterEmpty": "There are no students in this group yet.",
+    "rosterLoadError": "Failed to load the student list.",
+    "room": "Room",
+    "noPhone": "No phone",
+    "attendance": "Attendance",
+    "days": { "ODD": "Odd days", "EVEN": "Even days" }
+  },
+  "teacherDashboard": {
+    "title": "Dashboard",
+    "stats": {
+      "todayLessons": "Lessons today",
+      "totalStudents": "Students",
+      "activeGroups": "Active groups"
+    },
+    "statsError": "Failed to load your statistics.",
+    "schedule": {
+      "title": "Schedule",
+      "tabs": { "odd": "Odd days", "even": "Even days", "other": "Other" },
+      "horizontal": "Horizontal",
+      "horizontalTitle": "Horizontal view",
+      "vertical": "Vertical",
+      "verticalTitle": "Vertical view",
+      "loadError": "Failed to load your schedule.",
+      "empty": "No lessons for this day type.",
+      "noTime": "No time set",
+      "noRoom": "No room",
+      "studentsFraction": "{{count}} st. / {{max}}",
+      "studentsCount": "{{count}} students",
+      "daysLeft": "{{count}} days left",
+      "retry": "Retry"
+    }
+  },
+  "teacherSalary": {
+    "title": "Salary",
+    "subtitle": "Published payrolls",
+    "allPeriods": "All periods",
+    "period": "Period",
+    "totalCalculated": "Total calculated",
+    "totalPaid": "Total paid",
+    "table": { "period": "Period", "status": "Status", "total": "Calculated", "paid": "Paid", "paidAt": "Paid on" },
+    "status": { "draft": "Draft", "published": "Published", "paid": "Paid" },
+    "loadError": "Failed to load your salaries.",
+    "empty": "No published salaries yet."
+  },
+  "teacherPortal": {
+    "nav": { "dashboard": "Dashboard", "groups": "My groups", "salary": "Salary", "profile": "Profile" },
+    "profile": {
+      "title": "My profile",
+      "loadError": "Failed to load your profile.",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "specialization": "Specialization",
+      "branches": "Branches",
+      "gender": "Gender",
+      "genderNone": "Not specified",
+      "male": "Male",
+      "female": "Female",
+      "birthdate": "Date of birth",
+      "editTitle": "Update my details",
+      "editHint": "You can change your photo, password, gender and date of birth.",
+      "photo": "Profile photo",
+      "choosePhoto": "Choose photo",
+      "photoTooLarge": "The photo must be smaller than 5 MB.",
+      "photoInvalid": "Please choose an image file.",
+      "newPassword": "New password",
+      "confirmPassword": "Repeat new password",
+      "passwordHint": "Leave empty to keep your current password (min. 6 characters).",
+      "passwordTooShort": "Password must be at least 6 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "save": "Save changes",
+      "saving": "Saving...",
+      "nothingToSave": "There is nothing to update.",
+      "saved": "Profile updated",
+      "saveError": "Failed to update profile"
+    }
   },
   "studentPortal": {
     "appTitle": "Student Portal",
@@ -2649,6 +2807,44 @@
         "monday": "Monday", "tuesday": "Tuesday", "wednesday": "Wednesday",
         "thursday": "Thursday", "friday": "Friday", "saturday": "Saturday", "sunday": "Sunday"
       }
+    }
+  },
+  "studentAttendance": {
+    "was": "Was",
+    "not": "Not",
+    "notAttended": "Not attended",
+    "excused": "Excused",
+    "absent": "Absent",
+    "upcoming": "Upcoming",
+    "rate": "Attendance rate",
+    "group": "Group",
+    "allGroups": "All groups",
+    "all": "All",
+    "allHint": "Show lessons of all the student's groups",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "refresh": "Refresh",
+    "calendar": "Calendar",
+    "list": "List",
+    "createdAt": "Create at",
+    "topic": "Topic",
+    "lessonTime": "Lesson time",
+    "status": "Status",
+    "updatedBy": "Updated by",
+    "noGroups": "This student is not in any group yet",
+    "noLessons": "No lessons this month",
+    "loadError": "Failed to load attendance.",
+    "retry": "Retry",
+    "overall": "All groups, all time",
+    "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    "weekdays": {
+      "mo": "Mo",
+      "tu": "Tu",
+      "we": "We",
+      "th": "Th",
+      "fr": "Fr",
+      "sa": "Sa",
+      "su": "Su"
     }
   },
   "layout": {

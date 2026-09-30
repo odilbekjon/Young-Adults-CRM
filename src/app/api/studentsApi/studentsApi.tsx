@@ -28,6 +28,8 @@ import {
     StudentFinanceHistoryDebtEntry,
     StudentFinanceHistoryPaymentEntry,
     StudentFinanceTransaction,
+    StudentAttendanceReport,
+    StudentAttendanceReportGroup,
 } from "./types";
 import type { PaymentRow } from "../financeApi/types";
 
@@ -282,6 +284,60 @@ export const normalizeFinanceTransactions = (
     return rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 };
 
+
+// GET /students/{id}/attendance-report — response body isn't documented, so
+// every count is read from a few plausible field names (flat, or nested under
+// summary/stats/total, or summed from a per-group array).
+const pickCount = (obj: Record<string, unknown>, keys: string[]): number | null => {
+    for (const k of keys) {
+        const v = obj[k];
+        if (v !== undefined && v !== null && v !== "" && !Number.isNaN(Number(v))) return Number(v);
+    }
+    return null;
+};
+
+const ATTENDED_KEYS = ["attended", "present", "was", "attendedCount", "presentCount", "totalAttended", "totalPresent"];
+const EXCUSED_KEYS = ["excused", "excusedCount", "totalExcused", "withReason", "reasoned"];
+const ABSENT_KEYS = ["absent", "unexcused", "absentCount", "unexcusedCount", "totalAbsent", "totalUnexcused", "notAttended", "withoutReason"];
+
+const countsOf = (obj: Record<string, unknown>) => ({
+    attended: pickCount(obj, ATTENDED_KEYS),
+    excused: pickCount(obj, EXCUSED_KEYS),
+    absent: pickCount(obj, ABSENT_KEYS),
+});
+
+const normalizeStudentAttendanceReport = (raw: unknown): StudentAttendanceReport => {
+    const container = (raw ?? {}) as Record<string, unknown>;
+    const block = (Array.isArray(container) ? container : container.data ?? container) as unknown;
+    const obj = (Array.isArray(block) ? {} : block ?? {}) as Record<string, unknown>;
+    const listRaw: unknown = Array.isArray(block)
+        ? block
+        : Array.isArray(obj.groups)
+        ? obj.groups
+        : Array.isArray(obj.byGroup)
+        ? obj.byGroup
+        : Array.isArray(obj.items)
+        ? obj.items
+        : [];
+    const byGroup: StudentAttendanceReportGroup[] = (listRaw as Record<string, unknown>[]).map((r) => {
+        const group = (r.group ?? {}) as Record<string, unknown>;
+        const c = countsOf((r.stats ?? r.summary ?? r) as Record<string, unknown>);
+        return {
+            groupId: asString(r.groupId ?? group.id),
+            groupName: String(r.groupName ?? group.name ?? (typeof r.group === "string" ? r.group : "")),
+            attended: c.attended ?? 0,
+            excused: c.excused ?? 0,
+            absent: c.absent ?? 0,
+        };
+    });
+    const top = countsOf((obj.summary ?? obj.stats ?? obj.total ?? obj) as Record<string, unknown>);
+    const sum = (f: (g: StudentAttendanceReportGroup) => number) => byGroup.reduce((a, g) => a + f(g), 0);
+    const attended = top.attended ?? sum((g) => g.attended);
+    const excused = top.excused ?? sum((g) => g.excused);
+    const absent = top.absent ?? sum((g) => g.absent);
+    return { attended, excused, absent, total: attended + excused + absent, byGroup };
+};
+
 const appendStudentFormData = (formData: FormData, data: Partial<CreateStudentRequest>) => {
     const { branchIds, ...rest } = data;
     (Object.keys(rest) as (keyof typeof rest)[]).forEach((key) => {
@@ -518,6 +574,16 @@ export const studentsApi = baseApi.injectEndpoints({
             transformResponse: (response: unknown) => normalizeStudentFinanceHistory((response as { data?: unknown })?.data ?? response),
             providesTags: ["student", "payment"],
         }),
+        // GET /students/{id}/attendance-report — the student's central
+        // attendance stats across ALL groups (attended / excused / unexcused).
+        studentAttendanceReport: builder.query<StudentAttendanceReport, string>({
+            query: (id) => ({
+                url: `${PATHS.STUDENTS}/${id}/attendance-report`,
+                method: "GET",
+            }),
+            transformResponse: (response: unknown) => normalizeStudentAttendanceReport(response),
+            providesTags: ["student", "attendance"],
+        }),
     })
 })
 
@@ -539,4 +605,5 @@ export const {
     useStudentSmsHistoryQuery,
     useStudentPaymentsQuery,
     useStudentFinanceHistoryQuery,
+    useStudentAttendanceReportQuery,
 } = studentsApi;

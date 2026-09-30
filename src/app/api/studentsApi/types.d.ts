@@ -392,3 +392,24 @@ export interface StudentFinanceTransaction {
   // payment that's no longer actually paid.
   paymentStatus: string | null;
 }
+
+// GET /students/{id}/attendance-report — Swagger: "Talabaning markaziy davomat
+// hisoboti — barcha guruhlar bo'yicha qatnashgan, sababli va sababsiz
+// qoldirgan darslari statistikasi". The response body isn't documented, so
+// studentsApi's normalizeStudentAttendanceReport maps plausible field-name
+// variants into this shape (counts default to 0).
+export interface StudentAttendanceReportGroup {
+  groupId: string | null;
+  groupName: string;
+  attended: number;
+  excused: number;
+  absent: number;
+}
+
+export interface StudentAttendanceReport {
+  attended: number;
+  excused: number;
+  absent: number;
+  total: number;
+  byGroup: StudentAttendanceReportGroup[];
+}

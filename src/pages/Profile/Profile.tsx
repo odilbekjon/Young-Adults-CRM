@@ -11,6 +11,8 @@ import { logout } from "../../app/store/authSlice";
 import type { AppDispatch } from "../../app/store";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils";
+import { useAuth } from "../../hooks/useAuth";
+import TeacherOwnProfile from "./TeacherOwnProfile";
 
 interface ProfileDisplayUser {
   name: string | null;
@@ -36,8 +38,8 @@ const modalStyle = {
   p: 4,
 };
 
-// ─── ProfilePage ──────────────────────────────────────────────────────────────
-const ProfilePage = () => {
+// ─── AdminProfilePage (staff/admin/CEO) ───────────────────────────────────────
+const AdminProfilePage = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
@@ -475,6 +477,16 @@ const ProfilePage = () => {
       </Modal>
     </Box>
   );
+};
+
+// A TEACHER session's own /profile is backed by /teacher-portal/profile
+// (photo/password/gender/birthdate only) instead of the staff /users/{id}
+// endpoints. Viewing someone else's profile by id (/profile/:id) always stays
+// on the admin view.
+const ProfilePage = () => {
+  const { id } = useParams<{ id?: string }>();
+  const { isTeacher } = useAuth();
+  return isTeacher && !id ? <TeacherOwnProfile /> : <AdminProfilePage />;
 };
 
 export default ProfilePage;

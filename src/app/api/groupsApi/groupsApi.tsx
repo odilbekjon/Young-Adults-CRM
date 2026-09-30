@@ -382,6 +382,41 @@ const appendStudentGroupFormData = (data: Record<string, string | number | boole
     return formData;
 };
 
+// Freeze/unfreeze diagnostics. The request (method, url, multipart fields) is
+// logged in dev builds only; a FAILED call is always logged with the HTTP
+// status and the backend's response body, so "freeze doesn't work" can be
+// answered from the browser console (or its Network tab) without guessing.
+// Nothing sensitive is included — no auth header, no token.
+const describeFormFields = (formData: FormData): Record<string, string> => {
+    const fields: Record<string, string> = {};
+    formData.forEach((value, key) => { fields[key] = typeof value === "string" ? value : `[file ${value.name}]`; });
+    return fields;
+};
+
+const logStudentGroupAction = async (
+    label: string,
+    url: string,
+    fields: Record<string, string>,
+    queryFulfilled: Promise<{ data: unknown; meta?: unknown }>,
+) => {
+    if (import.meta.env.DEV) console.info(`[${label}] request`, { method: "POST", url, fields });
+    try {
+        const { data, meta } = await queryFulfilled;
+        if (import.meta.env.DEV) {
+            console.info(`[${label}] response`, { status: (meta as { response?: Response } | undefined)?.response?.status, data });
+        }
+    } catch (e) {
+        const rejection = e as { error?: { status?: unknown; data?: unknown }; meta?: { response?: Response } };
+        console.error(`[${label}] FAILED`, {
+            method: "POST",
+            url,
+            fields,
+            status: rejection.error?.status ?? rejection.meta?.response?.status,
+            response: rejection.error?.data ?? rejection.error,
+        });
+    }
+};
+
 // GET /groups/excel query string — only appends filters that are actually
 // set, same convention as the analogous *Excel endpoints in financeApi.
 const buildGroupsExcelQueryString = (args: GroupsExcelQueryArgs = {}): string => {
@@ -632,6 +667,13 @@ export const groupsApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: appendStudentGroupFormData({ startDate, endDate, reason }),
             }),
+            onQueryStarted: ({ id, startDate, endDate, reason }, { queryFulfilled }) =>
+                logStudentGroupAction(
+                    "freezeStudentGroup",
+                    `${PATHS.STUDENT_GROUPS}/${id}/freeze`,
+                    describeFormFields(appendStudentGroupFormData({ startDate, endDate, reason })),
+                    queryFulfilled,
+                ),
             invalidatesTags: ["studentGroup", "group", "student"],
         }),
         // POST /student-groups/{id}/unfreeze — Swagger: multipart/form-data
@@ -648,6 +690,15 @@ export const groupsApi = baseApi.injectEndpoints({
                     method: "POST",
                     body: appendStudentGroupFormData({ endDate }),
                 };
+            },
+            onQueryStarted: (arg, { queryFulfilled }) => {
+                const { id, endDate } = typeof arg === "string" ? { id: arg, endDate: undefined } : arg;
+                return logStudentGroupAction(
+                    "unfreezeStudentGroup",
+                    `${PATHS.STUDENT_GROUPS}/${id}/unfreeze`,
+                    describeFormFields(appendStudentGroupFormData({ endDate })),
+                    queryFulfilled,
+                );
             },
             invalidatesTags: ["studentGroup", "group", "student"],
         }),

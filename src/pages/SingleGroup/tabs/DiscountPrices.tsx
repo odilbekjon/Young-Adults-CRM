@@ -29,13 +29,15 @@ type DiscountEntry = {
   cause: string;
 };
 
-const formatPhone = (phone: string) => {
-  const digits = phone.replace(/\D/g, "");
+const formatPhone = (phone: string | null | undefined) => {
+  // A student can be created without a phone, so the API may hand back null.
+  const raw = phone ?? "";
+  const digits = raw.replace(/\D/g, "");
   if (digits.length >= 9) {
     const tail = digits.slice(-9);
     return `(${tail.slice(0, 2)}) ${tail.slice(2, 5)}-${tail.slice(5, 7)}-${tail.slice(7, 9)}`;
   }
-  return phone;
+  return raw;
 };
 
 const fmtDate = (d: Date) => {

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useMemo, useState } from "react";
-import { Box, Tooltip, Collapse, Drawer, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Tooltip, Collapse, Drawer, Skeleton, useMediaQuery, useTheme } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -10,7 +10,7 @@ import {
   FiBriefcase, FiBook, FiMap, FiArchive, FiCalendar,
   FiGrid, FiUserMinus, FiSmartphone, FiTrendingUp, FiList, FiPauseCircle
 } from "react-icons/fi";
-import { MdOutlineDiamond } from "react-icons/md";
+import { MdOutlineDiamond, MdOutlinePaid } from "react-icons/md";
 import { PiStudentDuotone } from "react-icons/pi";
 import { IoMdSettings } from "react-icons/io";
 // import { IoTrophyOutline } from "react-icons/io5";
@@ -19,6 +19,7 @@ import { AiOutlineDollar, AiOutlinePieChart } from "react-icons/ai";
 import { HiBuildingLibrary } from "react-icons/hi2";
 import { useSidebar } from "../../Context/SidebarContext";
 import { useAuth } from "../../hooks/useAuth";
+import { useTeacherPortalGroupsQuery } from "../../app/api/teacherPortalApi";
 import type { PermissionLabel } from "../../app/api/authApi/types";
 
 export const SIDEBAR_WIDTH = 140;
@@ -148,7 +149,7 @@ const SUBMENUS: Record<string, SubMenuItem[]> = {
 // (AUTH_ROLE_DOCS.md §3/§10). A path with no entry here has no documented
 // backend label and stays visible to any non-TEACHER/STUDENT staff member,
 // same as before this mapping existed — TEACHER's own visibility is still
-// governed entirely by TEACHER_NAV_PATHS below, not by this.
+// governed entirely by useTeacherNavItems below, not by this.
 
 // Top-level NAV_ITEMS: several labels means "any one grants entry" (e.g. a
 // Manager holding only PAYMENTS still needs to see the Finance nav item).
@@ -176,7 +177,18 @@ const SUBMENU_ITEM_LABELS: Record<string, PermissionLabel> = {
 
 // ─── NAV ITEMS ────────────────────────────────────────────────────────────────
 
-const NAV_ITEMS = [
+// A rail entry is labelled either by an i18n key (`labelKey`) or by a literal
+// string (`label` — used for a teacher's own group names, which are data).
+interface NavEntry {
+  labelKey?: string;
+  label?: string;
+  path: string;
+  icon: React.ReactNode;
+  // Single-line ellipsis instead of wrapping (long group names).
+  truncate?: boolean;
+}
+
+const NAV_ITEMS: NavEntry[] = [
   { labelKey: "sidebar.nav.dashboard",          path: "/dashboard",                  icon: <FiHome size={40}  /> },
   { labelKey: "sidebar.nav.leads",               path: "/leads",                      icon: <FiDownload size={40}  /> },
   { labelKey: "sidebar.nav.teachers",            path: "/teachers",                   icon: <FiUsers size={40}/> },
@@ -200,7 +212,7 @@ const useVisibleSubmenus = (): Record<string, SubMenuItem[]> => {
 
   return useMemo(() => {
     // TEACHER's sidebar never shows Finance/Reports/Settings in the first
-    // place (see TEACHER_NAV_PATHS) — nothing to filter for that case.
+    // place (see useTeacherNavItems) — nothing to filter for that case.
     if (isTeacher) return SUBMENUS;
 
     const isLabelVisible = (label?: PermissionLabel) => {
@@ -373,7 +385,9 @@ const SubMenuPanel = ({ items }: SubMenuPanelProps) => {
 // ─── NavItem (desktop icon rail) ───────────────────────────────────────────────
 
 interface NavItemProps {
-  labelKey: string;
+  labelKey?: string;
+  label?: string;
+  truncate?: boolean;
   path: string;
   icon: React.ReactNode;
   active: boolean;
@@ -386,6 +400,8 @@ interface NavItemProps {
 
 const NavItem = ({
   labelKey,
+  label: literalLabel,
+  truncate,
   path,
   icon,
   active,
@@ -399,7 +415,7 @@ const NavItem = ({
   // Submenu yopiq bo'lsa → active path highlight
   // Boshqa biror submenu ochiq bo'lsa → bu item highlight EMAS (active bo'lsa ham)
   const isHighlighted = submenuOpen || (active && !anySubmenuOpen);
-  const label = t(labelKey);
+  const label = literalLabel ?? t(labelKey ?? "");
 
   const inner = (
     <Box
@@ -443,9 +459,9 @@ const NavItem = ({
           color: isHighlighted ? "var(--color-nav-active)" : "var(--color-text-secondary)",
           lineHeight: 1.2,
           textAlign: "center",
-          whiteSpace: "normal",
-          wordBreak: "break-word",
-          maxWidth: 84,
+          ...(truncate
+            ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 120 }
+            : { whiteSpace: "normal", wordBreak: "break-word", maxWidth: 84 }),
           transition: "color 0.15s",
         }}
       >
@@ -542,7 +558,7 @@ const MobileSubMenuItem = ({ item, depth = 0 }: { item: SubMenuItem; depth?: num
   );
 };
 
-const MobileNavItem = ({ item }: { item: (typeof NAV_ITEMS)[number] }) => {
+const MobileNavItem = ({ item }: { item: NavEntry }) => {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const { setMobileOpen } = useSidebar();
@@ -572,7 +588,14 @@ const MobileNavItem = ({ item }: { item: (typeof NAV_ITEMS)[number] }) => {
       <Box sx={{ display: "flex", alignItems: "center", "& svg": { fontSize: 20 } }}>
         {item.icon}
       </Box>
-      <Box sx={{ fontSize: 14, flex: 1 }}>{t(item.labelKey)}</Box>
+      <Box
+        sx={{
+          fontSize: 14, flex: 1,
+          ...(item.truncate ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 } : {}),
+        }}
+      >
+        {item.label ?? t(item.labelKey ?? "")}
+      </Box>
       {hasSubmenu && (open ? <FiChevronDown size={16} /> : <FiChevronRight size={16} />)}
     </Box>
   );
@@ -606,22 +629,52 @@ const MobileNavItem = ({ item }: { item: (typeof NAV_ITEMS)[number] }) => {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-// TEACHER only gets their own groups (schedule + attendance, their landing
-// page) — no Dashboard, and everything else in NAV_ITEMS (Leads, Teachers,
-// Students, Finance, Settings, Reports...) is admin/CEO territory, matching
-// ProtectedRoute's own TEACHER_ALLOWED_PREFIXES allowlist.
-const TEACHER_NAV_PATHS = ["/groups"];
+// TEACHER gets a completely different rail (see the teacher UI reference):
+// Dashboard (their own schedule) on top, then one entry per group they teach
+// (GET /teacher-portal/groups → /groups/:id), then Salary. Everything else in
+// NAV_ITEMS (Leads, Teachers, Students, Finance, Settings, Reports...) is
+// admin/CEO territory, matching ProtectedRoute's own teacher path allowlist.
+const useTeacherNavItems = (enabled: boolean): { items: NavEntry[]; isLoading: boolean } => {
+  const { data: groups, isLoading } = useTeacherPortalGroupsQuery(undefined, { skip: !enabled });
+
+  const items = useMemo<NavEntry[]>(() => {
+    const groupItems: NavEntry[] = (groups ?? [])
+      .filter((g) => !!g.id)
+      .map((g) => ({
+        label: g.name || g.courseName || "—",
+        path: `/groups/${g.id}`,
+        icon: <FiLayers size={40} />,
+        truncate: true,
+      }));
+    return [
+      { labelKey: "sidebar.nav.dashboard", path: "/dashboard", icon: <FiHome size={40} /> },
+      ...groupItems,
+      { labelKey: "sidebar.nav.salary", path: "/salary", icon: <MdOutlinePaid size={40} /> },
+    ];
+  }, [groups]);
+
+  return { items, isLoading: enabled && isLoading };
+};
+
+const TeacherNavSkeleton = () => (
+  <Box sx={{ px: 1.5, py: 1, display: "flex", flexDirection: "column", gap: 1.5 }}>
+    {[0, 1, 2].map((i) => (
+      <Skeleton key={i} variant="rounded" height={56} />
+    ))}
+  </Box>
+);
 
 export const Sidebar = () => {
   const { pathname } = useLocation();
   const { openSubmenu, toggleSubmenu, setOpenSubmenu, mobileOpen, setMobileOpen } = useSidebar();
   const { isTeacher, sidebarAllAccess, sidebarLabels, isPermissionsReady } = useAuth();
+  const { items: teacherNavItems, isLoading: teacherNavLoading } = useTeacherNavItems(isTeacher);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const visibleSubmenus = useVisibleSubmenus();
 
   const navItems = useMemo(() => {
-    if (isTeacher) return NAV_ITEMS.filter((i) => TEACHER_NAV_PATHS.includes(i.path));
+    if (isTeacher) return teacherNavItems;
     return NAV_ITEMS.filter((i) => {
       const labels = NAV_ITEM_LABELS[i.path];
       if (!labels) return true; // no documented label => always visible for staff
@@ -629,7 +682,7 @@ export const Sidebar = () => {
       if (!isPermissionsReady) return true; // avoid flashing an empty rail; corrects once loaded
       return labels.some((l) => sidebarLabels.includes(l));
     });
-  }, [isTeacher, sidebarAllAccess, sidebarLabels, isPermissionsReady]);
+  }, [isTeacher, teacherNavItems, sidebarAllAccess, sidebarLabels, isPermissionsReady]);
 
   const handleNavClick = (path: string) => {
     if (visibleSubmenus[path]?.length) {
@@ -682,6 +735,7 @@ export const Sidebar = () => {
               />
             );
           })}
+          {teacherNavLoading && <TeacherNavSkeleton />}
         </Box>
       </Box>
 
@@ -707,6 +761,7 @@ export const Sidebar = () => {
           {navItems.map((item) => (
             <MobileNavItem key={item.path} item={item} />
           ))}
+          {teacherNavLoading && <TeacherNavSkeleton />}
         </Box>
       </Drawer>
     </>

@@ -4,6 +4,7 @@ import { PublicRoute } from "./routes/PublicRoute";
 import { StudentRoute } from "./routes/StudentRoute";
 import { PermissionRoute } from "./routes/PermissionRoute";
 import { GroupsRoute, GroupDetailRoute } from "./routes/RoleGroupsRoute";
+import { DashboardRoute, SalaryRoute } from "./routes/RoleDashboardRoute";
 import { StudentPortalLayout } from "./layouts/StudentPortalLayout/StudentPortalLayout";
 import { StudentPortalDashboard } from "./pages/StudentPortal/Dashboard/Dashboard";
 import { StudentPortalAttendance } from "./pages/StudentPortal/Attendance/Attendance";
@@ -13,7 +14,6 @@ import { StudentPortalGroups } from "./pages/StudentPortal/Groups/Groups";
 import { StudentPortalProfile } from "./pages/StudentPortal/Profile/Profile";
 import { StudentPortalSchedule } from "./pages/StudentPortal/Schedule/Schedule";
 import { NotFound } from "./pages/NotFound";
-import { Dashboard } from "./pages/Dashboard";
 import { Layout } from "./layouts/layout";
 import { Budget } from "./pages/Budget";
 import { Teachers } from "./pages/Teachers/Teachers";
@@ -74,7 +74,7 @@ import { ReasonsArchiving } from "./pages/Settings/reasons_archiving";
 export const AppRouter = () => {
    return(
     <Routes>
-        {/* Public routes — redirect to /dashboard if already authenticated */}
+        {/* Public routes — redirect to the role's landing page (/dashboard, or /portal for a student) if already authenticated */}
         <Route element={<PublicRoute />}>
             <Route path="/login" element={<LoginPage/>} />
         </Route>
@@ -83,7 +83,12 @@ export const AppRouter = () => {
         {/* Protected routes — redirect to /login if not authenticated */}
         <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Layout><Dashboard/></Layout>} />
+            {/* Admin Dashboard for staff; the teacher's own schedule view for a
+                TEACHER session (see RoleDashboardRoute.tsx). */}
+            <Route path="/dashboard" element={<Layout><DashboardRoute/></Layout>} />
+            {/* Teacher's own payroll page; staff are redirected to Finance →
+                Salaries. Renders its own Layout (only the teacher variant needs one). */}
+            <Route path="/salary" element={<SalaryRoute/>} />
 
             <Route element={<PermissionRoute label="LEADS" />}>
                 <Route path="/leads" element={<Layout><Leads/></Layout>} />

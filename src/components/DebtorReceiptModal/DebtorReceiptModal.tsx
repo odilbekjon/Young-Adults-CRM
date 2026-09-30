@@ -1,114 +1,113 @@
-import { Dialog, DialogTitle, DialogContent, IconButton, CircularProgress, Button, Box } from "@mui/material";
+import type { ReactNode } from "react";
+import { Box } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { FiX, FiPrinter } from "react-icons/fi";
 import { useDebtorReceiptQuery } from "../../app/api/financeApi";
-import logo from "../../assets/logo_ya_black.png";
+import { ReceiptModal, type ReceiptLine } from "../PaymentReceiptModal/ReceiptSheet";
+import { formatDateTime, formatUzs } from "../PaymentReceiptModal/format";
 
-const ReceiptRow = ({ label, value }: { label: string; value?: string | null }) => {
-  if (!value) return null;
-  return (
-    <div style={{ fontSize: 13, color: "#333", marginBottom: 4 }}>
-      <strong>{label}</strong> {value}
-    </div>
-  );
-};
-
-const formatIssuedAt = () => {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-
-// Shown from the Debtors table's per-row "receipt" action. Backed by
-// GET /finance/debtors/{studentId}/receipt — same print-style layout as
-// PaymentReceiptModal, which backs GET /finance/payments/{id} instead.
+// Shown from two places, backed by the same GET /finance/debtors/{studentId}
+// /receipt endpoint (student, branch, date, totalPaid/totalCharged/debtAmount
+// /balance, groups[{name, price}]):
+//  - variant "statement" (default; Finance > Debtors' per-row action and
+//    StudentProfile's "Print Payment Notice"): the "outstanding balance"
+//    statement with the totals breakdown.
+//  - variant "system" (StudentProfile's payments table, "system" charge rows):
+//    the short check — Company, Branch, Student, Phone, Group, Course price,
+//    Teacher, Payment amount, Time — with the totals appended.
+// This endpoint returns no check number / teacher / creator, so those lines
+// are simply left out (teacher can be supplied by the caller).
 export const DebtorReceiptModal = ({
-  open, onClose, studentId,
+  open, onClose, studentId, variant = "statement", groupName, teacherName,
 }: {
   open: boolean;
   onClose: () => void;
   studentId: string | null;
+  variant?: "statement" | "system";
+  // "system" variant: the charge row's own group — picks that group's price
+  // out of `groups` instead of listing every enrolled group.
+  groupName?: string | null;
+  teacherName?: string | null;
 }) => {
   const { t } = useTranslation();
+  const p = (key: string) => t(`settings.ceo.general.invoice.preview.${key}`);
   const { data: receipt, isFetching, isError } = useDebtorReceiptQuery(studentId ?? "", { skip: !open || !studentId });
 
-  const handlePrint = () => window.print();
+  let lines: ReceiptLine[] = [];
+  let banner: ReactNode = null;
+  let footnote: ReactNode = null;
+
+  if (receipt) {
+    const time = formatDateTime(receipt.date) ?? formatDateTime(new Date().toISOString());
+    const owed = Math.abs(receipt.debtAmount);
+
+    if (variant === "system") {
+      const matched = groupName ? receipt.groups.find((g) => g.name === groupName) : undefined;
+      const single = receipt.groups.length === 1 ? receipt.groups[0] : undefined;
+      const shown = matched ?? single;
+      lines = [
+        { label: p("company"), value: "Young Adults" },
+        { label: p("branch"), value: receipt.branch?.name },
+        { label: p("student"), value: receipt.student.name },
+        { label: p("phone"), value: receipt.student.phone },
+        { label: p("group"), value: shown?.name ?? groupName ?? receipt.groups.map((g) => g.name).join(", ") },
+        {
+          label: p("coursePrice"),
+          value: shown
+            ? formatUzs(shown.price)
+            : receipt.groups.map((g) => `${g.name}: ${formatUzs(g.price)}`).join(", "),
+        },
+        { label: p("teacher"), value: teacherName },
+        { label: p("paymentAmount"), value: formatUzs(receipt.totalPaid) },
+        { label: t("debtorReceipt.totalCharged") + ":", value: formatUzs(receipt.totalCharged) },
+        { label: t("debtorReceipt.balance") + ":", value: owed > 0 ? formatUzs(owed) : null },
+        { label: p("time"), value: time, muted: true },
+      ];
+    } else {
+      banner = owed > 0 ? (
+        <Box
+          sx={{
+            bgcolor: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca",
+            borderRadius: 1, px: 1.5, py: 1, mb: 1.5, fontSize: 13, fontWeight: 700, textAlign: "center",
+            letterSpacing: 0.4,
+          }}
+        >
+          {t("debtorReceipt.status")}
+        </Box>
+      ) : null;
+      lines = [
+        { label: t("debtorReceipt.name") + ":", value: receipt.student.name },
+        { label: t("debtorReceipt.studentId") + ":", value: receipt.student.id },
+        { label: t("debtorReceipt.phone") + ":", value: receipt.student.phone },
+        { label: t("debtorReceipt.group") + ":", value: receipt.groups.map((g) => g.name).join(", ") },
+        { label: t("debtorReceipt.branch") + ":", value: receipt.branch?.name },
+        { label: t("debtorReceipt.totalCharged") + ":", value: formatUzs(receipt.totalCharged) },
+        { label: t("debtorReceipt.totalPaid") + ":", value: formatUzs(receipt.totalPaid) },
+        { label: t("debtorReceipt.balance") + ":", value: formatUzs(owed) },
+        { label: t("debtorReceipt.issuedAt") + ":", value: time },
+      ];
+      footnote = owed > 0 ? (
+        <Box sx={{ mt: 1.5, fontSize: 11, color: "#888", fontStyle: "italic" }}>
+          {t("debtorReceipt.notice")}
+        </Box>
+      ) : null;
+    }
+  }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
-      <style>{`
-        @media print {
-          body * { visibility: hidden; }
-          #debtor-receipt-print, #debtor-receipt-print * { visibility: visible; }
-          #debtor-receipt-print { position: fixed; inset: 0; padding: 24px; }
-        }
-      `}</style>
-      <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 18, fontWeight: 600 }}>
-        {t("debtorReceipt.title")}
-        <IconButton size="small" onClick={onClose}><FiX size={20} /></IconButton>
-      </DialogTitle>
-      <DialogContent sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, pb: 4 }}>
-        {isFetching ? (
-          <Box sx={{ py: 6 }}><CircularProgress size={24} /></Box>
-        ) : isError || !receipt ? (
-          <Box sx={{ py: 6, fontSize: 14, color: "#ef4444" }}>{t("debtorReceipt.loadError")}</Box>
-        ) : (
-          <Box
-            id="debtor-receipt-print"
-            sx={{
-              width: "100%",
-              background: "#fff",
-              position: "relative",
-              "&::before, &::after": {
-                content: '""',
-                display: "block",
-                height: 8,
-                background: "repeating-linear-gradient(90deg, #e0e0e0 0px, #e0e0e0 8px, transparent 8px, transparent 16px)",
-              },
-            }}
-          >
-            <Box sx={{ px: 3, py: 2.5, border: "1px solid #eee", borderTop: "none", borderBottom: "none" }}>
-              <img src={logo} alt="Young Adults" width={100} style={{ display: "block", margin: "0 auto 16px" }} />
-
-              <Box
-                sx={{
-                  bgcolor: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca",
-                  borderRadius: 1, px: 1.5, py: 1, mb: 1.5, fontSize: 13, fontWeight: 700, textAlign: "center",
-                  letterSpacing: 0.4,
-                }}
-              >
-                {t("debtorReceipt.status")}
-              </Box>
-
-              <ReceiptRow label={t("debtorReceipt.name")} value={receipt.student.name} />
-              <ReceiptRow label={t("debtorReceipt.studentId")} value={receipt.student.id} />
-              <ReceiptRow label={t("debtorReceipt.phone")} value={receipt.student.phone} />
-              <ReceiptRow label={t("debtorReceipt.group")} value={receipt.groups.map((g) => g.name).join(", ")} />
-              <ReceiptRow label={t("debtorReceipt.branch")} value={receipt.branch?.name ?? null} />
-              <ReceiptRow label={t("debtorReceipt.totalCharged")} value={`${receipt.totalCharged.toLocaleString("ru-RU")} UZS`} />
-              <ReceiptRow label={t("debtorReceipt.totalPaid")} value={`${receipt.totalPaid.toLocaleString("ru-RU")} UZS`} />
-              <ReceiptRow label={t("debtorReceipt.balance")} value={`${Math.abs(receipt.debtAmount).toLocaleString("ru-RU")} UZS`} />
-              <ReceiptRow label={t("debtorReceipt.issuedAt")} value={formatIssuedAt()} />
-
-              <Box sx={{ mt: 1.5, fontSize: 11, color: "#888", fontStyle: "italic" }}>
-                {t("debtorReceipt.notice")}
-              </Box>
-            </Box>
-          </Box>
-        )}
-
-        {!isFetching && !isError && receipt && (
-          <Button
-            variant="contained"
-            startIcon={<FiPrinter />}
-            onClick={handlePrint}
-            sx={{ borderRadius: 999, textTransform: "none", bgcolor: "#26a9b8", px: 4, "&:hover": { bgcolor: "#1f8c99" } }}
-          >
-            {t("debtorReceipt.print")}
-          </Button>
-        )}
-      </DialogContent>
-    </Dialog>
+    <ReceiptModal
+      open={open}
+      onClose={onClose}
+      title={variant === "system" ? t("paymentReceipt.title") : t("debtorReceipt.title")}
+      printLabel={t("debtorReceipt.print")}
+      loadError={t("debtorReceipt.loadError")}
+      isLoading={isFetching}
+      isError={isError}
+      hasData={Boolean(receipt)}
+      printId="debtor-receipt-print"
+      lines={lines}
+      banner={banner}
+      footnote={footnote}
+    />
   );
 };
 

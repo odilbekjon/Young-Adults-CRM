@@ -52,12 +52,20 @@ import { AddPayment } from "../../components/AddPayment";
 import {
   useAllStudentsQuery,
   useUpdateStudentMutation,
-  useToggleStudentStatusMutation,
   useUpdateStudentStatusMutation,
   useLazyStudentsExcelQuery,
 } from "../../app/api/studentsApi";
-import { useAllGroupsQuery, useAddStudentToGroupMutation, useStudentGroupsQuery } from "../../app/api/groupsApi";
+import {
+  useAllGroupsQuery,
+  useAddStudentToGroupMutation,
+  useStudentGroupsQuery,
+  useLazyStudentGroupsQuery,
+  useFreezeStudentGroupMutation,
+  useUpdateStudentGroupStatusMutation,
+} from "../../app/api/groupsApi";
 import type { StudentGroupRecord } from "../../app/api/groupsApi/types";
+import { useCoursesSelectQuery } from "../../app/api/coursesApi";
+import { useTeachersSelectQuery } from "../../app/api/teachersApi";
 import { usePaymentsListQuery, isCompletedPaymentStatus } from "../../app/api/financeApi";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
 import { useTagsSelectQuery } from "../../app/api/tagsApi";
@@ -238,6 +246,11 @@ const DateFilterInput = ({ placeholder, value, onChange }: { placeholder: string
   <Box
     sx={{
       width: "100%", minWidth: 0,
+      // DatePickerField's wrapper carries an inline `min-width: 160px`, which
+      // is wider than the flex cell once the row is squeezed — the field then
+      // overflowed its cell and touched its neighbour (From/To glued together).
+      // Inline style => needs !important to be overridden.
+      "& > div": { minWidth: "0 !important", width: "100%" },
       "& [role='button']": {
         height: `${CONTROL_H}px !important`, borderRadius: "6px !important",
         padding: "0 8px !important", gap: "6px !important",
@@ -251,18 +264,36 @@ const DateFilterInput = ({ placeholder, value, onChange }: { placeholder: string
 );
 
 /* ─── ADD TO GROUP MODAL ─────────────────────────────── */
-// Status (Swagger: POST /student-groups accepts an optional `status` — PROBATION
-// or ACTIVE) decides whether the membership starts as a trial lesson (no
-// billing) or immediately active, in which case `paymentStartDate` is also
-// sent so the backend knows when to start calculating payment.
-type AddToGroupStatus = "PROBATION" | "ACTIVE";
+// Same rule as SingleGroup's "Add student": a student added to a group must
+// NOT be active on the spot — the membership is created as PROBATION (never
+// ACTIVE, which would start payment accounting) and immediately frozen; staff
+// activate it later from the group (Activate asks "since when"). So this
+// modal only asks for the group and the "joined on" date.
+const pad2 = (n: number) => String(n).padStart(2, "0");
+// Local calendar date as YYYY-MM-DD (toISOString() is UTC, which lands on the
+// previous day for the first hours after midnight in UTC+5).
+const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+// POST /student-groups' response envelope isn't documented beyond a 200, so
+// the new membership's id is picked up defensively ({data: {id}} or {id}) and
+// ignored if the row obviously belongs to a different group (same helper as
+// SingleGroup's handleAddStudentSubmit).
+const membershipIdFromCreateResponse = (res: unknown, groupId: string): string | undefined => {
+  if (!res || typeof res !== "object") return undefined;
+  const container = res as Record<string, unknown>;
+  const row = (container.data && typeof container.data === "object" && !Array.isArray(container.data)
+    ? container.data
+    : container) as Record<string, unknown>;
+  if (typeof row.groupId === "string" && row.groupId !== groupId) return undefined;
+  return typeof row.id === "string" && row.id ? row.id : undefined;
+};
 
 export interface AddToGroupPayload {
   groupId: string;
-  status: AddToGroupStatus;
-  paymentStartDate?: string;
+  joinedAt: string;
 }
 
 const AddToGroupModal = ({
@@ -282,14 +313,12 @@ const AddToGroupModal = ({
 }) => {
   const { t } = useTranslation();
   const [groupId, setGroupId] = useState("");
-  const [status, setStatus] = useState<AddToGroupStatus>("PROBATION");
-  const [paymentStartDate, setPaymentStartDate] = useState(todayIso());
+  const [joinedAt, setJoinedAt] = useState(todayIso());
 
   useEffect(() => {
     if (!open) {
       setGroupId("");
-      setStatus("PROBATION");
-      setPaymentStartDate(todayIso());
+      setJoinedAt(todayIso());
     }
   }, [open]);
 
@@ -300,12 +329,8 @@ const AddToGroupModal = ({
 
   const handleSubmit = async () => {
     if (!groupId || isSubmitting) return;
-    const success = await onSubmit({
-      groupId,
-      status,
-      paymentStartDate: status === "ACTIVE" ? paymentStartDate || undefined : undefined,
-    });
-    if (success) { setGroupId(""); setStatus("PROBATION"); setPaymentStartDate(todayIso()); }
+    const success = await onSubmit({ groupId, joinedAt: joinedAt || todayIso() });
+    if (success) { setGroupId(""); setJoinedAt(todayIso()); }
   };
 
   return (
@@ -369,44 +394,13 @@ const AddToGroupModal = ({
 
         <Box mt={2.5}>
           <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>
-            {t("students.addToGroup.status")}
+            {t("students.addToGroup.joinedAt")}
           </Typography>
-          <RadioGroup
-            row
-            value={status}
-            onChange={(e) => setStatus(e.target.value as AddToGroupStatus)}
-            sx={{ gap: 3 }}
-          >
-            <FormControlLabel
-              value="PROBATION"
-              disabled={isSubmitting}
-              control={<Radio size="small" sx={{ color: "var(--color-border)", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
-              label={<Typography fontSize={13} color="var(--color-text-secondary)">{t("students.addToGroup.statusOptions.probation")}</Typography>}
-              sx={{ m: 0, gap: 0.5 }}
-            />
-            <FormControlLabel
-              value="ACTIVE"
-              disabled={isSubmitting}
-              control={<Radio size="small" sx={{ color: "var(--color-border)", "&.Mui-checked": { color: "#5c7fa3" }, p: 0.5 }} />}
-              label={<Typography fontSize={13} color="var(--color-text-secondary)">{t("students.addToGroup.statusOptions.active")}</Typography>}
-              sx={{ m: 0, gap: 0.5 }}
-            />
-          </RadioGroup>
-          <Typography fontSize={12} color="var(--color-text-muted)" mt={0.5}>
-            {status === "PROBATION"
-              ? t("students.addToGroup.statusOptions.probationHint")
-              : t("students.addToGroup.statusOptions.activeHint")}
+          <DatePickerField value={joinedAt} onChange={setJoinedAt} disabled={isSubmitting} />
+          <Typography fontSize={12} color="var(--color-text-muted)" mt={0.8}>
+            {t("students.addToGroup.frozenHint")}
           </Typography>
         </Box>
-
-        {status === "ACTIVE" && (
-          <Box mt={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>
-              {t("students.addToGroup.paymentStartDate")}
-            </Typography>
-            <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} disabled={isSubmitting} />
-          </Box>
-        )}
 
         <Box mt={3}>
           <Button
@@ -549,16 +543,35 @@ export const Students = () => {
   const limit = 20;
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const [updateStudent, { isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
-  const [toggleStudentStatus, { isLoading: isArchivingStudent }] = useToggleStudentStatusMutation();
-  const [updateStudentStatus, { isLoading: isUpdatingStudentStatus }] = useUpdateStudentStatusMutation();
+  const [updateStudentStatus] = useUpdateStudentStatusMutation();
+  const [updateStudentGroupStatus] = useUpdateStudentGroupStatusMutation();
+  const [fetchMemberships] = useLazyStudentGroupsQuery();
+  const [freezeStudentGroup] = useFreezeStudentGroupMutation();
+  const [isArchiving, setIsArchiving] = useState(false);
   const { data: reasonOptions } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 });
   // GET /tags/select?type=STUDENT — real, admin-managed tags for the "Tags"
   // filter, replacing the disabled placeholder (students had no tags
   // relationship to filter by until this Tags feature existed).
   const { data: tagOptions } = useTagsSelectQuery({ type: "STUDENT" });
   const [fetchStudentsExcel, { isFetching: isExportingExcel }] = useLazyStudentsExcelQuery();
-  const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
-  const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
+  // GET /courses/select + GET /teachers/select — the complete lists for the
+  // "By courses" / "By teacher" filters (they used to be derived from the
+  // students on the current page, so most options never appeared).
+  const { data: courseOptions } = useCoursesSelectQuery({ branchId: selectedBranchId ?? "all" });
+  const { data: teacherOptions } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" });
+  // GET /groups is paginated (100 per page): pages 2-3 are only requested when
+  // the previous page came back full. The group list serves the Add-to-group
+  // picker, the discount price lookup and the group -> course map below.
+  const GROUPS_PAGE = 100;
+  const { data: groupsPage1 } = useAllGroupsQuery({ page: 1, limit: GROUPS_PAGE });
+  const { data: groupsPage2 } = useAllGroupsQuery({ page: 2, limit: GROUPS_PAGE }, { skip: (groupsPage1?.data.length ?? 0) < GROUPS_PAGE });
+  const { data: groupsPage3 } = useAllGroupsQuery({ page: 3, limit: GROUPS_PAGE }, { skip: (groupsPage2?.data.length ?? 0) < GROUPS_PAGE });
+  const allGroupRows = useMemo(
+    () => [...(groupsPage1?.data ?? []), ...(groupsPage2?.data ?? []), ...(groupsPage3?.data ?? [])],
+    [groupsPage1, groupsPage2, groupsPage3],
+  );
+  const [addStudentToGroup] = useAddStudentToGroupMutation();
+  const [isAddingToGroup, setIsAddingToGroup] = useState(false);
 
   const [students, setStudents] = useState<FlatStudent[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -617,7 +630,16 @@ export const Students = () => {
   // /students hides those unless `status=INACTIVE` is sent — so the "left"
   // filters also pull the INACTIVE list and merge it in.
   const includeArchived = filters.status === "left_after_trial" || filters.status === "left_active";
-  const hasClientFilter = hasFinancialFilter || (CLIENT_STATUS_KEYS as readonly string[]).includes(filters.status);
+  // Search / teacher / course / group-count / created-date have no query param
+  // on GET /students either (only the current 20-row page would be searched),
+  // so they use the same "fetch the full roster, filter + paginate client-side"
+  // mode as the status/financial filters above.
+  const hasLocalFieldFilter = Boolean(
+    filters.search.trim() || filters.teacher || filters.course || filters.groupCount.trim() ||
+    filters.fromCreated || filters.toCreatedDate,
+  );
+  const hasClientFilter =
+    hasFinancialFilter || hasLocalFieldFilter || (CLIENT_STATUS_KEYS as readonly string[]).includes(filters.status);
 
   // Current month range (used by "Added this month" and "Paid during the month").
   const monthRange = useMemo(() => {
@@ -634,7 +656,7 @@ export const Students = () => {
   // that can ask for INACTIVE, so it's sent straight through to the query
   // instead of being applied client-side (list rows carry no status field to
   // filter by locally in the first place).
-  const { data: studentsData, isLoading: studentsLoading } = useAllStudentsQuery({
+  const { data: studentsData, currentData: studentsCurrent, isLoading: studentsLoading } = useAllStudentsQuery({
     page: hasClientFilter ? 1 : page,
     limit: hasClientFilter ? FULL_FETCH_LIMIT : limit,
     branchId: selectedBranchId ?? undefined,
@@ -670,7 +692,16 @@ export const Students = () => {
     { skip: !needsPayments },
   );
 
+  // RTK keeps returning the previous args' `data` while a new query loads. When
+  // switching between the 20-row page and the full-roster batch that stale data
+  // would flash (a partly-filtered page, or thousands of rows un-paginated), so
+  // treat the list as loading until the current args' own result has arrived.
+  const rosterModeStale =
+    studentsData !== undefined && studentsCurrent === undefined &&
+    (hasClientFilter || studentsData.data.length > limit);
+
   const filterDataLoading =
+    rosterModeStale ||
     (needsMemberships && (probationLoading || activeLoading || frozenLoading || inactiveLoading || deletedLoading)) ||
     (needsPayments && paymentsLoading) ||
     (includeArchived && archivedLoading);
@@ -703,7 +734,7 @@ export const Students = () => {
     const discount = new Set<string>();
 
     const coursePriceOf = (groupId: string): number | null => {
-      const raw = (groupsData?.data ?? []).find((g) => g.id === groupId)?.course?.price as unknown;
+      const raw = allGroupRows.find((g) => g.id === groupId)?.course?.price as unknown;
       if (raw && typeof raw === "object" && Array.isArray((raw as { d?: unknown[] }).d)) return Number((raw as { d: unknown[] }).d[0]) || 0;
       return typeof raw === "number" ? raw : null;
     };
@@ -724,7 +755,7 @@ export const Students = () => {
     const leftActive = new Set([...endedActivated].filter((id) => !live.has(id)));
     const leftTrial = new Set([...endedTrial].filter((id) => !live.has(id) && !activated.has(id)));
     return { trial, active, frozen, live, activated, leftActive, leftTrial, discount };
-  }, [probationMs, activeMs, frozenMs, inactiveMs, deletedMs, groupsData]);
+  }, [probationMs, activeMs, frozenMs, inactiveMs, deletedMs, allGroupRows]);
 
   const paidThisMonth = useMemo(() => {
     const ids = new Set<string>();
@@ -740,7 +771,10 @@ export const Students = () => {
   // exists for the new filter/branch.
   useEffect(() => {
     setPage(1);
-  }, [filters.status, filters.tags, filters.financial, selectedBranchId]);
+  }, [
+    filters.status, filters.tags, filters.financial, filters.search, filters.teacher, filters.course,
+    filters.groupCount, filters.fromCreated, filters.toCreatedDate, selectedBranchId,
+  ]);
 
   const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) =>
     setFilters((p) => ({ ...p, [key]: val }));
@@ -749,27 +783,44 @@ export const Students = () => {
 
   const hasFilters = Object.values(filters).some(Boolean);
 
-  const TEACHERS_LIST = useMemo(() => {
-    const names = new Set<string>();
-    studentsData?.data.forEach((s) => (s.teachers ?? []).forEach((tch) => names.add(tch.name)));
-    return Array.from(names);
-  }, [studentsData]);
+  // Course / teacher of each listed student, resolved by ID (never by name):
+  //  - teachers: GET /students rows carry `teachers: [{id, name}]`.
+  //  - courses: rows only carry `groups: [{id, name}]` (no course reference),
+  //    so a student's courses are the courseId of each of their groups, looked
+  //    up in the GET /groups list. (The old filter matched the *name of the
+  //    student's first group* against a list built from the current page.)
+  const groupCourseId = useMemo(() => {
+    const m = new Map<string, string>();
+    allGroupRows.forEach((g) => { if (g.courseId) m.set(g.id, g.courseId); });
+    return m;
+  }, [allGroupRows]);
+  const studentRefs = useMemo(() => {
+    const m = new Map<string, { teacherIds: Set<string>; courseIds: Set<string> }>();
+    const rows = [...(studentsData?.data ?? []), ...(includeArchived ? archivedStudentsData?.data ?? [] : [])];
+    rows.forEach((s) => {
+      m.set(s.id, {
+        teacherIds: new Set((s.teachers ?? []).map((tch) => tch.id)),
+        courseIds: new Set((s.groups ?? []).map((g) => groupCourseId.get(g.id)).filter((x): x is string => Boolean(x))),
+      });
+    });
+    return m;
+  }, [studentsData, archivedStudentsData, includeArchived, groupCourseId]);
 
-  // "Course" reuses FlatStudent.course, which the backend mapper currently
-  // fills from the student's (first) group name — students.groups doesn't
-  // carry a separate course reference, so this is the closest real field.
-  const COURSES_LIST = useMemo(() => {
-    const names = new Set<string>();
-    students.forEach((s) => { if (s.course && s.course !== "—") names.add(s.course); });
-    return Array.from(names);
-  }, [students]);
+  const TEACHERS_LIST = useMemo(
+    () => (teacherOptions ?? []).map((tch) => ({ value: tch.id, label: tch.name })),
+    [teacherOptions],
+  );
+  const COURSES_LIST = useMemo(
+    () => (courseOptions ?? []).map((c) => ({ value: c.id, label: c.name })),
+    [courseOptions],
+  );
 
   // AddToGroupModal ochiladigan barcha guruhlar — backenddan (GET /groups),
   // joriy sahifadagi studentlarning guruhlaridan hosil qilingan taxminiy
   // ro'yxat emas.
   const allGroupsOptions = useMemo(
-    () => (groupsData?.data ?? []).map((g) => ({ id: g.id, name: g.name })),
-    [groupsData]
+    () => allGroupRows.map((g) => ({ id: g.id, name: g.name })),
+    [allGroupRows]
   );
 
   const filtered = useMemo(() => {
@@ -779,7 +830,7 @@ export const Students = () => {
     if (filterDataLoading) return [];
     return students
       .filter((s) => {
-        const search = filters.search.toLowerCase();
+        const search = filters.search.trim().toLowerCase();
         const balance = s.balance ?? 0;
         const financialMatch =
           !filters.financial ||
@@ -812,8 +863,8 @@ export const Students = () => {
         const toMatch = !filters.toCreatedDate || (createdAt && createdAt <= filters.toCreatedDate);
         return (
           (!search || s.name.toLowerCase().includes(search) || s.phone.includes(search)) &&
-          (!filters.teacher || s.teacher === filters.teacher) &&
-          (!filters.course || s.course === filters.course) &&
+          (!filters.teacher || studentRefs.get(s.uid)?.teacherIds.has(filters.teacher)) &&
+          (!filters.course || studentRefs.get(s.uid)?.courseIds.has(filters.course)) &&
           financialMatch && statusMatch && groupCountMatch && fromMatch && toMatch
         );
       })
@@ -823,7 +874,7 @@ export const Students = () => {
         const bv = String(b[sortKey as keyof FlatStudent] ?? "");
         return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
       });
-  }, [students, filters, sortKey, sortDir, filterDataLoading, membershipSets, paidThisMonth, monthRange]);
+  }, [students, filters, sortKey, sortDir, filterDataLoading, membershipSets, paidThisMonth, monthRange, studentRefs]);
 
   // Backend hozircha sahifalash meta'sini qaytarmaydi; shu sababli joriy
   // sahifa hajmidan taxminiy meta hosil qilamiz, chunki bu maydon kelib
@@ -878,17 +929,52 @@ export const Students = () => {
     setArchiveComment("");
   };
 
-  // Archives the student (POST /students/{id}/status -> INACTIVE, with the
-  // picked reason recorded — same call SingleGroup's own "remove student"
-  // dialog uses, so the reason/comment show up on the Archive page). A real
-  // permanent delete is only reachable from the Archive page itself.
+  // Ends every LIVE (PROBATION / ACTIVE / FROZEN) group membership of a
+  // student. Archiving the account alone (POST /students/{id}/status) leaves
+  // the /student-groups rows alive, so the archived student kept showing up in
+  // their groups — same two-step order SingleGroup's "Delete student" toggle
+  // uses: (1) PATCH /student-groups/{membershipId}/status INACTIVE with
+  // isAllGroup=true (one call that ends every membership of the student;
+  // `isAllGroup` is only ever sent when true), then (2) the caller archives the
+  // account. Whatever the all-groups call did not cover is ended one by one.
+  const endLiveMemberships = async (studentId: string, reasonId?: string, reason?: string) => {
+    const loadLive = async (): Promise<StudentGroupRecord[]> => {
+      const lists = await Promise.all(
+        (["PROBATION", "ACTIVE", "FROZEN"] as const).map((status) =>
+          fetchMemberships({ studentId, status, limit: 200 }).unwrap(),
+        ),
+      );
+      return lists
+        .flatMap((r) => r.rows)
+        .filter((m) => m.status !== "INACTIVE" && m.status !== "DELETED" && (!m.studentId || m.studentId === studentId));
+    };
+    const first = (await loadLive())[0];
+    if (!first) return;
+    await updateStudentGroupStatus({ id: first.id, status: "INACTIVE", reasonId, reason, isAllGroup: true }).unwrap();
+    for (const m of await loadLive()) {
+      await updateStudentGroupStatus({ id: m.id, status: "INACTIVE", reasonId, reason }).unwrap();
+    }
+  };
+
+  // Archives a student: end all group memberships first, then POST
+  // /students/{id}/status -> INACTIVE (the reason is recorded to the student's
+  // history — the source of the Archive page's reason/comment columns; the
+  // reason's name and the comment are combined because that field is free
+  // text). A real permanent DELETE /students/{id} is only reachable from the
+  // Archive page and is never called from here.
+  const archiveStudent = async (studentId: string, reasonId?: string, comment?: string) => {
+    const reasonName = reasonId ? reasonOptions?.find((r) => r.id === reasonId)?.name : undefined;
+    const combinedReason = [reasonName, comment?.trim()].filter(Boolean).join(" — ") || undefined;
+    await endLiveMemberships(studentId, reasonId || undefined, comment?.trim() || undefined);
+    await updateStudentStatus({ id: studentId, status: "INACTIVE", reason: combinedReason }).unwrap();
+  };
+
   const handleArchiveConfirm = async () => {
-    if (!archiveUid) return;
+    if (!archiveUid || isArchiving) return;
     setActionError(null);
-    const reasonName = reasonOptions?.find((r) => r.id === archiveReasonId)?.name;
-    const combinedReason = [reasonName, archiveComment.trim()].filter(Boolean).join(" — ") || undefined;
+    setIsArchiving(true);
     try {
-      await updateStudentStatus({ id: archiveUid, status: "INACTIVE", reason: combinedReason }).unwrap();
+      await archiveStudent(archiveUid, archiveReasonId, archiveComment);
       setSelected((p) => p.filter((x) => x !== archiveUid));
       resetArchiveState();
       toast.success(t("students.toast.archived"));
@@ -897,22 +983,43 @@ export const Students = () => {
       const message = detail ? `${t("students.archiveDialog.error")}: ${detail}` : t("students.archiveDialog.error");
       setActionError(message);
       toast.error(message);
+    } finally {
+      setIsArchiving(false);
     }
   };
 
+  // Bulk "delete selected" = the same archive flow for every selected row
+  // (no reason picker in the bulk dialog). Replaces the blind
+  // PATCH /students/{id}/toggle-status, which left memberships alive and would
+  // have flipped an already-archived student (Status filter "Inactive") back
+  // to ACTIVE.
   const handleBulkDelete = async () => {
-    if (selected.length === 0) return;
+    if (selected.length === 0 || isArchiving) return;
     setActionError(null);
-    try {
-      await Promise.all(selected.map((uid) => toggleStudentStatus(uid).unwrap()));
-      setSelected([]);
-      toast.success(t("students.toast.archived"));
-    } catch (err) {
-      const detail = extractApiError(err);
-      const message = detail ? `${t("students.archiveDialog.error")}: ${detail}` : t("students.archiveDialog.error");
-      setActionError(message);
-      toast.error(message);
+    setIsArchiving(true);
+    const failed: string[] = [];
+    let firstError: unknown = null;
+    for (const uid of selected) {
+      try {
+        await archiveStudent(uid);
+      } catch (err) {
+        failed.push(uid);
+        if (firstError === null) firstError = err;
+      }
     }
+    setIsArchiving(false);
+    setSelected(failed);
+    if (failed.length === 0) {
+      toast.success(t("students.toast.archived"));
+      return;
+    }
+    const detail = extractApiError(firstError);
+    const base = failed.length < selected.length
+      ? t("students.toast.archivePartial", { done: selected.length - failed.length, total: selected.length })
+      : t("students.archiveDialog.error");
+    const message = detail ? `${base}: ${detail}` : base;
+    setActionError(message);
+    toast.error(message);
   };
 
   const handleBulkDeleteConfirm = async () => {
@@ -933,7 +1040,7 @@ export const Students = () => {
     }
   };
 
-  const handleAddToGroup = async ({ groupId, status, paymentStartDate }: AddToGroupPayload): Promise<boolean> => {
+  const handleAddToGroup = async ({ groupId, joinedAt }: AddToGroupPayload): Promise<boolean> => {
     setActionError(null);
     // Backend student-groups' allaqachon a'zo bo'lgan studentni qayta
     // qo'shishga ruxsat bermasligi mumkin — shu sabab tanlanganlar orasidan
@@ -946,22 +1053,59 @@ export const Students = () => {
       toast.error(t("students.addToGroup.toast.alreadyInGroup"));
       return false;
     }
-    try {
-      await Promise.all(
-        eligibleUids.map((uid) =>
-          addStudentToGroup({ studentId: uid, groupId, status, paymentStartDate }).unwrap()
-        )
-      );
+    setIsAddingToGroup(true);
+    // Same flow as SingleGroup's handleAddStudentSubmit: POST /student-groups
+    // as PROBATION (never ACTIVE — that would start payment accounting; no
+    // paymentStartDate) with joinedAt, then POST /student-groups/{id}/freeze
+    // (startDate = joinedAt) so the student lands FROZEN. Staff activate them
+    // later ("since when" is asked then).
+    const addOne = async (studentId: string): Promise<"ok" | "notFrozen"> => {
+      const created = await addStudentToGroup({ studentId, groupId, status: "PROBATION", joinedAt }).unwrap();
+      try {
+        let membershipId = membershipIdFromCreateResponse(created, groupId);
+        if (!membershipId) {
+          const found = await fetchMemberships({ groupId, studentId, limit: 20 }).unwrap();
+          membershipId = found.rows
+            .filter((r) => r.status !== "INACTIVE" && r.status !== "DELETED")
+            .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))[0]?.id;
+        }
+        if (!membershipId) throw new Error("new membership id not found");
+        await freezeStudentGroup({ id: membershipId, startDate: joinedAt }).unwrap();
+        return "ok";
+      } catch {
+        // The student WAS added — only the follow-up freeze failed.
+        return "notFrozen";
+      }
+    };
+    const results = await Promise.all(
+      eligibleUids.map(async (uid) => {
+        try {
+          return { uid, outcome: await addOne(uid), error: null as unknown };
+        } catch (err) {
+          return { uid, outcome: "failed" as const, error: err };
+        }
+      }),
+    );
+    setIsAddingToGroup(false);
+
+    const failed = results.filter((r) => r.outcome === "failed");
+    const notFrozen = results.filter((r) => r.outcome === "notFrozen");
+    const done = results.length - failed.length;
+    if (done > 0) setSelected((p) => p.filter((uid) => failed.some((f) => f.uid === uid) || !eligibleUids.includes(uid)));
+
+    if (failed.length === 0) {
       toast.success(t("students.addToGroup.toast.success"));
-      setSelected([]);
+      if (notFrozen.length > 0) toast.error(t("students.addToGroup.toast.freezeError"));
       setAddToGroupOpen(false);
       return true;
-    } catch (err) {
-      const detail = extractApiError(err);
-      const generic = t("students.addToGroup.toast.error");
-      toast.error(detail ? `${generic}: ${detail}` : generic);
-      return false;
     }
+    const detail = extractApiError(failed[0].error);
+    const base = done > 0
+      ? t("students.addToGroup.toast.partialError", { done, total: results.length })
+      : t("students.addToGroup.toast.error");
+    toast.error(detail ? `${base}: ${detail}` : base);
+    if (notFrozen.length > 0) toast.error(t("students.addToGroup.toast.freezeError"));
+    return false;
   };
 
   const handleExportExcel = async () => {
@@ -1067,7 +1211,7 @@ export const Students = () => {
         <Box sx={filterCell(105)}>
           <DropdownFilter
             label={t("students.filters.byCourses")} value={filters.course}
-            options={COURSES_LIST.map((c) => ({ value: c, label: c }))}
+            options={COURSES_LIST}
             onChange={(v) => setFilter("course", v)} onClear={() => setFilter("course", "")}
           />
         </Box>
@@ -1118,7 +1262,7 @@ export const Students = () => {
           />
         </Box>
 
-        <Box sx={filterCell(145)}>
+        <Box sx={filterCell(155)}>
           <DateFilterInput
             placeholder={t("students.filters.fromCreated")}
             value={filters.fromCreated}
@@ -1126,7 +1270,7 @@ export const Students = () => {
           />
         </Box>
 
-        <Box sx={filterCell(145)}>
+        <Box sx={filterCell(155)}>
           <DateFilterInput
             placeholder={t("students.filters.toCreatedDate")}
             value={filters.toCreatedDate}
@@ -1168,7 +1312,7 @@ export const Students = () => {
           </Typography>
           <DropdownFilter
             label={t("students.filters.byTeacher")} value={filters.teacher}
-            options={TEACHERS_LIST.map((tch) => ({ value: tch, label: tch }))}
+            options={TEACHERS_LIST}
             onChange={(v) => setFilter("teacher", v)} onClear={() => setFilter("teacher", "")}
           />
         </Menu>
@@ -1405,7 +1549,16 @@ export const Students = () => {
       {/* ── MODALS & DRAWERS ─────────────────────────────── */}
 
       <AddStudent open={addStudentOpen} onClose={() => setAddStudentOpen(false)} />
-      <AddPayment open={addPaymentOpen} onClose={() => setAddPaymentOpen(false)} />
+      <AddPayment
+        open={addPaymentOpen}
+        onClose={() => setAddPaymentOpen(false)}
+        lockedStudent={activeStudent ? {
+          id: activeStudent.uid,
+          name: activeStudent.name,
+          phone: activeStudent.phone,
+          balance: activeStudent.balance,
+        } : undefined}
+      />
 
       <EditStudentDrawer
         open={editDrawerOpen}
@@ -1451,18 +1604,18 @@ export const Students = () => {
         onScopeChange={() => {}}
         showGroupScope={false}
         archiveLabel={t("students.removeDialog.archiveLabel")}
-        loading={isUpdatingStudentStatus}
+        loading={isArchiving}
       />
 
-      {/* Bulk archive confirm — toggleStudentStatus applied to every selected row */}
+      {/* Bulk archive confirm — same archive flow (memberships ended, then account archived) for every selected row */}
       <Dialog open={bulkDeleteConfirmOpen} onClose={() => setBulkDeleteConfirmOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>{t("students.archiveDialog.title")}</DialogTitle>
         <DialogContent>
           <Typography fontSize={14} color="text.secondary">{t("students.archiveDialog.message")}</Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setBulkDeleteConfirmOpen(false)} disabled={isArchivingStudent} sx={{ color: "var(--color-text-secondary)" }}>{t("students.archiveDialog.cancel")}</Button>
-          <Button variant="contained" color="error" disabled={isArchivingStudent} onClick={handleBulkDeleteConfirm} sx={{ borderRadius: 2 }}>{t("students.archiveDialog.confirm")}</Button>
+          <Button onClick={() => setBulkDeleteConfirmOpen(false)} disabled={isArchiving} sx={{ color: "var(--color-text-secondary)" }}>{t("students.archiveDialog.cancel")}</Button>
+          <Button variant="contained" color="error" disabled={isArchiving} onClick={handleBulkDeleteConfirm} sx={{ borderRadius: 2 }}>{t("students.archiveDialog.confirm")}</Button>
         </DialogActions>
       </Dialog>
     </Box>

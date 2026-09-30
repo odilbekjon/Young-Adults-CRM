@@ -11,6 +11,9 @@ import {
   AttendanceReportMeta,
   AttendanceReportResult,
   AttendanceReportAttendanceStatus,
+  StudentAttendanceDay,
+  StudentAttendanceDayStatus,
+  StudentMonthAttendanceArgs,
 } from "./types";
 
 const normalizeStatus = (raw: unknown): AttendanceStatus | null => {
@@ -171,6 +174,68 @@ const normalizeReportRows = (raw: unknown): AttendanceReportRow[] => {
   return list.map((item, index) => normalizeReportRow(item, index));
 };
 
+
+const normalizeDayStatus = (raw: unknown): StudentAttendanceDayStatus | null => {
+  if (typeof raw !== "string") return null;
+  const upper = raw.trim().toUpperCase();
+  if (upper === "PRESENT" || upper === "WAS") return "PRESENT";
+  if (upper === "ABSENT" || upper === "NOT") return "ABSENT";
+  if (upper === "EXCUSED") return "EXCUSED";
+  return null;
+};
+
+const personName = (raw: unknown): string | null => {
+  if (!raw) return null;
+  if (typeof raw === "string") return raw || null;
+  if (typeof raw === "object") {
+    const o = raw as Record<string, unknown>;
+    const name = o.name ?? o.fullName;
+    return name ? String(name) : null;
+  }
+  return null;
+};
+
+// Pulls ONE student's own per-date marks out of GET /attendances/group/{id}
+// (`table[]` rows carry `studentId` + nested `attendances[{date,status,
+// reason,attendance}]`). Status is read from `status` first and falls back to
+// the row's `attendance` field when it happens to be a string; the "updated
+// by" author is read from a few plausible field names since the exact one
+// isn't documented.
+const extractStudentDays = (raw: unknown, studentId: string): Omit<StudentAttendanceDay, "groupId">[] => {
+  const container = (raw ?? {}) as Record<string, unknown>;
+  const rows: unknown[] = Array.isArray(raw)
+    ? raw
+    : Array.isArray(container.table)
+    ? container.table
+    : Array.isArray(container.students)
+    ? container.students
+    : Array.isArray(container.data)
+    ? container.data
+    : [];
+  const out: Omit<StudentAttendanceDay, "groupId">[] = [];
+  rows.forEach((item) => {
+    const obj = (item ?? {}) as Record<string, unknown>;
+    if (asId(obj.studentId ?? obj.student ?? obj.id) !== studentId) return;
+    const nested =
+      (Array.isArray(obj.attendances) && obj.attendances) ||
+      (Array.isArray(obj.records) && obj.records) ||
+      (Array.isArray(obj.days) && obj.days) ||
+      (Array.isArray(obj.attendance) && obj.attendance) ||
+      [obj];
+    (nested as Record<string, unknown>[]).forEach((entry) => {
+      const date = String(entry?.date ?? "").slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      out.push({
+        date,
+        status: normalizeDayStatus(entry?.status) ?? normalizeDayStatus(entry?.attendance),
+        reason: entry?.reason ? String(entry.reason) : null,
+        updatedBy: personName(entry?.updatedBy ?? entry?.modifiedBy ?? entry?.markedBy ?? entry?.updatedByName ?? entry?.author),
+      });
+    });
+  });
+  return out;
+};
+
 export const attendancesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     groupAttendanceDates: builder.query<string[], GroupAttendanceQueryArgs>({
@@ -217,6 +282,48 @@ export const attendancesApi = baseApi.injectEndpoints({
       },
       providesTags: ["attendance"],
     }),
+    // One student's lesson days (scheduled dates + their own marks) for a
+    // month across one or many groups, fetched in parallel from the two
+    // existing per-group endpoints above — there is no per-student endpoint
+    // that returns dated marks. Groups whose requests both fail are skipped;
+    // the query only errors when EVERY request failed.
+    studentMonthAttendance: builder.query<StudentAttendanceDay[], StudentMonthAttendanceArgs>({
+      queryFn: async ({ studentId, groupIds, month }, _api, _extra, fetchWithBQ) => {
+        const results = await Promise.all(
+          groupIds.map(async (groupId) => {
+            const [datesRes, recordsRes] = await Promise.all([
+              fetchWithBQ({ url: `${PATHS.ATTENDANCES}/group/${groupId}/dates?month=${month}`, method: "GET" }),
+              fetchWithBQ({ url: `${PATHS.ATTENDANCES}/group/${groupId}?month=${month}`, method: "GET" }),
+            ]);
+            return { groupId, datesRes, recordsRes };
+          })
+        );
+        if (results.length > 0 && results.every((r) => r.datesRes.error && r.recordsRes.error)) {
+          return { error: results[0].recordsRes.error ?? results[0].datesRes.error! };
+        }
+        const days: StudentAttendanceDay[] = [];
+        results.forEach(({ groupId, datesRes, recordsRes }) => {
+          const byDate = new Map<string, StudentAttendanceDay>();
+          if (!datesRes.error) {
+            normalizeDates((datesRes.data as { data?: unknown } | undefined)?.data).forEach((date) => {
+              byDate.set(date, { groupId, date, status: null, reason: null, updatedBy: null });
+            });
+          }
+          if (!recordsRes.error) {
+            extractStudentDays((recordsRes.data as { data?: unknown } | undefined)?.data, studentId).forEach((d) => {
+              const prev = byDate.get(d.date);
+              // Rows without any mark are only kept when the lesson date is
+              // already known from the dates endpoint (or is itself a real
+              // entry) — a bare null row is a scheduled-but-unmarked lesson.
+              byDate.set(d.date, { groupId, ...d, status: d.status ?? prev?.status ?? null });
+            });
+          }
+          byDate.forEach((v) => days.push(v));
+        });
+        return { data: days.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)) };
+      },
+      providesTags: ["attendance"],
+    }),
     saveAttendance: builder.mutation<SaveAttendanceResponse, SaveAttendanceRequest>({
       // Swagger labels this endpoint's body as multipart/form-data, but that
       // was confirmed wrong against the real backend: sending `records` as a
@@ -252,6 +359,7 @@ export const {
   useGroupAttendanceDatesQuery,
   useGroupAttendanceQuery,
   useAttendanceReportQuery,
+  useStudentMonthAttendanceQuery,
   useSaveAttendanceMutation,
   useLazyGroupAttendanceExcelQuery,
 } = attendancesApi;

@@ -1,99 +1,89 @@
-import { Dialog, DialogTitle, DialogContent, IconButton, CircularProgress, Button, Box } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { FiX, FiPrinter } from "react-icons/fi";
-import { usePaymentReceiptQuery } from "../../app/api/financeApi";
+import { usePaymentReceiptQuery, usePaymentByIdQuery } from "../../app/api/financeApi";
 import { formatDate } from "../../constants/FlatStudents";
-import logo from "../../assets/logo_ya_black.png";
+import { ReceiptModal, type ReceiptLine } from "./ReceiptSheet";
+import { formatDateTime, formatUzs } from "./format";
 
-const ReceiptRow = ({ label, value }: { label: string; value?: string | null }) => {
-  if (!value) return null;
-  return (
-    <div style={{ fontSize: 13, color: "#333", marginBottom: 4 }}>
-      <strong>{label}</strong> {value}
-    </div>
-  );
-};
+// Values the caller already knows (e.g. from StudentProfile's payments
+// table row) — only used to fill in lines GET /finance/payments/{id}/receipt
+// itself doesn't return; the endpoint's own values always win.
+export interface PaymentReceiptFallback {
+  creator?: string | null;
+  createdAt?: string | null;
+  groupName?: string | null;
+  teacherName?: string | null;
+  coursePrice?: number | null;
+}
 
 // Shown after a payment is created, and reused wherever a past payment's
 // receipt needs to be viewed/printed (e.g. StudentProfile's payments table).
 // Backed by GET /finance/payments/{id}/receipt — the dedicated print
-// endpoint, distinct from the plain GET /finance/payments/{id} detail route.
+// endpoint. Layout follows the reference "check": Check number, Company,
+// Branch, Student, Phone, Group, Course price, Teacher, Type, Payment amount,
+// Date, then the grey Creator / Time lines. Any line with no data is hidden.
 export const PaymentReceiptModal = ({
-  open, onClose, paymentId,
+  open, onClose, paymentId, fallback,
 }: {
   open: boolean;
   onClose: () => void;
   paymentId: string | null;
+  fallback?: PaymentReceiptFallback;
 }) => {
   const { t } = useTranslation();
-  const { data: payment, isFetching, isError } = usePaymentReceiptQuery(paymentId ?? "", { skip: !open || !paymentId });
+  const p = (key: string) => t(`settings.ceo.general.invoice.preview.${key}`);
+  const { data: receipt, isFetching, isError } = usePaymentReceiptQuery(paymentId ?? "", { skip: !open || !paymentId });
 
-  const handlePrint = () => window.print();
+  // GET /finance/payments/{id} is only asked for when the receipt endpoint
+  // left teacher / course price / creator blank and the caller can't supply
+  // them either — avoids a second request per print in the common case.
+  const needsDetail = Boolean(
+    receipt && (
+      !(receipt.teacherName ?? fallback?.teacherName) ||
+      (receipt.coursePrice ?? fallback?.coursePrice) == null ||
+      !(receipt.creatorName ?? fallback?.creator)
+    )
+  );
+  const { data: detail } = usePaymentByIdQuery(paymentId ?? "", { skip: !open || !paymentId || !needsDetail });
+
+  const creator = receipt?.creatorName || fallback?.creator || detail?.createdBy || null;
+  const teacher = receipt?.teacherName || fallback?.teacherName || detail?.teacherName || null;
+  const coursePrice = receipt?.coursePrice ?? fallback?.coursePrice ?? detail?.coursePrice ?? null;
+  const number = receipt?.receiptNumber || detail?.checkNumber || null;
+  const timestamp = formatDateTime(receipt?.createdAt || fallback?.createdAt || detail?.createdAt || receipt?.date, true);
+
+  const lines: ReceiptLine[] = receipt
+    ? [
+        { label: p("checkNumber"), value: number ? `№${number}` : null },
+        { label: p("company"), value: "Young Adults" },
+        { label: p("branch"), value: receipt.branch?.name },
+        { label: p("student"), value: receipt.student.name },
+        { label: p("phone"), value: receipt.student.phone },
+        { label: p("group"), value: receipt.group?.name || fallback?.groupName },
+        { label: p("coursePrice"), value: formatUzs(coursePrice) },
+        { label: p("teacher"), value: teacher },
+        { label: p("type"), value: receipt.paymentMethod },
+        { label: p("paymentAmount"), value: formatUzs(receipt.amount) },
+        { label: p("paidMonths"), value: receipt.paidMonths.join(", ") },
+        { label: p("notes"), value: receipt.notes },
+        { label: p("date"), value: receipt.date ? formatDate(receipt.date) : null },
+        { label: p("creator"), value: creator, muted: true },
+        { label: p("time"), value: timestamp, muted: true },
+      ]
+    : [];
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
-      <style>{`
-        @media print {
-          body * { visibility: hidden; }
-          #payment-receipt-print, #payment-receipt-print * { visibility: visible; }
-          #payment-receipt-print { position: fixed; inset: 0; padding: 24px; }
-        }
-      `}</style>
-      <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 18, fontWeight: 600 }}>
-        {t("paymentReceipt.title")}
-        <IconButton size="small" onClick={onClose}><FiX size={20} /></IconButton>
-      </DialogTitle>
-      <DialogContent sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, pb: 4 }}>
-        {isFetching ? (
-          <Box sx={{ py: 6 }}><CircularProgress size={24} /></Box>
-        ) : isError || !payment ? (
-          <Box sx={{ py: 6, fontSize: 14, color: "#ef4444" }}>{t("paymentReceipt.loadError")}</Box>
-        ) : (
-          <Box
-            id="payment-receipt-print"
-            sx={{
-              width: "100%",
-              background: "#fff",
-              position: "relative",
-              "&::before, &::after": {
-                content: '""',
-                display: "block",
-                height: 8,
-                background: "repeating-linear-gradient(90deg, #e0e0e0 0px, #e0e0e0 8px, transparent 8px, transparent 16px)",
-              },
-            }}
-          >
-            <Box sx={{ px: 3, py: 2.5, border: "1px solid #eee", borderTop: "none", borderBottom: "none" }}>
-              <img src={logo} alt="Young Adults" width={100} style={{ display: "block", margin: "0 auto 16px" }} />
-
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.checkNumber")} value={payment.receiptNumber ? `№${payment.receiptNumber}` : null} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.company")} value="Young Adults" />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.branch")} value={payment.branch?.name ?? null} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.student")} value={payment.student.name} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.studentId")} value={payment.student.id} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.phone")} value={payment.student.phone} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.group")} value={payment.group?.name ?? null} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.type")} value={payment.paymentMethod} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.paymentAmount")} value={`${payment.amount.toLocaleString("ru-RU")} UZS`} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.paidMonths")} value={payment.paidMonths.join(", ")} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.notes")} value={payment.notes} />
-              <ReceiptRow label={t("settings.ceo.general.invoice.preview.date")} value={payment.date ? formatDate(payment.date) : null} />
-            </Box>
-          </Box>
-        )}
-
-        {!isFetching && !isError && payment && (
-          <Button
-            variant="contained"
-            startIcon={<FiPrinter />}
-            onClick={handlePrint}
-            sx={{ borderRadius: 999, textTransform: "none", bgcolor: "#26a9b8", px: 4, "&:hover": { bgcolor: "#1f8c99" } }}
-          >
-            {t("paymentReceipt.print")}
-          </Button>
-        )}
-      </DialogContent>
-    </Dialog>
+    <ReceiptModal
+      open={open}
+      onClose={onClose}
+      title={t("paymentReceipt.title")}
+      printLabel={t("paymentReceipt.print")}
+      loadError={t("paymentReceipt.loadError")}
+      isLoading={isFetching}
+      isError={isError}
+      hasData={Boolean(receipt)}
+      printId="payment-receipt-print"
+      lines={lines}
+    />
   );
 };
 

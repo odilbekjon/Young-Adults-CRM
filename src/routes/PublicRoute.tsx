@@ -6,15 +6,17 @@ import { useAuth } from "../hooks/useAuth";
 // requested, via the `from` state ProtectedRoute attaches) instead of
 // seeing the login form again. This is the single place that decides where
 // a just-logged-in user lands — the login form itself only dispatches the
-// credential update and lets this reactive guard redirect. TEACHER lands on
-// /groups (TeacherGroups' own schedule+groups view) — not /dashboard, which
-// ProtectedRoute no longer even allows a TEACHER session to reach.
+// credential update and lets this reactive guard redirect. Staff and TEACHER
+// both land on /dashboard (DashboardRoute renders the teacher's own schedule
+// variant for a TEACHER session); STUDENT lands on their portal. A stale
+// `from` pointing somewhere the role can't reach is corrected by
+// ProtectedRoute/StudentRoute on the next hop.
 export const PublicRoute = () => {
-  const { isAuthenticated, isStudent, isTeacher } = useAuth();
+  const { isAuthenticated, isStudent } = useAuth();
   const location = useLocation();
 
   if (isAuthenticated) {
-    const defaultPath = isStudent ? "/portal" : isTeacher ? "/groups" : "/dashboard";
+    const defaultPath = isStudent ? "/portal" : "/dashboard";
     const redirectTo = (location.state as { from?: Location })?.from?.pathname || defaultPath;
     return <Navigate to={redirectTo} replace />;
   }

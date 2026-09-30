@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
-import { MdKeyboardArrowDown, MdLock } from "react-icons/md";
+import { MdLock } from "react-icons/md";
 import { useToast } from "../../Context/ToastContext";
-import { useAllStudentsQuery } from "../../app/api/studentsApi/studentsApi";
+import { useStudentByIdQuery, useStudentGroupMembershipsQuery } from "../../app/api/studentsApi/studentsApi";
 import { useCreatePaymentMutation, useUpdatePaymentMutation } from "../../app/api/financeApi/financeApi";
 import { PaymentMethodPicker } from "../PaymentMethodPicker";
+import { StudentSearchField, type SearchedStudent } from "./StudentSearchField";
+import { PaymentGroupPicker, type PaymentGroupOption } from "./PaymentGroupPicker";
 import { PaymentReceiptModal } from "../PaymentReceiptModal";
 import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
 import { RightDrawer } from "../RightDrawer";
@@ -30,7 +32,13 @@ export interface EditPaymentTarget {
   notes: string | null;
   studentId: string;
   studentName: string;
+  // Group the payment is tied to, when the caller knows it (optional -
+  // prefills the group picker; PATCH accepts groupId).
+  groupId?: string | null;
 }
+
+// Memberships that still count as "the student's groups" for a payment.
+const LIVE_MEMBERSHIP_STATUSES = new Set(["ACTIVE", "PROBATION", "FROZEN"]);
 
 // Set when the drawer is opened for one specific student (e.g. SingleGroup's
 // student "..." menu): that student is pre-selected and locked — shown
@@ -49,8 +57,12 @@ export interface LockedPaymentStudent {
 // already selected in the header (state.branch.selectedBranchId), which is
 // also what every request is scoped to via the x-branch-id header, so asking
 // for it a second time in this form would be redundant.
-export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName, groupId, editPayment, lockedStudent, branchId }: {
-  open: boolean; onClose: () => void; initialStudentId?: string; initialStudentName?: string; groupId?: string;
+export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName, groupId, groupName, editPayment, lockedStudent, branchId }: {
+  open: boolean; onClose: () => void; initialStudentId?: string; initialStudentName?: string;
+  // Group to preselect in the group picker (e.g. SingleGroup's own group).
+  // groupName is only a display fallback for when that group isn't among the
+  // student's live memberships (e.g. archived from it).
+  groupId?: string; groupName?: string;
   editPayment?: EditPaymentTarget | null;
   lockedStudent?: LockedPaymentStudent;
   // Branch to record the payment against when the caller knows it (e.g. the
@@ -67,25 +79,9 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
   const lockedStudentId = lockedStudent?.id;
   const effectiveBranchId = branchId ?? selectedBranchId;
 
-  // No student list is needed when the student is fixed (locked / editing).
-  const { data: studentsData, isFetching: isStudentsLoading, isError: isStudentsError } = useAllStudentsQuery(
-    { page: 1, limit: 100, branchId: selectedBranchId ?? undefined },
-    { skip: !open || isLocked }
-  );
   const [createPayment, { isLoading: isCreating }] = useCreatePaymentMutation();
   const [updatePayment, { isLoading: isUpdating }] = useUpdatePaymentMutation();
   const isSaving = isCreating || isUpdating;
-
-  const students = studentsData?.data ?? [];
-  // The dropdown's own list is fetched separately (branch-scoped, first 100)
-  // from wherever initialStudentId came from — if the two don't happen to
-  // agree (e.g. this student falls outside that scope/page), the <select>
-  // would silently show no selection at all instead of the intended
-  // student. Rather than leave that unexplained, the known student is
-  // injected as an explicit option so the pre-fill always visibly works.
-  const missingInitialStudent = Boolean(
-    initialStudentId && initialStudentName && !students.some((s) => s.id === initialStudentId)
-  );
 
   const [paymentMethodId, setPaymentMethodId] = useState("");
   const [provider, setProvider] = useState<PaymentProvider>("MANUAL");
@@ -93,34 +89,85 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
   const [date, setDate] = useState(todayISO());
   const [forMonth, setForMonth] = useState("");
   const [notes, setNotes] = useState("");
-  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [pickedStudent, setPickedStudent] = useState<SearchedStudent | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [receiptPaymentId, setReceiptPaymentId] = useState<string | null>(null);
 
-  const selectedStudent = students.find((s) => s.id === selectedStudentId);
-  const shownBalance = isLocked ? lockedStudent?.balance ?? selectedStudent?.balance : selectedStudent?.balance;
+  // The student the payment is for: fixed when editing / locked, otherwise
+  // whoever was picked in the search field.
+  const studentId = editPayment ? editPayment.studentId : isLocked ? lockedStudentId ?? "" : pickedStudent?.id ?? "";
 
-  // Pre-fill the student when this drawer is opened from a specific
-  // student's page (e.g. StudentProfile's "Add payment" action), or the
-  // full form when editing an existing payment.
+  // A student known only by id (StudentProfile's preselect, or the student
+  // of a payment being edited) has no phone / balance - read from the
+  // student record. Search results already carry both, so those skip this.
+  const { data: studentDetail } = useStudentByIdQuery(studentId, {
+    skip: !open || !studentId || isLocked || pickedStudent?.balance !== undefined,
+  });
+  const detailForStudent = studentDetail?.data?.id === studentId ? studentDetail.data : undefined;
+  const shownBalance = isLocked
+    ? lockedStudent?.balance
+    : pickedStudent?.balance ?? detailForStudent?.balance;
+  const pickedForField: SearchedStudent | null = pickedStudent && {
+    ...pickedStudent,
+    name: pickedStudent.name || detailForStudent?.name || "",
+    phone: pickedStudent.phone || detailForStudent?.phone,
+  };
+
+  // Preselect the student when this drawer is opened from a specific
+  // student's page (e.g. StudentProfile's "Add payment" action). Depends on
+  // primitives only, so a re-render of the parent doesn't undo a "Change".
+  useEffect(() => {
+    if (!open || isEditing || lockedStudentId || !initialStudentId) return;
+    setPickedStudent({ id: initialStudentId, name: initialStudentName ?? "" });
+  }, [open, isEditing, lockedStudentId, initialStudentId, initialStudentName]);
+
+  // The student's live group memberships. GET /students/{id}/groups' own `id`
+  // is the group's id (confirmed live, see StudentProfile), which is exactly
+  // what a payment's `groupId` wants.
+  const { currentData: memberships, isFetching: isGroupsLoading, isError: isGroupsError } =
+    useStudentGroupMembershipsQuery(studentId, { skip: !open || !studentId });
+  const groupOptions = useMemo<PaymentGroupOption[]>(() => {
+    const live: PaymentGroupOption[] = (memberships ?? [])
+      .filter((m) => LIVE_MEMBERSHIP_STATUSES.has(String(m.status).toUpperCase()))
+      .map((m) => ({
+        id: m.id, name: m.name, courseName: m.courseName,
+        status: String(m.status).toUpperCase(), customPrice: m.customPrice,
+      }));
+    const preferredId = groupId || editPayment?.groupId || "";
+    // The caller's own group stays selectable even if it isn't a live
+    // membership of this student (yet / anymore).
+    if (preferredId && !live.some((o) => o.id === preferredId)) {
+      live.unshift({ id: preferredId, name: groupName || t("addPayment.thisGroup") });
+    }
+    return live;
+  }, [memberships, groupId, groupName, editPayment?.groupId, t]);
+
+  // Group preselection: the caller's group when given, else the student's
+  // only group. Re-runs when the student changes ("Change") so a stale group
+  // from the previous student is dropped.
   useEffect(() => {
     if (!open) return;
-    if (editPayment) {
-      setSelectedStudentId(editPayment.studentId);
-      setPaymentMethodId(editPayment.paymentMethodId);
-      setAmount(String(editPayment.amount));
-      setDate(editPayment.date || todayISO());
-      setNotes(editPayment.notes || "");
-    } else if (lockedStudentId) {
-      setSelectedStudentId(lockedStudentId);
-    } else if (initialStudentId) {
-      setSelectedStudentId(initialStudentId);
-    }
-  }, [open, initialStudentId, lockedStudentId, editPayment]);
+    setSelectedGroupId((cur) => {
+      if (cur && groupOptions.some((o) => o.id === cur)) return cur;
+      const preferredId = groupId || editPayment?.groupId || "";
+      if (preferredId && groupOptions.some((o) => o.id === preferredId)) return preferredId;
+      return groupOptions.length === 1 && !isGroupsLoading ? groupOptions[0].id : "";
+    });
+  }, [open, groupOptions, groupId, editPayment?.groupId, isGroupsLoading]);
+
+  // Prefill the full form when editing an existing payment.
+  useEffect(() => {
+    if (!open || !editPayment) return;
+    setPaymentMethodId(editPayment.paymentMethodId);
+    setAmount(String(editPayment.amount));
+    setDate(editPayment.date || todayISO());
+    setNotes(editPayment.notes || "");
+  }, [open, editPayment]);
 
   const handleClose = () => {
     setPaymentMethodId(""); setProvider("MANUAL"); setAmount(""); setNotes("");
-    setSelectedStudentId(""); setDate(todayISO()); setForMonth(""); setError(null);
+    setPickedStudent(null); setSelectedGroupId(""); setDate(todayISO()); setForMonth(""); setError(null);
     onClose();
   };
 
@@ -132,11 +179,14 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
   const handleSubmit = async () => {
     setError(null);
 
-    const studentId = isLocked && lockedStudentId ? lockedStudentId : selectedStudentId;
     if (!studentId) { setError(t("addPayment.errors.student")); return; }
     if (!effectiveBranchId) { setError(t("addPayment.errors.branch")); return; }
     if (!amount || Number(amount) <= 0) { setError(t("addPayment.errors.amount")); return; }
     if (!paymentMethodId.trim()) { setError(t("addPayment.errors.paymentMethodId")); return; }
+
+    // Only a group that is actually one of this student's options is sent -
+    // never a stale id left over from a previously picked student.
+    const chosenGroupId = groupOptions.some((o) => o.id === selectedGroupId) ? selectedGroupId : undefined;
 
     try {
       if (isEditing && editPayment) {
@@ -147,6 +197,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
           date: date || undefined,
           forMonth: forMonth || undefined,
           notes: notes.trim() || undefined,
+          groupId: chosenGroupId,
         }).unwrap();
         toast.success(t("addPayment.toast.updated"));
         handleClose();
@@ -157,7 +208,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
         paymentMethodId: paymentMethodId.trim(),
         studentId,
         branchId: effectiveBranchId,
-        groupId: groupId || undefined,
+        groupId: chosenGroupId,
         date: date || undefined,
         forMonth: forMonth || undefined,
         notes: notes.trim() || undefined,
@@ -201,39 +252,27 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
               <MdLock size={15} color="#999" style={{ flexShrink: 0 }} />
             </div>
           ) : (
-            <div style={{ position: "relative" }}>
-              <select
-                value={selectedStudentId}
-                onChange={(e) => setSelectedStudentId(e.target.value)}
-                disabled={isStudentsLoading}
-                style={{
-                  ...inputStyle, appearance: "none",
-                  color: selectedStudentId ? "#1a1a1a" : "#aaa", paddingRight: 36,
-                }}
-              >
-                <option value="">
-                  {isStudentsLoading ? t("addPayment.studentLoading") : t("addPayment.selectStudent")}
-                </option>
-                {missingInitialStudent && (
-                  <option value={initialStudentId}>{initialStudentName}</option>
-                )}
-                {!isStudentsLoading && students.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-              <MdKeyboardArrowDown size={18} style={{
-                position: "absolute", right: 12, top: "50%",
-                transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
-              }} />
-            </div>
-          )}
-          {!isEditing && !isLocked && isStudentsError && (
-            <div style={{ fontSize: 12, color: "#d93f4f", marginTop: 6 }}>{t("addPayment.studentError")}</div>
+            <StudentSearchField active={open} value={pickedForField} onChange={setPickedStudent} disabled={isSaving} />
           )}
         </div>
 
+        {/* Groups of the selected student - which one this payment is for */}
+        {studentId && (
+          <div>
+            <label style={labelStyle}>{t("addPayment.group")}</label>
+            <PaymentGroupPicker
+              options={groupOptions}
+              value={selectedGroupId}
+              onChange={setSelectedGroupId}
+              isLoading={isGroupsLoading && groupOptions.length === 0}
+              isError={isGroupsError && groupOptions.length === 0}
+              disabled={isSaving}
+            />
+          </div>
+        )}
+
         {/* Show balance if student selected */}
-        {(selectedStudent || (isLocked && shownBalance !== undefined)) && (
+        {shownBalance !== undefined && studentId && (
           <div>
             <label style={labelStyle}>{t("addPayment.balance")}</label>
             <span
@@ -306,7 +345,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
           type="button"
           style={{ ...paymentSubmitBtn, opacity: isSaving ? 0.7 : 1, cursor: isSaving ? "default" : "pointer" }}
           onClick={handleSubmit}
-          disabled={isSaving}
+          disabled={isSaving || (isGroupsLoading && Boolean(studentId) && groupOptions.length === 0)}
         >
           {isSaving ? t("addPayment.saving") : isEditing ? t("addPayment.updateSubmit") : t("addPayment.submit")}
         </button>

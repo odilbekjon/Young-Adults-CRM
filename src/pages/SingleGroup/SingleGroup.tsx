@@ -53,6 +53,7 @@ import { extractApiError, formatTrainingDate } from "../../utils";
 import { formatDate } from "../../constants/FlatStudents";
 
 import { AddStudentDrawer, type AddStudentPayload } from "./AddStudentDrawer/AddStudentDrawer";
+import { describeApiError } from "./describeApiError";
 
 import { Attendance } from "./tabs/Attendance";
 import { Grade } from "./tabs/Grade";
@@ -334,6 +335,9 @@ export const SingleGroup = () => {
     const isLive = (m: StudentGroupRecord) => m.status !== "INACTIVE" && m.status !== "DELETED";
     [...(studentGroupsData?.rows ?? []), ...archivedRowsForThisGroup].forEach((m) => {
       if (!m.studentId) return;
+      // Same guard liveMembershipRows uses: a row that names a different
+      // group must never supply this roster's status / membership id.
+      if (m.groupId && m.groupId !== id) return;
       const prev = map.get(m.studentId);
       if (!prev) { map.set(m.studentId, m); return; }
       if (isLive(m) !== isLive(prev)) {
@@ -343,7 +347,7 @@ export const SingleGroup = () => {
       if ((m.createdAt ?? "") >= (prev.createdAt ?? "")) map.set(m.studentId, m);
     });
     return map;
-  }, [studentGroupsData, archivedRowsForThisGroup]);
+  }, [studentGroupsData, archivedRowsForThisGroup, id]);
 
   // GroupDetail.students has no balance field (see toRealStudents above,
   // which defaults everyone to 0) — GET /students does carry the real
@@ -624,7 +628,9 @@ export const SingleGroup = () => {
       toast.success(t("singleGroup.freezeModal.toast.success"));
       setFreezeOpen(false);
     } catch (err) {
-      const detail = extractApiError(err);
+      // Backend message + HTTP status (the request/response itself is also in
+      // the console — see logStudentGroupAction in groupsApi).
+      const detail = describeApiError(err);
       const generic = t("singleGroup.freezeModal.toast.error");
       toast.error(detail ? `${generic}: ${detail}` : generic);
     }
@@ -652,7 +658,7 @@ export const SingleGroup = () => {
     try {
       await unfreezeStudentGroup({ id: studentGroupId, endDate: todayLocalISO() }).unwrap();
     } catch (err) {
-      const detail = extractApiError(err);
+      const detail = describeApiError(err);
       const generic = t("singleGroup.activateModal.toast.error");
       toast.error(detail ? `${generic}: ${detail}` : generic);
       return;
@@ -662,7 +668,7 @@ export const SingleGroup = () => {
       await updateStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
       toast.success(t("singleGroup.activateModal.toast.success"));
     } catch (err) {
-      const detail = extractApiError(err);
+      const detail = describeApiError(err);
       const generic = t("singleGroup.activateModal.toast.dateError");
       toast.error(detail ? `${generic}: ${detail}` : generic);
     }
@@ -883,12 +889,16 @@ export const SingleGroup = () => {
         startDate: joinedAt || todayLocalISO(),
       }).unwrap();
       toast.success(t("singleGroup.addStudentDrawer.toast.success"));
-    } catch {
+    } catch (err) {
       // The student WAS added — only the follow-up freeze failed — so this
       // is a distinct, narrower warning rather than the generic add-failed
-      // error above.
+      // error above. It used to swallow the reason entirely; now the
+      // backend's message + HTTP status are appended (and the failed request
+      // is in the console — see logStudentGroupAction in groupsApi).
+      const detail = describeApiError(err);
       toast.success(t("singleGroup.addStudentDrawer.toast.success"));
-      toast.error(t("singleGroup.addStudentDrawer.toast.freezeError"));
+      const generic = t("singleGroup.addStudentDrawer.toast.freezeError");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
 
@@ -1400,6 +1410,7 @@ export const SingleGroup = () => {
           balance: selectedStudent.balance,
         } : undefined}
         groupId={id}
+        groupName={group.name}
         branchId={groupCourse?.branchId ?? groupCourse?.branch?.id}
       />
 

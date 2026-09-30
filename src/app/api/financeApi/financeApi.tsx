@@ -61,7 +61,12 @@ const appendPaymentFormData = (formData: FormData, data: Partial<CreatePaymentRe
     const { receiptUrl, ...rest } = data;
     (Object.keys(rest) as (keyof typeof rest)[]).forEach((key) => {
         const value = rest[key];
-        if (value !== undefined && value !== null) formData.append(key, String(value));
+        // Empty values are never sent: on a multipart body they'd arrive as
+        // a literal empty string and either fail the backend's validators
+        // (dates, ids) or silently blank a field on the
+        // PATCH /finance/payments/{id} partial update.
+        if (value === undefined || value === null || value === "") return;
+        formData.append(key, String(value));
     });
     if (receiptUrl) formData.append("receiptUrl", receiptUrl);
 };
@@ -319,10 +324,27 @@ const normalizePaymentReceipt = (raw: unknown): PaymentReceipt => {
     const group = obj.group as Record<string, unknown> | null | undefined;
     const branch = obj.branch as Record<string, unknown> | null | undefined;
     const paidMonths = Array.isArray(obj.paidMonths) ? obj.paidMonths : [];
+    // Print-oriented fields that the live response doesn't always carry
+    // (confirmed: `cashier` is an id only) — read defensively from the few
+    // shapes a backend would plausibly use, left null when absent so the
+    // receipt UI can fall back to the payments-list row or hide the line.
+    const creatorObj = [obj.creator, obj.createdBy, obj.cashier].find(
+        (c): c is Record<string, unknown> => Boolean(c) && typeof c === "object"
+    );
+    const teacherObj = (obj.teacher ?? {}) as Record<string, unknown>;
+    const groupTeachers = Array.isArray(group?.teachers) ? (group!.teachers as Record<string, unknown>[]) : [];
+    const groupCourse = (group?.course ?? obj.course ?? {}) as Record<string, unknown>;
+    const coursePriceRaw = obj.coursePrice ?? group?.price ?? groupCourse.price;
+    const teacherName = asString(obj.teacherName ?? teacherObj.name ?? groupTeachers[0]?.name);
+    const creatorName = asString(creatorObj?.name ?? obj.creatorName ?? obj.cashierName);
 
     return {
         receiptNumber: obj.receiptNumber ? asString(obj.receiptNumber) : null,
         date: obj.date ? asString(obj.date) : null,
+        createdAt: obj.createdAt ? asString(obj.createdAt) : null,
+        creatorName: creatorName || null,
+        teacherName: teacherName || null,
+        coursePrice: coursePriceRaw !== undefined && coursePriceRaw !== null ? asMoney(coursePriceRaw) : null,
         amount: asMoney(obj.amount),
         paymentMethod: asString(obj.paymentMethod),
         student: {

@@ -18,6 +18,9 @@ export interface TeacherPortalGroupStudent {
   id: string;
   name: string;
   phone: string | null;
+  // Membership/student status when the backend sends one (ACTIVE, FROZEN,
+  // PROBATION, ...) — empty string when it doesn't.
+  status: string;
 }
 
 // GET /teacher-portal/groups — "O'qituvchi o'qitayotgan barcha guruhlar
@@ -47,6 +50,13 @@ export interface TeacherPortalGroupDetail extends TeacherPortalGroup {
 // ro'yxati."
 export type TeacherPortalGroupStudentsResponse = TeacherPortalGroupStudent[];
 
+export type TeacherPortalGender = "MALE" | "FEMALE";
+
+export interface TeacherPortalBranchRef {
+  id: string;
+  name: string;
+}
+
 // GET /teacher-portal/profile — "Shaxsiy profil"
 export interface TeacherPortalProfile {
   id: string;
@@ -55,7 +65,24 @@ export interface TeacherPortalProfile {
   email: string | null;
   photo: string | null;
   specialization: string | null;
+  gender: TeacherPortalGender | null;
+  // Plain YYYY-MM-DD (the datetime suffix, if any, is stripped).
+  birthdate: string | null;
+  branches: TeacherPortalBranchRef[];
+  // Kept for callers that only need a single branch label.
   branchName: string | null;
+}
+
+// PATCH /teacher-portal/profile — multipart/form-data. Swagger documents
+// `photo` and `password` (min 6 chars); the description also mentions
+// gender and birth date, sent under the same names teachersApi uses for
+// the admin-side teacher form (`gender`, `birthdate`). Empty/undefined
+// values are never sent.
+export interface UpdateTeacherPortalProfileRequest {
+  photo?: File;
+  password?: string;
+  gender?: TeacherPortalGender;
+  birthdate?: string;
 }
 
 // GET /teacher-portal/salaries — "O'qituvchining e'lon qilingan
@@ -69,12 +96,25 @@ export interface TeacherPortalSalaryRow {
   status: string;
   totalAmount: number;
   paidAmount: number;
+  paidAt: string;
 }
 
-// GET /teacher-portal/schedule — "O'zining dars jadvali"
+// GET /teacher-portal/schedule — "O'zining dars jadvali". Expected to
+// mirror GET /dashboard/schedule (admin) restricted to this teacher's own
+// groups: one row per group with room/time/day-type. `day` is kept for a
+// per-weekday shape, should the backend return one instead.
 export interface TeacherPortalScheduleItem {
   groupId: string;
   groupName: string;
+  courseName: string;
+  roomName: string;
   day: string;
+  days: string[];
+  daysType: string;
   time: string | null;
+  teachers: string;
+  trainingStart: string | null;
+  trainingEnd: string | null;
+  studentsCount: number | null;
+  maxStudents: number | null;
 }

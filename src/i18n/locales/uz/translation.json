@@ -5,7 +5,9 @@
   },
   "accessDenied": {
     "message": "Bu sahifani ko'rish uchun sizda ruxsat yo'q.",
-    "backHome": "Bosh sahifaga"
+    "backHome": "Bosh sahifaga",
+    "loadError": "Ruxsatlaringizni yuklab bo'lmadi. Qayta urinib ko'ring.",
+    "retry": "Qayta urinish"
   },
   "header": {
     "search": "Qidiruv",
@@ -78,6 +80,18 @@
     "selectStudent": "Foydalanuvchini tanlang",
     "studentLoading": "O'quvchilar yuklanmoqda...",
     "studentError": "O'quvchilarni yuklab bo'lmadi",
+    "changeStudent": "O'zgartirish",
+    "searchPlaceholder": "O'quvchini ism yoki telefon bo'yicha qidiring...",
+    "searching": "Qidirilmoqda...",
+    "noStudentsFound": "O'quvchi topilmadi",
+    "group": "Guruh",
+    "groupsLoading": "Guruhlar yuklanmoqda...",
+    "groupsError": "O'quvchining guruhlarini yuklab bo'lmadi",
+    "noGroups": "O'quvchi hech qanday faol guruhda emas",
+    "groupHint": "To'lov qaysi guruh uchun ekanini tanlang",
+    "thisGroup": "Ushbu guruh",
+    "customPrice": "Maxsus narx",
+    "groupStatus": { "ACTIVE": "Faol", "PROBATION": "Sinov", "FROZEN": "Muzlatilgan" },
     "balance": "Balans",
     "methodPay": "To'lov usuli",
     "paymentMethodId": "To'lov usuli",
@@ -124,6 +138,67 @@
     "totalPaid": "Jami to'langan",
     "balance": "Qarz summasi",
     "issuedAt": "Berilgan sana"
+  },
+  "studentPayments": {
+    "balanceTitle": "Balans",
+    "outstanding": "Qarzdorlik",
+    "credit": "Ortiqcha balans",
+    "fullyPaid": "To'liq to'langan",
+    "totalDue": "Jami to'lanishi kerak",
+    "alreadyPaid": "To'langan",
+    "printNotice": "To'lov xabarnomasini chop etish",
+    "charged": "Hisoblangan",
+    "paid": "To'langan",
+    "monthlyTitle": "Oylik balans holati",
+    "monthlyError": "Oylik balansni yuklab bo'lmadi",
+    "monthlyEmpty": "Oylik ma'lumot hali yo'q",
+    "title": "To'lovlar",
+    "typePayment": "to'lov",
+    "typeSystem": "tizim",
+    "more": "batafsil",
+    "less": "yopish",
+    "printOut": "Chop etish",
+    "moreActions": "Boshqa amallar",
+    "col": {
+      "date": "Sana",
+      "type": "Turi",
+      "amount": "Summa",
+      "comment": "Izoh",
+      "creator": "Yaratuvchi"
+    },
+    "loading": "Yuklanmoqda...",
+    "loadError": "To'lovlarni yuklab bo'lmadi",
+    "empty": "Hozircha to'lovlar yo'q",
+    "menu": {
+      "refund": "Qaytarish",
+      "edit": "Tahrirlash",
+      "remove": "O'chirish"
+    },
+    "refundTitle": "To'lovni qaytarish",
+    "removeTitle": "To'lovni o'chirish",
+    "refundMessage": "Bu to'lov bekor qilinadi va qaytarilgan deb belgilanadi. U endi o'quvchi balansiga hisoblanmaydi.",
+    "removeMessage": "Ushbu to'lovni o'chirishni xohlaysizmi? U qaytarilgan deb belgilanadi va o'quvchi balansidan olib tashlanadi.",
+    "cancel": "Bekor qilish",
+    "toast": {
+      "refunded": "To'lov qaytarildi",
+      "removed": "To'lov o'chirildi",
+      "debtUpdated": "Summa yangilandi"
+    },
+    "errors": {
+      "refund": "To'lovni qaytarib bo'lmadi",
+      "remove": "To'lovni o'chirib bo'lmadi",
+      "debtSave": "Summani yangilab bo'lmadi"
+    },
+    "edit": {
+      "noChanges": "Hech narsa o'zgartirilmadi",
+      "group": "Guruh"
+    },
+    "debt": {
+      "title": "Summani tahrirlash",
+      "reason": "Sabab",
+      "reasonRequired": "O'zgartirish sababini kiriting",
+      "hint": "Bu o'quvchining maxsus qarzini / guruhning oylik to'lov miqdorini o'zgartiradi, bitta o'tgan hisob-kitobni emas."
+    }
   },
   "addWithdrawal": {
     "title": "Yechib olish qo'shish",
@@ -173,7 +248,8 @@
       "attendanceReports": "Davomat hisobotlari",
       "finance": "Moliya",
       "reports": "Hisobotlar",
-      "settings": "Sozlamalar"
+      "settings": "Sozlamalar",
+      "salary": "Oylik"
     },
     "finance": {
       "allPayments": "Barcha to'lovlar",
@@ -272,7 +348,8 @@
     "toast": {
       "updated": "O'quvchi muvaffaqiyatli yangilandi",
       "deleted": "O'quvchi butunlay o'chirildi",
-      "archived": "O'quvchi arxivga o'tkazildi"
+      "archived": "O'quvchi arxivga o'tkazildi",
+      "archivePartial": "{{total}} tadan {{done}} ta o'quvchi arxivlandi, qolganlari xato berdi"
     },
     "header": {
       "title": "O'quvchilar",
@@ -368,12 +445,16 @@
         "activeHint": "Faol — ko'rsatilgan sanadan boshlab to'lov hisoblanadi"
       },
       "paymentStartDate": "To'lov hisoblana boshlash sanasi",
+      "joinedAt": "Qo'shilgan sana",
+      "frozenHint": "Qo'shilgan o'quvchilar avval muzlatilgan holatda turadi — keyin guruhdan faollashtiring (qachondan ekanligi so'raladi).",
       "submit": "O'quvchini guruhga qo'shish",
       "submitting": "Qo'shilmoqda...",
       "toast": {
         "success": "O'quvchi(lar) guruhga qo'shildi",
         "error": "O'quvchi(lar)ni guruhga qo'shib bo'lmadi",
-        "alreadyInGroup": "Tanlangan o'quvchi(lar) bu guruhda allaqachon bor"
+        "alreadyInGroup": "Tanlangan o'quvchi(lar) bu guruhda allaqachon bor",
+        "freezeError": "O'quvchi(lar) qo'shildi, lekin muzlatib bo'lmadi — holatini qo'lda tekshiring",
+        "partialError": "{{total}} tadan {{done}} tasi qo'shildi, qolganlari xato berdi"
       }
     },
     "editDrawer": {
@@ -2578,7 +2659,84 @@
     "backToGroups": "Guruhlarimga qaytish",
     "attendanceOnlyNote": "Bu guruhda faqat bugungi dars uchun davomat belgilay olasiz.",
     "roster": "O'quvchilar",
-    "schedule": "Dars jadvali"
+    "rosterName": "O'quvchi",
+    "rosterPhone": "Telefon",
+    "rosterEmpty": "Bu guruhda hali o'quvchilar yo'q.",
+    "rosterLoadError": "O'quvchilar ro'yxatini yuklab bo'lmadi.",
+    "room": "Xona",
+    "noPhone": "Telefon yo'q",
+    "attendance": "Davomat",
+    "days": { "ODD": "Toq kunlar", "EVEN": "Juft kunlar" }
+  },
+  "teacherDashboard": {
+    "title": "Bosh sahifa",
+    "stats": {
+      "todayLessons": "Bugungi darslar",
+      "totalStudents": "O'quvchilar",
+      "activeGroups": "Faol guruhlar"
+    },
+    "statsError": "Statistikani yuklab bo'lmadi.",
+    "schedule": {
+      "title": "Dars jadvali",
+      "tabs": { "odd": "Toq kunlar", "even": "Juft kunlar", "other": "Boshqa" },
+      "horizontal": "Gorizontal",
+      "horizontalTitle": "Gorizontal ko'rinish",
+      "vertical": "Vertikal",
+      "verticalTitle": "Vertikal ko'rinish",
+      "loadError": "Dars jadvalini yuklab bo'lmadi.",
+      "empty": "Bu kun turi uchun darslar yo'q.",
+      "noTime": "Vaqt belgilanmagan",
+      "noRoom": "Xonasiz",
+      "studentsFraction": "{{count}} o'q. / {{max}}",
+      "studentsCount": "{{count}} o'quvchi",
+      "daysLeft": "{{count}} kun qoldi",
+      "retry": "Qayta urinish"
+    }
+  },
+  "teacherSalary": {
+    "title": "Oylik",
+    "subtitle": "E'lon qilingan oyliklar",
+    "allPeriods": "Barcha davrlar",
+    "period": "Davr",
+    "totalCalculated": "Jami hisoblangan",
+    "totalPaid": "Jami to'langan",
+    "table": { "period": "Davr", "status": "Holat", "total": "Hisoblangan", "paid": "To'langan", "paidAt": "To'langan sana" },
+    "status": { "draft": "Qoralama", "published": "E'lon qilingan", "paid": "To'langan" },
+    "loadError": "Oyliklarni yuklab bo'lmadi.",
+    "empty": "Hali e'lon qilingan oyliklar yo'q."
+  },
+  "teacherPortal": {
+    "nav": { "dashboard": "Bosh sahifa", "groups": "Mening guruhlarim", "salary": "Oylik", "profile": "Profil" },
+    "profile": {
+      "title": "Mening profilim",
+      "loadError": "Profilni yuklab bo'lmadi.",
+      "name": "Ism",
+      "phone": "Telefon",
+      "email": "Email",
+      "specialization": "Mutaxassislik",
+      "branches": "Filiallar",
+      "gender": "Jinsi",
+      "genderNone": "Ko'rsatilmagan",
+      "male": "Erkak",
+      "female": "Ayol",
+      "birthdate": "Tug'ilgan sana",
+      "editTitle": "Ma'lumotlarimni yangilash",
+      "editHint": "Rasm, parol, jins va tug'ilgan sanangizni o'zgartirishingiz mumkin.",
+      "photo": "Profil rasmi",
+      "choosePhoto": "Rasm tanlash",
+      "photoTooLarge": "Rasm hajmi 5 MB dan kichik bo'lishi kerak.",
+      "photoInvalid": "Iltimos, rasm faylini tanlang.",
+      "newPassword": "Yangi parol",
+      "confirmPassword": "Yangi parolni takrorlang",
+      "passwordHint": "Joriy parolni saqlash uchun bo'sh qoldiring (kamida 6 belgi).",
+      "passwordTooShort": "Parol kamida 6 belgidan iborat bo'lishi kerak.",
+      "passwordMismatch": "Parollar mos kelmadi.",
+      "save": "Saqlash",
+      "saving": "Saqlanmoqda...",
+      "nothingToSave": "Yangilash uchun o'zgarish yo'q.",
+      "saved": "Profil yangilandi",
+      "saveError": "Profilni yangilab bo'lmadi"
+    }
   },
   "studentPortal": {
     "appTitle": "O'quvchi portali",
@@ -2649,6 +2807,44 @@
         "monday": "Dushanba", "tuesday": "Seshanba", "wednesday": "Chorshanba",
         "thursday": "Payshanba", "friday": "Juma", "saturday": "Shanba", "sunday": "Yakshanba"
       }
+    }
+  },
+  "studentAttendance": {
+    "was": "Bor edi",
+    "not": "Yo'q",
+    "notAttended": "Qatnashmagan",
+    "excused": "Sababli",
+    "absent": "Sababsiz",
+    "upcoming": "Kutilmoqda",
+    "rate": "Davomat foizi",
+    "group": "Guruh",
+    "allGroups": "Barcha guruhlar",
+    "all": "Hammasi",
+    "allHint": "Talabaning barcha guruhlari darslarini ko'rsatish",
+    "prevMonth": "Oldingi oy",
+    "nextMonth": "Keyingi oy",
+    "refresh": "Yangilash",
+    "calendar": "Kalendar",
+    "list": "Ro'yxat",
+    "createdAt": "Sana",
+    "topic": "Mavzu",
+    "lessonTime": "Dars vaqti",
+    "status": "Holati",
+    "updatedBy": "O'zgartirgan",
+    "noGroups": "Talaba hali hech qaysi guruhda emas",
+    "noLessons": "Bu oyda darslar yo'q",
+    "loadError": "Davomatni yuklab bo'lmadi.",
+    "retry": "Qayta urinish",
+    "overall": "Barcha guruhlar, butun davr",
+    "months": ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"],
+    "weekdays": {
+      "mo": "Du",
+      "tu": "Se",
+      "we": "Ch",
+      "th": "Pa",
+      "fr": "Ju",
+      "sa": "Sh",
+      "su": "Ya"
     }
   },
   "layout": {

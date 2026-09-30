@@ -588,6 +588,12 @@ export const Header = () => {
 
   const { data: meData } = useGetMeQuery();
   const currentUser = meData?.data;
+  // A TEACHER session gets a stripped-down header (no branch picker, no "+"
+  // quick-add menu, no student search, no Add-student/Add-payment drawers) —
+  // those are admin actions, and the /students, /finance etc. endpoints behind
+  // them aren't theirs to call. Language/theme/fullscreen/help/history/
+  // notifications/account stay.
+  const { isTeacher } = useAuth();
   const displayName = currentUser?.name || currentUser?.email || t("header.account");
   const avatarInitial = displayName.charAt(0).toUpperCase();
 
@@ -657,14 +663,16 @@ export const Header = () => {
 
         {/* Main area — desktop */}
         <Box sx={{ flex: 1, display: { xs: "none", md: "flex" }, alignItems: "center", gap: 2, px: 3, height: "100%" }}>
-          <BranchDropdown branch={branch} setBranch={setBranch} />
+          {!isTeacher && <BranchDropdown branch={branch} setBranch={setBranch} />}
 
-          <QuickAddBtn
-            onAddStudent={() => setAddStudentOpen(true)}
-            onAddPayment={() => setAddPaymentOpen(true)}
-          />
+          {!isTeacher && (
+            <QuickAddBtn
+              onAddStudent={() => setAddStudentOpen(true)}
+              onAddPayment={() => setAddPaymentOpen(true)}
+            />
+          )}
 
-          <SearchBar />
+          {!isTeacher && <SearchBar />}
           <Box sx={{ flex: 1 }} />
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -704,7 +712,7 @@ export const Header = () => {
 
         {/* Main area — mobile compact controls */}
         <Box sx={{ display: { xs: "flex", md: "none" }, alignItems: "center", gap: 0.5, pr: 1, height: "100%" }}>
-          <BranchDropdown branch={branch} setBranch={setBranch} />
+          {!isTeacher && <BranchDropdown branch={branch} setBranch={setBranch} />}
           <LangToggle />
           <ThemeToggle />
           <NotificationBtn />
@@ -740,8 +748,12 @@ export const Header = () => {
       </Box>
 
       {/* Drawers */}
-      <AddStudent open={addStudentOpen} onClose={() => setAddStudentOpen(false)} />
-      <AddPayment open={addPaymentOpen} onClose={() => setAddPaymentOpen(false)} />
+      {!isTeacher && (
+        <>
+          <AddStudent open={addStudentOpen} onClose={() => setAddStudentOpen(false)} />
+          <AddPayment open={addPaymentOpen} onClose={() => setAddPaymentOpen(false)} />
+        </>
+      )}
     </>
   );
 };

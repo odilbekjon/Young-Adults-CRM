@@ -244,7 +244,8 @@
       "studentsFractionSlash": "{{count}} st. / {{max}}",
       "studentsCountSuffix": "{{count}} / {{max}} st.",
       "daysLeft": "{{count}} days left",
-      "emptyState": "No schedule available for this day type"
+      "emptyState": "No schedule available for this day type",
+      "noTime": "No time set"
     },
     "chart": {
       "currency": "UZS",
@@ -284,15 +285,31 @@
       "byCourses": "By Courses",
       "allCourses": "All courses",
       "status": "Status",
-      "statusOptions": { "active": "Active", "inactive": "Inactive" },
+      "statusOptions": {
+        "added_this_month": "Added this month",
+        "signed_offer": "Students with signed offer",
+        "trial": "Trial lesson",
+        "active": "Active",
+        "frozen": "Frozen",
+        "without_group": "Without Group",
+        "left_after_trial": "Left after Trial (before activation)",
+        "left_active": "Left active group (after activation)",
+        "inactive": "Inactive"
+      },
       "financialSituation": "Financial situation",
-      "financialOptions": { "positive": "Positive balance", "negative": "Negative balance", "zero": "Zero balance" },
+      "financialOptions": {
+        "debt": "With debt",
+        "discount": "With discount",
+        "no_debt": "Without Debt",
+        "positive": "Positive Balance",
+        "paid_month": "Paid during the month"
+      },
       "byTags": "By Tags",
       "tagsUnavailable": "Tags aren't available yet",
       "externalId": "External ID",
       "externalIdUnavailable": "External ID isn't available yet",
       "groupCount": "Group count",
-      "fromCreated": "From created",
+      "fromCreated": "From created date",
       "toCreatedDate": "To created date",
       "advancedFilters": "Advanced filters",
       "clearAll": "Clear all"
@@ -1385,7 +1402,21 @@
           "TEACHER_REMOVED": "Teacher removed",
           "STATUS_CHANGED": "Status changed",
           "GROUP_UPDATED": "Group updated",
-          "GROUP_CREATED": "Group created"
+          "GROUP_CREATED": "Group created",
+          "GROUP_EDITED": "Group edited",
+          "STUDENT_ACTIVATED": "Student activated",
+          "STUDENT_FROZEN": "Student frozen",
+          "STUDENT_STATUS_CHANGED": "Status changed"
+        },
+        "activatedFrom": "Activated from",
+        "statuses": {
+          "ACTIVE": "Active (Learns)",
+          "PROBATION": "Trial",
+          "FROZEN": "Frozen",
+          "INACTIVE": "Inactive",
+          "DELETED": "Removed",
+          "GRADUATED": "Graduated",
+          "LEFT": "Left"
         }
       },
       "comments": {
@@ -1440,6 +1471,7 @@
       "toast": {
         "success": "Student activated, payment calculation started",
         "error": "Failed to activate the student",
+        "dateError": "Student activated, but the payment start date couldn't be saved — check their balance",
         "notFound": "No active freeze record found for this student"
       }
     },
@@ -1491,8 +1523,20 @@
       "selectStudent": "Select student",
       "selectPlaceholder": "Select",
       "noStudentsFound": "No students found",
-      "startDate": "Date from",
+      "startDate": "Joined on",
       "submit": "Add Student",
+      "change": "Change",
+      "searching": "Searching...",
+      "searchError": "Search failed. Please try again.",
+      "alreadyInGroup": "Already in group",
+      "inGroupArchived": "In group (archived)",
+      "customPrice": "Individual price",
+      "optional": "optional",
+      "customPricePlaceholder": "Leave empty to use the course price",
+      "customPriceInvalid": "Enter a valid non-negative amount",
+      "discountReason": "Discount reason",
+      "discountReasonPlaceholder": "Why is this price different?",
+      "frozenNote": "The student is added as frozen. Use Activate in the student's menu to start them from a chosen date.",
       "cancel": "Cancel",
       "toast": {
         "success": "Student added to the group",
@@ -1586,10 +1630,15 @@
       "notConnected": "This feature isn't connected to the backend yet — the reminder won't be saved."
     },
     "removeStudentDialog": {
-      "title": "Are you sure you want to delete it?",
+      "title": "Do you really want to delete it?",
       "removeFromGroup": "Remove from group",
       "deleteStudent": "Delete student",
+      "deleteOnlyInArchive": "Permanent deletion is only available from the Archive page",
+      "deleteStudentHint": "The student will be archived (permanent deletion is only available from the Archive page)",
       "reasonsForRemoval": "Reasons for removal",
+      "reasonsLoading": "Loading reasons...",
+      "reasonsEmpty": "No reasons available",
+      "reasonsError": "Couldn't load the reasons list",
       "reasons": {
         "noAttendance": "No attendance",
         "disciplineProblem": "Discipline problem",
@@ -1605,6 +1654,7 @@
       "cancel": "Cancel",
       "toast": {
         "removed": "Student removed from the group",
+        "archived": "Student archived",
         "deleted": "Student deleted",
         "error": "Failed to remove student. Please try again."
       }
@@ -1615,6 +1665,8 @@
         "selectBranch": "Select branch",
         "submit": "Move to branch",
         "moving": "Moving...",
+        "reasonPlaceholder": "Reason (optional)",
+        "defaultReason": "Moved from the group page",
         "toast": {
           "success": "Student moved to the branch",
           "error": "Failed to move student to the branch. Please try again."
@@ -1653,6 +1705,62 @@
       "note": "Note",
       "allCoins": "All coins",
       "goToProfile": "Go to profile →"
+    }
+  },
+  "reasonsArchiving": {
+    "title": "Reasons for archiving",
+    "back": "Back to archive",
+    "refresh": "Refresh",
+    "addNew": "Add reason",
+    "searchPlaceholder": "Search by name",
+    "toggleStatus": "Change status",
+    "edit": "Edit",
+    "delete": "Delete",
+    "loadError": "Failed to load reasons",
+    "emptyState": "No reasons found",
+    "statusOptions": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "createdBy": "Created by",
+      "createdAt": "Created at",
+      "actions": "Actions"
+    },
+    "drawer": {
+      "addTitle": "Add reason",
+      "editTitle": "Edit reason"
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "e.g. Moved to another center",
+      "type": "Type",
+      "typePlaceholder": "Optional",
+      "cancel": "Cancel",
+      "save": "Save",
+      "errors": {
+        "name": "Enter the reason name",
+        "branchRequired": "Select a specific branch first — a reason is created for one branch.",
+        "save": "Failed to save"
+      }
+    },
+    "errors": {
+      "toggle": "Failed to change the status"
+    },
+    "deleteConfirm": {
+      "title": "Delete reason",
+      "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+      "error": "Failed to delete the reason"
+    },
+    "toast": {
+      "created": "Reason added successfully",
+      "updated": "Reason updated successfully",
+      "deleted": "Reason deleted successfully",
+      "statusToggled": "Reason status updated"
     }
   },
   "settings": {
@@ -2400,7 +2508,8 @@
           "message": "The issues in the report about students who left the learning center have been fixed. Additionally, new necessary columns and filters have been added to the table. Starting from 18.02.2025, all students removed from the group will be recorded in the \"New Table,\" and they will no longer be added to the old table. To see data before 18.02.2025, go to the old table."
         },
         "tabs": { "new": "New", "old": "Old" },
-        "filters": { "searchByNameOrPhone": "Search by name or phone", "course": "Course", "group": "Group", "teachers": "Teachers", "staff": "Staff", "reasonsForArchiving": "Reasons for archiving", "status": "Status", "filter": "Filter" },
+        "filters": { "searchByNameOrPhone": "Search by name or phone", "course": "Course", "group": "Group", "teachers": "Teachers", "staff": "Staff", "reasonsForArchiving": "Reasons for archiving", "status": "Status", "filter": "Filter", "startDate": "Start date", "endDate": "End date", "reset": "Reset" },
+        "leftStatuses": { "trial": "Trial lesson", "frozen": "Frozen", "active": "Active" },
         "toolbar": { "filters": "Filters", "columns": "Columns" },
         "table": { "number": "#", "student": "Student", "phone": "Phone", "course": "Course", "group": "Group", "teacher": "Teacher", "status": "Status", "reasonsForRemoval": "Reasons for removal", "comment": "Comment", "staff": "Staff" },
         "statusLabels": { "INACTIVE": "Removed", "DELETED": "Deleted" },

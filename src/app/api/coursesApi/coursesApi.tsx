@@ -7,6 +7,8 @@ import {
     UpdateCourseRequest,
     DeleteCourseResponse,
     ToggleCourseStatusResponse,
+    CourseSelectOption,
+    CoursesSelectRequest,
 } from "./types";
 
 // Backend ba'zan ro'yxatni tekis massiv, ba'zan {data: [...], meta} ko'rinishida
@@ -30,6 +32,17 @@ export const coursesApi = baseApi.injectEndpoints({
                 ...response,
                 data: normalizeList<CoursesResponse["data"][number]>(response.data),
             }),
+            providesTags: ["course"],
+        }),
+        // GET /courses/select — simplified dropdown list (id, name, code,
+        // months, ...) used by filters/pickers. branchId is required by
+        // Swagger: the selected branch id, or "all" for every branch.
+        coursesSelect: builder.query<CourseSelectOption[], CoursesSelectRequest>({
+            query: ({ branchId }) => ({
+                url: `${PATHS.COURSES}/select?branchId=${encodeURIComponent(branchId)}`,
+                method: "GET",
+            }),
+            transformResponse: (response: { data: unknown }) => normalizeList<CourseSelectOption>(response?.data),
             providesTags: ["course"],
         }),
         createCourse: builder.mutation<CourseResponse, CreateCourseRequest>({
@@ -96,6 +109,7 @@ export const coursesApi = baseApi.injectEndpoints({
 
 export const {
     useAllCoursesQuery,
+    useCoursesSelectQuery,
     useCreateCourseMutation,
     useUpdateCourseMutation,
     useToggleCourseStatusMutation,

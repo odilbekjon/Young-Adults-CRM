@@ -411,8 +411,10 @@ export const studentsApi = baseApi.injectEndpoints({
                 method: "PATCH",
             }),
             // Flipping status moves the student between the Students list and
-            // the Archive page — both must refetch, not just "student".
-            invalidatesTags: ["student", "archive"],
+            // the Archive page — both must refetch, not just "student". An
+            // archive also ends the student's group memberships server-side,
+            // so group rosters (studentGroup/group) refetch too.
+            invalidatesTags: ["student", "archive", "studentGroup", "group"],
         }),
         transferStudentBranch: builder.mutation<TransferStudentBranchResponse, TransferStudentBranchRequest>({
             query: ({ id, newBranchId, reason }) => ({
@@ -440,7 +442,9 @@ export const studentsApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: ["student", "archive"],
+            // "studentGroup"/"group": archiving (INACTIVE) also drops the
+            // student out of every group roster (SingleGroup, Groups list).
+            invalidatesTags: ["student", "archive", "studentGroup", "group"],
         }),
         studentComments: builder.query<StudentComment[], string>({
             query: (id) => ({

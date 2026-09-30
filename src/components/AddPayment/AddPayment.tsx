@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
-import { MdKeyboardArrowDown } from "react-icons/md";
+import { MdKeyboardArrowDown, MdLock } from "react-icons/md";
 import { useToast } from "../../Context/ToastContext";
 import { useAllStudentsQuery } from "../../app/api/studentsApi/studentsApi";
 import { useCreatePaymentMutation, useUpdatePaymentMutation } from "../../app/api/financeApi/financeApi";
@@ -32,23 +32,45 @@ export interface EditPaymentTarget {
   studentName: string;
 }
 
+// Set when the drawer is opened for one specific student (e.g. SingleGroup's
+// student "..." menu): that student is pre-selected and locked — shown
+// read-only instead of the student <select>, so a different student can't be
+// picked by accident. Unset (Students page, Header quick-add, ...) keeps the
+// normal select.
+export interface LockedPaymentStudent {
+  id: string;
+  name: string;
+  phone?: string;
+  balance?: number;
+}
+
 // Matches the reference "Add payment" modal: student, method pay, amount,
 // date, comment. Branch is not a field here — it comes from the branch
 // already selected in the header (state.branch.selectedBranchId), which is
 // also what every request is scoped to via the x-branch-id header, so asking
 // for it a second time in this form would be redundant.
-export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName, groupId, editPayment }: {
+export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName, groupId, editPayment, lockedStudent, branchId }: {
   open: boolean; onClose: () => void; initialStudentId?: string; initialStudentName?: string; groupId?: string;
   editPayment?: EditPaymentTarget | null;
+  lockedStudent?: LockedPaymentStudent;
+  // Branch to record the payment against when the caller knows it (e.g. the
+  // group's own branch) — used instead of the header's selected branch, which
+  // is empty while "All branches" is active and would otherwise block the
+  // payment with "No branch selected". Omitted -> header branch, as before.
+  branchId?: string;
 }) => {
   const { t } = useTranslation();
   const toast = useToast();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const isEditing = Boolean(editPayment);
+  const isLocked = Boolean(lockedStudent) && !isEditing;
+  const lockedStudentId = lockedStudent?.id;
+  const effectiveBranchId = branchId ?? selectedBranchId;
 
+  // No student list is needed when the student is fixed (locked / editing).
   const { data: studentsData, isFetching: isStudentsLoading, isError: isStudentsError } = useAllStudentsQuery(
     { page: 1, limit: 100, branchId: selectedBranchId ?? undefined },
-    { skip: !open }
+    { skip: !open || isLocked }
   );
   const [createPayment, { isLoading: isCreating }] = useCreatePaymentMutation();
   const [updatePayment, { isLoading: isUpdating }] = useUpdatePaymentMutation();
@@ -76,6 +98,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
   const [receiptPaymentId, setReceiptPaymentId] = useState<string | null>(null);
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
+  const shownBalance = isLocked ? lockedStudent?.balance ?? selectedStudent?.balance : selectedStudent?.balance;
 
   // Pre-fill the student when this drawer is opened from a specific
   // student's page (e.g. StudentProfile's "Add payment" action), or the
@@ -88,10 +111,12 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
       setAmount(String(editPayment.amount));
       setDate(editPayment.date || todayISO());
       setNotes(editPayment.notes || "");
+    } else if (lockedStudentId) {
+      setSelectedStudentId(lockedStudentId);
     } else if (initialStudentId) {
       setSelectedStudentId(initialStudentId);
     }
-  }, [open, initialStudentId, editPayment]);
+  }, [open, initialStudentId, lockedStudentId, editPayment]);
 
   const handleClose = () => {
     setPaymentMethodId(""); setProvider("MANUAL"); setAmount(""); setNotes("");
@@ -107,8 +132,9 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
   const handleSubmit = async () => {
     setError(null);
 
-    if (!selectedStudentId) { setError(t("addPayment.errors.student")); return; }
-    if (!selectedBranchId) { setError(t("addPayment.errors.branch")); return; }
+    const studentId = isLocked && lockedStudentId ? lockedStudentId : selectedStudentId;
+    if (!studentId) { setError(t("addPayment.errors.student")); return; }
+    if (!effectiveBranchId) { setError(t("addPayment.errors.branch")); return; }
     if (!amount || Number(amount) <= 0) { setError(t("addPayment.errors.amount")); return; }
     if (!paymentMethodId.trim()) { setError(t("addPayment.errors.paymentMethodId")); return; }
 
@@ -129,8 +155,8 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
       const created = await createPayment({
         amount: Number(amount),
         paymentMethodId: paymentMethodId.trim(),
-        studentId: selectedStudentId,
-        branchId: selectedBranchId,
+        studentId,
+        branchId: effectiveBranchId,
         groupId: groupId || undefined,
         date: date || undefined,
         forMonth: forMonth || undefined,
@@ -160,6 +186,20 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
             <div style={{ ...inputStyle, display: "flex", alignItems: "center", background: "#f5f5f5", color: "#666" }}>
               {editPayment?.studentName}
             </div>
+          ) : isLocked && lockedStudent ? (
+            <div
+              aria-readonly="true"
+              style={{
+                ...inputStyle, display: "flex", alignItems: "center", gap: 8,
+                background: "#f5f5f5", color: "#444", cursor: "not-allowed",
+              }}
+            >
+              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {lockedStudent.name}
+                {lockedStudent.phone && <span style={{ color: "#888" }}> — {lockedStudent.phone}</span>}
+              </span>
+              <MdLock size={15} color="#999" style={{ flexShrink: 0 }} />
+            </div>
           ) : (
             <div style={{ position: "relative" }}>
               <select
@@ -187,13 +227,13 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
               }} />
             </div>
           )}
-          {!isEditing && isStudentsError && (
+          {!isEditing && !isLocked && isStudentsError && (
             <div style={{ fontSize: 12, color: "#d93f4f", marginTop: 6 }}>{t("addPayment.studentError")}</div>
           )}
         </div>
 
         {/* Show balance if student selected */}
-        {selectedStudent && (
+        {(selectedStudent || (isLocked && shownBalance !== undefined)) && (
           <div>
             <label style={labelStyle}>{t("addPayment.balance")}</label>
             <span
@@ -207,7 +247,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
                 borderRadius: 999,
               }}
             >
-              {(selectedStudent.balance ?? 0).toLocaleString("ru-RU")} UZS
+              {(shownBalance ?? 0).toLocaleString("ru-RU")} UZS
             </span>
           </div>
         )}

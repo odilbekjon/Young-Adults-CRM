@@ -23,6 +23,13 @@ export interface Reason {
   updatedById?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  // GET /reasons rows embed the creator ({id,name,phone,photo}).
+  createdBy?: {
+    id: string;
+    name?: string | null;
+    phone?: string | null;
+    photo?: string | null;
+  } | null;
 }
 
 export interface ReasonsRequest {
@@ -30,6 +37,9 @@ export interface ReasonsRequest {
   status?: ReasonStatus;
   page?: number;
   limit?: number;
+  // Optional explicit scope: "all" or a branch UUID (Swagger). Omitted ->
+  // the x-branch-id header alone decides (existing callers unchanged).
+  branchId?: string;
 }
 
 export interface ReasonsResponse {

@@ -10,7 +10,12 @@ import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { DatePickerField } from "../DatePickerField";
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
+// Local calendar date — toISOString() is UTC, which is still "yesterday" for
+// the first hours after midnight in UTC+5.
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 export const ActivateModal = ({
   open, onClose, onConfirm, isSaving,

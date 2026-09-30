@@ -40,7 +40,7 @@ interface StudentActionsMenuProps {
   onReminders: () => void;
   branches: BranchOption[];
   isMovingBranch?: boolean;
-  onMoveToBranch: (branchId: string) => Promise<boolean> | boolean;
+  onMoveToBranch: (branchId: string, reason?: string) => Promise<boolean> | boolean;
 }
 
 const itemSx = {
@@ -68,24 +68,27 @@ const MoveToBranchModal = ({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (branchId: string) => Promise<boolean> | boolean;
+  onSubmit: (branchId: string, reason?: string) => Promise<boolean> | boolean;
   branches: BranchOption[];
   isSubmitting?: boolean;
 }) => {
   const { t } = useTranslation();
   const [branch, setBranch] = useState("");
+  const [reason, setReason] = useState("");
 
   const handleClose = () => {
     if (isSubmitting) return;
     setBranch("");
+    setReason("");
     onClose();
   };
 
   const handleSubmit = async () => {
     if (!branch || isSubmitting) return;
-    const success = await onSubmit(branch);
+    const success = await onSubmit(branch, reason.trim() || undefined);
     if (success) {
       setBranch("");
+      setReason("");
       onClose();
     }
   };
@@ -115,7 +118,7 @@ const MoveToBranchModal = ({
             padding: "0 12px",
             color: branch ? "#1f2937" : "#a8b0bb",
             fontSize: 14,
-            marginBottom: 18,
+            marginBottom: 12,
           }}
         >
           <option value="">{t("singleGroup.studentActionsMenu.moveToBranchModal.selectBranch")}</option>
@@ -125,6 +128,26 @@ const MoveToBranchModal = ({
             </option>
           ))}
         </select>
+        {/* POST /students/{id}/transfer-branch takes a `reason` alongside the
+            branch (Swagger body {newBranchId, reason}) — optional here, a
+            default is sent when it's left empty (see handleMoveToBranch). */}
+        <input
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          disabled={isSubmitting}
+          placeholder={t("singleGroup.studentActionsMenu.moveToBranchModal.reasonPlaceholder")}
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            border: "1px solid #e5e7eb",
+            borderRadius: 8,
+            height: 42,
+            padding: "0 12px",
+            color: "#1f2937",
+            fontSize: 14,
+            marginBottom: 18,
+          }}
+        />
         <Button
           variant="contained"
           onClick={handleSubmit}

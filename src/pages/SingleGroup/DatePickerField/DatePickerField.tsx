@@ -4,9 +4,14 @@ import { MdCalendarToday } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { Calendar } from "../Calendar";
 import { PortalPopover } from "../../../components/common/PortalPopover";
+import { parseTrainingDate } from "../../../utils";
 
 interface DatePickerFieldProps {
-  /** ISO date string, e.g. "2026-07-19", or "" when nothing is selected */
+  /**
+   * ISO date string, e.g. "2026-07-19", or "" when nothing is selected. A full
+   * ISO datetime ("2026-07-19T00:00:00+05:00") is tolerated too — only its
+   * leading YYYY-MM-DD is used. onChange always emits plain "YYYY-MM-DD".
+   */
   value: string;
   onChange: (isoDate: string) => void;
   placeholder?: string;
@@ -25,6 +30,14 @@ const toIso = (d: Date) => {
   const m = (d.getMonth() + 1).toString().padStart(2, "0");
   const day = d.getDate().toString().padStart(2, "0");
   return `${y}-${m}-${day}`;
+};
+
+// Backend may hand back a full ISO datetime; reduce to the leading
+// YYYY-MM-DD (no Date/timezone round-trip, so the day can never shift).
+const toDateOnly = (value: string) => {
+  const p = parseTrainingDate(value);
+  if (!p) return "";
+  return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 };
 
 const formatDisplay = (iso: string) => {
@@ -50,26 +63,49 @@ export const DatePickerField = ({ value, onChange, placeholder, min, max, disabl
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t("singleGroup.datePickerField.noDateSelected");
   const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  const selectedDate = value ? new Date(`${value}T00:00:00`) : null;
+  const dateOnly = toDateOnly(value);
+  const selectedDate = dateOnly ? new Date(`${dateOnly}T00:00:00`) : null;
   const handlePick = (d: Date) => { onChange(toIso(d)); setOpen(false); };
+  const toggle = () => { if (!disabled) setOpen((p) => !p); };
 
   return (
-    <div ref={wrapRef} style={{ position: "relative" }}>
+    // The wrapper is the popup anchor: fills block/grid parents (modals, drawers) and
+    // keeps a stable minimum width inside flex filter rows (value vs placeholder).
+    <div ref={wrapRef} style={{ position: "relative", minWidth: 160 }}>
       <div
-        onClick={() => !disabled && setOpen((p) => !p)}
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-disabled={disabled || undefined}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         style={{
           display: "flex", alignItems: "center", gap: 10,
-          border: "1px solid var(--color-border)", borderRadius: 10,
-          padding: "12px 14px", cursor: disabled ? "not-allowed" : "pointer",
+          boxSizing: "border-box", width: "100%", height: 40,
+          border: `1px solid ${!disabled && (open || hovered) ? "var(--color-primary)" : "var(--color-border)"}`,
+          borderRadius: 8, padding: "0 12px", outline: "none",
+          cursor: disabled ? "not-allowed" : "pointer",
           background: disabled ? "var(--color-surface-alt)" : "var(--color-surface)",
           opacity: disabled ? 0.6 : 1,
+          transition: "border-color 0.15s",
         }}
       >
-        <MdCalendarToday size={17} color="var(--color-text-muted)" />
-        <span style={{ fontSize: 14, color: value ? "var(--color-text-primary)" : "var(--color-text-muted)" }}>
-          {value ? formatDisplay(value) : resolvedPlaceholder}
+        <MdCalendarToday size={17} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+        <span
+          style={{
+            fontSize: 13, lineHeight: 1.2, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            color: dateOnly ? "var(--color-text-primary)" : "var(--color-text-muted)",
+          }}
+        >
+          {dateOnly ? formatDisplay(dateOnly) : resolvedPlaceholder}
         </span>
       </div>
 
@@ -79,18 +115,18 @@ export const DatePickerField = ({ value, onChange, placeholder, min, max, disabl
             style={{
               display: "flex",
               background: "var(--color-surface)", border: "1px solid var(--color-border)",
-              borderRadius: 12, boxShadow: "0 12px 32px var(--color-shadow)",
+              borderRadius: 10, boxShadow: "0 8px 24px var(--color-shadow)",
               overflow: "hidden",
             }}
           >
             {shortcuts && (
-              <div style={{ borderRight: "1px solid var(--color-border)", padding: "12px 0", minWidth: 150 }}>
+              <div style={{ borderRight: "1px solid var(--color-border)", padding: "8px 0", minWidth: 130 }}>
                 {buildShortcuts(t).map((sc) => (
                   <div
                     key={sc.label}
                     onClick={() => handlePick(sc.date)}
                     style={{
-                      padding: "9px 16px", fontSize: 13, color: "var(--color-text-primary)",
+                      padding: "7px 14px", fontSize: 12, color: "var(--color-text-primary)",
                       cursor: "pointer", whiteSpace: "nowrap",
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
@@ -101,8 +137,8 @@ export const DatePickerField = ({ value, onChange, placeholder, min, max, disabl
                 ))}
               </div>
             )}
-            <div style={{ width: "100%", minWidth: 300, padding: 16 }}>
-              <Calendar value={selectedDate} onChange={handlePick} min={min} max={max} />
+            <div style={{ width: 272, boxSizing: "border-box", padding: 12 }}>
+              <Calendar value={selectedDate} onChange={handlePick} min={min ? toDateOnly(min) || undefined : undefined} max={max ? toDateOnly(max) || undefined : undefined} />
             </div>
           </div>
         </PortalPopover>

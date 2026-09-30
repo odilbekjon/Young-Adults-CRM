@@ -24,10 +24,7 @@ import { useAllGroupsQuery, useStudentGroupsQuery } from "../../app/api/groupsAp
 import type { Group } from "../../app/api/groupsApi/types";
 import { useDebtorsQuery, usePaymentsListQuery, useFinanceChartQuery } from "../../app/api/financeApi";
 import { useReportLeftStudentsQuery } from "../../app/api/reportsApi";
-import {
-  SCHEDULE_COLORS, DEFAULT_LESSON_DURATION,
-  SCHEDULE_TIME_START, SCHEDULE_TIME_END,
-} from "../../constants/DashboardData";
+import { SCHEDULE_COLORS, DEFAULT_LESSON_DURATION, SCHEDULE_TIME_START, SCHEDULE_TIME_END } from "../../constants/DashboardData";
 import { STATS } from "../../constants/DashboardStats";
 
 // "This month" as [firstOfMonth, today] in the plain YYYY-MM-DD format every
@@ -36,10 +33,13 @@ import { STATS } from "../../constants/DashboardStats";
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const toISODate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
+// -1 = the backend has no start time for this group (it can't be placed on the
+// time axis; it's listed under the grid instead).
 const parseTimeToMinutes = (time: string | null | undefined) => {
-  if (!time) return 0;
+  if (!time) return -1;
   const [h, m] = time.split(":").map(Number);
-  return (h || 0) * 60 + (m || 0);
+  if (Number.isNaN(h)) return -1;
+  return h * 60 + (m || 0);
 };
 
 const mapDaysType = (daysType: string): ScheduleTab => {
@@ -54,10 +54,22 @@ const mapDaysType = (daysType: string): ScheduleTab => {
 const DAYS_LEFT_THRESHOLD = 5;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+// Backend sends trainingStart/End either as a plain date ("2026-07-01") or a full
+// ISO datetime ("2026-07-01T00:00:00.000Z") — only the date part is used, and an
+// unparseable value yields null instead of throwing (Intl.format throws RangeError
+// on an Invalid Date, which used to crash the whole Dashboard).
+const parseDay = (d: string | null | undefined): Date | null => {
+  if (!d) return null;
+  const date = new Date(`${d.slice(0, 10)}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const formatDateRange = (start: string | null | undefined, end: string | null | undefined, locale: string): string => {
-  if (!start || !end) return "";
+  const s = parseDay(start);
+  const e = parseDay(end);
+  if (!s || !e) return "";
   const fmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
-  return `${fmt.format(new Date(`${start}T00:00:00`))} – ${fmt.format(new Date(`${end}T00:00:00`))}`;
+  return `${fmt.format(s)} – ${fmt.format(e)}`;
 };
 
 // GroupDetail.students (the legacy relation Group.students comes from) keeps
@@ -84,9 +96,10 @@ const toScheduleEvents = (
   items.map((item, i) => {
     const group = groupById.get(item.groupId);
     let daysLeftLabel: string | undefined;
-    if (group?.trainingEnd) {
+    const trainingEnd = parseDay(group?.trainingEnd);
+    if (trainingEnd) {
       const today = new Date(); today.setHours(0, 0, 0, 0);
-      const daysLeft = Math.round((new Date(`${group.trainingEnd}T00:00:00`).getTime() - today.getTime()) / MS_PER_DAY);
+      const daysLeft = Math.round((trainingEnd.getTime() - today.getTime()) / MS_PER_DAY);
       if (daysLeft >= 0 && daysLeft <= DAYS_LEFT_THRESHOLD) {
         daysLeftLabel = t("dashboard.schedule.daysLeft", { count: daysLeft });
       }
@@ -108,21 +121,55 @@ const toScheduleEvents = (
     };
   });
 
+// Full targets (route + query) for the cards that open a pre-filtered list —
+// Students reads ?status=trial / ?financial=paid_month, Settings > Office >
+// Student Left Group (Router.tsx: settings/office/students-left-group) reads
+// ?leftType=active|trial. Override the route/filter in constants/DashboardStats.
+const STAT_TARGETS: Record<string, string> = {
+  trial:      "/students?status=trial",
+  paid:       "/students?financial=paid_month",
+  leftActive: "/settings/office/students-left-group?leftType=active",
+  leftTrial:  "/settings/office/students-left-group?leftType=trial",
+};
+
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
-const TIME_START = SCHEDULE_TIME_START;
-const TIME_END   = SCHEDULE_TIME_END;
-const TOTAL_MINS = TIME_END - TIME_START;
+const SLOT_MINS = 30;
 
-const TIME_LABELS: string[] = [];
-for (let m = TIME_START; m <= TIME_END; m += 30) {
-  const h   = Math.floor(m / 60).toString().padStart(2, "0");
-  const min = (m % 60).toString().padStart(2, "0");
-  TIME_LABELS.push(`${h}:${min}`);
-}
+const formatSlot = (m: number) =>
+  `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
-const pct = (mins: number) =>
-  `${((mins / TOTAL_MINS) * 100).toFixed(3)}%`;
+// The axis always covers the full working day (08:00-20:00, 30-min slots), so
+// an empty day still shows an empty grid. Lessons outside that window extend
+// the axis just enough to show them. `gapBefore[i]` marks a slot that follows a
+// skipped stretch (only possible for such out-of-window lessons).
+const buildSlots = (events: ScheduleEvent[]) => {
+  const set = new Set<number>();
+  for (let m = SCHEDULE_TIME_START; m <= SCHEDULE_TIME_END; m += SLOT_MINS) set.add(m);
+  events.forEach((e) => {
+    for (let m = Math.floor(e.start / SLOT_MINS) * SLOT_MINS; m < e.start + e.duration; m += SLOT_MINS) set.add(m);
+  });
+  const slots = [...set].sort((a, b) => a - b);
+  const slotIndex = new Map(slots.map((m, i) => [m, i]));
+  const gapBefore = slots.map((m, i) => i > 0 && m - slots[i - 1] > SLOT_MINS);
+  return { slots, slotIndex, gapBefore };
+};
+
+// Event position/size in slot units (1 = one 30-min slot) on the compacted axis.
+const slotSpan = (ev: ScheduleEvent, slotIndex: Map<number, number>) => ({
+  pos: (slotIndex.get(Math.floor(ev.start / SLOT_MINS) * SLOT_MINS) ?? 0) + (ev.start % SLOT_MINS) / SLOT_MINS,
+  len: ev.duration / SLOT_MINS,
+});
+
+// Sizes for the schedule grids (px) — one 30-min slot column/row.
+const SLOT_W = 64;
+const ROOM_COL_W = 170;
+const SLOT_H = 76;
+const TIME_COL_W = 76;
+const VERTICAL_ROOM_MIN_W = 210;
+
+const DIVIDER_HEAVY = "2px solid var(--color-text-muted)";
+const DIVIDER_LIGHT = "1px solid var(--color-border)";
 
 const formatChartValue = (value: number, currency: string) => {
   if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B ${currency}`;
@@ -271,25 +318,31 @@ export const Dashboard = () => {
     () => toScheduleEvents(scheduleData?.data ?? [], groupById, archivedMembershipKeys, t, i18n.language),
     [scheduleData, groupById, archivedMembershipKeys, t, i18n.language],
   );
-  const rooms = useMemo(
-    () => [...new Set(events.map((e) => e.room))],
-    [events],
-  );
+  // Rooms come from every day type so an empty tab still draws its rows; with
+  // no rooms at all one blank row keeps the empty grid visible.
+  const rooms = useMemo(() => {
+    const all = [...new Set(events.map((e) => e.room))];
+    return all.length ? all : [""];
+  }, [events]);
 
   // Filtered events for current tab — this only affects the schedule below,
   // the revenue chart above is intentionally independent of it.
-  const visibleEvents = useMemo(
+  const tabEvents = useMemo(
     () => events.filter((e) => e.days.includes(tab)),
     [events, tab],
   );
+  const visibleEvents = useMemo(() => tabEvents.filter((e) => e.start >= 0), [tabEvents]);
+  const unscheduledEvents = useMemo(() => tabEvents.filter((e) => e.start < 0), [tabEvents]);
 
-  // Navigate stat card → page (with optional ?filter=xxx, or for "paid" the
-  // current month's date range — AllPayments reads startDate/endDate from
-  // the URL to pre-filter its list, same param names its own filter panel
-  // already sends to GET /finance/payments).
+  const { slots, slotIndex, gapBefore } = useMemo(() => buildSlots(visibleEvents), [visibleEvents]);
+  const slotCount = slots.length;
+
+  // Navigate stat card → page (with optional ?filter=xxx). trial/paid/
+  // leftActive/leftTrial land on a pre-filtered list via STAT_TARGETS.
   const goTo = (key: string, route: string, filter?: string) => {
-    if (key === "paid") {
-      navigate(`${route}?startDate=${monthStart}&endDate=${monthEnd}`);
+    const override = STAT_TARGETS[key];
+    if (override) {
+      navigate(override);
       return;
     }
     const url = filter ? `${route}?filter=${filter}` : route;
@@ -611,38 +664,37 @@ export const Dashboard = () => {
         )}
 
         {/* ── HORIZONTAL layout ── */}
-        {!scheduleLoading && !scheduleError && orientation === "horizontal" && (
+        {!scheduleLoading && !scheduleError && orientation === "horizontal" && slotCount > 0 && (
           <Box sx={{ overflowX: "auto" }}>
-            <Box sx={{ minWidth: 1100 }}>
+            <Box sx={{ minWidth: ROOM_COL_W + slotCount * SLOT_W }}>
 
               {/* Time header row */}
               <Box sx={{
                 display: "grid",
-                gridTemplateColumns: "110px 1fr",
+                gridTemplateColumns: `${ROOM_COL_W}px 1fr`,
                 borderBottom: "1px solid var(--color-border)",
                 background: "var(--color-surface-alt)",
               }}>
                 <Box sx={{ borderRight: "1px solid var(--color-border)", py: 1 }} />
-                <Box sx={{ position: "relative", height: 30 }}>
-                  {TIME_LABELS.map((t, i) => {
-                    const isHourMark = t.endsWith(":00");
+                <Box sx={{ display: "grid", gridTemplateColumns: `repeat(${slotCount}, 1fr)` }}>
+                  {slots.map((m, i) => {
+                    const isHourMark = m % 60 === 0;
                     return (
-                      <Typography
-                        key={t}
+                      <Box
+                        key={m}
                         sx={{
-                          position: "absolute",
-                          left: `${(i / (TIME_LABELS.length - 1)) * 100}%`,
-                          transform: "translateX(-50%)",
-                          top: "50%", mt: "-9px",
-                          fontSize: isHourMark ? 11 : 9.5, whiteSpace: "nowrap",
-                          fontWeight: isHourMark ? 700 : 400,
-                          color: (t === "10:30" || t === "11:00")
-                            ? "#f97316"
-                            : isHourMark ? "var(--color-text-secondary)" : "var(--color-text-muted)",
+                          py: 1.25, textAlign: "center",
+                          borderLeft: gapBefore[i] ? DIVIDER_HEAVY : i > 0 ? DIVIDER_LIGHT : "none",
                         }}
                       >
-                        {t}
-                      </Typography>
+                        <Typography sx={{
+                          fontSize: 14, whiteSpace: "nowrap",
+                          fontWeight: isHourMark ? 800 : 500,
+                          color: isHourMark ? "var(--color-text-primary)" : "var(--color-text-muted)",
+                        }}>
+                          {formatSlot(m)}
+                        </Typography>
+                      </Box>
                     );
                   })}
                 </Box>
@@ -656,9 +708,9 @@ export const Dashboard = () => {
                     key={room}
                     sx={{
                       display: "grid",
-                      gridTemplateColumns: "110px 1fr",
+                      gridTemplateColumns: `${ROOM_COL_W}px 1fr`,
                       borderBottom: "1px solid var(--color-border-subtle)",
-                      minHeight: 56,
+                      minHeight: 128,
                       "&:hover": { background: "var(--color-surface-hover)" },
                     }}
                   >
@@ -666,23 +718,23 @@ export const Dashboard = () => {
                       px: 2, display: "flex", alignItems: "center",
                       borderRight: "1px solid var(--color-border)",
                     }}>
-                      <Typography sx={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>
+                      <Typography sx={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)", wordBreak: "break-word" }}>
                         {room}
                       </Typography>
                     </Box>
-                    <Box sx={{ position: "relative", minHeight: 56 }}>
-                      {/* Grid lines */}
-                      {TIME_LABELS.map((t, i) => (
-                        <Box key={t} sx={{
+                    <Box sx={{ position: "relative", minHeight: 128 }}>
+                      {/* Grid lines — heavier where empty stretches were collapsed */}
+                      {slots.map((m, i) => i > 0 && (
+                        <Box key={m} sx={{
                           position: "absolute",
-                          left: `${(i / (TIME_LABELS.length - 1)) * 100}%`,
+                          left: `${(i / slotCount) * 100}%`,
                           top: 0, bottom: 0,
-                          borderLeft: "1px solid var(--color-border)",
+                          borderLeft: gapBefore[i] ? DIVIDER_HEAVY : DIVIDER_LIGHT,
                         }} />
                       ))}
                       {/* Events */}
                       {roomEvents.map((ev: ScheduleEvent) => {
-                        const startOff = ev.start - TIME_START;
+                        const { pos, len } = slotSpan(ev, slotIndex);
                         return (
                           <Tooltip
                             key={ev.id}
@@ -694,13 +746,14 @@ export const Dashboard = () => {
                               onClick={() => navigate(`/groups/${ev.id}`)}
                               sx={{
                                 position: "absolute",
-                                left: pct(startOff),
-                                width: pct(ev.duration),
-                                top: 4, bottom: 4,
+                                left: `calc(${(pos / slotCount) * 100}% + 3px)`,
+                                width: `calc(${(len / slotCount) * 100}% - 6px)`,
+                                top: 8, bottom: 8,
                                 backgroundColor: ev.color,
-                                borderRadius: "8px",
+                                borderRadius: "10px",
                                 boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-                                px: 1.1, py: 0.6,
+                                px: 1.5, py: 1,
+                                display: "flex", flexDirection: "column", justifyContent: "center", gap: 0.4,
                                 overflow: "visible",
                                 cursor: "pointer",
                                 transition: "filter 0.15s",
@@ -709,42 +762,40 @@ export const Dashboard = () => {
                             >
                               {ev.daysLeftLabel && (
                                 <Box sx={{
-                                  position: "absolute", top: -7, right: 6,
+                                  position: "absolute", top: -9, right: 8,
                                   background: "var(--color-danger)", borderRadius: "10px",
-                                  px: 0.8, py: 0.15, fontSize: 8.5, fontWeight: 700,
+                                  px: 1, py: 0.2, fontSize: 11, fontWeight: 700,
                                   color: "#fff", whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
                                 }}>
                                   {ev.daysLeftLabel}
                                 </Box>
                               )}
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap", overflow: "hidden" }}>
-                                <Box sx={{
-                                  background: "rgba(255,255,255,0.25)", borderRadius: "4px",
-                                  px: 0.6, fontSize: 9.5, fontWeight: 700,
-                                  color: "#fff", lineHeight: 1.5, whiteSpace: "nowrap",
-                                }}>
-                                  {ev.groupName}
-                                </Box>
-                                <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: "#fff", lineHeight: 1.3, whiteSpace: "nowrap" }}>
-                                  {ev.courseName}
-                                </Typography>
+                              <Box sx={{
+                                alignSelf: "flex-start", maxWidth: "100%",
+                                background: "rgba(255,255,255,0.3)", borderRadius: "5px",
+                                px: 0.8, fontSize: 13, fontWeight: 800,
+                                color: "#fff", lineHeight: 1.5,
+                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              }}>
+                                {ev.groupName}
                               </Box>
-                              <Typography sx={{ fontSize: 10, color: "rgba(255,255,255,0.9)", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              <Typography sx={{ fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {ev.courseName}
+                              </Typography>
+                              <Typography sx={{ fontSize: 13, color: "rgba(255,255,255,0.95)", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {ev.teacher}
                               </Typography>
-                              {ev.dateRange && (
-                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.3 }}>
-                                  <Typography sx={{ fontSize: 9, color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
-                                    {ev.dateRange}
-                                  </Typography>
-                                  <Box sx={{
-                                    background: "rgba(0,0,0,0.2)", borderRadius: "3px",
-                                    px: 0.6, fontSize: 9, color: "#fff", fontWeight: 700, whiteSpace: "nowrap", ml: 0.5,
-                                  }}>
-                                    {t("dashboard.schedule.studentsFractionSlash", { count: ev.students, max: ev.maxStudents || "-" })}
-                                  </Box>
+                              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 0.5 }}>
+                                <Typography sx={{ fontSize: 12, color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {ev.dateRange}
+                                </Typography>
+                                <Box sx={{
+                                  background: "rgba(0,0,0,0.22)", borderRadius: "4px",
+                                  px: 0.8, fontSize: 12, color: "#fff", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0,
+                                }}>
+                                  {t("dashboard.schedule.studentsFractionSlash", { count: ev.students, max: ev.maxStudents || "-" })}
                                 </Box>
-                              )}
+                              </Box>
                             </Box>
                           </Tooltip>
                         );
@@ -758,13 +809,13 @@ export const Dashboard = () => {
         )}
 
         {/* ── VERTICAL layout ── */}
-        {!scheduleLoading && !scheduleError && orientation === "vertical" && (
+        {!scheduleLoading && !scheduleError && orientation === "vertical" && slotCount > 0 && (
           <Box sx={{ overflowX: "auto" }}>
-            <Box sx={{ minWidth: 900 }}>
+            <Box sx={{ minWidth: TIME_COL_W + rooms.length * VERTICAL_ROOM_MIN_W }}>
               {/* Column headers = rooms */}
               <Box sx={{
                 display: "grid",
-                gridTemplateColumns: `80px repeat(${rooms.length}, 1fr)`,
+                gridTemplateColumns: `${TIME_COL_W}px repeat(${rooms.length}, minmax(${VERTICAL_ROOM_MIN_W}px, 1fr))`,
                 borderBottom: "1px solid var(--color-border)",
                 background: "var(--color-surface-alt)",
                 position: "sticky", top: 0, zIndex: 2,
@@ -772,145 +823,140 @@ export const Dashboard = () => {
                 <Box sx={{ borderRight: "1px solid var(--color-border)", py: 1 }} />
                 {rooms.map((r: string) => (
                   <Box key={r} sx={{
-                    py: 1, px: 1,
+                    py: 1.25, px: 1,
                     borderRight: "1px solid var(--color-border)",
                     textAlign: "center",
                   }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-secondary)" }}>{r}</Typography>
+                    <Typography sx={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)" }}>{r}</Typography>
                   </Box>
                 ))}
               </Box>
 
-              {/* Time rows */}
-              {TIME_LABELS.map((timeLabel, tIdx) => {
-                // For each time slot row, find events that START in this 30-min window
-                const slotStart = TIME_START + tIdx * 30;
-                const slotEnd   = slotStart + 30;
-                const isHourMark = timeLabel.endsWith(":00");
-                const rowHeight = 40;
+              <Box sx={{
+                display: "grid",
+                gridTemplateColumns: `${TIME_COL_W}px repeat(${rooms.length}, minmax(${VERTICAL_ROOM_MIN_W}px, 1fr))`,
+              }}>
+                {/* Time labels — collapsed stretches get a heavier divider */}
+                <Box sx={{ borderRight: "1px solid var(--color-border)" }}>
+                  {slots.map((m, i) => {
+                    const isHourMark = m % 60 === 0;
+                    return (
+                      <Box key={m} sx={{
+                        height: SLOT_H, px: 1, pt: 0.75, textAlign: "center",
+                        borderTop: gapBefore[i] ? DIVIDER_HEAVY : i > 0 ? "1px solid var(--color-border-subtle)" : "none",
+                      }}>
+                        <Typography sx={{
+                          fontSize: 14, fontWeight: isHourMark ? 800 : 500, whiteSpace: "nowrap",
+                          color: isHourMark ? "var(--color-text-primary)" : "var(--color-text-muted)",
+                        }}>
+                          {formatSlot(m)}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
 
-                return (
-                  <Box
-                    key={timeLabel}
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: `80px repeat(${rooms.length}, 1fr)`,
-                      borderBottom: "1px solid var(--color-border-subtle)",
-                      minHeight: rowHeight,
-                    }}
-                  >
-                    {/* Time label */}
-                    <Box sx={{
-                      px: 1.5,
-                      display: "flex", alignItems: "flex-start", pt: 0.75,
+                {/* Room columns */}
+                {rooms.map((room) => {
+                  const roomEvents = visibleEvents.filter((e) => e.room === room);
+                  return (
+                    <Box key={room} sx={{
+                      position: "relative", height: slotCount * SLOT_H,
                       borderRight: "1px solid var(--color-border)",
                     }}>
-                      <Typography sx={{
-                        fontSize: isHourMark ? 11 : 9.5, fontWeight: isHourMark ? 700 : 500,
-                        color: (timeLabel === "10:30" || timeLabel === "11:00")
-                          ? "#f97316"
-                          : isHourMark ? "var(--color-text-secondary)" : "var(--color-text-muted)",
-                        whiteSpace: "nowrap",
-                      }}>
-                        {timeLabel}
-                      </Typography>
-                    </Box>
-
-                    {/* Room cells */}
-                    {rooms.map((room ) => {
-                      const cellEvents = visibleEvents.filter(
-                        (e) => e.room === room && e.start >= slotStart && e.start < slotEnd,
-                      );
-                      // Also check spanning events
-                      const spanningEvents = visibleEvents.filter(
-                        (e) =>
-                          e.room === room &&
-                          e.start < slotStart &&
-                          e.start + e.duration > slotStart,
-                      );
-                      // const allCellEvents = [...cellEvents, ...spanningEvents];
-
-                      return (
-                        <Box
-                          key={room}
-                          sx={{
-                            borderRight: "1px solid var(--color-border)",
-                            p: 0.4, minHeight: rowHeight,
-                            background: tIdx % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-alt)",
-                          }}
-                        >
-                          {cellEvents.map((ev) => (
-                            <Tooltip
-                              key={ev.id}
-                              title={`${ev.groupName} · ${ev.courseName} · ${ev.teacher}${ev.dateRange ? ` · ${ev.dateRange}` : ""}`}
-                              placement="top" arrow
+                      {/* Grid lines */}
+                      {slots.map((m, i) => i > 0 && (
+                        <Box key={m} sx={{
+                          position: "absolute", left: 0, right: 0,
+                          top: i * SLOT_H,
+                          borderTop: gapBefore[i] ? DIVIDER_HEAVY : "1px solid var(--color-border-subtle)",
+                        }} />
+                      ))}
+                      {/* Events */}
+                      {roomEvents.map((ev) => {
+                        const { pos, len } = slotSpan(ev, slotIndex);
+                        return (
+                          <Tooltip
+                            key={ev.id}
+                            title={`${ev.groupName} · ${ev.courseName} · ${ev.teacher}${ev.dateRange ? ` · ${ev.dateRange}` : ""}`}
+                            placement="top" arrow
+                          >
+                            <Box
+                              onClick={() => navigate(`/groups/${ev.id}`)}
+                              sx={{
+                                position: "absolute",
+                                left: 4, right: 4,
+                                top: pos * SLOT_H + 3,
+                                height: len * SLOT_H - 6,
+                                backgroundColor: ev.color,
+                                borderRadius: "10px",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                                px: 1.25, py: 0.75,
+                                display: "flex", flexDirection: "column", justifyContent: "center", gap: 0.3,
+                                cursor: "pointer",
+                                transition: "filter 0.15s",
+                                "&:hover": { filter: "brightness(0.9)" },
+                              }}
                             >
-                              <Box
-                                onClick={() => navigate(`/groups/${ev.id}`)}
-                                sx={{
-                                  position: "relative",
-                                  backgroundColor: ev.color,
-                                  borderRadius: "6px",
-                                  boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-                                  px: 1, py: 0.5,
-                                  mb: 0.4,
-                                  cursor: "pointer",
-                                  transition: "filter 0.15s",
-                                  "&:hover": { filter: "brightness(0.9)" },
-                                  // span multiple rows via minHeight proportional to duration
-                                  minHeight: Math.max(34, (ev.duration / 30) * rowHeight - 4),
-                                }}
-                              >
-                                {ev.daysLeftLabel && (
-                                  <Box sx={{
-                                    position: "absolute", top: -6, right: 4,
-                                    background: "var(--color-danger)", borderRadius: "8px",
-                                    px: 0.6, fontSize: 7.5, fontWeight: 700,
-                                    color: "#fff", whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
-                                  }}>
-                                    {ev.daysLeftLabel}
-                                  </Box>
-                                )}
+                              {ev.daysLeftLabel && (
                                 <Box sx={{
-                                  background: "rgba(255,255,255,0.25)", borderRadius: "3px",
-                                  px: 0.5, mb: 0.25, display: "inline-block",
-                                  fontSize: 8, fontWeight: 700, color: "#fff",
+                                  position: "absolute", top: -8, right: 8,
+                                  background: "var(--color-danger)", borderRadius: "10px",
+                                  px: 1, py: 0.1, fontSize: 11, fontWeight: 700,
+                                  color: "#fff", whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
                                 }}>
-                                  {ev.groupName}
+                                  {ev.daysLeftLabel}
                                 </Box>
-                                <Typography sx={{ fontSize: 9.5, fontWeight: 700, color: "#fff", lineHeight: 1.25 }}>
-                                  {ev.courseName}
-                                </Typography>
-                                <Typography sx={{ fontSize: 8.5, color: "rgba(255,255,255,0.85)", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                  {ev.teacher}
-                                </Typography>
-                                <Typography sx={{ fontSize: 8.5, color: "rgba(255,255,255,0.8)", mt: 0.25 }}>
-                                  {t("dashboard.schedule.studentsCountSuffix", { count: ev.students, max: ev.maxStudents || "-" })}
-                                </Typography>
+                              )}
+                              <Box sx={{
+                                alignSelf: "flex-start", maxWidth: "100%",
+                                background: "rgba(255,255,255,0.3)", borderRadius: "5px",
+                                px: 0.8, fontSize: 13, fontWeight: 800, color: "#fff", lineHeight: 1.5,
+                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              }}>
+                                {ev.groupName}
                               </Box>
-                            </Tooltip>
-                          ))}
-                          {/* Continuing event indicator */}
-                          {spanningEvents.length > 0 && cellEvents.length === 0 && (
-                            <Box sx={{
-                              background: spanningEvents[0].color,
-                              opacity: 0.3,
-                              borderRadius: "4px",
-                              height: 32,
-                            }} />
-                          )}
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                );
-              })}
+                              <Typography sx={{ fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {ev.courseName}
+                              </Typography>
+                              <Typography sx={{ fontSize: 13, color: "rgba(255,255,255,0.95)", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {ev.teacher}
+                              </Typography>
+                              <Typography sx={{ fontSize: 12, color: "rgba(255,255,255,0.9)", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {ev.dateRange}
+                              </Typography>
+                              <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#fff", lineHeight: 1.25 }}>
+                                {t("dashboard.schedule.studentsCountSuffix", { count: ev.students, max: ev.maxStudents || "-" })}
+                              </Typography>
+                            </Box>
+                          </Tooltip>
+                        );
+                      })}
+                    </Box>
+                  );
+                })}
+              </Box>
             </Box>
           </Box>
         )}
 
+        {!scheduleLoading && !scheduleError && unscheduledEvents.length > 0 && (
+          <Box sx={{ px: 2, py: 1.25, borderTop: "1px solid var(--color-border)", fontSize: 13, color: "var(--color-text-muted)", display: "flex", flexWrap: "wrap", gap: 1 }}>
+            <span>{t("dashboard.schedule.noTime")}:</span>
+            {unscheduledEvents.map((ev) => (
+              <span
+                key={`${ev.id}-${ev.room}`}
+                onClick={() => navigate(`/groups/${ev.id}`)}
+                style={{ cursor: "pointer", color: "var(--color-primary)", fontWeight: 600 }}
+              >
+                {ev.groupName}
+              </span>
+            ))}
+          </Box>
+        )}
+
         {/* Empty state */}
-        {!scheduleLoading && !scheduleError && visibleEvents.length === 0 && (
+        {!scheduleLoading && !scheduleError && tabEvents.length === 0 && (
           <Box sx={{ py: 6, textAlign: "center" }}>
             <Typography sx={{ color: "var(--color-text-muted)", fontSize: 14 }}>
               {t("dashboard.schedule.emptyState")}

@@ -18,20 +18,33 @@ import { useAllGroupsQuery, useStudentGroupsQuery } from "../../../../../app/api
 import type { StudentGroupStatus } from "../../../../../app/api/groupsApi/types";
 import { useAllCoursesQuery } from "../../../../../app/api/coursesApi";
 import { useReasonsSelectQuery } from "../../../../../app/api/reasonsApi";
+import { useStudentFreezesQuery } from "../../../../../app/api/studentFreezesApi";
+import type { StudentFreezeRecord } from "../../../../../app/api/studentFreezesApi/types";
 import { useStaffUsersSelectQuery } from "../../../../../app/api/usersApi";
 import type { RootState } from "../../../../../app/store";
 import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
 
 const PAGE_SIZE = 10;
+const REASONS_LIMIT = 200;
+const FREEZES_LIMIT = 200;
 
 // A membership only shows up here once its status moves away from
 // ACTIVE/PROBATION/FROZEN — same definition SingleGroup.tsx already uses to
 // decide a student "left" a group (see its `archived` derivation).
 const LEFT_STATUSES: StudentGroupStatus[] = ["INACTIVE", "DELETED"];
 
+// What the student's membership was at the moment they left the group. The
+// backend keeps no "status before leaving" field on /student-groups rows (the
+// row just ends up INACTIVE/DELETED), so it is derived — see `leftAsOf`.
+type LeftAs = "trial" | "frozen" | "active";
+const LEFT_AS_OPTIONS: LeftAs[] = ["trial", "frozen", "active"];
+
 interface LeftStudentRow {
   id: string;
   studentId: string;
+  groupId: string;
+  leftAs: LeftAs;
+  reasonId: string;
   name: string;
   phone: string;
   course: string;
@@ -50,26 +63,100 @@ const TAB_LABEL_KEYS: Record<"new" | "old", string> = {
   old: "settings.office.studentLeft.tabs.old",
 };
 
+// Filter controls: white, thin border, 6px radius, 40px tall; the blue border
+// shows while a select is open/focused.
+const FIELD_HEIGHT = 40;
+const FOCUS_BORDER = "#29b6f6";
+
 const selectSx = {
-  height: 38,
+  height: FIELD_HEIGHT,
   fontSize: "0.82rem",
   borderRadius: "6px",
   backgroundColor: "#fff",
-  "& fieldset": { borderColor: "#e5e7eb" },
+  "& fieldset": { borderColor: "#e5e7eb", borderWidth: 1 },
   "&:hover fieldset": { borderColor: "#9ca3af" },
-  "&.Mui-focused fieldset": { borderColor: "#29b6f6" },
+  "&.Mui-focused fieldset": { borderColor: FOCUS_BORDER, borderWidth: 1 },
 };
 
 const inputSx = {
   "& .MuiOutlinedInput-root": {
     borderRadius: "6px",
     fontSize: "0.82rem",
-    height: 38,
+    height: FIELD_HEIGHT,
     backgroundColor: "#fff",
-    "& fieldset": { borderColor: "#e5e7eb" },
+    "& fieldset": { borderColor: "#e5e7eb", borderWidth: 1 },
     "&:hover fieldset": { borderColor: "#9ca3af" },
-    "&.Mui-focused fieldset": { borderColor: "#29b6f6" },
+    "&.Mui-focused fieldset": { borderColor: FOCUS_BORDER, borderWidth: 1 },
   },
+};
+
+// Dropdown list opens right below the select (not over it).
+const menuProps = {
+  anchorOrigin: { vertical: "bottom", horizontal: "left" },
+  transformOrigin: { vertical: "top", horizontal: "left" },
+  slotProps: {
+    paper: {
+      sx: {
+        mt: 0.5,
+        maxHeight: 280,
+        borderRadius: "6px",
+        border: "1px solid #e5e7eb",
+        boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
+        "& .MuiMenuItem-root": { fontSize: "0.82rem" },
+      },
+    },
+  },
+} as const;
+
+// DatePickerField's trigger is styled with inline styles (big modal-style
+// field, 10px radius, 12px padding) and is shared with modals, so it isn't
+// touched — the filter bar scopes an override to `.sl-date` instead so the
+// trigger matches the other 40px filter controls and never clips its text.
+const DATE_FIELD_CSS = `
+.sl-date { width: 100%; min-width: 0; }
+.sl-date > div:first-child {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: ${FIELD_HEIGHT}px !important;
+  padding: 0 12px !important;
+  gap: 8px !important;
+  border-radius: 6px !important;
+  border-color: #e5e7eb !important;
+  background: #fff !important;
+  min-width: 0;
+}
+.sl-date > div:first-child:hover { border-color: #9ca3af !important; }
+.sl-date > div:first-child svg { flex-shrink: 0; width: 16px; height: 16px; }
+.sl-date > div:first-child span {
+  font-size: 0.82rem !important;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+`;
+
+const isoDay = (v: string) => (/^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : "");
+
+// Derives the membership's state when the student left, from the fields the
+// API really exposes:
+//  - frozen: a /student-freezes record for this membership was ACTIVE, or its
+//    [startDate, endDate] window covers the exit date;
+//  - trial:  never activated — Activate/graduate-trial always stamps
+//    paymentStartDate, so a null one means they left during the trial;
+//  - active: activated (paymentStartDate set) and not frozen.
+const leftAsOf = (
+  m: { paymentStartDate: string | null; exitedAt: string | null; updatedAt: string | null },
+  freezes: StudentFreezeRecord[]
+): LeftAs => {
+  const exitDay = isoDay(m.exitedAt ?? m.updatedAt ?? "");
+  const wasFrozen = freezes.some(
+    (f) =>
+      f.status === "ACTIVE" ||
+      (!!exitDay && f.status !== "CANCELLED" && f.startDate <= exitDay && (!f.endDate || exitDay <= f.endDate))
+  );
+  if (wasFrozen) return "frozen";
+  return m.paymentStartDate ? "active" : "trial";
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -80,13 +167,18 @@ export const StudentLeft = () => {
   const [tab, setTab] = useState<"new" | "old">("new");
   const [page, setPage] = useState(1);
 
-  // Read once on mount so a link like
-  // /settings/office/students-left-group?status=INACTIVE opens pre-filtered
-  // — same "read once into initial state" convention already used by
-  // Finance > All Payments for its Dashboard-driven date range.
+  // Read once on mount so links open pre-filtered — same "read once into
+  // initial state" convention already used by Finance > All Payments for its
+  // Dashboard-driven date range:
+  //  - ?leftType=trial|active (Dashboard cards) preselects the Status filter;
+  //  - ?status=INACTIVE|DELETED (legacy) filters by the membership's own
+  //    status; it has no dropdown of its own and is cleared by Reset.
   const [searchParams] = useSearchParams();
+  const leftTypeParam = searchParams.get("leftType");
+  const initialLeftAs: "" | LeftAs =
+    leftTypeParam === "trial" || leftTypeParam === "active" || leftTypeParam === "frozen" ? leftTypeParam : "";
   const initialStatusParam = searchParams.get("status");
-  const initialStatus: "" | StudentGroupStatus =
+  const initialMembershipStatus: "" | StudentGroupStatus =
     initialStatusParam === "INACTIVE" || initialStatusParam === "DELETED" ? initialStatusParam : "";
 
   // Filters
@@ -98,12 +190,13 @@ export const StudentLeft = () => {
   const [teacher, setTeacher] = useState("");
   const [staff, setStaff] = useState("");
   const [reasonId, setReasonId] = useState("");
-  const [status, setStatus] = useState<"" | StudentGroupStatus>(initialStatus);
+  const [status, setStatus] = useState<"" | LeftAs>(initialLeftAs);
 
   // Applied filters (only applied on "Filter" click)
   const [applied, setApplied] = useState<{
     search: string; course: string; groupId: string; teacher: string; staff: string;
-    reasonId: string; status: "" | StudentGroupStatus; startDate: string; endDate: string;
+    reasonId: string; status: "" | LeftAs; startDate: string; endDate: string;
+    membershipStatus: "" | StudentGroupStatus;
   }>({
     search: "",
     course: "",
@@ -111,20 +204,27 @@ export const StudentLeft = () => {
     teacher: "",
     staff: "",
     reasonId: "",
-    status: initialStatus,
+    status: initialLeftAs,
     startDate: "",
     endDate: "",
+    membershipStatus: initialMembershipStatus,
   });
 
   const handleFilter = () => {
-    setApplied({ search, course, groupId, teacher, staff, reasonId, status, startDate, endDate });
+    setApplied((prev) => ({
+      search, course, groupId, teacher, staff, reasonId, status, startDate, endDate,
+      membershipStatus: prev.membershipStatus,
+    }));
     setPage(1);
   };
 
   const handleReset = () => {
     setSearch(""); setCourse(""); setGroupId(""); setTeacher(""); setStaff("");
     setReasonId(""); setStatus(""); setStartDate(""); setEndDate("");
-    setApplied({ search: "", course: "", groupId: "", teacher: "", staff: "", reasonId: "", status: "", startDate: "", endDate: "" });
+    setApplied({
+      search: "", course: "", groupId: "", teacher: "", staff: "", reasonId: "", status: "",
+      startDate: "", endDate: "", membershipStatus: "",
+    });
     setPage(1);
   };
 
@@ -154,6 +254,7 @@ export const StudentLeft = () => {
     {
       branchId: selectedBranchId ?? undefined,
       groupId: applied.groupId || undefined,
+      status: applied.membershipStatus || undefined,
       search: applied.search || undefined,
       page,
       limit: PAGE_SIZE,
@@ -166,7 +267,19 @@ export const StudentLeft = () => {
   // option lists, same pattern Groups.tsx uses for its own filters.
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 }, { skip: tab === "old" });
   const { data: coursesData } = useAllCoursesQuery(undefined, { skip: tab === "old" });
-  const { data: reasonOptions } = useReasonsSelectQuery(undefined, { skip: tab === "old" });
+  // GET /reasons/select — the same active-reasons list Settings > Reasons
+  // manages (reasonsApi) and SingleGroup's "remove student" dialog stores
+  // `reasonId` from, so the option ids match StudentGroupRecord.reasonId.
+  const { data: reasonOptions } = useReasonsSelectQuery(
+    { page: 1, limit: REASONS_LIMIT },
+    { skip: tab === "old" }
+  );
+  // GET /student-freezes — needed to tell whether a student was frozen at the
+  // moment they left (see leftAsOf).
+  const { data: freezesData } = useStudentFreezesQuery(
+    { page: 1, limit: FREEZES_LIMIT },
+    { skip: tab === "old" }
+  );
   // GET /users/select — branchId required per Swagger; same branch scoping
   // every other filter dropdown on this page already uses.
   const { data: staffOptions } = useStaffUsersSelectQuery(selectedBranchId ?? "", {
@@ -178,28 +291,52 @@ export const StudentLeft = () => {
     [groupsData]
   );
 
+  const reasonNameById = useMemo(
+    () => new Map((reasonOptions ?? []).map((r) => [r.id, r.name])),
+    [reasonOptions]
+  );
+
+  const freezesByMembership = useMemo(() => {
+    const map = new Map<string, StudentFreezeRecord[]>();
+    const push = (key: string, f: StudentFreezeRecord) => map.set(key, [...(map.get(key) ?? []), f]);
+    (freezesData?.rows ?? []).forEach((f) => {
+      if (f.studentGroupId) push(`sg:${f.studentGroupId}`, f);
+      else if (f.groupId) push(`${f.studentId}|${f.groupId}`, f);
+    });
+    return map;
+  }, [freezesData]);
+
   const rows: LeftStudentRow[] = useMemo(
     () =>
       (studentGroupsData?.rows ?? [])
         .filter((m) => LEFT_STATUSES.includes(m.status as StudentGroupStatus))
         .map((m) => {
           const g = groupById.get(m.groupId);
+          const freezes = [
+            ...(freezesByMembership.get(`sg:${m.id}`) ?? []),
+            ...(freezesByMembership.get(`${m.studentId}|${m.groupId}`) ?? []),
+          ];
           return {
             id: m.id,
             studentId: m.studentId,
+            groupId: m.groupId,
+            leftAs: leftAsOf(m, freezes),
+            reasonId: m.reasonId ?? "",
             name: m.studentName || "—",
             phone: m.studentPhone || "",
             course: g?.course?.name ?? "—",
             group: m.groupName || g?.name || "—",
             teacher: g?.teachers?.map((tc) => tc.name).join(", ") || "—",
             status: m.status,
-            reason: m.reason ?? "—",
+            // `reason` is only free text on some responses; the Reason record
+            // itself is referenced by reasonId, so prefer its real name.
+            reason: (m.reasonId && reasonNameById.get(m.reasonId)) || m.reason || "—",
             comment: m.comment ?? "—",
             staff: m.processedBy ?? "—",
             staffTime: m.exitedAt ?? m.updatedAt ?? "—",
           };
         }),
-    [studentGroupsData, groupById]
+    [studentGroupsData, groupById, freezesByMembership, reasonNameById]
   );
 
   const COURSES = useMemo(() => (coursesData?.data ?? []).map((c) => c.name), [coursesData]);
@@ -212,17 +349,19 @@ export const StudentLeft = () => {
   // not a confirmed id (see its own defensive-typing comment in
   // groupsApi/types.d.ts) — matched by name here, same as the Teachers filter.
   const STAFF_NAMES = useMemo(() => (staffOptions ?? []).map((s) => s.name), [staffOptions]);
-  const STATUSES: StudentGroupStatus[] = LEFT_STATUSES;
 
   const filtered = rows.filter((r) => {
+    const day = isoDay(r.staffTime);
     return (
       (!applied.course || r.course === applied.course) &&
       (!applied.teacher || r.teacher.split(", ").includes(applied.teacher)) &&
       (!applied.staff || r.staff === applied.staff) &&
-      (!applied.reasonId || r.reason === (reasonOptions ?? []).find((o) => o.id === applied.reasonId)?.name) &&
-      (!applied.status || r.status === applied.status) &&
-      (!applied.startDate || r.staffTime >= applied.startDate) &&
-      (!applied.endDate || r.staffTime <= applied.endDate)
+      (!applied.reasonId ||
+        r.reasonId === applied.reasonId ||
+        (!!reasonNameById.get(applied.reasonId) && r.reason === reasonNameById.get(applied.reasonId))) &&
+      (!applied.status || r.leftAs === applied.status) &&
+      (!applied.startDate || (!!day && day >= applied.startDate)) &&
+      (!applied.endDate || (!!day && day <= applied.endDate))
     );
   });
 
@@ -232,6 +371,7 @@ export const StudentLeft = () => {
   const pageData = filtered;
   const busy = tab === "new" && (isLoading || isFetching);
   const statusLabel = (s: string) => t(`settings.office.studentLeft.statusLabels.${s}`, s);
+  const leftAsLabel = (s: LeftAs) => t(`settings.office.studentLeft.leftStatuses.${s}`);
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
@@ -283,75 +423,96 @@ export const StudentLeft = () => {
         </div>
       ) : (
         <>
-          {/* Filters — compact single row on normal desktop widths, wraps
-              naturally on narrower screens. */}
-          <div className="flex flex-wrap items-center gap-2 mb-5">
+          {/* Filters — two compact rows on desktop (6 columns): dates, search,
+              course, group, teachers / staff, reasons, status, Filter + Reset.
+              Wraps into fewer columns on narrower screens. */}
+          <style>{DATE_FIELD_CSS}</style>
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2 mb-4 items-center">
             {/* Start date */}
-            <DatePickerField value={startDate} onChange={setStartDate} />
+            <div className="sl-date">
+              <DatePickerField
+                value={startDate}
+                onChange={setStartDate}
+                placeholder={t("settings.office.studentLeft.filters.startDate")}
+              />
+            </div>
             {/* End date */}
-            <DatePickerField value={endDate} onChange={setEndDate} />
+            <div className="sl-date">
+              <DatePickerField
+                value={endDate}
+                onChange={setEndDate}
+                placeholder={t("settings.office.studentLeft.filters.endDate")}
+              />
+            </div>
             {/* Search */}
             <TextField
               size="small"
+              fullWidth
               placeholder={t("settings.office.studentLeft.filters.searchByNameOrPhone")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleFilter()}
-              sx={{ ...inputSx, width: 170, flexShrink: 0 }}
+              sx={inputSx}
             />
             {/* Course */}
-            <Select displayEmpty size="small" value={course} onChange={(e) => setCourse(e.target.value)} sx={{ ...selectSx, width: 130, flexShrink: 0 }}>
+            <Select displayEmpty fullWidth size="small" value={course} onChange={(e) => setCourse(e.target.value)} MenuProps={menuProps} sx={selectSx}>
               <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.course")}</em></MenuItem>
               {COURSES.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
             </Select>
             {/* Group */}
-            <Select displayEmpty size="small" value={groupId} onChange={(e) => setGroupId(e.target.value)} sx={{ ...selectSx, width: 130, flexShrink: 0 }}>
+            <Select displayEmpty fullWidth size="small" value={groupId} onChange={(e) => setGroupId(e.target.value)} MenuProps={menuProps} sx={selectSx}>
               <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.group")}</em></MenuItem>
               {GROUPS.map((g) => <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>)}
             </Select>
             {/* Teachers */}
-            <Select displayEmpty size="small" value={teacher} onChange={(e) => setTeacher(e.target.value)} sx={{ ...selectSx, width: 140, flexShrink: 0 }}>
+            <Select displayEmpty fullWidth size="small" value={teacher} onChange={(e) => setTeacher(e.target.value)} MenuProps={menuProps} sx={selectSx}>
               <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.teachers")}</em></MenuItem>
               {TEACHERS.map((tc) => <MenuItem key={tc} value={tc}>{tc}</MenuItem>)}
             </Select>
             {/* Staff */}
-            <Select displayEmpty size="small" value={staff} onChange={(e) => setStaff(e.target.value)} sx={{ ...selectSx, width: 130, flexShrink: 0 }}>
+            <Select displayEmpty fullWidth size="small" value={staff} onChange={(e) => setStaff(e.target.value)} MenuProps={menuProps} sx={selectSx}>
               <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.staff")}</em></MenuItem>
               {STAFF_NAMES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
             {/* Reasons */}
-            <Select displayEmpty size="small" value={reasonId} onChange={(e) => setReasonId(e.target.value)} sx={{ ...selectSx, width: 160, flexShrink: 0 }}>
+            <Select displayEmpty fullWidth size="small" value={reasonId} onChange={(e) => setReasonId(e.target.value)} MenuProps={menuProps} sx={selectSx}>
               <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.reasonsForArchiving")}</em></MenuItem>
               {(reasonOptions ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>)}
             </Select>
-            {/* Status */}
-            <Select displayEmpty size="small" value={status} onChange={(e) => setStatus(e.target.value as "" | StudentGroupStatus)} sx={{ ...selectSx, width: 120, flexShrink: 0 }}>
+            {/* Status — what the student was when they left the group */}
+            <Select displayEmpty fullWidth size="small" value={status} onChange={(e) => setStatus(e.target.value as "" | LeftAs)} MenuProps={menuProps} sx={selectSx}>
               <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.status")}</em></MenuItem>
-              {STATUSES.map((s) => <MenuItem key={s} value={s}>{statusLabel(s)}</MenuItem>)}
+              {LEFT_AS_OPTIONS.map((s) => <MenuItem key={s} value={s}>{leftAsLabel(s)}</MenuItem>)}
             </Select>
-            <Button
-              variant="contained"
-              onClick={handleFilter}
-              sx={{
-                backgroundColor: "#29b6f6",
-                "&:hover": { backgroundColor: "#0288d1" },
-                textTransform: "none",
-                fontWeight: 600,
-                borderRadius: "6px",
-                height: 38,
-                px: 3,
-                boxShadow: "none",
-                flexShrink: 0,
-              }}
-            >
-              {t("settings.office.studentLeft.filters.filter")}
-            </Button>
-            <button
-              onClick={handleReset}
-              className="flex items-center justify-center w-9 h-9 border border-gray-200 rounded-md bg-white text-gray-500 hover:bg-gray-50 transition-colors flex-shrink-0"
-            >
-              <MdRefresh size={18} />
-            </button>
+            {/* Filter + Reset */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="contained"
+                onClick={handleFilter}
+                sx={{
+                  backgroundColor: "#29b6f6",
+                  "&:hover": { backgroundColor: "#0288d1" },
+                  textTransform: "none",
+                  fontWeight: 600,
+                  borderRadius: "6px",
+                  height: FIELD_HEIGHT,
+                  px: 3,
+                  boxShadow: "none",
+                  flexShrink: 0,
+                }}
+              >
+                {t("settings.office.studentLeft.filters.filter")}
+              </Button>
+              <button
+                type="button"
+                onClick={handleReset}
+                title={t("settings.office.studentLeft.filters.reset")}
+                aria-label={t("settings.office.studentLeft.filters.reset")}
+                className="flex items-center justify-center w-10 h-10 border border-gray-200 rounded-md bg-white text-gray-500 hover:bg-gray-50 transition-colors flex-shrink-0"
+              >
+                <MdRefresh size={18} />
+              </button>
+            </div>
           </div>
 
           {/* Table toolbar */}

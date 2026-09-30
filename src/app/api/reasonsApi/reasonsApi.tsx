@@ -19,6 +19,11 @@ const normalizeList = <T,>(data: unknown): T[] => {
     if (data && typeof data === "object" && Array.isArray((data as { data?: unknown }).data)) {
         return (data as { data: T[] }).data;
     }
+    // {data: {items: [...], meta}} — the envelope GET /reasons is documented
+    // to answer with, so it's accepted alongside the two shapes above.
+    if (data && typeof data === "object" && Array.isArray((data as { items?: unknown }).items)) {
+        return (data as { items: T[] }).items;
+    }
     return [];
 };
 
@@ -30,6 +35,7 @@ const buildReasonsQueryString = (args: ReasonsRequest = {}): string => {
     if (args.status) params.set("status", args.status);
     if (args.page) params.set("page", String(args.page));
     if (args.limit) params.set("limit", String(args.limit));
+    if (args.branchId) params.set("branchId", args.branchId);
     return params.toString();
 };
 
@@ -43,6 +49,14 @@ export const reasonsApi = baseApi.injectEndpoints({
             transformResponse: (response: ReasonsResponse) => ({
                 ...response,
                 data: normalizeList<ReasonsResponse["data"][number]>(response?.data),
+                // GET /reasons documents {data:{items, meta}} — surface the
+                // nested meta at the top level (where pages already read it)
+                // unless the envelope already carries one.
+                meta:
+                    response?.meta ??
+                    (response?.data && !Array.isArray(response.data)
+                        ? (response.data as unknown as { meta?: ReasonsResponse["meta"] }).meta
+                        : undefined),
             }),
             providesTags: ["reason"],
         }),

@@ -16,6 +16,8 @@ const isSameDay = (a: Date, b: Date) =>
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 const YEARS_PER_PAGE = 12;
+/** Diameter of a day cell — compact calendar, matches the Groups filter date popup. */
+const CELL_SIZE = 32;
 
 interface CalendarProps {
   value: Date | null;
@@ -82,14 +84,14 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
     const years = Array.from({ length: YEARS_PER_PAGE }, (_, i) => yearPageStart + i);
     return (
       <div style={{ width: "100%", userSelect: "none" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <NavBtn onClick={() => setYearPageStart((p) => p - YEARS_PER_PAGE)}>«</NavBtn>
-          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>
             {years[0]} – {years[years.length - 1]}
           </span>
           <NavBtn onClick={() => setYearPageStart((p) => p + YEARS_PER_PAGE)}>»</NavBtn>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4 }}>
           {years.map((y) => (
             <button
               key={y}
@@ -100,9 +102,9 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
                 background: y === year ? "var(--color-primary)" : "transparent",
                 color: y === year ? "#fff" : y === today.getFullYear() ? "var(--color-primary)" : "var(--color-text-primary)",
                 fontWeight: y === year || y === today.getFullYear() ? 700 : 400,
-                fontSize: 13,
+                fontSize: 12,
                 borderRadius: 8,
-                padding: "8px 0",
+                padding: "6px 0",
                 cursor: "pointer",
               }}
             >
@@ -117,17 +119,17 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
   if (viewMode === "months") {
     return (
       <div style={{ width: "100%", userSelect: "none" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <NavBtn onClick={goPrevYear}>«</NavBtn>
           <span
             onClick={openYears}
-            style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)", cursor: "pointer" }}
+            style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", cursor: "pointer" }}
           >
             {year}
           </span>
           <NavBtn onClick={goNextYear}>»</NavBtn>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 4 }}>
           {MONTH_KEYS.map((mk, i) => (
             <button
               key={mk}
@@ -140,7 +142,7 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
                 fontWeight: i === month ? 700 : 400,
                 fontSize: 12,
                 borderRadius: 8,
-                padding: "10px 4px",
+                padding: "8px 4px",
                 cursor: "pointer",
               }}
             >
@@ -156,33 +158,33 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
     <div style={{ width: "100%", userSelect: "none" }}>
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        marginBottom: 12,
+        marginBottom: 8,
       }}>
-        <div style={{ display: "flex", gap: 2 }}>
+        <div style={{ display: "flex", gap: 0 }}>
           <NavBtn onClick={goPrevYear}>«</NavBtn>
           <NavBtn onClick={goPrevMonth}>‹</NavBtn>
         </div>
-        <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)", display: "flex", gap: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", display: "flex", gap: 6 }}>
           <span onClick={openYears} style={{ cursor: "pointer" }}>{year}</span>
           <span onClick={openMonths} style={{ cursor: "pointer" }}>
             {t(`singleGroup.calendar.months.${MONTH_KEYS[month]}`)}
           </span>
         </span>
-        <div style={{ display: "flex", gap: 2 }}>
+        <div style={{ display: "flex", gap: 0 }}>
           <NavBtn onClick={goNextMonth}>›</NavBtn>
           <NavBtn onClick={goNextYear}>»</NavBtn>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 4 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 2 }}>
         {WEEKDAY_KEYS.map((w) => (
-          <div key={w} style={{ textAlign: "center", fontSize: 12, color: "var(--color-text-muted)", padding: "4px 0" }}>
+          <div key={w} style={{ textAlign: "center", fontSize: 11, color: "var(--color-text-muted)", padding: "4px 0" }}>
             {t(`singleGroup.calendar.weekdays.${w}`)}
           </div>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", rowGap: 6 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", rowGap: 2, justifyItems: "center" }}>
         {cells.map((c, i) => {
           const isToday = isSameDay(c.date, today);
           const isSelected = value ? isSameDay(c.date, value) : false;
@@ -194,15 +196,24 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
               disabled={disabled}
               onClick={() => onChange(c.date)}
               style={{
+                width: CELL_SIZE, height: CELL_SIZE, padding: 0,
                 border: "none",
                 background: isSelected ? "var(--color-primary)" : "transparent",
-                color: disabled ? "var(--color-text-muted)" : isSelected ? "#fff" : isToday ? "var(--color-primary)" : c.inMonth ? "var(--color-text-primary)" : "var(--color-text-muted)",
+                color: isSelected
+                  ? "#fff"
+                  : isToday && !disabled
+                    ? "var(--color-primary)"
+                    : c.inMonth && !disabled
+                      ? "var(--color-text-primary)"
+                      : "var(--color-text-muted)",
+                opacity: disabled ? 0.45 : c.inMonth || isSelected ? 1 : 0.6,
                 fontWeight: isToday || isSelected ? 700 : 400,
-                fontSize: 13,
-                borderRadius: 8,
-                padding: "6px 0",
+                fontSize: 12,
+                borderRadius: "50%",
                 cursor: disabled ? "not-allowed" : "pointer",
               }}
+              onMouseEnter={(e) => { if (!disabled && !isSelected) e.currentTarget.style.background = "var(--color-surface-hover)"; }}
+              onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
             >
               {c.day}
             </button>
@@ -219,7 +230,7 @@ const NavBtn = ({ onClick, children }: { onClick: () => void; children: React.Re
     onClick={onClick}
     style={{
       border: "none", background: "transparent", color: "var(--color-text-muted)",
-      fontSize: 15, cursor: "pointer", padding: "2px 6px", borderRadius: 6,
+      fontSize: 14, lineHeight: 1, cursor: "pointer", padding: "3px 6px", borderRadius: 6,
     }}
     onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}

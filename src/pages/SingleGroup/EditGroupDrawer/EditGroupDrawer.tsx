@@ -1,13 +1,13 @@
 // src/pages/groups/EditGroupDrawer.tsx
-import { CSSProperties, useEffect, useState } from "react";
+import { CSSProperties, useEffect, useMemo, useState } from "react";
 import { HiChevronDown } from "react-icons/hi";
 import { useTranslation } from "react-i18next";
-import { Chip, Stack, CircularProgress } from "@mui/material";
+import { Chip, Stack, CircularProgress, Select, MenuItem, Checkbox, ListItemText } from "@mui/material";
 import { RightDrawer } from "../../../components/RightDrawer";
 import { inputStyle, labelStyle, submitBtn, cancelBtn } from "../styles";
 import { DatePickerField } from "../DatePickerField";
 import { TimeSelectField } from "../TimeSelectField";
-import { DAYS_PRESETS, classifyDayList, addMonthsToIsoDate } from "../../../utils";
+import { DAYS_PRESETS, classifyDayList, addMonthsToIsoDate, parseTrainingDate } from "../../../utils";
 import type { GroupDay, GroupDetail, UpdateGroupRequest } from "../../../app/api/groupsApi/types";
 
 const ALL_DAYS: GroupDay[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
@@ -83,6 +83,18 @@ interface EditGroupFormState {
   trainingEnd: string;
 }
 
+// GroupDetail.trainingStart/trainingEnd can arrive as a plain "YYYY-MM-DD" or
+// as a full ISO datetime ("2026-08-14T00:00:00.000Z" / "...+05:00"). The form
+// (and everything sent back in UpdateGroupRequest) always holds plain
+// "YYYY-MM-DD": the leading date is read straight from the string — never via
+// `new Date()` / `toISOString()`, which would shift the day by the viewer's
+// timezone offset.
+const toDateOnly = (value?: string | null): string => {
+  const p = parseTrainingDate(value);
+  if (!p) return "";
+  return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+};
+
 const toFormState = (group: GroupDetail): EditGroupFormState => ({
   name: group.name ?? "",
   courseId: group.courseId ?? "",
@@ -90,8 +102,8 @@ const toFormState = (group: GroupDetail): EditGroupFormState => ({
   roomId: group.roomId ?? "",
   days: group.days ?? [],
   time: group.time ?? "",
-  trainingStart: group.trainingStart ?? "",
-  trainingEnd: group.trainingEnd ?? "",
+  trainingStart: toDateOnly(group.trainingStart),
+  trainingEnd: toDateOnly(group.trainingEnd),
 });
 
 export const EditGroupDrawer = ({
@@ -132,14 +144,17 @@ export const EditGroupDrawer = ({
     }));
   };
 
-  const toggleTeacher = (teacherId: string) => {
-    setForm((f) => ({
-      ...f,
-      teacherIds: f.teacherIds.includes(teacherId)
-        ? f.teacherIds.filter((id) => id !== teacherId)
-        : [...f.teacherIds, teacherId],
-    }));
-  };
+  // Dropdown options: GET /teachers/select list plus any teacher already on
+  // the group that is missing from it (e.g. list still loading or teacher no
+  // longer "active") — so a current teacher is always visible and is never
+  // silently dropped on save.
+  const teacherOptions = useMemo(() => {
+    const list = [...teachers];
+    (group.teachers ?? []).forEach((gt) => {
+      if (!list.some((tc) => tc.id === gt.id)) list.push({ id: gt.id, name: gt.name });
+    });
+    return list;
+  }, [teachers, group.teachers]);
 
   const DAY_OPTIONS = [
     { value: "Odd days",     label: t("groups.options.days.odd") },
@@ -167,8 +182,8 @@ export const EditGroupDrawer = ({
       roomId: form.roomId || undefined,
       days: form.days,
       time: form.time || undefined,
-      trainingStart: form.trainingStart || undefined,
-      trainingEnd: form.trainingEnd || undefined,
+      trainingStart: toDateOnly(form.trainingStart) || undefined,
+      trainingEnd: toDateOnly(form.trainingEnd) || undefined,
     });
   };
 
@@ -195,18 +210,53 @@ export const EditGroupDrawer = ({
 
         <div>
           <label style={labelStyle}>{t("singleGroup.editGroupDrawer.selectTeacher")}</label>
-          <Stack direction="row" flexWrap="wrap" gap={1} mt={0.5}>
-            {teachers.map((tc) => (
-              <Chip
-                key={tc.id}
-                label={tc.name}
-                size="small"
-                color={form.teacherIds.includes(tc.id) ? "primary" : "default"}
-                onClick={() => toggleTeacher(tc.id)}
-                sx={{ cursor: "pointer" }}
-              />
-            ))}
-          </Stack>
+          <div style={selectWrapperStyle}>
+            <Select
+              multiple
+              displayEmpty
+              fullWidth
+              size="small"
+              value={form.teacherIds}
+              onChange={(e) => {
+                const v = e.target.value;
+                setForm((f) => ({ ...f, teacherIds: typeof v === "string" ? v.split(",") : v }));
+              }}
+              renderValue={(selected) =>
+                selected.length === 0 ? (
+                  <span style={{ color: "#9ca3af" }}>{t("singleGroup.editGroupDrawer.selectTeacher")}</span>
+                ) : (
+                  <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                    {selected.map((id) => (
+                      <Chip
+                        key={id}
+                        size="small"
+                        label={teacherOptions.find((tc) => tc.id === id)?.name ?? id}
+                      />
+                    ))}
+                  </Stack>
+                )
+              }
+              MenuProps={{ PaperProps: { style: { maxHeight: 280 } } }}
+              sx={{
+                fontSize: 13,
+                borderRadius: "8px",
+                bgcolor: "#fff",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e0e0e0" },
+                "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#a0aec0" },
+                "& .MuiSelect-select": { py: "7px" },
+              }}
+            >
+              {teacherOptions.length === 0 && (
+                <MenuItem disabled sx={{ fontSize: 13 }}>{t("singleGroup.editGroupDrawer.noTeachers")}</MenuItem>
+              )}
+              {teacherOptions.map((tc) => (
+                <MenuItem key={tc.id} value={tc.id} sx={{ fontSize: 13, py: 0.25 }}>
+                  <Checkbox size="small" checked={form.teacherIds.includes(tc.id)} sx={{ p: 0.5, mr: 1 }} />
+                  <ListItemText primary={tc.name} primaryTypographyProps={{ fontSize: 13 }} />
+                </MenuItem>
+              ))}
+            </Select>
+          </div>
         </div>
 
         <div>

@@ -24,8 +24,9 @@ import {
   MdGroup,
   MdCalendarToday,
 } from "react-icons/md";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Calendar } from "../SingleGroup/Calendar";
+import { PortalPopover } from "../../components/common/PortalPopover";
 
 // ─── Mock teachers ────────────────────────────────────────────────────────────
 const TEACHERS = [
@@ -102,15 +103,6 @@ function DateFilterButton({
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
   const displayValue = value
     ? value.split("-").reverse().join(".")
     : null;
@@ -157,13 +149,12 @@ function DateFilterButton({
           </Box>
         )}
       </Box>
-      {open && (
+      <PortalPopover open={open} onClose={() => setOpen(false)} anchorRef={wrapRef}>
         <Box
           sx={{
-            position: "absolute", top: "calc(100% + 8px)", left: 0,
-            width: 300, bgcolor: "#fff", border: "1px solid #eee",
-            borderRadius: "12px", boxShadow: "0 12px 32px rgba(0,0,0,0.14)",
-            p: 2, zIndex: 50,
+            width: 300, bgcolor: "var(--color-surface)", border: "1px solid var(--color-border)",
+            borderRadius: "12px", boxShadow: "0 12px 32px var(--color-shadow)",
+            p: 2,
           }}
         >
           <Calendar
@@ -177,7 +168,7 @@ function DateFilterButton({
             }}
           />
         </Box>
-      )}
+      </PortalPopover>
     </Box>
   );
 }

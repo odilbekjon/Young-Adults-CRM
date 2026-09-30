@@ -68,6 +68,7 @@ import { Logs } from "./pages/Reports/Logs";
 import { Workly, Sms, Call, Log } from "./pages/Reports/Logs/pages";
 import { Tags } from "./pages/Settings/tags";
 import { Tag } from "./pages/Settings/tags/pages/tag/tag";
+import { ReasonsArchiving } from "./pages/Settings/reasons_archiving";
 
 
 export const AppRouter = () => {
@@ -149,6 +150,8 @@ export const AppRouter = () => {
                     <Route path="whats-new"      element={<WhatsNew />} />
                      <Route path="whats-new/add" element={<BlogAdd />} />
                 </Route>
+
+                <Route path="reasons_archiving" element={<ReasonsArchiving />} />
 
                 <Route path="tags"             element={<Tags />} >
                     <Route path="list"      element={<Tag />} />

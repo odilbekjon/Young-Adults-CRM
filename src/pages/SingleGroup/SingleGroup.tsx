@@ -52,7 +52,7 @@ import { useToast } from "../../Context/ToastContext";
 import { extractApiError, formatTrainingDate } from "../../utils";
 import { formatDate } from "../../constants/FlatStudents";
 
-import { AddStudentDrawer, type AddStudentOption } from "./AddStudentDrawer/AddStudentDrawer";
+import { AddStudentDrawer, type AddStudentPayload } from "./AddStudentDrawer/AddStudentDrawer";
 
 import { Attendance } from "./tabs/Attendance";
 import { Grade } from "./tabs/Grade";
@@ -90,6 +90,27 @@ const TAB_KEYS = [
 // freeze/unfreeze/status-change calls (distinct from realId, the student's
 // own id).
 type RealGroupStudent = GroupStudent & { realId: string; studentGroupId?: string; isTrial?: boolean };
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+// Local calendar date as YYYY-MM-DD (toISOString() is UTC, which lands on the
+// previous day for the first hours after midnight in UTC+5).
+const todayLocalISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
+
+// POST /student-groups' response envelope isn't documented beyond a 200, so
+// the new membership's id is picked up defensively ({data: {id}} or {id}) and
+// ignored if the row obviously belongs to a different group.
+const membershipIdFromCreateResponse = (res: unknown, groupId: string): string | undefined => {
+  if (!res || typeof res !== "object") return undefined;
+  const container = res as Record<string, unknown>;
+  const row = (container.data && typeof container.data === "object" && !Array.isArray(container.data)
+    ? container.data
+    : container) as Record<string, unknown>;
+  if (typeof row.groupId === "string" && row.groupId !== groupId) return undefined;
+  return typeof row.id === "string" && row.id ? row.id : undefined;
+};
 
 const toLegacyGroup = (d: GroupDetail): LegacyGroup => ({
   id: 0,
@@ -164,7 +185,15 @@ export const SingleGroup = () => {
   const { data: allRoomsData } = useAllRoomsQuery();
   const { data: allBranchesData } = useAllBranchesQuery();
   const { data: teacherSelectData } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" });
-  const { data: reasonOptions } = useReasonsSelectQuery();
+  // GET /reasons/select — only ACTIVE reasons (the branch comes from the
+  // x-branch-id header baseApi already sends), first 200 so a branch with
+  // more than the backend's default page size doesn't lose options. The ids
+  // are what PATCH /student-groups/{id}/status takes as `reasonId`.
+  const {
+    data: reasonOptions,
+    isLoading: reasonsLoading,
+    isError: reasonsError,
+  } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 });
   // Full membership roster for this group — the authoritative source for
   // each student's real status and their /student-groups row id (see
   // combinedStudents). Confirmed live that omitting `status` does NOT
@@ -204,10 +233,67 @@ export const SingleGroup = () => {
   const group = groupDetailData ? toLegacyGroup(groupDetailData.data) : undefined;
   const teacher = group ? findTeacherById(group.teacherId) : undefined;
   const [students, setStudents] = useState<RealGroupStudent[]>([]);
+  // Students just moved to another group from this page — kept out of the
+  // roster until the /student-groups refetch confirms they're gone (see
+  // extraStudents below, which would otherwise briefly re-add them from the
+  // stale membership rows).
+  const [movedOutIds, setMovedOutIds] = useState<Set<string>>(() => new Set());
+  // Students moved to ANOTHER BRANCH from this page (POST /students/{id}/
+  // transfer-branch). Unlike movedOutIds above this is never pruned: the
+  // backend ends their memberships in the old branch, so they'd otherwise
+  // resurface here as archived ("show archived") rows or, while the legacy
+  // GroupDetail.students relation is stale, as live ones. Their old groups
+  // belong on the Student Profile page only, not on a group's member list.
+  const [branchMovedIds, setBranchMovedIds] = useState<Set<string>>(() => new Set());
   useEffect(() => {
     if (groupDetailData) setStudents(toRealStudents(groupDetailData.data));
   }, [groupDetailData]);
   const [showArchived, setShowArchived] = useState(false);
+
+  // Memberships that are still part of the group (PROBATION / ACTIVE /
+  // FROZEN) — the GET /student-groups query above already scopes to this
+  // group, the groupId check is just a guard.
+  const liveMembershipRows = useMemo(
+    () => (studentGroupsData?.rows ?? []).filter(
+      (r) => r.status !== "INACTIVE" && r.status !== "DELETED" && (!r.groupId || r.groupId === id)
+    ),
+    [studentGroupsData, id]
+  );
+
+  // GroupDetail.students is the legacy relation — POST /student-groups (how
+  // "Add student" now creates a member) isn't guaranteed to write to it, so a
+  // freshly added (frozen) student could otherwise be missing from the roster
+  // entirely. /student-groups is the authoritative roster (see the comment on
+  // studentGroupsData above), so any live membership the legacy relation
+  // doesn't list is added here.
+  const extraStudents = useMemo<RealGroupStudent[]>(() => {
+    if (!groupDetailData) return [];
+    const known = new Set(students.map((s) => s.realId));
+    const out: RealGroupStudent[] = [];
+    liveMembershipRows.forEach((r) => {
+      if (!r.studentId || known.has(r.studentId) || movedOutIds.has(r.studentId) || branchMovedIds.has(r.studentId)) return;
+      known.add(r.studentId);
+      out.push({
+        id: students.length + out.length + 1,
+        realId: r.studentId,
+        name: r.studentName || "—",
+        phone: r.studentPhone || "",
+        active: true,
+        archived: false,
+        balance: 0,
+      });
+    });
+    return out;
+  }, [groupDetailData, students, liveMembershipRows, movedOutIds, branchMovedIds]);
+
+  useEffect(() => {
+    setMovedOutIds((prev) => {
+      if (prev.size === 0) return prev;
+      const live = new Set(liveMembershipRows.map((r) => r.studentId));
+      const next = new Set([...prev].filter((sid) => live.has(sid)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [liveMembershipRows]);
 
   // Branch-wide (see the fetch comment above) — narrowed to this group here.
   const archivedRowsForThisGroup = useMemo(
@@ -219,9 +305,13 @@ export const SingleGroup = () => {
   );
 
   const archivedStudents = useMemo(() => {
-    const activeIds = new Set(students.map((s) => s.realId));
-    return deriveArchivedFromMemberships(archivedRowsForThisGroup, activeIds);
-  }, [archivedRowsForThisGroup, students]);
+    // A student with a live membership (e.g. re-added after being removed)
+    // isn't archived here, even though an older INACTIVE row still exists.
+    const activeIds = new Set([...students, ...extraStudents].map((s) => s.realId));
+    liveMembershipRows.forEach((r) => activeIds.add(r.studentId));
+    return deriveArchivedFromMemberships(archivedRowsForThisGroup, activeIds)
+      .filter((s) => !branchMovedIds.has(s.realId));
+  }, [archivedRowsForThisGroup, students, extraStudents, liveMembershipRows, branchMovedIds]);
 
   const membershipByStudentId = useMemo(() => {
     const map = new Map<string, StudentGroupRecord>();
@@ -232,15 +322,33 @@ export const SingleGroup = () => {
     // still correctly marks them archived/frozen even during that window,
     // instead of falling back to students' stale "active" default because
     // the unfiltered query alone doesn't carry INACTIVE/DELETED rows.
-    [...(studentGroupsData?.rows ?? []), ...archivedRowsForThisGroup]
-      .forEach((m) => { if (m.studentId) map.set(m.studentId, m); });
+    // A student who was removed and later re-added has two rows here (the
+    // old INACTIVE one and the new live one) — the newer row (by createdAt)
+    // must win, otherwise the re-added student would read as archived and
+    // their freeze/activate calls would target the dead membership id. The
+    // same row appearing in both lists keeps the later (archived-query) copy.
+    // A live (PROBATION/ACTIVE/FROZEN) row always beats an archived one no
+    // matter what their createdAt values say — freeze/activate/remove must
+    // never be aimed at a dead (INACTIVE/DELETED) membership id, which the
+    // backend answers with an error that reads as "freeze doesn't work".
+    const isLive = (m: StudentGroupRecord) => m.status !== "INACTIVE" && m.status !== "DELETED";
+    [...(studentGroupsData?.rows ?? []), ...archivedRowsForThisGroup].forEach((m) => {
+      if (!m.studentId) return;
+      const prev = map.get(m.studentId);
+      if (!prev) { map.set(m.studentId, m); return; }
+      if (isLive(m) !== isLive(prev)) {
+        if (isLive(m)) map.set(m.studentId, m);
+        return;
+      }
+      if ((m.createdAt ?? "") >= (prev.createdAt ?? "")) map.set(m.studentId, m);
+    });
     return map;
   }, [studentGroupsData, archivedRowsForThisGroup]);
 
   // GroupDetail.students has no balance field (see toRealStudents above,
   // which defaults everyone to 0) — GET /students does carry the real
-  // balance, and allStudentsData is already fetched for addStudentCandidates
-  // below, so it's reused here rather than firing a second request. Without
+  // balance, and allStudentsData is already fetched (first 100 of the branch)
+  // for exactly this, so it's reused here rather than firing a second request. Without
   // this overlay the roster's debt dot (bgcolor keyed off s.balance) always
   // read the placeholder 0 and rendered green even for actual debtors.
   const balanceByStudentId = useMemo(
@@ -254,7 +362,11 @@ export const SingleGroup = () => {
   // /student-groups row was actually found for; everyone else keeps the
   // prior placeholder rather than being guessed at.
   const combinedStudents = useMemo(() => {
-    const base = [...students, ...archivedStudents];
+    // branchMovedIds is also applied here (not just to extra/archived
+    // rows) because `students` is re-seeded from GroupDetail on every refetch
+    // and that legacy relation can lag behind the transfer.
+    const base = [...students, ...extraStudents, ...archivedStudents]
+      .filter((s) => !branchMovedIds.has(s.realId));
     return base.map((s) => {
       const membership = membershipByStudentId.get(s.realId);
       const realBalance = balanceByStudentId.get(s.realId);
@@ -269,14 +381,16 @@ export const SingleGroup = () => {
         ...(realBalance !== undefined && { balance: realBalance }),
       };
     });
-  }, [students, archivedStudents, membershipByStudentId, balanceByStudentId]);
+  }, [students, extraStudents, archivedStudents, membershipByStudentId, balanceByStudentId, branchMovedIds]);
 
-  const addStudentCandidates: AddStudentOption[] = useMemo(() => {
-    const existingIds = new Set(combinedStudents.map((s) => s.realId));
-    return (allStudentsData?.data ?? [])
-      .filter((s) => !existingIds.has(s.id))
-      .map((s) => ({ id: s.id, name: s.name, phone: s.phone ?? "" }));
-  }, [allStudentsData, combinedStudents]);
+  // The Add student modal searches the whole student list itself (GET
+  // /students?search=) — this only tells it who is already in this group so
+  // those rows are marked instead of being addable a second time.
+  const memberStatusById = useMemo(() => {
+    const map: Record<string, "active" | "archived"> = {};
+    combinedStudents.forEach((s) => { map[s.realId] = s.archived ? "archived" : "active"; });
+    return map;
+  }, [combinedStudents]);
 
   const otherGroups = useMemo(
     () => (groupsSelectData ?? []).filter((g) => g.id !== id),
@@ -327,6 +441,9 @@ export const SingleGroup = () => {
   const [removeComment, setRemoveComment] = useState("");
   const [removeRecalculate, setRemoveRecalculate] = useState(false);
   const [removeScope, setRemoveScope] = useState<"current" | "all">("current");
+  // "Delete student" side of the dialog's toggle — archives the whole account
+  // (never a hard delete, that only exists on the Archive page).
+  const [removeDeleteMode, setRemoveDeleteMode] = useState(false);
 
   if (groupLoading) {
     return (
@@ -373,6 +490,14 @@ export const SingleGroup = () => {
 
   const handleOpenMenu = (e: React.MouseEvent<HTMLElement>, student: RealGroupStudent) => {
     e.stopPropagation();
+    // The hover card is armed by simply moving the pointer onto the row (to
+    // reach the "..." button) — left alone it pops up ~200ms later on top of
+    // the freshly opened actions menu and swallows clicks meant for its items.
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
+    hoverRequestId.current = null;
+    setHoverStudent(null);
+    setHoverAnchorEl(null);
     setMenuAnchor(e.currentTarget);
     setSelectedStudent(student);
   };
@@ -414,6 +539,7 @@ export const SingleGroup = () => {
   }
 
   const handleStudentMouseEnter = (e: React.MouseEvent<HTMLElement>, student: RealGroupStudent) => {
+    if (menuAnchor) return;
     if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
     if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
     const target = e.currentTarget;
@@ -450,9 +576,33 @@ export const SingleGroup = () => {
     }, 250);
   };
 
+  // The freeze/unfreeze/status endpoints are keyed on the LIVE membership's
+  // own id (never the student id, never a dead INACTIVE/DELETED row). The id
+  // captured on the roster row is normally right, but it comes from a cached
+  // overlay — so it is re-resolved here: first from the current live rows,
+  // then (if the cache has nothing, e.g. the row was created a moment ago)
+  // straight from GET /student-groups, taking the newest live row.
+  const resolveLiveMembershipId = async (student: RealGroupStudent): Promise<string | undefined> => {
+    const cached = liveMembershipRows.find((r) => r.studentId === student.realId);
+    if (cached?.id) return cached.id;
+    if (id) {
+      try {
+        const found = await fetchNewMembership({ groupId: id, studentId: student.realId, limit: 20 }).unwrap();
+        const live = found.rows
+          .filter((r) => r.status !== "INACTIVE" && r.status !== "DELETED"
+            && (!r.groupId || r.groupId === id) && (!r.studentId || r.studentId === student.realId))
+          .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+        if (live[0]?.id) return live[0].id;
+      } catch {
+        // Fall through to the id already on the row.
+      }
+    }
+    return student.studentGroupId;
+  };
+
   const handleFreezeConfirm = async (data: { reason: string; startDate: string; recalculateBalance: boolean }) => {
     if (!selectedStudent) return;
-    const studentGroupId = selectedStudent.studentGroupId;
+    const studentGroupId = await resolveLiveMembershipId(selectedStudent);
     if (!studentGroupId) {
       toast.error(t("singleGroup.freezeModal.toast.error"));
       return;
@@ -482,25 +632,38 @@ export const SingleGroup = () => {
 
   const handleActivateConfirm = async (paymentStartDate: string) => {
     if (!selectedStudent) return;
-    const studentGroupId = selectedStudent.studentGroupId;
+    const studentGroupId = await resolveLiveMembershipId(selectedStudent);
     if (!studentGroupId) {
       toast.error(t("singleGroup.activateModal.toast.notFound"));
       return;
     }
+    // POST /student-groups/{id}/unfreeze — same membership id as freeze,
+    // multipart body {endDate} (the date the freeze ends = today, the moment
+    // staff release the student; deliberately NOT the picked "since when"
+    // date, which may be backdated to before the freeze started and would be
+    // rejected as an end before the start) (FROZEN -> ACTIVE). Followed by PATCH
+    // /student-groups/{id} {paymentStartDate} — same combo
+    // handleGraduateTrialConfirm already uses to record which date the
+    // backend should calculate this membership's payment/debt accounting
+    // from (per PATCH .../status's own doc comment: "Agar ACTIVE qilinsa,
+    // to'lov hisobi boshlanadi"). The two steps are reported separately: once
+    // the unfreeze has gone through the student IS active, so a failure of
+    // the date step alone must not read as "activation failed".
     try {
-      // POST /student-groups/{id}/unfreeze — same membership id as freeze,
-      // no request body. Followed by PATCH /student-groups/{id}
-      // {paymentStartDate} — same combo handleGraduateTrialConfirm already
-      // uses to record which date the backend should calculate this
-      // membership's payment/debt accounting from (per PATCH .../status's
-      // own doc comment: "Agar ACTIVE qilinsa, to'lov hisobi boshlanadi").
-      await unfreezeStudentGroup(studentGroupId).unwrap();
-      await updateStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
-      toast.success(t("singleGroup.activateModal.toast.success"));
-      setActivateOpen(false);
+      await unfreezeStudentGroup({ id: studentGroupId, endDate: todayLocalISO() }).unwrap();
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("singleGroup.activateModal.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
+      return;
+    }
+    setActivateOpen(false);
+    try {
+      await updateStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
+      toast.success(t("singleGroup.activateModal.toast.success"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.activateModal.toast.dateError");
       toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
@@ -596,6 +759,7 @@ export const SingleGroup = () => {
     setRemoveComment("");
     setRemoveRecalculate(false);
     setRemoveScope("current");
+    setRemoveDeleteMode(false);
   };
 
   const handleCloseRemove = () => {
@@ -605,8 +769,8 @@ export const SingleGroup = () => {
 
   const handleRemoveStudent = async () => {
     if (!selectedStudent) return;
-    const studentGroupId = selectedStudent.studentGroupId;
     const studentId = selectedStudent.realId;
+    const studentGroupId = await resolveLiveMembershipId(selectedStudent);
     if (!studentGroupId) {
       toast.error(t("singleGroup.removeStudentDialog.toast.error"));
       return;
@@ -619,6 +783,11 @@ export const SingleGroup = () => {
     // documented.
     const reasonName = reasonOptions?.find((r) => r.id === removeReasonId)?.name;
     const combinedReason = [reasonName, removeComment.trim()].filter(Boolean).join(" — ") || undefined;
+    // "Delete student" = archive the whole account, i.e. the same outcome as
+    // removing from ALL groups (and never a permanent DELETE), so it takes
+    // the "all" path below regardless of what the scope radios (locked to
+    // "all" in this mode) last held.
+    const effectiveScope = removeDeleteMode ? "all" : removeScope;
     try {
       // Step 1 — PATCH /student-groups/{id}/status: ends this membership (or,
       // with isAllGroup, every membership this student has) so it stops
@@ -629,7 +798,11 @@ export const SingleGroup = () => {
         status: "INACTIVE",
         reasonId: removeReasonId || undefined,
         reason: removeComment.trim() || undefined,
-        isAllGroup: removeScope === "all",
+        // Only ever sent when true — multipart carries booleans as strings and
+        // this backend's validator rejects/mis-coerces a literal "false"
+        // (same story as PaymentMethod.isDefault), so "current group" simply
+        // omits the flag and lets it default to false.
+        isAllGroup: effectiveScope === "all" ? true : undefined,
       }).unwrap();
 
       // Step 2 — only archive the student's whole account (POST
@@ -639,11 +812,16 @@ export const SingleGroup = () => {
       // removing them from just the current group must leave their
       // account-wide status, and their other group memberships, untouched.
       // A permanent delete is only reachable from the Archive page itself.
-      if (removeScope === "all") {
+      // POST /students/{id}/status is used instead of the blind PATCH
+      // /students/{id}/toggle-status, which takes no body (so it can't carry
+      // the reason) and would flip an already-archived student back to ACTIVE.
+      if (effectiveScope === "all") {
         await updateStudentStatus({ id: studentId, status: "INACTIVE", reason: combinedReason }).unwrap();
       }
 
-      toast.success(t("singleGroup.removeStudentDialog.toast.removed"));
+      toast.success(t(removeDeleteMode
+        ? "singleGroup.removeStudentDialog.toast.archived"
+        : "singleGroup.removeStudentDialog.toast.removed"));
       setRemoveOpen(false);
       resetRemoveState();
     } catch (err) {
@@ -653,57 +831,64 @@ export const SingleGroup = () => {
     }
   };
 
-  const handleAddStudentSubmit = async (studentId: string, joinedAt?: string) => {
+  const handleAddStudentSubmit = async ({ studentId, joinedAt, customPrice, discountReason }: AddStudentPayload) => {
     if (!id) return;
+    // POST /student-groups (not POST /groups/{id}/students/assign):
+    // confirmed live that the assign endpoint never creates a row in the
+    // /student-groups membership table, so a student added through it has
+    // no studentGroupId — silently breaking freeze/unfreeze/status-change
+    // (all keyed on that id) for every student added this way. Only the
+    // /student-groups resource itself creates the row those calls need.
+    // Body is multipart/form-data (see addStudentToGroup in groupsApi):
+    // studentId + groupId required; joinedAt ("since when"), customPrice and
+    // discountReason optional. Starts on PROBATION (never ACTIVE) with no
+    // paymentStartDate — going through ACTIVE, even briefly, would trigger
+    // PATCH .../status's documented "payment accounting starts" side effect
+    // before a staff member meant it to.
+    let created: unknown;
     try {
-      // POST /student-groups (not POST /groups/{id}/students/assign):
-      // confirmed live that the assign endpoint never creates a row in the
-      // /student-groups membership table, so a student added through it has
-      // no studentGroupId — silently breaking freeze/unfreeze/status-change
-      // (all keyed on that id) for every student added this way. Only the
-      // /student-groups resource itself creates the row those calls need.
-      // Starts on PROBATION rather than ACTIVE so the immediate freeze
-      // below (not this call itself) is what puts them in the requested
-      // "added → frozen, not active yet" state — going through ACTIVE even
-      // briefly would risk triggering PATCH .../status's documented "payment
-      // accounting starts" side effect before a staff member meant it to.
-      // joinedAt ("since when") is already one of this endpoint's own
-      // optional fields per Swagger — the Add student modal's date picker
-      // just wasn't wired to it before.
-      await addStudentToGroup({ studentId, groupId: id, status: "PROBATION", joinedAt }).unwrap();
-      setAddStudentOpen(false);
-
-      // A newly added student shouldn't read as active right away — they
-      // should land FROZEN, with a staff member explicitly activating them
-      // afterwards (the same "Activate" action StudentActionsMenu already
-      // exposes for any frozen member, which unfreezes them). Creation
-      // itself only documents PROBATION/ACTIVE as initial statuses, so this
-      // freezes the brand-new membership as an immediate follow-up via the
-      // one endpoint that IS documented for FROZEN (POST /student-groups/
-      // {id}/freeze, startDate required) — looking its id up via GET
-      // /student-groups since the create response doesn't confirm carrying
-      // it back.
-      try {
-        const created = await fetchNewMembership({ groupId: id, studentId, limit: 1 }).unwrap();
-        const newMembershipId = created.rows[0]?.id;
-        if (newMembershipId) {
-          await freezeStudentGroup({
-            id: newMembershipId,
-            startDate: joinedAt || new Date().toISOString().split("T")[0],
-          }).unwrap();
-        }
-        toast.success(t("singleGroup.addStudentDrawer.toast.success"));
-      } catch {
-        // The student WAS added — only the follow-up freeze failed — so this
-        // is a distinct, narrower warning rather than the generic
-        // add-failed error below.
-        toast.success(t("singleGroup.addStudentDrawer.toast.success"));
-        toast.error(t("singleGroup.addStudentDrawer.toast.freezeError"));
-      }
+      created = await addStudentToGroup({
+        studentId, groupId: id, status: "PROBATION", joinedAt, customPrice, discountReason,
+      }).unwrap();
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("singleGroup.addStudentDrawer.toast.error");
       toast.error(detail ? `${generic}: ${detail}` : generic);
+      return;
+    }
+    setAddStudentOpen(false);
+    // An explicit re-add must show up even if this student was moved out of
+    // this group (or to another branch) earlier in this session.
+    setMovedOutIds((prev) => { if (!prev.has(studentId)) return prev; const next = new Set(prev); next.delete(studentId); return next; });
+    setBranchMovedIds((prev) => { if (!prev.has(studentId)) return prev; const next = new Set(prev); next.delete(studentId); return next; });
+
+    // Business rule: a newly added student must NOT read as active — they
+    // land FROZEN, and a staff member explicitly activates them afterwards
+    // (StudentActionsMenu's "Activate" -> ActivateModal asks "since when" and
+    // unfreezes + sets the payment start date). Creation itself only
+    // documents PROBATION/ACTIVE as initial statuses, so the brand-new
+    // membership is frozen as an immediate follow-up through the one
+    // endpoint that IS documented for FROZEN (POST /student-groups/{id}/
+    // freeze, startDate required). Its id comes from the create response
+    // when present, otherwise it's looked up via GET /student-groups.
+    try {
+      let newMembershipId = membershipIdFromCreateResponse(created, id);
+      if (!newMembershipId) {
+        const found = await fetchNewMembership({ groupId: id, studentId, limit: 1 }).unwrap();
+        newMembershipId = found.rows[0]?.id;
+      }
+      if (!newMembershipId) throw new Error("new membership id not found");
+      await freezeStudentGroup({
+        id: newMembershipId,
+        startDate: joinedAt || todayLocalISO(),
+      }).unwrap();
+      toast.success(t("singleGroup.addStudentDrawer.toast.success"));
+    } catch {
+      // The student WAS added — only the follow-up freeze failed — so this
+      // is a distinct, narrower warning rather than the generic add-failed
+      // error above.
+      toast.success(t("singleGroup.addStudentDrawer.toast.success"));
+      toast.error(t("singleGroup.addStudentDrawer.toast.freezeError"));
     }
   };
 
@@ -718,6 +903,7 @@ export const SingleGroup = () => {
       // reconcile via the membership overlay the way freeze/archive do.
       const movedRealId = selectedStudent.realId;
       setStudents((prev) => prev.filter((s) => s.realId !== movedRealId));
+      setMovedOutIds((prev) => new Set(prev).add(movedRealId));
       setMoveOpen(false);
     } catch (err) {
       const detail = extractApiError(err);
@@ -726,11 +912,31 @@ export const SingleGroup = () => {
     }
   };
 
-  const handleMoveToBranch = async (branchId: string): Promise<boolean> => {
+  const handleMoveToBranch = async (branchId: string, reason?: string): Promise<boolean> => {
     if (!selectedStudent) return false;
     try {
-      await transferStudentBranch({ id: selectedStudent.realId, newBranchId: branchId }).unwrap();
+      // POST /students/{id}/transfer-branch — Swagger body {newBranchId,
+      // reason}. Like the sibling group-transfer endpoint (which 400s
+      // without one), `reason` is always sent: the typed one, or a
+      // localized default when the field is left empty.
+      const movedRealId = selectedStudent.realId;
+      await transferStudentBranch({
+        id: movedRealId,
+        newBranchId: branchId,
+        reason: reason?.trim() || t("singleGroup.studentActionsMenu.moveToBranchModal.defaultReason"),
+      }).unwrap();
       toast.success(t("singleGroup.studentActionsMenu.moveToBranchModal.toast.success"));
+      // The backend ends the student's memberships in the old branch (see
+      // TransferStudentBranchRequest in studentsApi/types.d.ts) and the
+      // mutation's tags ("student"/"group"/"studentGroup") refetch the roster
+      // — but that lags, and the ended rows would then resurface under "show
+      // archived". Take the student off THIS group's member list right away
+      // and for good (branchMovedIds); their old groups remain visible on the
+      // Student Profile page, which reads its own data.
+      setStudents((prev) => prev.filter((s) => s.realId !== movedRealId));
+      setBranchMovedIds((prev) => new Set(prev).add(movedRealId));
+      setHoverStudent(null);
+      setHoverAnchorEl(null);
       return true;
     } catch (err) {
       const apiDetail = extractApiError(err);
@@ -1172,7 +1378,7 @@ export const SingleGroup = () => {
       <AddStudentDrawer
         open={addStudentOpen}
         onClose={() => setAddStudentOpen(false)}
-        students={addStudentCandidates}
+        memberStatusById={memberStatusById}
         onSubmit={handleAddStudentSubmit}
         isSubmitting={isAssigning || isFreezing}
       />
@@ -1187,9 +1393,14 @@ export const SingleGroup = () => {
       <AddPayment
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
-        initialStudentId={selectedStudent?.realId}
-        initialStudentName={selectedStudent?.name}
+        lockedStudent={selectedStudent ? {
+          id: selectedStudent.realId,
+          name: selectedStudent.name,
+          phone: selectedStudent.phone,
+          balance: selectedStudent.balance,
+        } : undefined}
         groupId={id}
+        branchId={groupCourse?.branchId ?? groupCourse?.branch?.id}
       />
 
       {/* ══ MOVE DIALOG ══ */}
@@ -1210,6 +1421,11 @@ export const SingleGroup = () => {
         reasonId={removeReasonId}
         onReasonIdChange={setRemoveReasonId}
         reasons={reasonOptions ?? []}
+        reasonsLoading={reasonsLoading}
+        reasonsError={reasonsError}
+        showDeleteToggle
+        deleteMode={removeDeleteMode}
+        onDeleteModeChange={setRemoveDeleteMode}
         comment={removeComment}
         onCommentChange={setRemoveComment}
         recalculate={removeRecalculate}

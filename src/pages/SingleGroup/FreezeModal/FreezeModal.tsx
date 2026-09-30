@@ -14,6 +14,13 @@ interface FreezeModalProps {
   onConfirm: (data: { reason: string; startDate: string; recalculateBalance: boolean }) => void;
 }
 
+// Local calendar date (toISOString() is UTC — the previous day for the first
+// hours after midnight in UTC+5).
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 export const FreezeModal = ({ open, onClose, isSaving, onConfirm }: FreezeModalProps) => {
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
@@ -25,12 +32,18 @@ export const FreezeModal = ({ open, onClose, isSaving, onConfirm }: FreezeModalP
   // (Cancel, backdrop click, or the parent closing it after a successful
   // save) — the parent controls `open` directly on success, so this can't
   // rely on a local handleClose alone.
+  //
+  // On open the start date defaults to today — POST /student-groups/{id}/freeze
+  // requires startDate, and an empty field made the very first "Make Frozen"
+  // attempt fail with a validation error.
   useEffect(() => {
     if (!open) {
       setReason("");
       setStartDate("");
       setRecalculateBalance(false);
       setError(null);
+    } else {
+      setStartDate((prev) => prev || todayISO());
     }
   }, [open]);
 

@@ -1722,7 +1722,7 @@ export const StudentProfile = () => {
 
   const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
   const [updateStudentStatus, { isLoading: isArchivingStudent }] = useUpdateStudentStatusMutation();
-  const { data: archiveReasonOptions } = useReasonsSelectQuery();
+  const { data: archiveReasonOptions } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 });
   const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [freezeStudentGroup, { isLoading: isFreezingGroup }] = useFreezeStudentGroupMutation();

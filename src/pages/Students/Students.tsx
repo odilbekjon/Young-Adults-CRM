@@ -56,7 +56,9 @@ import {
   useUpdateStudentStatusMutation,
   useLazyStudentsExcelQuery,
 } from "../../app/api/studentsApi";
-import { useAllGroupsQuery, useAddStudentToGroupMutation } from "../../app/api/groupsApi";
+import { useAllGroupsQuery, useAddStudentToGroupMutation, useStudentGroupsQuery } from "../../app/api/groupsApi";
+import type { StudentGroupRecord } from "../../app/api/groupsApi/types";
+import { usePaymentsListQuery, isCompletedPaymentStatus } from "../../app/api/financeApi";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
 import { useTagsSelectQuery } from "../../app/api/tagsApi";
 import { useToast } from "../../Context/ToastContext";
@@ -83,6 +85,22 @@ interface Filters {
   tags: string;
 }
 
+// Status / Financial filter values (also accepted from the URL:
+// /students?status=<key>&financial=<key>). "inactive" is a legacy status
+// value — still honoured (server-side INACTIVE list) but no longer offered.
+const STATUS_OPTION_KEYS = [
+  "added_this_month", "signed_offer", "trial", "active", "frozen",
+  "without_group", "left_after_trial", "left_active",
+] as const;
+const STATUS_FILTER_KEYS = [...STATUS_OPTION_KEYS, "inactive"] as const;
+const FINANCIAL_FILTER_KEYS = ["debt", "discount", "no_debt", "positive", "paid_month"] as const;
+// Status values that need student-group memberships (GET /student-groups).
+const MEMBERSHIP_STATUS_KEYS: string[] = [
+  "signed_offer", "trial", "active", "frozen", "without_group", "left_after_trial", "left_active",
+];
+// Status values resolved client-side (so the full roster must be fetched).
+const CLIENT_STATUS_KEYS = ["added_this_month", ...MEMBERSHIP_STATUS_KEYS] as const;
+
 /* ─── STYLES ─────────────────────────────────────────── */
 const inputSx = {
   "& .MuiOutlinedInput-root": {
@@ -95,6 +113,22 @@ const inputSx = {
   },
 };
 
+/* ─── COMPACT FILTER CONTROLS ────────────────────────── */
+// Shared look for every control in the filter row: white field, thin grey
+// border, small radius, fixed 36px height, 13px text.
+const CONTROL_H = 36;
+const controlSx = {
+  display: "flex", alignItems: "center", gap: 0.75,
+  height: CONTROL_H, boxSizing: "border-box", width: "100%", minWidth: 0,
+  border: "1px solid var(--color-border)", borderRadius: "6px", px: 1,
+  bgcolor: "var(--color-surface)", transition: "border-color 0.15s",
+};
+
+// Each control sits in a flex cell: `basis` is roughly its natural width, the
+// cell may grow to fill the row and the row wraps (instead of breaking the
+// layout) once the cells no longer fit on a single line.
+const filterCell = (basis: number, grow = 1) => ({ flex: `${grow} 1 ${basis}px`, minWidth: 0 });
+
 /* ─── DROPDOWN FILTER ────────────────────────────────── */
 interface DropdownProps {
   label: string;
@@ -102,45 +136,56 @@ interface DropdownProps {
   options: { value: string; label: string }[];
   onChange: (val: string) => void;
   onClear: () => void;
+  // Labels for values that are still accepted (e.g. from an old URL) but no
+  // longer offered in the list.
+  extraLabels?: Record<string, string>;
 }
 
-const DropdownFilter = ({ label, value, options, onChange, onClear }: DropdownProps) => {
+const DropdownFilter = ({ label, value, options, onChange, onClear, extraLabels }: DropdownProps) => {
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
+  const selectedLabel = value ? options.find((o) => o.value === value)?.label ?? extraLabels?.[value] ?? value : "";
+  const open = (el: HTMLElement) => setAnchor(el);
   return (
     <>
-      <Button
-        variant="outlined"
-        size="small"
-        endIcon={!value ? <HiChevronDown size={13} /> : undefined}
-        onClick={(e) => setAnchor(e.currentTarget)}
+      <Box
+        role="button" tabIndex={0} aria-haspopup="listbox" title={selectedLabel || label}
+        onClick={(e) => open(e.currentTarget)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(e.currentTarget); } }}
         sx={{
-          borderRadius: "6px",
+          ...controlSx, cursor: "pointer", userSelect: "none",
           borderColor: value ? "#5c7fa3" : "var(--color-border)",
-          color: value ? "#5c7fa3" : "var(--color-text-secondary)",
           bgcolor: value ? "var(--color-primary-surface)" : "var(--color-surface)",
-          fontWeight: 400, fontSize: 13, px: 1.5, py: 0.6,
-          textTransform: "none", whiteSpace: "nowrap",
-          "&:hover": { borderColor: "#5c7fa3", bgcolor: "var(--color-primary-surface)" },
+          "&:hover": { borderColor: "#5c7fa3" },
+          "&:focus-visible": { outline: "none", borderColor: "#5c7fa3" },
         }}
       >
+        <Box
+          component="span"
+          sx={{
+            flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.2,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            color: value ? "#5c7fa3" : "var(--color-text-secondary)",
+          }}
+        >
+          {selectedLabel || label}
+        </Box>
         {value ? (
-          <Stack direction="row" alignItems="center" gap={0.5}>
-            <span>{options.find((o) => o.value === value)?.label || value}</span>
-            <IoClose size={13} onClick={(e) => { e.stopPropagation(); onClear(); }} />
-          </Stack>
-        ) : label}
-      </Button>
+          <IoClose size={14} color="#5c7fa3" style={{ flexShrink: 0 }} onClick={(e) => { e.stopPropagation(); onClear(); }} />
+        ) : (
+          <HiChevronDown size={13} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+        )}
+      </Box>
       <Menu
         anchorEl={anchor}
         open={Boolean(anchor)}
         onClose={() => setAnchor(null)}
-        PaperProps={{ sx: { borderRadius: 2, minWidth: 160, mt: 0.5, boxShadow: "0 4px 16px rgba(0,0,0,0.1)" } }}
+        PaperProps={{ sx: { borderRadius: 2, minWidth: Math.max(anchor?.offsetWidth ?? 0, 180), maxWidth: 340, mt: 0.5, boxShadow: "0 4px 16px rgba(0,0,0,0.1)" } }}
       >
         {options.map((o) => (
           <MenuItem
             key={o.value} selected={value === o.value}
             onClick={() => { onChange(o.value); setAnchor(null); }}
-            sx={{ fontSize: 13 }}
+            sx={{ fontSize: 13, whiteSpace: "normal" }}
           >
             {o.label}
           </MenuItem>
@@ -158,34 +203,49 @@ interface TextFilterProps {
   disabled?: boolean;
   disabledTitle?: string;
   type?: "text" | "number";
-  minWidth?: number;
 }
 
-const TextFilterInput = ({ placeholder, value, onChange, disabled, disabledTitle, type = "text", minWidth = 140 }: TextFilterProps) => (
+const TextFilterInput = ({ placeholder, value, onChange, disabled, disabledTitle, type = "text" }: TextFilterProps) => (
   <Tooltip title={disabled ? disabledTitle ?? "" : ""} arrow disableHoverListener={!disabled}>
     <Box
       sx={{
-        display: "flex", alignItems: "center",
-        border: "1px solid var(--color-border)", borderRadius: "6px",
-        px: 1.2, py: 0.6, bgcolor: disabled ? "var(--color-surface-alt)" : "var(--color-surface)",
-        minWidth, opacity: disabled ? 0.6 : 1,
+        ...controlSx,
+        bgcolor: disabled ? "var(--color-surface-alt)" : "var(--color-surface)",
+        opacity: disabled ? 0.6 : 1,
+        "&:hover": disabled ? {} : { borderColor: "var(--color-text-muted)" },
+        "&:focus-within": { borderColor: "#5c7fa3" },
       }}
     >
       <input
         placeholder={placeholder}
         value={value}
         type={type}
+        min={type === "number" ? 0 : undefined}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        style={{ border: "none", outline: "none", fontSize: 13, color: "var(--color-text-secondary)", background: "transparent", width: "100%", cursor: disabled ? "not-allowed" : "text" }}
+        style={{ border: "none", outline: "none", fontSize: 13, color: "var(--color-text-secondary)", background: "transparent", width: "100%", minWidth: 0, cursor: disabled ? "not-allowed" : "text" }}
       />
     </Box>
   </Tooltip>
 );
 
 /* ─── DATE FILTER BOX (From/To created) ─────────────────── */
+// DatePickerField (shared) renders a 40px / 8px-radius field; the overrides
+// below bring it to the same 36px / 6px look as the rest of the row and
+// tighten its padding so the whole placeholder ("From created date") fits
+// without being clipped. Its calendar popup is a portal, so it is unaffected.
 const DateFilterInput = ({ placeholder, value, onChange }: { placeholder: string; value: string; onChange: (val: string) => void }) => (
-  <Box sx={{ minWidth: 132, flexShrink: 0 }}>
+  <Box
+    sx={{
+      width: "100%", minWidth: 0,
+      "& [role='button']": {
+        height: `${CONTROL_H}px !important`, borderRadius: "6px !important",
+        padding: "0 8px !important", gap: "6px !important",
+      },
+      "& [role='button'] svg": { width: "14px", height: "14px" },
+      "& [role='button'] span": { fontSize: "13px !important" },
+    }}
+  >
     <DatePickerField value={value} onChange={onChange} placeholder={placeholder} />
   </Box>
 );
@@ -491,7 +551,7 @@ export const Students = () => {
   const [updateStudent, { isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
   const [toggleStudentStatus, { isLoading: isArchivingStudent }] = useToggleStudentStatusMutation();
   const [updateStudentStatus, { isLoading: isUpdatingStudentStatus }] = useUpdateStudentStatusMutation();
-  const { data: reasonOptions } = useReasonsSelectQuery();
+  const { data: reasonOptions } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 });
   // GET /tags/select?type=STUDENT — real, admin-managed tags for the "Tags"
   // filter, replacing the disabled placeholder (students had no tags
   // relationship to filter by until this Tags feature existed).
@@ -528,22 +588,44 @@ export const Students = () => {
   // pre-filtered — same "read once into initial state" convention already
   // used by Finance > All Payments for its Dashboard-driven date range.
   const [searchParams] = useSearchParams();
-  const initialStatusParam = searchParams.get("status");
-  const initialStatus = initialStatusParam === "active" || initialStatusParam === "inactive" ? initialStatusParam : "";
-  const [filters, setFilters] = useState<Filters>({ ...EMPTY_FILTERS, status: initialStatus });
+  const initialStatusParam = searchParams.get("status") ?? "";
+  const initialFinancialParam = searchParams.get("financial") ?? "";
+  const [filters, setFilters] = useState<Filters>({
+    ...EMPTY_FILTERS,
+    status: (STATUS_FILTER_KEYS as readonly string[]).includes(initialStatusParam) ? initialStatusParam : "",
+    financial: (FINANCIAL_FILTER_KEYS as readonly string[]).includes(initialFinancialParam) ? initialFinancialParam : "",
+  });
   const [advancedAnchor, setAdvancedAnchor] = useState<null | HTMLElement>(null);
 
-  // Financial situation (With debt/positive/zero balance) has no backend
-  // query param on GET /students (confirmed: studentsRequest carries no
-  // balance/debt field) — filtering it against only the current page's 20
-  // rows would silently miss matching students on other pages. So while
-  // that filter is active, this fetches a large batch instead of the normal
-  // page (covers the branch's full roster with headroom) and filters/
-  // paginates it client-side — a real filter over the real data, not a
-  // page-scoped approximation. Outside that filter, normal server-side
-  // pagination is unchanged.
+  // Status / Financial filters that have no backend query param on GET
+  // /students (confirmed: studentsRequest carries only status ACTIVE/INACTIVE,
+  // tagId, search, branchId) are computed client-side from real data — the
+  // students' own balance/createdAt, plus student-group memberships
+  // (GET /student-groups) and this month's payments (GET /finance/payments).
+  // Filtering that against only the current page's 20 rows would silently
+  // miss matching students on other pages. So while such a filter is active,
+  // this fetches a large batch instead of the normal page (covers the
+  // branch's full roster with headroom) and filters/paginates it client-side
+  // — a real filter over the real data, not a page-scoped approximation.
+  // Outside those filters, normal server-side pagination is unchanged.
   const FULL_FETCH_LIMIT = 3000;
+  const MEMBERSHIP_LIMIT = 1000;
   const hasFinancialFilter = Boolean(filters.financial);
+  const needsMemberships = MEMBERSHIP_STATUS_KEYS.includes(filters.status) || filters.financial === "discount";
+  const needsPayments = filters.financial === "paid_month";
+  // Students who left a group are usually archived (INACTIVE), and GET
+  // /students hides those unless `status=INACTIVE` is sent — so the "left"
+  // filters also pull the INACTIVE list and merge it in.
+  const includeArchived = filters.status === "left_after_trial" || filters.status === "left_active";
+  const hasClientFilter = hasFinancialFilter || (CLIENT_STATUS_KEYS as readonly string[]).includes(filters.status);
+
+  // Current month range (used by "Added this month" and "Paid during the month").
+  const monthRange = useMemo(() => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const ym = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
+    return { start: `${ym}-01`, end: `${ym}-${pad(now.getDate())}`, ym };
+  }, []);
 
   // GET /students only returns ACTIVE students unless `status` is sent
   // explicitly (Swagger: status query param, ACTIVE/INACTIVE) — an archived
@@ -553,16 +635,104 @@ export const Students = () => {
   // instead of being applied client-side (list rows carry no status field to
   // filter by locally in the first place).
   const { data: studentsData, isLoading: studentsLoading } = useAllStudentsQuery({
-    page: hasFinancialFilter ? 1 : page,
-    limit: hasFinancialFilter ? FULL_FETCH_LIMIT : limit,
+    page: hasClientFilter ? 1 : page,
+    limit: hasClientFilter ? FULL_FETCH_LIMIT : limit,
     branchId: selectedBranchId ?? undefined,
     status: filters.status === "active" ? "ACTIVE" : filters.status === "inactive" ? "INACTIVE" : undefined,
     tagId: filters.tags || undefined,
   });
+  const { data: archivedStudentsData, isLoading: archivedLoading } = useAllStudentsQuery(
+    {
+      page: 1, limit: FULL_FETCH_LIMIT,
+      branchId: selectedBranchId ?? undefined,
+      status: "INACTIVE",
+      tagId: filters.tags || undefined,
+    },
+    { skip: !includeArchived },
+  );
+
+  // Student-group memberships by status — GET /student-groups accepts a
+  // `status` filter (same calls Dashboard uses), one request per status so
+  // each stays within its own row cap. Only fetched while a filter needs them.
+  const branchArg = selectedBranchId ?? undefined;
+  const membershipArgs = { branchId: branchArg, limit: MEMBERSHIP_LIMIT };
+  const membershipOpts = { skip: !needsMemberships };
+  const { data: probationMs, isLoading: probationLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "PROBATION" }, membershipOpts);
+  const { data: activeMs, isLoading: activeLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "ACTIVE" }, membershipOpts);
+  const { data: frozenMs, isLoading: frozenLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "FROZEN" }, membershipOpts);
+  const { data: inactiveMs, isLoading: inactiveLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "INACTIVE" }, membershipOpts);
+  const { data: deletedMs, isLoading: deletedLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "DELETED" }, membershipOpts);
+
+  // GET /finance/payments for the current month (same call Dashboard's
+  // "Paid during the month" card uses) — rows carry the paying student's id.
+  const { data: monthPaymentsData, isLoading: paymentsLoading } = usePaymentsListQuery(
+    { startDate: monthRange.start, endDate: monthRange.end, page: 1, limit: MEMBERSHIP_LIMIT, branchId: branchArg },
+    { skip: !needsPayments },
+  );
+
+  const filterDataLoading =
+    (needsMemberships && (probationLoading || activeLoading || frozenLoading || inactiveLoading || deletedLoading)) ||
+    (needsPayments && paymentsLoading) ||
+    (includeArchived && archivedLoading);
 
   useEffect(() => {
-    if (studentsData) setStudents(studentsData.data.map(mapApiStudentToFlat));
-  }, [studentsData]);
+    if (!studentsData) return;
+    const seen = new Set(studentsData.data.map((s) => s.id));
+    const archived = includeArchived ? (archivedStudentsData?.data ?? []).filter((s) => !seen.has(s.id)) : [];
+    setStudents([...studentsData.data, ...archived].map(mapApiStudentToFlat));
+  }, [studentsData, archivedStudentsData, includeArchived]);
+
+  // Student-id sets derived from the memberships above.
+  //  - trial / active / frozen: has a PROBATION / ACTIVE / FROZEN membership.
+  //  - live: any of those three (i.e. currently in at least one group).
+  //  - activated ("signed offer" proxy): has ever had billing start — an
+  //    ACTIVE/FROZEN membership, or an ended one that still carries a
+  //    paymentStartDate (trial memberships never get one).
+  //  - leftActive: all memberships ended, at least one of them had been
+  //    activated (paymentStartDate set).
+  //  - leftTrial: all memberships ended and none was ever activated.
+  //  - discount: a live membership with a discountReason or a customPrice
+  //    below the group's course price.
+  const membershipSets = useMemo(() => {
+    const trial = new Set<string>();
+    const active = new Set<string>();
+    const frozen = new Set<string>();
+    const activated = new Set<string>();
+    const endedActivated = new Set<string>();
+    const endedTrial = new Set<string>();
+    const discount = new Set<string>();
+
+    const coursePriceOf = (groupId: string): number | null => {
+      const raw = (groupsData?.data ?? []).find((g) => g.id === groupId)?.course?.price as unknown;
+      if (raw && typeof raw === "object" && Array.isArray((raw as { d?: unknown[] }).d)) return Number((raw as { d: unknown[] }).d[0]) || 0;
+      return typeof raw === "number" ? raw : null;
+    };
+    const markDiscount = (m: StudentGroupRecord) => {
+      const base = m.customPrice != null ? coursePriceOf(m.groupId) : null;
+      if ((m.discountReason ?? "").trim() || (m.customPrice != null && base != null && m.customPrice < base)) discount.add(m.studentId);
+    };
+
+    (probationMs?.rows ?? []).forEach((m) => { trial.add(m.studentId); markDiscount(m); });
+    (activeMs?.rows ?? []).forEach((m) => { active.add(m.studentId); activated.add(m.studentId); markDiscount(m); });
+    (frozenMs?.rows ?? []).forEach((m) => { frozen.add(m.studentId); activated.add(m.studentId); markDiscount(m); });
+    [...(inactiveMs?.rows ?? []), ...(deletedMs?.rows ?? [])].forEach((m) => {
+      if (m.paymentStartDate) { endedActivated.add(m.studentId); activated.add(m.studentId); }
+      else endedTrial.add(m.studentId);
+    });
+
+    const live = new Set<string>([...trial, ...active, ...frozen]);
+    const leftActive = new Set([...endedActivated].filter((id) => !live.has(id)));
+    const leftTrial = new Set([...endedTrial].filter((id) => !live.has(id) && !activated.has(id)));
+    return { trial, active, frozen, live, activated, leftActive, leftTrial, discount };
+  }, [probationMs, activeMs, frozenMs, inactiveMs, deletedMs, groupsData]);
+
+  const paidThisMonth = useMemo(() => {
+    const ids = new Set<string>();
+    (monthPaymentsData?.rows ?? []).forEach((p) => {
+      if (p.studentId && isCompletedPaymentStatus(p.status)) ids.add(p.studentId);
+    });
+    return ids;
+  }, [monthPaymentsData]);
 
   // Changing the status/financial filter or the globally-selected branch
   // re-queries the backend with a different result set (see above) — reset
@@ -603,31 +773,48 @@ export const Students = () => {
   );
 
   const filtered = useMemo(() => {
+    // Membership/payment-backed filters need their data before they can say
+    // anything meaningful — show nothing (the table shows "Loading") until
+    // it arrives instead of briefly listing everyone.
+    if (filterDataLoading) return [];
     return students
       .filter((s) => {
         const search = filters.search.toLowerCase();
         const balance = s.balance ?? 0;
         const financialMatch =
           !filters.financial ||
+          (filters.financial === "debt" && balance < 0) ||
+          (filters.financial === "no_debt" && balance >= 0) ||
           (filters.financial === "positive" && balance > 0) ||
-          (filters.financial === "negative" && balance < 0) ||
-          (filters.financial === "zero" && balance === 0);
-        // Status is already applied server-side (see useAllStudentsQuery
-        // above) — list rows carry no reliable status field to re-filter by
-        // here (mapApiStudentToFlat defaults `active` to true for every list
-        // item, since GET /students' list shape doesn't include it), so
-        // filtering again client-side would incorrectly hide real INACTIVE
-        // results the backend already returned.
+          (filters.financial === "discount" && membershipSets.discount.has(s.uid)) ||
+          (filters.financial === "paid_month" && paidThisMonth.has(s.uid));
+        const createdAt = s.createdAt ? s.createdAt.slice(0, 10) : "";
+        // The legacy active/inactive values are applied server-side (see
+        // useAllStudentsQuery above — list rows carry no reliable status
+        // field: mapApiStudentToFlat defaults `active` to true for every
+        // list item). "active" additionally requires an ACTIVE membership,
+        // so it lines up with the trial/frozen options; every other new
+        // option is computed here from the memberships/createdAt.
+        let statusMatch = true;
+        switch (filters.status) {
+          case "added_this_month": statusMatch = createdAt.startsWith(monthRange.ym); break;
+          case "signed_offer": statusMatch = membershipSets.activated.has(s.uid); break;
+          case "trial": statusMatch = membershipSets.trial.has(s.uid); break;
+          case "active": statusMatch = membershipSets.active.has(s.uid); break;
+          case "frozen": statusMatch = membershipSets.frozen.has(s.uid); break;
+          case "without_group": statusMatch = (s.groupsCount ?? 0) === 0 || !membershipSets.live.has(s.uid); break;
+          case "left_after_trial": statusMatch = membershipSets.leftTrial.has(s.uid); break;
+          case "left_active": statusMatch = membershipSets.leftActive.has(s.uid); break;
+        }
         const groupCountMatch =
           !filters.groupCount || String(s.groupsCount ?? 0) === filters.groupCount.trim();
-        const createdAt = s.createdAt ? s.createdAt.slice(0, 10) : "";
         const fromMatch = !filters.fromCreated || (createdAt && createdAt >= filters.fromCreated);
         const toMatch = !filters.toCreatedDate || (createdAt && createdAt <= filters.toCreatedDate);
         return (
           (!search || s.name.toLowerCase().includes(search) || s.phone.includes(search)) &&
           (!filters.teacher || s.teacher === filters.teacher) &&
           (!filters.course || s.course === filters.course) &&
-          financialMatch && groupCountMatch && fromMatch && toMatch
+          financialMatch && statusMatch && groupCountMatch && fromMatch && toMatch
         );
       })
       .sort((a, b) => {
@@ -636,7 +823,7 @@ export const Students = () => {
         const bv = String(b[sortKey as keyof FlatStudent] ?? "");
         return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
       });
-  }, [students, filters, sortKey, sortDir]);
+  }, [students, filters, sortKey, sortDir, filterDataLoading, membershipSets, paidThisMonth, monthRange]);
 
   // Backend hozircha sahifalash meta'sini qaytarmaydi; shu sababli joriy
   // sahifa hajmidan taxminiy meta hosil qilamiz, chunki bu maydon kelib
@@ -647,7 +834,7 @@ export const Students = () => {
   // describe the client-side-paginated `filtered` result instead of that
   // batch's own (irrelevant) size.
   const pageMeta = useMemo(() => {
-    if (hasFinancialFilter) {
+    if (hasClientFilter) {
       return {
         total: filtered.length,
         page,
@@ -663,7 +850,7 @@ export const Students = () => {
       limit,
       totalPages: count < limit ? page : page + 1,
     };
-  }, [studentsData, page, limit, hasFinancialFilter, filtered]);
+  }, [studentsData, page, limit, hasClientFilter, filtered]);
 
   // Outside financial-filter mode `filtered` is already just the current
   // server-fetched page (≤ limit rows), same as before. In financial-filter
@@ -671,8 +858,8 @@ export const Students = () => {
   // one page here for display/selection — "select all" then only selects
   // what's visible, not every matching row across the full result.
   const pageRows = useMemo(
-    () => (hasFinancialFilter ? filtered.slice((page - 1) * limit, page * limit) : filtered),
-    [filtered, hasFinancialFilter, page, limit]
+    () => (hasClientFilter ? filtered.slice((page - 1) * limit, page * limit) : filtered),
+    [filtered, hasClientFilter, page, limit]
   );
 
   const handleSort = (key: SortKey) => {
@@ -857,102 +1044,105 @@ export const Students = () => {
         </Stack>
       </Stack>
 
-      {/* FILTER ROW — compact controls sized to fit one row on normal
-          desktop widths; still wraps naturally on narrower screens. */}
-      <Stack
-        direction="row" flexWrap="wrap" gap={0.75} mb={1.5} alignItems="center"
-        sx={{ bgcolor: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "8px", p: 1.25 }}
-      >
+      {/* FILTER ROW — one compact horizontal row of 36px controls; each sits
+          in a flex cell so the row fills the width on desktop and wraps
+          cleanly (never overlaps/clips) on narrower screens. */}
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 1, alignItems: "center" }}>
         {/* Search */}
-        <Box
-          sx={{
-            display: "flex", alignItems: "center", gap: 0.5,
-            border: "1px solid var(--color-border)", borderRadius: "6px",
-            px: 1.2, py: 0.6, bgcolor: "var(--color-surface)", minWidth: 180, flexShrink: 0,
-          }}
-        >
-          <IoSearchOutline size={15} color="var(--color-text-muted)" />
-          <input
-            placeholder={t("students.filters.searchPlaceholder")}
-            value={filters.search}
-            onChange={(e) => setFilter("search", e.target.value)}
-            style={{ border: "none", outline: "none", fontSize: 13, color: "var(--color-text-secondary)", background: "transparent", width: "100%" }}
-          />
-          {filters.search && (
-            <IoClose size={13} color="var(--color-text-muted)" style={{ cursor: "pointer" }} onClick={() => setFilter("search", "")} />
-          )}
+        <Box sx={filterCell(190, 2)}>
+          <Box sx={{ ...controlSx, "&:hover": { borderColor: "var(--color-text-muted)" }, "&:focus-within": { borderColor: "#5c7fa3" } }}>
+            <IoSearchOutline size={15} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+            <input
+              placeholder={t("students.filters.searchPlaceholder")}
+              value={filters.search}
+              onChange={(e) => setFilter("search", e.target.value)}
+              style={{ border: "none", outline: "none", fontSize: 13, color: "var(--color-text-secondary)", background: "transparent", width: "100%", minWidth: 0 }}
+            />
+            {filters.search && (
+              <IoClose size={13} color="var(--color-text-muted)" style={{ cursor: "pointer", flexShrink: 0 }} onClick={() => setFilter("search", "")} />
+            )}
+          </Box>
         </Box>
 
-        <DropdownFilter
-          label={t("students.filters.byCourses")} value={filters.course}
-          options={COURSES_LIST.map((c) => ({ value: c, label: c }))}
-          onChange={(v) => setFilter("course", v)} onClear={() => setFilter("course", "")}
-        />
+        <Box sx={filterCell(105)}>
+          <DropdownFilter
+            label={t("students.filters.byCourses")} value={filters.course}
+            options={COURSES_LIST.map((c) => ({ value: c, label: c }))}
+            onChange={(v) => setFilter("course", v)} onClear={() => setFilter("course", "")}
+          />
+        </Box>
 
-        <DropdownFilter
-          label={t("students.filters.status")} value={filters.status}
-          options={[
-            { value: "active", label: t("students.filters.statusOptions.active") },
-            { value: "inactive", label: t("students.filters.statusOptions.inactive") },
-          ]}
-          onChange={(v) => setFilter("status", v)} onClear={() => setFilter("status", "")}
-        />
+        <Box sx={filterCell(95)}>
+          <DropdownFilter
+            label={t("students.filters.status")} value={filters.status}
+            options={STATUS_OPTION_KEYS.map((k) => ({ value: k, label: t(`students.filters.statusOptions.${k}`) }))}
+            extraLabels={{ inactive: t("students.filters.statusOptions.inactive") }}
+            onChange={(v) => setFilter("status", v)} onClear={() => setFilter("status", "")}
+          />
+        </Box>
 
-        <DropdownFilter
-          label={t("students.filters.financialSituation")} value={filters.financial}
-          options={[
-            { value: "positive", label: t("students.filters.financialOptions.positive") },
-            { value: "negative", label: t("students.filters.financialOptions.negative") },
-            { value: "zero", label: t("students.filters.financialOptions.zero") },
-          ]}
-          onChange={(v) => setFilter("financial", v)} onClear={() => setFilter("financial", "")}
-        />
+        <Box sx={filterCell(160)}>
+          <DropdownFilter
+            label={t("students.filters.financialSituation")} value={filters.financial}
+            options={FINANCIAL_FILTER_KEYS.map((k) => ({ value: k, label: t(`students.filters.financialOptions.${k}`) }))}
+            onChange={(v) => setFilter("financial", v)} onClear={() => setFilter("financial", "")}
+          />
+        </Box>
 
-        <DropdownFilter
-          label={t("students.filters.byTags")}
-          value={filters.tags}
-          options={(tagOptions ?? []).map((tag) => ({ value: tag.id, label: tag.name }))}
-          onChange={(v) => setFilter("tags", v)}
-          onClear={() => setFilter("tags", "")}
-        />
+        <Box sx={filterCell(90)}>
+          <DropdownFilter
+            label={t("students.filters.byTags")}
+            value={filters.tags}
+            options={(tagOptions ?? []).map((tag) => ({ value: tag.id, label: tag.name }))}
+            onChange={(v) => setFilter("tags", v)}
+            onClear={() => setFilter("tags", "")}
+          />
+        </Box>
 
         {/* No externalId field exists on students in the backend yet —
             same reasoning as the Tags box above. */}
-        <TextFilterInput
-          placeholder={t("students.filters.externalId")}
-          value="" onChange={() => {}} disabled
-          disabledTitle={t("students.filters.externalIdUnavailable")}
-          minWidth={110}
-        />
+        <Box sx={filterCell(100)}>
+          <TextFilterInput
+            placeholder={t("students.filters.externalId")}
+            value="" onChange={() => {}} disabled
+            disabledTitle={t("students.filters.externalIdUnavailable")}
+          />
+        </Box>
 
-        <TextFilterInput
-          placeholder={t("students.filters.groupCount")}
-          value={filters.groupCount}
-          onChange={(v) => setFilter("groupCount", v.replace(/[^0-9]/g, ""))}
-          type="number" minWidth={95}
-        />
+        <Box sx={filterCell(100)}>
+          <TextFilterInput
+            placeholder={t("students.filters.groupCount")}
+            value={filters.groupCount}
+            onChange={(v) => setFilter("groupCount", v.replace(/[^0-9]/g, ""))}
+            type="number"
+          />
+        </Box>
 
-        <DateFilterInput
-          placeholder={t("students.filters.fromCreated")}
-          value={filters.fromCreated}
-          onChange={(v) => setFilter("fromCreated", v)}
-        />
+        <Box sx={filterCell(145)}>
+          <DateFilterInput
+            placeholder={t("students.filters.fromCreated")}
+            value={filters.fromCreated}
+            onChange={(v) => setFilter("fromCreated", v)}
+          />
+        </Box>
 
-        <DateFilterInput
-          placeholder={t("students.filters.toCreatedDate")}
-          value={filters.toCreatedDate}
-          onChange={(v) => setFilter("toCreatedDate", v)}
-        />
+        <Box sx={filterCell(145)}>
+          <DateFilterInput
+            placeholder={t("students.filters.toCreatedDate")}
+            value={filters.toCreatedDate}
+            onChange={(v) => setFilter("toCreatedDate", v)}
+          />
+        </Box>
 
         {hasFilters && (
           <Button
             size="small" startIcon={<IoClose />} onClick={clearAll} variant="outlined"
-            sx={{ borderRadius: "6px", borderColor: "var(--color-border)", color: "var(--color-text-secondary)", fontSize: 12, px: 1.5, textTransform: "none" }}
+            sx={{ height: CONTROL_H, borderRadius: "6px", borderColor: "var(--color-border)", color: "var(--color-text-secondary)", fontSize: 12, px: 1.5, textTransform: "none", whiteSpace: "nowrap", flexShrink: 0 }}
           >
             {t("students.filters.clearAll")}
           </Button>
         )}
-      </Stack>
+      </Box>
 
       {/* COLUMNS + BULK ACTIONS */}
       <Stack direction="row" justifyContent="flex-end" alignItems="center" mb={1.5} gap={1}>
@@ -1162,14 +1352,14 @@ export const Students = () => {
                 );
               })}
 
-              {!studentsLoading && filtered.length === 0 && (
+              {!studentsLoading && !filterDataLoading && filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={12} align="center" sx={{ py: 6, color: "var(--color-text-muted)" }}>
                     {t("students.table.noStudentsFound")}
                   </TableCell>
                 </TableRow>
               )}
-              {studentsLoading && (
+              {(studentsLoading || filterDataLoading) && (
                 <TableRow>
                   <TableCell colSpan={12} align="center" sx={{ py: 6, color: "var(--color-text-muted)" }}>
                     {t("students.table.loading")}

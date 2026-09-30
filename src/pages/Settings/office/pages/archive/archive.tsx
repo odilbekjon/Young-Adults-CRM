@@ -18,27 +18,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import {
-  MdDelete,
-  MdEdit,
-  MdEmail,
-  MdRefresh,
-  MdClose,
-  MdArrowBack,
-} from "react-icons/md";
+import { MdDelete, MdEmail, MdRefresh } from "react-icons/md";
 import { useAllArchivesQuery } from "../../../../../app/api/archivesApi/archivesApi";
 import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
 import type { ArchiveRecord, ArchiveRole } from "../../../../../app/api/archivesApi/types";
-import {
-  useAllReasonsQuery,
-  useReasonsSelectQuery,
-  useLazyReasonForEditQuery,
-  useCreateReasonMutation,
-  useUpdateReasonMutation,
-  useToggleReasonStatusMutation,
-  useDeleteReasonMutation,
-} from "../../../../../app/api/reasonsApi";
-import type { Reason } from "../../../../../app/api/reasonsApi/types";
+import { useReasonsSelectQuery } from "../../../../../app/api/reasonsApi";
 import { useToggleStudentStatusMutation, useDeleteStudentMutation } from "../../../../../app/api/studentsApi";
 import { useToggleTeacherStatusMutation, useDeleteTeacherMutation } from "../../../../../app/api/teachersApi";
 import { useToggleStaffUserStatusMutation, useDeleteStaffUserMutation } from "../../../../../app/api/usersApi";
@@ -50,8 +34,8 @@ const SEARCH_DEBOUNCE_MS = 350;
 
 const PAGE_SIZE = 10;
 
-// The reasons view has no pagination control in the design, so the whole
-// (small) reference list is requested at once — GET /reasons would otherwise
+// The reason filter dropdown has no pagination, so the whole (small)
+// reference list is requested at once — GET /reasons/select would otherwise
 // fall back to its documented default of limit=10 and silently truncate.
 const REASONS_LIMIT = 200;
 
@@ -64,7 +48,6 @@ export const Archive = () => {
   // UUID lives in the Redux branch slice (the same source baseApi uses for the
   // x-branch-id header); BranchContext only carries display labels.
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
-  const [view, setView] = useState<"archive" | "reasons">("archive");
 
   // Archive filters & selection
   const [search, setSearch] = useState("");
@@ -74,16 +57,6 @@ export const Archive = () => {
   const [endDate, setEndDate] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [page, setPage] = useState(1);
-
-  // Reasons modal
-  const [addOpen, setAddOpen] = useState(false);
-  const [newReason, setNewReason] = useState("");
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editOpen, setEditOpen] = useState(false);
-  const [reasonError, setReasonError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Reason | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Restore / permanent-delete for archived records (students, teachers,
   // staff). Distinct from the reasons CRUD above.
@@ -127,22 +100,9 @@ export const Archive = () => {
   const totalPages = data?.meta?.totalPages ?? Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // ── Reasons ─────────────────────────────────────────────────────────────────
-  // Full list (ACTIVE + INACTIVE) for the management table…
-  const {
-    data: reasonsData,
-    isLoading: reasonsLoading,
-    isError: reasonsError,
-  } = useAllReasonsQuery({ page: 1, limit: REASONS_LIMIT });
-  // …and the active-only shortlist for the archive "filter by reason" dropdown.
+  // Active-only shortlist for the archive "filter by reason" dropdown. The
+  // reasons themselves are managed on /settings/reasons_archiving.
   const { data: reasonOptions } = useReasonsSelectQuery({ page: 1, limit: REASONS_LIMIT });
-
-  const [fetchReasonForEdit, { isFetching: isLoadingReasonForEdit }] = useLazyReasonForEditQuery();
-  const [createReason, { isLoading: isCreatingReason }] = useCreateReasonMutation();
-  const [updateReason, { isLoading: isUpdatingReason }] = useUpdateReasonMutation();
-  const [toggleReasonStatus, { isLoading: isTogglingReason }] = useToggleReasonStatusMutation();
-  const [deleteReason, { isLoading: isDeletingReason }] = useDeleteReasonMutation();
-
-  const reasons = reasonsData?.data ?? [];
 
   // ── Restore / permanent delete for archived records ─────────────────────────
   // An archive row can be a student, a teacher, or staff (ADMIN/SUPERADMIN) —
@@ -278,84 +238,6 @@ export const Archive = () => {
   const toggleOne = (id: string) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
-  // ── Reason CRUD ─────────────────────────────────────────────────────────────
-  const reportReasonError = (err: unknown, genericKey: string) => {
-    const detail = extractApiError(err);
-    const generic = t(genericKey);
-    const message = detail ? `${generic}: ${detail}` : generic;
-    toast.error(message);
-    return message;
-  };
-
-  const handleAddReason = async () => {
-    if (!newReason.trim() || isCreatingReason) return;
-    // Swagger marks branchId as a required query param on POST /reasons, and
-    // "all branches" has no single id to send — ask for a concrete branch
-    // instead of inventing one.
-    if (!selectedBranchId) {
-      setReasonError(t("settings.office.archive.reasons.errors.branchRequired"));
-      return;
-    }
-    setReasonError(null);
-    try {
-      await createReason({ branchId: selectedBranchId, name: newReason.trim() }).unwrap();
-      toast.success(t("settings.office.archive.reasons.toast.created"));
-      setNewReason("");
-      setAddOpen(false);
-    } catch (err) {
-      setReasonError(reportReasonError(err, "settings.office.archive.reasons.errors.save"));
-    }
-  };
-
-  // GET /reasons/{id}/for-edit — the row's values fill the form immediately,
-  // then the dedicated edit endpoint refreshes them.
-  const handleOpenEditReason = async (reason: Reason) => {
-    setEditId(reason.id);
-    setEditName(reason.name);
-    setReasonError(null);
-    setEditOpen(true);
-    try {
-      const detail = await fetchReasonForEdit(reason.id).unwrap();
-      if (detail?.data) setEditName(detail.data.name ?? "");
-    } catch {
-      // The row already provided a usable value — keep the form open.
-    }
-  };
-
-  const handleEditReason = async () => {
-    if (!editId || !editName.trim() || isUpdatingReason) return;
-    setReasonError(null);
-    try {
-      await updateReason({ id: editId, name: editName.trim() }).unwrap();
-      toast.success(t("settings.office.archive.reasons.toast.updated"));
-      setEditOpen(false);
-    } catch (err) {
-      setReasonError(reportReasonError(err, "settings.office.archive.reasons.errors.save"));
-    }
-  };
-
-  const handleToggleReasonStatus = async (id: string) => {
-    if (isTogglingReason) return;
-    try {
-      await toggleReasonStatus(id).unwrap();
-      toast.success(t("settings.office.archive.reasons.toast.statusToggled"));
-    } catch (err) {
-      reportReasonError(err, "settings.office.archive.reasons.errors.toggle");
-    }
-  };
-
-  const handleDeleteReason = async () => {
-    if (!deleteTarget) return;
-    setDeleteError(null);
-    try {
-      await deleteReason(deleteTarget.id).unwrap();
-      toast.success(t("settings.office.archive.reasons.toast.deleted"));
-      setDeleteTarget(null);
-    } catch (err) {
-      setDeleteError(reportReasonError(err, "settings.office.archive.reasons.deleteConfirm.error"));
-    }
-  };
-
   // ── Helpers ─────────────────────────────────────────────────────────────────
   const balanceColor = (b: number | null | undefined) =>
     !b ? "text-gray-500" : b > 0 ? "text-green-600" : "text-red-500";
@@ -390,298 +272,6 @@ export const Archive = () => {
     },
   };
 
-  // ════════════════════════════════════════════════════════════════════════════
-  // VIEW: REASONS FOR ARCHIVING
-  // ════════════════════════════════════════════════════════════════════════════
-  if (view === "reasons") {
-    return (
-      <div className="min-h-screen bg-gray-100 p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <IconButton
-              onClick={() => setView("archive")}
-              size="small"
-              sx={{ color: "#374151" }}
-            >
-              <MdArrowBack size={20} />
-            </IconButton>
-            <Typography variant="h5" sx={{ fontWeight: 600, color: "#1f2937" }}>
-              {t("settings.office.archive.reasonsForArchiving")}
-            </Typography>
-          </div>
-          <Button
-            variant="contained"
-            onClick={() => { setNewReason(""); setReasonError(null); setAddOpen(true); }}
-            sx={{
-              backgroundColor: "#1e3a5f",
-              "&:hover": { backgroundColor: "#162c47" },
-              borderRadius: "20px",
-              textTransform: "none",
-              fontWeight: 600,
-              px: 3,
-              boxShadow: "none",
-            }}
-          >
-            {t("settings.office.archive.reasons.addTemplate")}
-          </Button>
-        </div>
-
-        {/* Table */}
-        <div className="bg-white rounded-lg shadow-sm max-w-2xl">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left px-6 py-4 text-gray-700 font-semibold w-24">{t("settings.office.archive.reasons.table.id")}</th>
-                <th className="text-left px-6 py-4 text-gray-700 font-semibold">{t("settings.office.archive.reasons.table.name")}</th>
-                <th className="text-left px-6 py-4 text-gray-700 font-semibold">{t("settings.office.archive.reasons.table.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reasonsLoading ? (
-                <tr>
-                  <td colSpan={3} className="text-center py-12">
-                    <CircularProgress size={26} />
-                  </td>
-                </tr>
-              ) : reasonsError ? (
-                <tr>
-                  <td colSpan={3} className="text-center py-12 text-red-500 text-sm">
-                    {t("settings.office.archive.reasons.loadError")}
-                  </td>
-                </tr>
-              ) : reasons.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="text-center py-12 text-gray-400">
-                    {t("settings.office.archive.reasons.noData")}
-                  </td>
-                </tr>
-              ) : (
-                reasons.map((r) => {
-                  const isActive = r.status !== "INACTIVE";
-                  return (
-                    <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 text-gray-600">{r.id.slice(0, 8)}</td>
-                      <td className="px-6 py-4 text-gray-800">{r.name}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleReasonStatus(r.id)}
-                            disabled={isTogglingReason}
-                            title={t("settings.office.archive.reasons.status.toggle")}
-                            className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors disabled:opacity-60 ${
-                              isActive
-                                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                            }`}
-                          >
-                            {isActive
-                              ? t("settings.office.archive.reasons.status.active")
-                              : t("settings.office.archive.reasons.status.inactive")}
-                          </button>
-                          <IconButton
-                            size="small"
-                            sx={{ color: "#6b7280" }}
-                            onClick={() => handleOpenEditReason(r)}
-                            aria-label={t("settings.office.archive.reasons.edit")}
-                          >
-                            <MdEdit size={16} />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            sx={{ color: "#ef5350" }}
-                            onClick={() => { setDeleteError(null); setDeleteTarget(r); }}
-                            aria-label={t("settings.office.archive.reasons.delete")}
-                          >
-                            <MdDelete size={16} />
-                          </IconButton>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Add Modal — right side */}
-        <Dialog
-          open={addOpen}
-          onClose={() => setAddOpen(false)}
-          PaperProps={{
-            sx: {
-              borderRadius: "12px",
-              minWidth: "320px",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-            },
-          }}
-          sx={{
-            "& .MuiDialog-container": {
-              justifyContent: "flex-end",
-              alignItems: "flex-start",
-              paddingTop: "80px",
-              paddingRight: "40px",
-            },
-          }}
-        >
-          <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1 }}>
-            <Typography sx={{ fontWeight: 600, fontSize: "1rem", color: "#1f2937" }}>
-              {t("settings.office.archive.reasons.addTemplate")}
-            </Typography>
-            <IconButton onClick={() => setAddOpen(false)} size="small" sx={{ color: "#9ca3af" }}>
-              <MdClose size={18} />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent sx={{ pt: 1, pb: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1, color: "#374151", fontWeight: 500 }}>
-              {t("settings.office.archive.reasons.form.name")}
-            </Typography>
-            <TextField
-              fullWidth
-              size="small"
-              value={newReason}
-              onChange={(e) => setNewReason(e.target.value)}
-              sx={{ ...inputSx, mb: reasonError ? 1 : 2 }}
-              onKeyDown={(e) => e.key === "Enter" && handleAddReason()}
-            />
-            {reasonError && (
-              <Typography sx={{ mb: 2, color: "#ef5350", fontSize: "0.8125rem" }}>
-                {reasonError}
-              </Typography>
-            )}
-            <Button
-              variant="contained"
-              onClick={handleAddReason}
-              disabled={!newReason.trim() || isCreatingReason}
-              startIcon={isCreatingReason ? <CircularProgress size={16} color="inherit" /> : undefined}
-              sx={{
-                backgroundColor: "#29b6f6",
-                "&:hover": { backgroundColor: "#0288d1" },
-                "&.Mui-disabled": { backgroundColor: "#bae6fd", color: "#fff" },
-                textTransform: "none",
-                fontWeight: 600,
-                borderRadius: "6px",
-                boxShadow: "none",
-                px: 3,
-              }}
-            >
-              {t("settings.office.archive.reasons.submit")}
-            </Button>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Modal */}
-        <Dialog
-          open={editOpen}
-          onClose={() => setEditOpen(false)}
-          PaperProps={{
-            sx: { borderRadius: "12px", minWidth: "320px", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" },
-          }}
-          sx={{
-            "& .MuiDialog-container": {
-              justifyContent: "flex-end",
-              alignItems: "flex-start",
-              paddingTop: "80px",
-              paddingRight: "40px",
-            },
-          }}
-        >
-          <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1 }}>
-            <Typography sx={{ fontWeight: 600, fontSize: "1rem", color: "#1f2937" }}>
-              {t("settings.office.archive.reasons.editTemplate")}
-            </Typography>
-            <IconButton onClick={() => setEditOpen(false)} size="small" sx={{ color: "#9ca3af" }}>
-              <MdClose size={18} />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent sx={{ pt: 1, pb: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1, color: "#374151", fontWeight: 500 }}>
-              {t("settings.office.archive.reasons.form.name")}
-            </Typography>
-            <TextField
-              fullWidth
-              size="small"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              disabled={isLoadingReasonForEdit}
-              sx={{ ...inputSx, mb: reasonError ? 1 : 2 }}
-              onKeyDown={(e) => e.key === "Enter" && handleEditReason()}
-            />
-            {reasonError && (
-              <Typography sx={{ mb: 2, color: "#ef5350", fontSize: "0.8125rem" }}>
-                {reasonError}
-              </Typography>
-            )}
-            <Button
-              variant="contained"
-              onClick={handleEditReason}
-              disabled={!editName.trim() || isUpdatingReason || isLoadingReasonForEdit}
-              startIcon={isUpdatingReason ? <CircularProgress size={16} color="inherit" /> : undefined}
-              sx={{
-                backgroundColor: "#29b6f6",
-                "&:hover": { backgroundColor: "#0288d1" },
-                "&.Mui-disabled": { backgroundColor: "#bae6fd", color: "#fff" },
-                textTransform: "none",
-                fontWeight: 600,
-                borderRadius: "6px",
-                boxShadow: "none",
-                px: 3,
-              }}
-            >
-              {t("settings.office.archive.reasons.save")}
-            </Button>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete confirmation */}
-        <Dialog
-          open={!!deleteTarget}
-          onClose={() => { setDeleteTarget(null); setDeleteError(null); }}
-          PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
-        >
-          <DialogTitle sx={{ fontWeight: 600 }}>
-            {t("settings.office.archive.reasons.deleteConfirm.title")}
-          </DialogTitle>
-          <DialogContent>
-            <DialogContentText>
-              {t("settings.office.archive.reasons.deleteConfirm.message", { name: deleteTarget?.name ?? "" })}
-            </DialogContentText>
-            {deleteError && (
-              <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
-                {deleteError}
-              </Typography>
-            )}
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 3 }}>
-            <Button
-              onClick={() => { setDeleteTarget(null); setDeleteError(null); }}
-              variant="outlined"
-              disabled={isDeletingReason}
-              sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
-            >
-              {t("settings.office.archive.reasons.deleteConfirm.cancel")}
-            </Button>
-            <Button
-              onClick={handleDeleteReason}
-              variant="contained"
-              color="error"
-              disabled={isDeletingReason}
-              startIcon={isDeletingReason ? <CircularProgress size={16} color="inherit" /> : undefined}
-              sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
-            >
-              {t("settings.office.archive.reasons.delete")}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </div>
-    );
-  }
-
-  // ════════════════════════════════════════════════════════════════════════════
-  // VIEW: ARCHIVE
-  // ════════════════════════════════════════════════════════════════════════════
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       {/* Header */}
@@ -696,7 +286,7 @@ export const Archive = () => {
         </div>
         <Button
           variant="outlined"
-          onClick={() => setView("reasons")}
+          onClick={() => navigate("/settings/reasons_archiving")}
           sx={{
             borderColor: "#e5e7eb",
             color: "#374151",

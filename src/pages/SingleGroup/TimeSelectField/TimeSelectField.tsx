@@ -12,20 +12,33 @@ interface TimeSelectFieldProps {
 
 export const TimeSelectField = ({ value, onChange, placeholder }: TimeSelectFieldProps) => {
   const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={wrapRef} style={{ position: "relative" }}>
+    <div ref={wrapRef} style={{ position: "relative", minWidth: 160 }}>
       <div
+        role="button"
+        tabIndex={0}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => setOpen((p) => !p)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((p) => !p); }
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         style={{
           display: "flex", alignItems: "center", gap: 10,
-          border: "1px solid var(--color-border)", borderRadius: 10,
-          padding: "12px 14px", cursor: "pointer", background: "var(--color-surface)",
+          boxSizing: "border-box", width: "100%", height: 40,
+          border: `1px solid ${open || hovered ? "var(--color-primary)" : "var(--color-border)"}`,
+          borderRadius: 8, padding: "0 12px", outline: "none",
+          cursor: "pointer", background: "var(--color-surface)",
+          transition: "border-color 0.15s",
         }}
       >
-        <MdAccessTime size={17} color="var(--color-text-muted)" />
-        <span style={{ fontSize: 14, color: value ? "var(--color-text-primary)" : "var(--color-text-muted)" }}>
+        <MdAccessTime size={17} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+        <span style={{ fontSize: 13, lineHeight: 1.2, color: value ? "var(--color-text-primary)" : "var(--color-text-muted)" }}>
           {value || placeholder}
         </span>
       </div>

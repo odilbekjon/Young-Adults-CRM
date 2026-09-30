@@ -117,9 +117,14 @@ export const PaymentMethodPicker = ({ value, onChange, loadingLabel, errorLabel,
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
         {methods.map((m) => (
           <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer", flex: 1, minWidth: 0 }}>
+            {/* onClick lives on the label (not just the 18px circle) so the method's
+                name is clickable too — the label wraps no real <input>, so
+                nothing else would select it. */}
+            <label
+              onClick={() => onChange(m.id, m)}
+              style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer", flex: 1, minWidth: 0 }}
+            >
               <div
-                onClick={() => onChange(m.id, m)}
                 style={{
                   width: 18, height: 18, borderRadius: "50%",
                   border: `2px solid ${value === m.id ? "#185FA5" : "#ccc"}`,

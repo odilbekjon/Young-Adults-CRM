@@ -41,6 +41,22 @@ export interface Course {
   description?: string | null;
 }
 
+// GET /courses/select — trimmed-down course shape for dropdowns.
+export interface CourseSelectOption {
+  id: string;
+  name: string;
+  price?: CoursePrice | number | null;
+  code?: string | null;
+  months?: number | null;
+  lessonDuration?: number | null;
+  lessonsPerMonth?: number | null;
+  description?: string | null;
+}
+
+export interface CoursesSelectRequest {
+  branchId: string;
+}
+
 export interface CoursesResponse {
   success: boolean;
   message: string;

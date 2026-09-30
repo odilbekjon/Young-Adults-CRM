@@ -15,6 +15,7 @@ import {
     TransferStudentRequest,
     TransferStudentResponse,
     GroupHistoryEntry,
+    GroupHistoryChange,
     GroupComment,
     AssignTeachersRequest,
     AssignTeachersResponse,
@@ -31,6 +32,7 @@ import {
     StudentGroupsRequest,
     StudentGroupsResult,
     FreezeStudentGroupRequest,
+    UnfreezeStudentGroupRequest,
     StudentGroupActionResponse,
     UpdateStudentGroupRequest,
     UpdateStudentGroupStatusRequest,
@@ -85,6 +87,63 @@ const asId = (raw: unknown): string | null => {
 // Backend's exact envelope for GET /groups/{id}/history isn't documented
 // beyond a 200 status, so we accept a bare array or a few likely wrappers
 // and normalize field names defensively (same approach as attendancesApi).
+// Every row keeps as much information as we can find: well-known fields map
+// to dedicated properties, status moves become `transition`, and anything
+// else the backend sends (changes/fields/diff blocks or unknown scalar
+// fields) is surfaced as `changes` rows so nothing is silently dropped.
+const historyScalar = (v: unknown): string | null => {
+    if (v === undefined || v === null || v === "") return null;
+    if (typeof v === "string") {
+        // Midnight-UTC ISO timestamps are really plain dates — show them as such.
+        const m = v.match(/^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.0+)?Z?$/);
+        return m ? m[1] : v;
+    }
+    if (typeof v === "number" || typeof v === "boolean") return String(v);
+    return null;
+};
+
+const historyPerson = (v: unknown): string | null => {
+    if (v === undefined || v === null || v === "") return null;
+    if (typeof v !== "object") return String(v);
+    const o = v as Record<string, unknown>;
+    const full = [o.firstName, o.lastName].filter((x) => typeof x === "string" && x).join(" ");
+    const name = o.name ?? o.fullName ?? (full || undefined) ?? o.username ?? o.login ?? o.id;
+    return name === undefined || name === null || name === "" ? null : String(name);
+};
+
+const historyHumanize = (key: string): string => {
+    const words = key
+        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replace(/[_\-.]+/g, " ")
+        .trim()
+        .toLowerCase();
+    return words ? words[0].toUpperCase() + words.slice(1) : key;
+};
+
+const historyFirst = (r: Record<string, unknown>, keys: string[]): unknown => {
+    for (const k of keys) {
+        const v = r[k];
+        if (v !== undefined && v !== null && v !== "") return v;
+    }
+    return undefined;
+};
+
+const HISTORY_KNOWN_KEYS = new Set([
+    "id", "_id", "__v", "updatedAt",
+    "type", "action", "event", "eventType",
+    "detail", "details", "description", "message",
+    "student", "studentId", "studentName", "studentPhone", "phone",
+    "group", "groupId", "groupName", "groupCode", "code", "uid",
+    "oldStatus", "previousStatus", "fromStatus", "statusFrom", "newStatus", "toStatus", "statusTo", "from", "to",
+    "activatedFrom", "activatedAt",
+    "changes", "fields", "diff",
+    "modifiedBy", "actor", "createdBy", "user", "performedBy", "changedBy",
+    "createdAt", "timestamp", "date", "created_at",
+]);
+
+// Containers whose scalar members are unwrapped into rows of their own.
+const HISTORY_NESTED_KEYS = ["data", "meta", "metadata", "payload", "extra", "info", "details"];
+
 const normalizeHistory = (raw: unknown): GroupHistoryEntry[] => {
     const container = (raw ?? {}) as Record<string, unknown>;
     const list: unknown[] = Array.isArray(raw)
@@ -99,16 +158,112 @@ const normalizeHistory = (raw: unknown): GroupHistoryEntry[] => {
         ? container.data
         : [];
 
-    return (list as Record<string, unknown>[]).map((r, i) => ({
-        id: String(r.id ?? r._id ?? i),
-        type: String(r.type ?? r.action ?? r.event ?? "").toUpperCase(),
-        studentId: asId(r.studentId ?? r.student),
-        studentName: asString(r.studentName ?? r.student),
-        studentPhone: (r.studentPhone as string | undefined) ?? null,
-        detail: String(r.detail ?? r.description ?? r.message ?? ""),
-        createdAt: String(r.createdAt ?? r.timestamp ?? r.date ?? ""),
-        actor: asString(r.modifiedBy ?? r.actor ?? r.createdBy ?? r.user),
-    }));
+    return (list as unknown[])
+        .filter((row): row is Record<string, unknown> => !!row && typeof row === "object")
+        .map((r, i) => {
+            const student = (r.student && typeof r.student === "object" ? r.student : {}) as Record<string, unknown>;
+            const group = (r.group && typeof r.group === "object" ? r.group : {}) as Record<string, unknown>;
+
+            // A bare string `group` is either the id (uuid/number) or the name.
+            const groupRefIsId = typeof r.group === "string" && /^([0-9a-f-]{8,}|\d+)$/i.test(r.group);
+
+            const changes: GroupHistoryChange[] = [];
+            const pushChange = (key: string, value: unknown, from?: unknown) => {
+                const v = historyScalar(value);
+                if (v === null) return;
+                changes.push({ key, label: historyHumanize(key), value: v, from: historyScalar(from) });
+            };
+
+            // Status moves: explicit old/new fields first, then a `status`
+            // entry inside a changes/fields/diff block as a fallback.
+            let from = historyScalar(historyFirst(r, ["oldStatus", "previousStatus", "fromStatus", "statusFrom", "from"]));
+            let to = historyScalar(historyFirst(r, ["newStatus", "toStatus", "statusTo", "to"]));
+
+            const block = historyFirst(r, ["changes", "fields", "diff"]);
+            if (Array.isArray(block)) {
+                block.forEach((c, ci) => {
+                    if (c && typeof c === "object") {
+                        const o = c as Record<string, unknown>;
+                        const key = String(historyFirst(o, ["field", "key", "name", "label", "property"]) ?? `change ${ci + 1}`);
+                        const cFrom = historyFirst(o, ["from", "old", "oldValue", "previous", "before"]);
+                        const cTo = historyFirst(o, ["to", "new", "newValue", "value", "current", "after"]);
+                        if (key.toLowerCase() === "status" && (!to || historyScalar(cTo) === to)) {
+                            from = from ?? historyScalar(cFrom);
+                            to = to ?? historyScalar(cTo);
+                        } else {
+                            pushChange(key, cTo, cFrom);
+                        }
+                    } else {
+                        const v = historyScalar(c);
+                        if (v !== null) changes.push({ key: `change${ci}`, label: "", value: v, from: null });
+                    }
+                });
+            } else if (block && typeof block === "object") {
+                Object.entries(block as Record<string, unknown>).forEach(([key, val]) => {
+                    if (val && typeof val === "object" && !Array.isArray(val)) {
+                        const o = val as Record<string, unknown>;
+                        const cFrom = historyFirst(o, ["from", "old", "oldValue", "previous", "before"]);
+                        const cTo = historyFirst(o, ["to", "new", "newValue", "value", "current", "after"]);
+                        if (key.toLowerCase() === "status" && (!to || historyScalar(cTo) === to)) {
+                            from = from ?? historyScalar(cFrom);
+                            to = to ?? historyScalar(cTo);
+                        } else {
+                            pushChange(key, cTo, cFrom);
+                        }
+                    } else if (key.toLowerCase() === "status" && (!to || historyScalar(val) === to)) {
+                        to = to ?? historyScalar(val);
+                    } else {
+                        pushChange(key, val);
+                    }
+                });
+            }
+
+            // Unknown top-level scalars and unwrapped nested containers.
+            const collectExtras = (obj: Record<string, unknown>, skipKnown: boolean) => {
+                Object.entries(obj).forEach(([key, val]) => {
+                    if (skipKnown && HISTORY_KNOWN_KEYS.has(key)) return;
+                    if (/(^|[a-z])Id$|_id$/.test(key) || key === "id") return;
+                    if (skipKnown && HISTORY_NESTED_KEYS.includes(key)) return;
+                    if (key === "status") {
+                        const v = historyScalar(val);
+                        if (v !== null && v !== to) pushChange("status", v);
+                        return;
+                    }
+                    if (Array.isArray(val)) {
+                        const joined = val.map(historyScalar).filter((x): x is string => x !== null).join(", ");
+                        if (joined) pushChange(key, joined);
+                        return;
+                    }
+                    pushChange(key, val);
+                });
+            };
+            collectExtras(r, true);
+            HISTORY_NESTED_KEYS.forEach((k) => {
+                const nested = r[k];
+                if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+                    collectExtras(nested as Record<string, unknown>, false);
+                }
+            });
+
+            const detailRaw = historyFirst(r, ["detail", "description", "message", "details"]);
+
+            return {
+                id: String(r.id ?? r._id ?? `row-${i}`),
+                type: String(historyFirst(r, ["type", "action", "event", "eventType"]) ?? "").toUpperCase(),
+                studentId: asId(r.studentId ?? r.student),
+                studentName: historyPerson(r.studentName ?? r.student),
+                studentPhone: historyScalar(historyFirst(r, ["studentPhone", "phone"]) ?? student.phone),
+                groupId: r.groupId !== undefined && r.groupId !== null ? asId(r.groupId) : groupRefIsId ? String(r.group) : asId(group.id),
+                groupName: historyPerson(r.groupName ?? (typeof r.group === "string" && !groupRefIsId ? r.group : group.name)),
+                groupCode: historyScalar(historyFirst(r, ["groupCode", "code", "uid"]) ?? group.code ?? group.uid),
+                detail: historyScalar(detailRaw) ?? "",
+                transition: from || to ? { from, to } : null,
+                activatedFrom: historyScalar(historyFirst(r, ["activatedFrom", "activatedAt"])),
+                changes,
+                createdAt: String(historyFirst(r, ["createdAt", "timestamp", "date", "created_at"]) ?? ""),
+                actor: historyPerson(historyFirst(r, ["modifiedBy", "actor", "createdBy", "user", "performedBy", "changedBy"])),
+            };
+        });
 };
 
 // Backend's exact envelope for GET /groups/{id}/comments isn't documented
@@ -211,10 +366,18 @@ const buildStudentGroupsQueryString = (args: StudentGroupsRequest = {}): string 
 // .../status all declare multipart/form-data bodies (same convention as
 // appendGroupFormData above, minus the array-field handling this resource
 // doesn't need).
+//
+// A boolean `false` is skipped rather than sent: multipart can only carry it
+// as the string "false", which this backend's validator rejects or coerces to
+// true (confirmed live for the same reason on PaymentMethod.isDefault — see
+// appendPaymentMethodFormData in financeApi). Every boolean field on these
+// endpoints (isAllGroup, studentDelete) defaults to false server-side, so
+// omitting it is equivalent; `true` is still sent.
 const appendStudentGroupFormData = (data: Record<string, string | number | boolean | undefined>): FormData => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== "") formData.append(key, String(value));
+        if (value === undefined || value === "" || value === false) return;
+        formData.append(key, String(value));
     });
     return formData;
 };
@@ -412,11 +575,21 @@ export const groupsApi = baseApi.injectEndpoints({
             // this app already uses elsewhere; kept as its own endpoint since
             // Swagger documents it as a separate resource with its own optional
             // fields (status/joinedAt/paymentStartDate/customPrice/discountReason).
+            // Contract re-checked against Swagger ("Talabani guruhga
+            // biriktirish"): multipart/form-data with studentId* + groupId*
+            // required, status (PROBATION | ACTIVE), joinedAt and
+            // paymentStartDate as YYYY-MM-DD, customPrice as a number (so
+            // sent as its plain string form), discountReason. FormData is
+            // passed as-is so the browser sets the multipart boundary header
+            // itself (no manual Content-Type); empty/NaN values are omitted so
+            // optional fields never arrive as ""/"NaN".
             query: (data) => {
                 const formData = new FormData();
                 (Object.keys(data) as (keyof AddStudentToGroupRequest)[]).forEach((key) => {
                     const value = data[key];
-                    if (value !== undefined && value !== null && value !== "") formData.append(key, String(value));
+                    if (value === undefined || value === null || value === "") return;
+                    if (typeof value === "number" && !Number.isFinite(value)) return;
+                    formData.append(key, String(value));
                 });
                 return {
                     url: PATHS.STUDENT_GROUPS,
@@ -461,11 +634,21 @@ export const groupsApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ["studentGroup", "group", "student"],
         }),
-        unfreezeStudentGroup: builder.mutation<StudentGroupActionResponse, string>({
-            query: (id) => ({
-                url: `${PATHS.STUDENT_GROUPS}/${id}/unfreeze`,
-                method: "POST",
-            }),
+        // POST /student-groups/{id}/unfreeze — Swagger: multipart/form-data
+        // with `endDate` (YYYY-MM-DD, when the freeze ends). Accepts a bare
+        // membership id (StudentProfile) or {id, endDate}; the FormData is
+        // always sent (empty when no date is given) so the multipart body the
+        // endpoint declares is never missing, and no Content-Type is set by
+        // hand so the browser adds the boundary itself.
+        unfreezeStudentGroup: builder.mutation<StudentGroupActionResponse, string | UnfreezeStudentGroupRequest>({
+            query: (arg) => {
+                const { id, endDate } = typeof arg === "string" ? { id: arg, endDate: undefined } : arg;
+                return {
+                    url: `${PATHS.STUDENT_GROUPS}/${id}/unfreeze`,
+                    method: "POST",
+                    body: appendStudentGroupFormData({ endDate }),
+                };
+            },
             invalidatesTags: ["studentGroup", "group", "student"],
         }),
         // POST /student-groups/{id}/graduate-trial — PROBATION -> ACTIVE.

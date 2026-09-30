@@ -244,7 +244,8 @@
       "studentsFractionSlash": "{{count}} o'q. / {{max}}",
       "studentsCountSuffix": "{{count}} / {{max}} o'q.",
       "daysLeft": "{{count}} kun qoldi",
-      "emptyState": "Bu kun turi uchun jadval mavjud emas"
+      "emptyState": "Bu kun turi uchun jadval mavjud emas",
+      "noTime": "Vaqti belgilanmagan"
     },
     "chart": {
       "currency": "UZS",
@@ -284,9 +285,25 @@
       "byCourses": "Kurslar bo'yicha",
       "allCourses": "Barcha kurslar",
       "status": "Status",
-      "statusOptions": { "active": "Faol", "inactive": "Faol emas" },
+      "statusOptions": {
+        "added_this_month": "Shu oy qo'shilgan",
+        "signed_offer": "Oferta imzolagan o'quvchilar",
+        "trial": "Sinov darsi",
+        "active": "Faol",
+        "frozen": "Muzlatilgan",
+        "without_group": "Guruhsiz",
+        "left_after_trial": "Sinovdan keyin ketgan (faollashtirishgacha)",
+        "left_active": "Faol guruhdan ketgan (faollashtirilgandan keyin)",
+        "inactive": "Faol emas"
+      },
       "financialSituation": "Moliyaviy holat",
-      "financialOptions": { "positive": "Musbat balans", "negative": "Manfiy balans", "zero": "Nol balans" },
+      "financialOptions": {
+        "debt": "Qarzdor",
+        "discount": "Chegirmali",
+        "no_debt": "Qarzsiz",
+        "positive": "Musbat balans",
+        "paid_month": "Shu oy to'lagan"
+      },
       "byTags": "Teglar bo'yicha",
       "tagsUnavailable": "Teglar hali mavjud emas",
       "externalId": "Tashqi ID",
@@ -1385,7 +1402,21 @@
           "TEACHER_REMOVED": "O'qituvchi olib tashlandi",
           "STATUS_CHANGED": "Holat o'zgardi",
           "GROUP_UPDATED": "Guruh yangilandi",
-          "GROUP_CREATED": "Guruh yaratildi"
+          "GROUP_CREATED": "Guruh yaratildi",
+          "GROUP_EDITED": "Guruh tahrirlandi",
+          "STUDENT_ACTIVATED": "O'quvchi faollashtirildi",
+          "STUDENT_FROZEN": "O'quvchi muzlatildi",
+          "STUDENT_STATUS_CHANGED": "Holat o'zgardi"
+        },
+        "activatedFrom": "Faollashtirilgan sana",
+        "statuses": {
+          "ACTIVE": "Faol (o'qimoqda)",
+          "PROBATION": "Sinov",
+          "FROZEN": "Muzlatilgan",
+          "INACTIVE": "Nofaol",
+          "DELETED": "Olib tashlangan",
+          "GRADUATED": "Bitirgan",
+          "LEFT": "Ketgan"
         }
       },
       "comments": {
@@ -1440,6 +1471,7 @@
       "toast": {
         "success": "O'quvchi faollashtirildi, to'lov hisoblana boshladi",
         "error": "O'quvchini faollashtirib bo'lmadi",
+        "dateError": "O'quvchi faollashtirildi, lekin to'lov boshlanish sanasini saqlab bo'lmadi — balansini tekshiring",
         "notFound": "Bu o'quvchi uchun aktiv muzlatish yozuvi topilmadi"
       }
     },
@@ -1491,8 +1523,20 @@
       "selectStudent": "O'quvchini tanlang",
       "selectPlaceholder": "Tanlang",
       "noStudentsFound": "O'quvchilar topilmadi",
-      "startDate": "Qachondan",
+      "startDate": "Qo'shilgan sana",
       "submit": "O'quvchi qo'shish",
+      "change": "O'zgartirish",
+      "searching": "Qidirilmoqda...",
+      "searchError": "Qidiruv amalga oshmadi. Qaytadan urinib ko'ring.",
+      "alreadyInGroup": "Guruhda bor",
+      "inGroupArchived": "Guruhda (arxivda)",
+      "customPrice": "Individual narx",
+      "optional": "ixtiyoriy",
+      "customPricePlaceholder": "Bo'sh qoldirilsa, kurs narxi qo'llanadi",
+      "customPriceInvalid": "To'g'ri (manfiy bo'lmagan) summa kiriting",
+      "discountReason": "Chegirma sababi",
+      "discountReasonPlaceholder": "Nega narx boshqacha?",
+      "frozenNote": "O'quvchi muzlatilgan holatda qo'shiladi. Uni tanlangan sanadan boshlash uchun o'quvchi menyusidagi Faollashtirish tugmasidan foydalaning.",
       "cancel": "Bekor qilish",
       "toast": {
         "success": "O'quvchi guruhga qo'shildi",
@@ -1589,7 +1633,12 @@
       "title": "Rostdan ham o'chirmoqchimisiz?",
       "removeFromGroup": "Guruhdan o'chirish",
       "deleteStudent": "O'quvchini o'chirish",
+      "deleteOnlyInArchive": "Butunlay o'chirish faqat Arxiv sahifasida mavjud",
+      "deleteStudentHint": "O'quvchi arxivga o'tkaziladi (butunlay o'chirish faqat Arxiv sahifasida mavjud)",
       "reasonsForRemoval": "O'chirish sabablari",
+      "reasonsLoading": "Sabablar yuklanmoqda...",
+      "reasonsEmpty": "Sabablar mavjud emas",
+      "reasonsError": "Sabablar ro'yxatini yuklab bo'lmadi",
       "reasons": {
         "noAttendance": "Davomat yo'q",
         "disciplineProblem": "Intizom muammosi",
@@ -1605,6 +1654,7 @@
       "cancel": "Bekor qilish",
       "toast": {
         "removed": "O'quvchi guruhdan chiqarildi",
+        "archived": "O'quvchi arxivga o'tkazildi",
         "deleted": "O'quvchi o'chirildi",
         "error": "O'quvchini chiqarib bo'lmadi. Qaytadan urinib ko'ring."
       }
@@ -1615,6 +1665,8 @@
         "selectBranch": "Filialni tanlang",
         "submit": "Filialga ko'chirish",
         "moving": "Ko'chirilmoqda...",
+        "reasonPlaceholder": "Sabab (ixtiyoriy)",
+        "defaultReason": "Guruh sahifasidan ko'chirildi",
         "toast": {
           "success": "O'quvchi filialga ko'chirildi",
           "error": "O'quvchini filialga ko'chirib bo'lmadi. Qaytadan urinib ko'ring."
@@ -1653,6 +1705,62 @@
       "note": "Izoh",
       "allCoins": "Barcha tangalar",
       "goToProfile": "Profilga o'tish →"
+    }
+  },
+  "reasonsArchiving": {
+    "title": "Arxivlash sabablari",
+    "back": "Arxivga qaytish",
+    "refresh": "Yangilash",
+    "addNew": "Sabab qo'shish",
+    "searchPlaceholder": "Nomi bo'yicha qidirish",
+    "toggleStatus": "Holatni o'zgartirish",
+    "edit": "Tahrirlash",
+    "delete": "O'chirish",
+    "loadError": "Sabablarni yuklab bo'lmadi",
+    "emptyState": "Sabablar topilmadi",
+    "statusOptions": {
+      "all": "Barchasi",
+      "active": "Faol",
+      "inactive": "Nofaol"
+    },
+    "table": {
+      "name": "Nomi",
+      "type": "Turi",
+      "status": "Holati",
+      "createdBy": "Yaratgan",
+      "createdAt": "Yaratilgan sana",
+      "actions": "Amallar"
+    },
+    "drawer": {
+      "addTitle": "Sabab qo'shish",
+      "editTitle": "Sababni tahrirlash"
+    },
+    "form": {
+      "name": "Nomi",
+      "namePlaceholder": "Masalan: boshqa markazga o'tdi",
+      "type": "Turi",
+      "typePlaceholder": "Ixtiyoriy",
+      "cancel": "Bekor qilish",
+      "save": "Saqlash",
+      "errors": {
+        "name": "Sabab nomini kiriting",
+        "branchRequired": "Avval aniq filialni tanlang — sabab bitta filial uchun yaratiladi.",
+        "save": "Saqlab bo'lmadi"
+      }
+    },
+    "errors": {
+      "toggle": "Holatni o'zgartirib bo'lmadi"
+    },
+    "deleteConfirm": {
+      "title": "Sababni o'chirish",
+      "message": "\"{{name}}\" sababini o'chirishni xohlaysizmi? Bu amalni ortga qaytarib bo'lmaydi.",
+      "error": "Sababni o'chirib bo'lmadi"
+    },
+    "toast": {
+      "created": "Sabab muvaffaqiyatli qo'shildi",
+      "updated": "Sabab muvaffaqiyatli yangilandi",
+      "deleted": "Sabab muvaffaqiyatli o'chirildi",
+      "statusToggled": "Sabab holati yangilandi"
     }
   },
   "settings": {
@@ -2400,7 +2508,8 @@
           "message": "O'quv markazini tark etgan o'quvchilar hisobotidagi muammolar tuzatildi. Bundan tashqari, jadvalga yangi zarur ustunlar va filtrlar qo'shildi. 18.02.2025 sanasidan boshlab, guruhdan o'chirilgan barcha o'quvchilar \"Yangi jadval\"da qayd etiladi va endi eski jadvalga qo'shilmaydi. 18.02.2025 dan oldingi ma'lumotlarni ko'rish uchun eski jadvalga o'ting."
         },
         "tabs": { "new": "Yangi", "old": "Eski" },
-        "filters": { "searchByNameOrPhone": "Ism yoki telefon bo'yicha qidirish", "course": "Kurs", "group": "Guruh", "teachers": "O'qituvchilar", "staff": "Xodim", "reasonsForArchiving": "Arxivlash sabablari", "status": "Holat", "filter": "Filtr" },
+        "filters": { "searchByNameOrPhone": "Ism yoki telefon bo'yicha qidirish", "course": "Kurs", "group": "Guruh", "teachers": "O'qituvchilar", "staff": "Xodim", "reasonsForArchiving": "Arxivlash sabablari", "status": "Holat", "filter": "Filtr", "startDate": "Boshlanish sanasi", "endDate": "Tugash sanasi", "reset": "Tozalash" },
+        "leftStatuses": { "trial": "Sinov darsi", "frozen": "Muzlatilgan", "active": "Faol" },
         "toolbar": { "filters": "Filtrlar", "columns": "Ustunlar" },
         "table": { "number": "#", "student": "O'quvchi", "phone": "Telefon", "course": "Kurs", "group": "Guruh", "teacher": "O'qituvchi", "status": "Holat", "reasonsForRemoval": "O'chirish sabablari", "comment": "Izoh", "staff": "Xodim" },
         "statusLabels": { "INACTIVE": "Chetlashtirilgan", "DELETED": "O'chirilgan" },

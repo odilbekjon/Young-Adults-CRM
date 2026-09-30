@@ -6,11 +6,13 @@ import { useTranslation } from "react-i18next";
 import { IconButton, Button, CircularProgress } from "@mui/material";
 import { IoArrowBack } from "react-icons/io5";
 import { MdEdit, MdClose } from "react-icons/md";
-import { BsFlag } from "react-icons/bs";
+import { BsFlag, BsPerson } from "react-icons/bs";
 import { useTeacherByIdQuery, useTeacherForEditQuery, useUpdateTeacherMutation, useTeacherHistoryQuery } from "../../app/api/teachersApi";
 import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useAllGroupsQuery } from "../../app/api/groupsApi";
+import { useStudentByIdQuery } from "../../app/api/studentsApi";
+import { BALANCE_STATUS_COLOR, classifyBalance } from "../../utils/balance";
 import { useTeacherSalariesQuery } from "../../app/api/salariesApi";
 import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
@@ -42,7 +44,7 @@ function getInitials(name: string) {
 }
 function formatDate(d: string | null) {
   if (!d) return "—";
-  const [y, m, day] = d.split("-");
+  const [y, m, day] = d.slice(0, 10).split("-");
   if (!y || !m || !day) return d;
   return `${day}.${m}.${y}`;
 }
@@ -63,6 +65,9 @@ interface ProfileGroup {
   room: string;
   students: ProfileGroupStudent[];
 }
+
+const TOOLTIP_WIDTH = 300;
+const TOOLTIP_HEIGHT = 470; // conservative estimate, only used to keep the card on screen
 
 type TabType = "profile" | "history" | "salary";
 
@@ -238,31 +243,95 @@ const GroupCard = ({ group, index, isSelected, onSelect }: { group: ProfileGroup
   );
 };
 
-/* ── StudentTooltip ── */
+/* ── StudentTooltip ──
+   Hover card for a student row. The group payload only carries name/phone,
+   so balance/status/dates come from GET /students/{id} (RTK-cached, fetched
+   only while the card is open). */
+const TooltipField = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div style={{ borderTop: "1px solid #ececec", padding: "9px 0" }}>
+    <div style={{ fontSize: 12, color: "#8a8a8a", marginBottom: 3 }}>{label}</div>
+    <div style={{ fontSize: 14, color: "#1a1a1a" }}>{children}</div>
+  </div>
+);
+
 const StudentTooltip = ({
-  student, visible, position,
+  student, position, onNavigate, onMouseEnter, onMouseLeave,
 }: {
-  student: ProfileGroupStudent | undefined;
-  visible: boolean;
+  student: ProfileGroupStudent;
   position: { top: number; left: number };
+  onNavigate: (id: string) => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }) => {
-  if (!visible || !student) return null;
+  const { t } = useTranslation();
+  const { data } = useStudentByIdQuery(student.id);
+  const detail = data?.data;
+
+  const name = detail?.name ?? student.name;
+  const phone = detail?.phone ?? student.phone;
+  const balance = detail?.balance;
+  const isDebtor = balance !== undefined && balance < 0;
+  const statusLabel =
+    detail?.status === "INACTIVE"
+      ? t("singleGroup.studentHoverCard.inactiveArchived")
+      : detail?.status === "FROZEN"
+      ? t("singleGroup.studentHoverCard.frozenPaused")
+      : t("singleGroup.studentHoverCard.activeLearns");
 
   return (
-    <div style={{ position: "fixed", top: position.top, left: position.left, zIndex: 2000, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", padding: "16px", width: 240, pointerEvents: "none", animation: "tooltipFadeIn 0.15s ease" }}>
+    <div
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      style={{ position: "fixed", top: position.top, left: position.left, zIndex: 2000, background: "#fff", border: "1px solid #e2e2e2", borderRadius: 4, boxShadow: "0 4px 18px rgba(0,0,0,0.16)", padding: "16px 22px 12px", width: TOOLTIP_WIDTH, animation: "tooltipFadeIn 0.15s ease" }}
+    >
       <style>{`@keyframes tooltipFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{student.name}</div>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 2 }}>
+        <span style={{ fontSize: 16, color: "#1a1a1a" }}>{name}</span>
+        <span style={{ fontSize: 12, color: "#9a9a9a", whiteSpace: "nowrap" }}>
+          (id:{student.id.length > 8 ? `${student.id.slice(0, 8)}…` : student.id})
+        </span>
       </div>
+      <div style={{ fontSize: 13, color: "#8a8a8a", marginBottom: 8 }}>{statusLabel}</div>
+      {isDebtor && (
+        <span style={{ display: "inline-block", background: BALANCE_STATUS_COLOR.debtor, color: "#fff", fontSize: 11, fontWeight: 600, borderRadius: 20, padding: "3px 12px", marginBottom: 12 }}>
+          {t("singleGroup.studentHoverCard.debtor")}
+        </span>
+      )}
 
-      <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "10px 0" }} />
+      <TooltipField label={t("singleGroup.studentHoverCard.phone")}>{phone || "—"}</TooltipField>
 
-      <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>Phone</div>
-      <div style={{ fontSize: 13, color: "#1a1a1a", fontWeight: 500, marginBottom: 10 }}>{student.phone}</div>
+      <TooltipField label={t("singleGroup.studentHoverCard.balance")}>
+        {balance === undefined || balance === 0 ? (
+          <span style={{ color: "#bbb" }}>—</span>
+        ) : (
+          <span style={{ display: "inline-block", background: BALANCE_STATUS_COLOR[classifyBalance(balance)], color: "#fff", fontSize: 12, fontWeight: 600, borderRadius: 20, padding: "3px 12px" }}>
+            {balance > 0 ? "+" : ""}{balance.toLocaleString("ru-RU")} UZS
+          </span>
+        )}
+      </TooltipField>
 
-      <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 10, textAlign: "right" }}>
-        <span style={{ fontSize: 12, color: "#185FA5", fontWeight: 500 }}>Go to profile →</span>
+      <TooltipField label={t("singleGroup.studentHoverCard.addedAt")}>{detail?.createdAt ? formatDate(detail.createdAt) : "—"}</TooltipField>
+      <TooltipField label={t("singleGroup.studentHoverCard.activatedAt")}>{detail?.groupsStart ? formatDate(detail.groupsStart) : "—"}</TooltipField>
+
+      {detail?.comment && (
+        <TooltipField label={t("singleGroup.studentHoverCard.note")}>
+          <span style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{detail.comment}</span>
+        </TooltipField>
+      )}
+
+      {/* Coins are not tracked by the backend yet: static 0, same as the
+          SingleGroup hover card. */}
+      <TooltipField label={t("singleGroup.studentHoverCard.allCoins")}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span aria-hidden style={{ width: 16, height: 16, borderRadius: "50%", background: "#f5a623", display: "inline-block" }} /> 0
+        </span>
+      </TooltipField>
+
+      <div style={{ borderTop: "1px solid #ececec", paddingTop: 10, textAlign: "right" }}>
+        <span onClick={() => onNavigate(student.id)} style={{ fontSize: 14, color: "#1a1a1a", cursor: "pointer" }}>
+          {t("singleGroup.studentHoverCard.goToProfile")}
+        </span>
       </div>
     </div>
   );
@@ -279,23 +348,33 @@ const StudentRow = ({
   const [hovered, setHovered] = useState(false);
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
   const rowRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimers = () => {
+    if (enterTimer.current) clearTimeout(enterTimer.current);
+    if (leaveTimer.current) clearTimeout(leaveTimer.current);
+  };
+  useEffect(() => clearTimers, []);
 
   const handleMouseEnter = () => {
+    clearTimers();
     if (rowRef.current) {
       const rect = rowRef.current.getBoundingClientRect();
-      const leftCandidate = rect.left - 256;
+      const leftCandidate = rect.left - TOOLTIP_WIDTH - 6;
       setTooltipPos({
-        top: Math.min(rect.top, window.innerHeight - 380),
-        left: leftCandidate > 0 ? leftCandidate : rect.right + 8,
+        top: Math.max(12, Math.min(rect.top - 20, window.innerHeight - TOOLTIP_HEIGHT - 12)),
+        left: leftCandidate > 12 ? leftCandidate : rect.right + 6,
       });
     }
-    timerRef.current = setTimeout(() => setHovered(true), 200);
+    enterTimer.current = setTimeout(() => setHovered(true), 200);
   };
 
+  // Short grace period so the pointer can travel from the row into the card
+  // (the "Go to profile" link inside it is clickable).
   const handleMouseLeave = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setHovered(false);
+    clearTimers();
+    leaveTimer.current = setTimeout(() => setHovered(false), 200);
   };
 
   return (
@@ -310,7 +389,15 @@ const StudentRow = ({
         <span style={{ fontSize: 12, color: hovered ? "#185FA5" : "#1a1a1a", fontWeight: hovered ? 500 : 400, transition: "color 0.12s" }}>{student.name}</span>
         <span style={{ fontSize: 11, color: "#888" }}>{student.phone}</span>
       </div>
-      <StudentTooltip student={student} visible={hovered} position={tooltipPos} />
+      {hovered && (
+        <StudentTooltip
+          student={student}
+          position={tooltipPos}
+          onNavigate={onNavigate}
+          onMouseEnter={clearTimers}
+          onMouseLeave={handleMouseLeave}
+        />
+      )}
     </>
   );
 };
@@ -352,7 +439,7 @@ const StudentsList = ({
 /* ══════════════════════════════════════════
    HistoryTab
 ══════════════════════════════════════════ */
-const HistoryTab = ({ teacherId }: { teacherId: string }) => {
+const HistoryTab = ({ teacherId, teacherName, teacherPhone }: { teacherId: string; teacherName: string; teacherPhone?: string | null }) => {
   const { t } = useTranslation();
   const { data: entries, isLoading, isError } = useTeacherHistoryQuery(teacherId, { skip: !teacherId });
 
@@ -366,37 +453,52 @@ const HistoryTab = ({ teacherId }: { teacherId: string }) => {
     return <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: 14 }}>{t("teacherProfile.history.emptyState")}</div>;
   }
 
+  // Backend gives an ISO timestamp, shown as DD.MM.YYYY HH:mm:ss (24h).
+  const formatStamp = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 860 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
       {entries.map((entry) => (
         <div
           key={entry.id}
           style={{
             background: "#fff",
-            border: "1px solid #e8e8e8",
-            borderRadius: 12,
-            padding: "18px 24px",
+            borderRadius: 3,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+            padding: "26px 32px 22px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
+            gap: 24,
           }}
         >
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 500, color: "#1a1a1a", marginBottom: entry.detail ? 8 : 0 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 20, color: "#1f1f1f", lineHeight: 1.25, marginBottom: 16 }}>
               {t(`teacherProfile.history.types.${entry.type}`, { defaultValue: entry.type.toLowerCase().split("_").filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") || "—" })}
             </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#185FA5", flexWrap: "wrap" }}>
+              <BsPerson size={14} style={{ flexShrink: 0 }} />
+              <span>{teacherName}</span>
+              {teacherPhone && (
+                <>
+                  <span style={{ color: "#555" }}>•</span>
+                  <span>{teacherPhone}</span>
+                </>
+              )}
+            </div>
             {entry.detail && (
-              <div style={{ fontSize: 13, color: "#555" }}>{entry.detail}</div>
+              <div style={{ fontSize: 13, color: "#555", marginTop: 10 }}>{entry.detail}</div>
             )}
           </div>
 
-          <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 24 }}>
-            {entry.createdAt && (
-              <div style={{ fontSize: 13, color: "#888" }}>{new Date(entry.createdAt).toLocaleString()}</div>
-            )}
-            {entry.actor && (
-              <div style={{ fontSize: 13, color: "#888", marginTop: 2 }}>{entry.actor}</div>
-            )}
+          <div style={{ textAlign: "right", flexShrink: 0, fontSize: 14, color: "#8a8a8a", lineHeight: 1.5 }}>
+            {entry.createdAt && <div>{formatStamp(entry.createdAt)}</div>}
+            {entry.actor && <div>{entry.actor}</div>}
           </div>
         </div>
       ))}
@@ -710,7 +812,7 @@ export const TeacherProfile = () => {
         </div>
       )}
 
-      {activeTab === "history" && <HistoryTab teacherId={teacher.id} />}
+      {activeTab === "history" && <HistoryTab teacherId={teacher.id} teacherName={teacher.name} teacherPhone={teacher.phone} />}
       {activeTab === "salary" && <SalaryTab teacherId={id ?? ""} />}
 
       <EditDrawer teacher={teacherForEditData?.data ?? teacher} open={editOpen} onClose={() => setEditOpen(false)} branches={branches} onSave={handleSaveTeacher} isSaving={isSaving} />

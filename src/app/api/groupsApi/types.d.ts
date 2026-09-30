@@ -188,13 +188,26 @@ export interface TransferStudentResponse {
 // Backend's exact envelope for /groups/{id}/history isn't documented beyond
 // a 200 status, so this is our normalized shape (see normalizeHistory in
 // groupsApi.tsx) rather than a literal mirror of the raw response.
+export interface GroupHistoryChange {
+  key: string;
+  label: string;
+  value: string;
+  from: string | null;
+}
+
 export interface GroupHistoryEntry {
   id: string;
   type: string;
   studentId: string | null;
   studentName: string | null;
   studentPhone: string | null;
+  groupId: string | null;
+  groupName: string | null;
+  groupCode: string | null;
   detail: string;
+  transition: { from: string | null; to: string | null } | null;
+  activatedFrom: string | null;
+  changes: GroupHistoryChange[];
   createdAt: string;
   actor: string | null;
 }
@@ -335,6 +348,15 @@ export interface FreezeStudentGroupRequest {
   startDate: string;
   endDate?: string;
   reason?: string;
+}
+
+// POST /student-groups/{id}/unfreeze — same membership id as freeze.
+// Swagger: multipart/form-data, `endDate` (YYYY-MM-DD, the date the freeze
+// ends / the student is released) is the only body field. Callers that don't
+// care about the date may still pass just the id string.
+export interface UnfreezeStudentGroupRequest {
+  id: string;
+  endDate?: string;
 }
 
 export interface StudentGroupActionResponse {

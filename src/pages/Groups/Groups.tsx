@@ -26,7 +26,7 @@ import {
   useStudentGroupsQuery,
 } from "../../app/api/groupsApi";
 import type { Group, GroupDay } from "../../app/api/groupsApi/types";
-import { useAllCoursesQuery } from "../../app/api/coursesApi";
+import { useAllCoursesQuery, useCoursesSelectQuery } from "../../app/api/coursesApi";
 import { useAllRoomsQuery } from "../../app/api/roomsApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useTeachersSelectQuery } from "../../app/api/teachersApi";
@@ -68,9 +68,9 @@ interface GroupRow {
 }
 
 interface Filters {
-  status: string;
-  teacher: string;
-  course: string;
+  status: string;        // "ACTIVE" | "ARCHIVE" | "COMPLETED" (see matchesStatus)
+  teacher: string[];     // teacher ids (multi-select)
+  course: string;        // course id
   days: string;
   tags: string[];
   startDate: string;
@@ -100,6 +100,14 @@ const ALL_COLUMNS = [
   { key: "room",         label: "Room" },
   { key: "studentCount", label: "Students" },
 ];
+
+const DEFAULT_FILTERS: Filters = {
+  status: "ACTIVE", teacher: [], course: "", days: "", tags: [], startDate: "", endDate: "",
+};
+
+const FILTER_HEIGHT = 36;
+const FILTER_WIDTH = 150;
+const FILTER_BLUE = "#185FA5";
 
 const EMPTY_FORM: FormState = {
   name: "", courseId: "", teacherIds: [], roomId: "", days: [],
@@ -165,72 +173,168 @@ const toGroupRow = (g: Group, archivedMembershipKeys: Set<string>): GroupRow => 
   createdAt: g.createdAt,
 });
 
+// GET /groups only exposes ACTIVE/ARCHIVE (PATCH /groups/{id}/toggle-status
+// flips between them) — there is no COMPLETED value in the backend enum that
+// the app knows of, so "completed" is derived: an explicit COMPLETED/FINISHED
+// status if the backend ever sends one, otherwise a non-archived group whose
+// trainingEnd date is already in the past.
+const ARCHIVED_STATUSES = ["ARCHIVE", "ARCHIVED", "INACTIVE"];
+const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const isCompletedGroup = (g: GroupRow, today: string): boolean => {
+  const status = g.status.toUpperCase();
+  if (status === "COMPLETED" || status === "FINISHED") return true;
+  if (ARCHIVED_STATUSES.includes(status)) return false;
+  return Boolean(g.endDate) && g.endDate.slice(0, 10) < today;
+};
+const matchesStatus = (g: GroupRow, status: string, today: string): boolean => {
+  if (!status) return true;
+  if (status === "COMPLETED") return isCompletedGroup(g, today);
+  if (status === "ARCHIVE")   return ARCHIVED_STATUSES.includes(g.status.toUpperCase());
+  return g.status.toUpperCase() === "ACTIVE" && !isCompletedGroup(g, today);
+};
+
 // Tag filtering itself is applied server-side (tagId forwarded to
 // useAllGroupsQuery below) — groups carry no per-row tag list to re-check
 // client-side against.
-const matchesFilters = (g: GroupRow, filters: Filters): boolean => {
-  if (filters.status  && g.status !== filters.status) return false;
-  if (filters.teacher && !g.teacherNames.includes(filters.teacher)) return false;
-  if (filters.course  && g.course !== filters.course)  return false;
+const matchesFilters = (g: GroupRow, filters: Filters, today: string): boolean => {
+  if (!matchesStatus(g, filters.status, today)) return false;
+  if (filters.teacher.length && !filters.teacher.some((id) => g.teacherIds.includes(id))) return false;
+  if (filters.course  && g.courseId !== filters.course) return false;
   if (filters.days    && g.days   !== filters.days)     return false;
   if (filters.startDate && g.startDate && g.startDate < filters.startDate) return false;
   if (filters.endDate   && g.endDate   && g.endDate   > filters.endDate)   return false;
   return true;
 };
 
+/* ─── shared filter look ─────────────────────────────────── */
+const filterTriggerSx = (active: boolean, open: boolean) => ({
+  display: "flex", alignItems: "center", gap: "6px",
+  width: FILTER_WIDTH, height: FILTER_HEIGHT, boxSizing: "border-box" as const,
+  px: "10px", py: 0,
+  border: "1px solid", borderColor: active || open ? FILTER_BLUE : "#d0d5dd",
+  borderRadius: "6px", bgcolor: "white",
+  color: active ? FILTER_BLUE : "#667085",
+  fontFamily: "inherit", fontSize: 13, fontWeight: 400, lineHeight: 1,
+  textAlign: "left" as const, cursor: "pointer", outline: "none",
+  "&:hover": { borderColor: FILTER_BLUE },
+  "&:focus-visible": { borderColor: FILTER_BLUE, boxShadow: `0 0 0 2px ${FILTER_BLUE}22` },
+});
+
+const filterMenuPaperSx = {
+  mt: "4px", minWidth: FILTER_WIDTH, maxHeight: 300,
+  border: "1px solid #e4e7ec", borderRadius: "8px",
+  boxShadow: "0 8px 24px rgba(16,24,40,0.12)",
+  "& .MuiList-root": { py: "4px" },
+};
+
+const filterItemSx = (selected: boolean) => ({
+  fontSize: 13, minHeight: 34, mx: "4px", px: "10px", py: "6px", borderRadius: "6px", gap: 1,
+  color: selected ? FILTER_BLUE : "#344054",
+  fontWeight: selected ? 700 : 400,
+  "&.Mui-selected": { bgcolor: "transparent" },
+  "&:hover, &.Mui-selected:hover, &.Mui-focusVisible": { bgcolor: "#f2f4f7" },
+});
+
 /* ─── DropdownFilter ─────────────────────────────────────── */
 interface DropdownProps {
   label: string;
-  value: string;
+  value: string[];
   options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-  onClear?: () => void;
-  minWidth?: number;
+  onChange: (v: string[]) => void;
+  // multi: checkbox list + chip in the trigger; otherwise single choice
+  multiple?: boolean;
+  // shows an "x" in the trigger to reset just this filter
+  clearable?: boolean;
+  // text of the disabled row shown when there are no options
+  emptyLabel?: string;
 }
-const DropdownFilter = ({ label, value, options, onChange, onClear, minWidth = 200 }: DropdownProps) => {
+const DropdownFilter = ({ label, value, options, onChange, multiple = false, clearable = true, emptyLabel = "—" }: DropdownProps) => {
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
   const open = Boolean(anchor);
+  const labelOf = (v: string) => options.find((o) => o.value === v)?.label ?? v;
+  const active = value.length > 0;
+
+  const handlePick = (v: string) => {
+    if (multiple) {
+      onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+    } else {
+      onChange([v]);
+      setAnchor(null);
+    }
+  };
+
   return (
     <>
-      <Button
-        variant="outlined"
-        size="small"
-        endIcon={<HiChevronDown style={{ transform: open ? "rotate(180deg)" : undefined, transition: "transform 0.15s" }} />}
-        onClick={(e) => setAnchor(e.currentTarget)}
-        sx={{
-          borderRadius: "8px",
-          borderColor: value ? "primary.main" : "#d0d5dd",
-          color: value ? "primary.main" : "#667085",
-          bgcolor: value ? "#eff8ff" : "white",
-          fontWeight: 400, fontSize: 13, px: 1.5, py: 0.9,
-          minWidth, justifyContent: "space-between",
-          textTransform: "none",
-          "&:hover": { borderColor: "primary.main", bgcolor: "#eff8ff" },
-        }}
-      >
-        {value ? (
-          <Stack direction="row" alignItems="center" gap={0.5} flex={1} justifyContent="space-between">
-            <span>{options.find((o) => o.value === value)?.label || value}</span>
-            <IoClose size={14} onClick={(e) => { e.stopPropagation(); onClear?.(); }} />
-          </Stack>
-        ) : <span style={{ flex: 1, textAlign: "left" }}>{label}</span>}
-      </Button>
+      <Box component="button" type="button" onClick={(e: React.MouseEvent<HTMLElement>) => setAnchor(e.currentTarget)} sx={filterTriggerSx(active, open)}>
+        <Box sx={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: "4px" }}>
+          {!active && (
+            <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</Box>
+          )}
+          {active && multiple && (
+            <>
+              <Box
+                component="span"
+                sx={{
+                  minWidth: 0, maxWidth: value.length > 1 ? 74 : "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  bgcolor: "#e8f1fa", borderRadius: "4px", px: "6px", py: "3px", fontSize: 12, fontWeight: 500,
+                }}
+              >
+                {labelOf(value[0])}
+              </Box>
+              {value.length > 1 && (
+                <Box component="span" sx={{ fontSize: 12, fontWeight: 600, flexShrink: 0 }}>+{value.length - 1}</Box>
+              )}
+            </>
+          )}
+          {active && !multiple && (
+            <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 500 }}>
+              {labelOf(value[0])}
+            </Box>
+          )}
+        </Box>
+        {active && clearable && (
+          <IoClose
+            size={14}
+            style={{ flexShrink: 0 }}
+            onClick={(e) => { e.stopPropagation(); onChange([]); }}
+          />
+        )}
+        <HiChevronDown
+          size={14}
+          style={{ flexShrink: 0, color: "#98a2b3", transform: open ? "rotate(180deg)" : undefined, transition: "transform 0.15s" }}
+        />
+      </Box>
       <Menu
         anchorEl={anchor}
         open={open}
         onClose={() => setAnchor(null)}
-        PaperProps={{ sx: { borderRadius: 2, minWidth, mt: 0.5 } }}
+        PaperProps={{ sx: filterMenuPaperSx }}
       >
-        {options.map((o) => (
-          <MenuItem
-            key={o.value}
-            selected={value === o.value}
-            onClick={() => { onChange(o.value); setAnchor(null); }}
-            sx={{ fontSize: 13, fontWeight: value === o.value ? 700 : 400, color: value === o.value ? "primary.main" : "inherit" }}
-          >
-            {o.label}
-          </MenuItem>
-        ))}
+        {options.length === 0 && (
+          <MenuItem disabled sx={{ fontSize: 13 }}>{emptyLabel}</MenuItem>
+        )}
+        {options.map((o) => {
+          const selected = value.includes(o.value);
+          return (
+            <MenuItem key={o.value} selected={selected} onClick={() => handlePick(o.value)} sx={filterItemSx(selected)}>
+              {multiple && (
+                <Box
+                  sx={{
+                    width: 15, height: 15, borderRadius: "4px", border: "1.5px solid", flexShrink: 0,
+                    borderColor: selected ? FILTER_BLUE : "#d0d5dd", bgcolor: selected ? FILTER_BLUE : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  {selected && <Box sx={{ width: 7, height: 7, bgcolor: "white", borderRadius: "2px" }} />}
+                </Box>
+              )}
+              <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.label}</Box>
+            </MenuItem>
+          );
+        })}
       </Menu>
     </>
   );
@@ -242,46 +346,31 @@ interface DateFilterProps {
   value: string;
   onChange: (v: string) => void;
   onClear: () => void;
-  minWidth?: number;
 }
-const DateFilter = ({ label, value, onChange, onClear, minWidth = 200 }: DateFilterProps) => {
+const DateFilter = ({ label, value, onChange, onClear }: DateFilterProps) => {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
-      <Button
-        variant="outlined"
-        size="small"
-        startIcon={<TbCalendar size={14} />}
-        onClick={() => setOpen((p) => !p)}
-        sx={{
-          borderRadius: "8px",
-          borderColor: value ? "primary.main" : "#d0d5dd",
-          color: value ? "primary.main" : "#667085",
-          bgcolor: value ? "#eff8ff" : "white",
-          fontSize: 13, fontWeight: 400, px: 1.5, py: 0.9,
-          minWidth, justifyContent: "flex-start",
-          textTransform: "none",
-          position: "relative",
-          "&:hover": { borderColor: "primary.main", bgcolor: "#eff8ff" },
-        }}
-      >
-        {value ? (
-          <Stack direction="row" alignItems="center" gap={0.5}>
-            <span>{formatTrainingDate(value)}</span>
-            <IoClose
-              size={14}
-              onClick={(e) => { e.stopPropagation(); onClear(); }}
-            />
-          </Stack>
-        ) : label}
-      </Button>
+      <Box component="button" type="button" onClick={() => setOpen((p) => !p)} sx={filterTriggerSx(Boolean(value), open)}>
+        <TbCalendar size={14} style={{ flexShrink: 0 }} />
+        <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: value ? 500 : 400 }}>
+          {value ? formatTrainingDate(value) : label}
+        </Box>
+        {value && (
+          <IoClose
+            size={14}
+            style={{ flexShrink: 0 }}
+            onClick={(e) => { e.stopPropagation(); onClear(); }}
+          />
+        )}
+      </Box>
       <PortalPopover open={open} onClose={() => setOpen(false)} anchorRef={wrapRef}>
         <div
           style={{
-            width: 300, background: "#fff", border: "1px solid #eee",
-            borderRadius: 12, boxShadow: "0 12px 32px rgba(0,0,0,0.14)",
+            width: 300, boxSizing: "border-box", background: "var(--color-surface)", border: "1px solid var(--color-border)",
+            borderRadius: 12, boxShadow: "0 12px 32px var(--color-shadow)",
             padding: 16,
           }}
         >
@@ -312,9 +401,7 @@ export const Groups = () => {
 
   // Declared ahead of useAllGroupsQuery below so filters.tags[0] can be
   // forwarded to it as a real server-side tagId filter.
-  const [filters, setFilters] = useState<Filters>({
-    status: "", teacher: "", course: "", days: "", tags: [], startDate: "", endDate: "",
-  });
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
 
   const { data: groupsData, isLoading: groupsLoading, isError: groupsError } = useAllGroupsQuery({
     page: 1,
@@ -352,9 +439,27 @@ export const Groups = () => {
   // because its client-side branch-name filter depended on a `branches`
   // shape that endpoint doesn't reliably return.
   const { data: teacherOptions } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" });
-  // GET /tags/select?type=GROUP — real, admin-managed tags for the Groups
-  // "Tags" filter (previously a hardcoded New/Popular/VIP/Trial heuristic).
-  const { data: tagOptions } = useTagsSelectQuery({ type: "GROUP" });
+  // GET /courses/select — full course list for the Courses filter (the
+  // filter used to be built from the courses of the already-loaded groups,
+  // so a course without groups, or beyond the page limit, never showed up).
+  const { data: courseOptions } = useCoursesSelectQuery({ branchId: selectedBranchId ?? "all" });
+  // GET /tags/select — real, admin-managed tags for the Groups "Tags"
+  // filter. `type` is required by the endpoint and the only enum values are
+  // GROUP | STUDENT (Settings > Tags). Live data showed existing tags stored
+  // as type=STUDENT, so a GROUP-only request came back empty; both types are
+  // requested and merged (deduped by id) so every existing tag is offered.
+  const { data: groupTagOptions } = useTagsSelectQuery({ type: "GROUP" });
+  const { data: studentTagOptions } = useTagsSelectQuery({ type: "STUDENT" });
+  const tagOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: { value: string; label: string }[] = [];
+    [...(groupTagOptions ?? []), ...(studentTagOptions ?? [])].forEach((tag) => {
+      if (!tag?.id || seen.has(tag.id)) return;
+      seen.add(tag.id);
+      merged.push({ value: tag.id, label: tag.name });
+    });
+    return merged;
+  }, [groupTagOptions, studentTagOptions]);
 
   const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [updateGroup, { isLoading: isUpdating }] = useUpdateGroupMutation();
@@ -387,11 +492,11 @@ export const Groups = () => {
     SUNDAY:    t("groups.weekdays.sunday"),
   };
 
-  const STATUS_LABELS: Record<string, string> = {
-    ACTIVE:    t("groups.options.status.active"),
-    ARCHIVE:   t("groups.options.status.archive"),
-    COMPLETED: t("groups.options.status.completed"),
-  };
+  const STATUS_OPTIONS = [
+    { value: "ACTIVE",    label: t("groups.options.status.active") },
+    { value: "ARCHIVE",   label: t("groups.options.status.archive") },
+    { value: "COMPLETED", label: t("groups.options.status.completed") },
+  ];
 
   const FILTER_TOGGLES: { key: string; label: string }[] = [
     { key: "status",  label: t("groups.filters.panel.groupStatus") },
@@ -441,8 +546,6 @@ export const Groups = () => {
     .filter((r) => selectedBranch === "all" || r.branch?.name === selectedBranch);
   const activeTeachers = teacherOptions ?? [];
 
-  const COURSES  = [...new Set(allGroups.map((g) => g.course).filter(Boolean))];
-  const TEACHERS = [...new Set(allGroups.flatMap((g) => g.teacherNames))];
   const DAY_FILTER_OPTIONS = [
     { value: "Odd days",     label: t("groups.options.days.odd") },
     { value: "Even days",    label: t("groups.options.days.even") },
@@ -450,10 +553,6 @@ export const Groups = () => {
     { value: "Every day",    label: t("groups.options.days.every") },
     { value: "Other",        label: t("groups.options.days.other") },
   ];
-  const STATUS_OPTIONS = useMemo(
-    () => [...new Set(allGroups.map((g) => g.status).filter(Boolean))].map((s) => ({ value: s, label: STATUS_LABELS[s] ?? s })),
-    [allGroups] // eslint-disable-line react-hooks/exhaustive-deps
-  );
 
   const [open,              setOpen]              = useState(false);
   const [editingId,         setEditingId]         = useState<string | null>(null);
@@ -475,15 +574,19 @@ export const Groups = () => {
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
 
-  const clearAllFilters = () =>
-    setFilters({ status: "", teacher: "", course: "", days: "", tags: [], startDate: "", endDate: "" });
+  const clearAllFilters = () => setFilters(DEFAULT_FILTERS);
 
-  const hasActiveFilters = Object.values(filters).some((v) =>
-    Array.isArray(v) ? v.length > 0 : Boolean(v)
-  );
+  // status always holds one of the three options (default ACTIVE), so it only
+  // counts as "changed" when it differs from the default.
+  const hasActiveFilters = (Object.keys(filters) as (keyof Filters)[]).some((k) => {
+    const v = filters[k];
+    const def = DEFAULT_FILTERS[k];
+    return Array.isArray(v) ? v.length > 0 : v !== def;
+  });
 
   const filteredGroups = useMemo(() => {
-    const list = allGroups.filter((g) => matchesFilters(g, filters));
+    const today = todayIso();
+    const list = allGroups.filter((g) => matchesFilters(g, filters, today));
     if (!sortKey) return list;
     return [...list].sort((a, b) => {
       if (sortKey === "studentCount") {
@@ -505,8 +608,10 @@ export const Groups = () => {
     // own status domain (ACTIVE/ARCHIVE/COMPLETED) is wider, so only ACTIVE
     // is forwarded as-is; other selections are left unfiltered rather than
     // risking a 400 from an unsupported enum value.
-    const courseId = activeCourses.find((c) => c.name === filters.course)?.id;
-    const teacherId = activeTeachers.find((tc) => tc.name === filters.teacher)?.id;
+    // Excel endpoint takes a single teacherId — with several teachers picked
+    // it is left unfiltered on that dimension rather than exporting a subset.
+    const courseId = filters.course || undefined;
+    const teacherId = filters.teacher.length === 1 ? filters.teacher[0] : undefined;
     try {
       const blob = await fetchGroupsExcel({
         status: filters.status === "ACTIVE" ? filters.status : undefined,
@@ -674,51 +779,49 @@ export const Groups = () => {
         </Button>
       </Stack>
 
-      {/* FILTERS — always visible */}
-      <Stack direction="row" flexWrap="wrap" alignItems="center" gap={1.5} mb={1.5}>
+      {/* FILTERS — always visible, compact single row (wraps if it doesn't fit) */}
+      <Stack direction="row" flexWrap="wrap" alignItems="center" gap={1} mb={1.5}>
         {visibleFilters.includes("status") && (
           <DropdownFilter
             label={t("groups.filters.status")}
-            value={filters.status}
+            value={filters.status ? [filters.status] : []}
             options={STATUS_OPTIONS}
-            onChange={(v) => setFilter("status", v)}
-            onClear={() => setFilter("status", "")}
+            onChange={(v) => setFilter("status", v[0] ?? DEFAULT_FILTERS.status)}
+            clearable={false}
           />
         )}
         {visibleFilters.includes("teacher") && (
           <DropdownFilter
             label={t("groups.filters.teacher")}
             value={filters.teacher}
-            options={TEACHERS.map((tc) => ({ value: tc, label: tc }))}
+            options={activeTeachers.map((tc) => ({ value: tc.id, label: tc.name }))}
             onChange={(v) => setFilter("teacher", v)}
-            onClear={() => setFilter("teacher", "")}
+            multiple
           />
         )}
         {visibleFilters.includes("course") && (
           <DropdownFilter
             label={t("groups.filters.courses")}
-            value={filters.course}
-            options={COURSES.map((c) => ({ value: c, label: c }))}
-            onChange={(v) => setFilter("course", v)}
-            onClear={() => setFilter("course", "")}
+            value={filters.course ? [filters.course] : []}
+            options={(courseOptions ?? []).map((c) => ({ value: c.id, label: c.name }))}
+            onChange={(v) => setFilter("course", v[0] ?? "")}
           />
         )}
         {visibleFilters.includes("days") && (
           <DropdownFilter
             label={t("groups.filters.days")}
-            value={filters.days}
+            value={filters.days ? [filters.days] : []}
             options={DAY_FILTER_OPTIONS}
-            onChange={(v) => setFilter("days", v)}
-            onClear={() => setFilter("days", "")}
+            onChange={(v) => setFilter("days", v[0] ?? "")}
           />
         )}
         {visibleFilters.includes("tags") && (
           <DropdownFilter
             label={t("groups.filters.tags")}
-            value={filters.tags[0] || ""}
-            options={(tagOptions ?? []).map((tag) => ({ value: tag.id, label: tag.name }))}
-            onChange={(v) => setFilter("tags", [v])}
-            onClear={() => setFilter("tags", [])}
+            value={filters.tags}
+            options={tagOptions}
+            emptyLabel={t("groups.filters.noOptions", { defaultValue: "No options" })}
+            onChange={(v) => setFilter("tags", v)}
           />
         )}
         {visibleFilters.includes("date") && (
@@ -739,10 +842,12 @@ export const Groups = () => {
         )}
         {hasActiveFilters && (
           <IconButton
-            size="small"
             onClick={clearAllFilters}
             title={t("groups.filters.clearAll")}
-            sx={{ border: "1px solid #d0d5dd", borderRadius: "8px", color: "#667085" }}
+            sx={{
+              width: FILTER_HEIGHT, height: FILTER_HEIGHT, border: "1px solid #d0d5dd", borderRadius: "6px",
+              color: "#667085", bgcolor: "white", "&:hover": { borderColor: FILTER_BLUE, color: FILTER_BLUE, bgcolor: "white" },
+            }}
           >
             <IoClose size={16} />
           </IconButton>
@@ -758,11 +863,11 @@ export const Groups = () => {
             variant="outlined"
             onClick={() => setShowFiltersPanel((p) => !p)}
             sx={{
-              borderRadius: "8px",
-              borderColor: showFiltersPanel ? "primary.main" : "#d0d5dd",
-              color: showFiltersPanel ? "primary.main" : "#667085",
+              borderRadius: "6px", height: FILTER_HEIGHT,
+              borderColor: showFiltersPanel ? FILTER_BLUE : "#d0d5dd",
+              color: showFiltersPanel ? FILTER_BLUE : "#667085",
               bgcolor: showFiltersPanel ? "#eff8ff" : "white",
-              fontSize: 12, fontWeight: 500, px: 1.5, textTransform: "none",
+              fontSize: 13, fontWeight: 500, px: 1.5, textTransform: "none",
             }}
           >
             {t("groups.filters.filtersButton")}
@@ -820,8 +925,8 @@ export const Groups = () => {
           variant="outlined"
           onClick={(e) => setColumnsAnchor(e.currentTarget)}
           sx={{
-            borderRadius: "8px", borderColor: "#d0d5dd", color: "#667085",
-            fontSize: 12, fontWeight: 500, px: 1.5, textTransform: "none",
+            borderRadius: "6px", height: FILTER_HEIGHT, borderColor: "#d0d5dd", color: "#667085",
+            fontSize: 13, fontWeight: 500, px: 1.5, textTransform: "none",
           }}
         >
           {t("groups.filters.columns")}

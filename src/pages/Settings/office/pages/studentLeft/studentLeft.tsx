@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Button,
@@ -17,6 +18,7 @@ import { useAllGroupsQuery, useStudentGroupsQuery } from "../../../../../app/api
 import type { StudentGroupStatus } from "../../../../../app/api/groupsApi/types";
 import { useAllCoursesQuery } from "../../../../../app/api/coursesApi";
 import { useReasonsSelectQuery } from "../../../../../app/api/reasonsApi";
+import { useStaffUsersSelectQuery } from "../../../../../app/api/usersApi";
 import type { RootState } from "../../../../../app/store";
 import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
 
@@ -78,6 +80,15 @@ export const StudentLeft = () => {
   const [tab, setTab] = useState<"new" | "old">("new");
   const [page, setPage] = useState(1);
 
+  // Read once on mount so a link like
+  // /settings/office/students-left-group?status=INACTIVE opens pre-filtered
+  // — same "read once into initial state" convention already used by
+  // Finance > All Payments for its Dashboard-driven date range.
+  const [searchParams] = useSearchParams();
+  const initialStatusParam = searchParams.get("status");
+  const initialStatus: "" | StudentGroupStatus =
+    initialStatusParam === "INACTIVE" || initialStatusParam === "DELETED" ? initialStatusParam : "";
+
   // Filters
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -85,30 +96,35 @@ export const StudentLeft = () => {
   const [course, setCourse] = useState("");
   const [groupId, setGroupId] = useState("");
   const [teacher, setTeacher] = useState("");
+  const [staff, setStaff] = useState("");
   const [reasonId, setReasonId] = useState("");
-  const [status, setStatus] = useState<"" | StudentGroupStatus>("");
+  const [status, setStatus] = useState<"" | StudentGroupStatus>(initialStatus);
 
   // Applied filters (only applied on "Filter" click)
-  const [applied, setApplied] = useState({
+  const [applied, setApplied] = useState<{
+    search: string; course: string; groupId: string; teacher: string; staff: string;
+    reasonId: string; status: "" | StudentGroupStatus; startDate: string; endDate: string;
+  }>({
     search: "",
     course: "",
     groupId: "",
     teacher: "",
+    staff: "",
     reasonId: "",
-    status: "" as "" | StudentGroupStatus,
+    status: initialStatus,
     startDate: "",
     endDate: "",
   });
 
   const handleFilter = () => {
-    setApplied({ search, course, groupId, teacher, reasonId, status, startDate, endDate });
+    setApplied({ search, course, groupId, teacher, staff, reasonId, status, startDate, endDate });
     setPage(1);
   };
 
   const handleReset = () => {
-    setSearch(""); setCourse(""); setGroupId(""); setTeacher("");
+    setSearch(""); setCourse(""); setGroupId(""); setTeacher(""); setStaff("");
     setReasonId(""); setStatus(""); setStartDate(""); setEndDate("");
-    setApplied({ search: "", course: "", groupId: "", teacher: "", reasonId: "", status: "", startDate: "", endDate: "" });
+    setApplied({ search: "", course: "", groupId: "", teacher: "", staff: "", reasonId: "", status: "", startDate: "", endDate: "" });
     setPage(1);
   };
 
@@ -151,6 +167,11 @@ export const StudentLeft = () => {
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 }, { skip: tab === "old" });
   const { data: coursesData } = useAllCoursesQuery(undefined, { skip: tab === "old" });
   const { data: reasonOptions } = useReasonsSelectQuery(undefined, { skip: tab === "old" });
+  // GET /users/select — branchId required per Swagger; same branch scoping
+  // every other filter dropdown on this page already uses.
+  const { data: staffOptions } = useStaffUsersSelectQuery(selectedBranchId ?? "", {
+    skip: tab === "old" || !selectedBranchId,
+  });
 
   const groupById = useMemo(
     () => new Map((groupsData?.data ?? []).map((g) => [g.id, g])),
@@ -187,12 +208,17 @@ export const StudentLeft = () => {
     () => [...new Set((groupsData?.data ?? []).flatMap((g) => g.teachers?.map((tc) => tc.name) ?? []))],
     [groupsData]
   );
+  // StudentGroupRecord.processedBy (LeftStudentRow.staff) is a free-text name,
+  // not a confirmed id (see its own defensive-typing comment in
+  // groupsApi/types.d.ts) — matched by name here, same as the Teachers filter.
+  const STAFF_NAMES = useMemo(() => (staffOptions ?? []).map((s) => s.name), [staffOptions]);
   const STATUSES: StudentGroupStatus[] = LEFT_STATUSES;
 
   const filtered = rows.filter((r) => {
     return (
       (!applied.course || r.course === applied.course) &&
       (!applied.teacher || r.teacher.split(", ").includes(applied.teacher)) &&
+      (!applied.staff || r.staff === applied.staff) &&
       (!applied.reasonId || r.reason === (reasonOptions ?? []).find((o) => o.id === applied.reasonId)?.name) &&
       (!applied.status || r.status === applied.status) &&
       (!applied.startDate || r.staffTime >= applied.startDate) &&
@@ -257,8 +283,9 @@ export const StudentLeft = () => {
         </div>
       ) : (
         <>
-          {/* Filters Row 1 */}
-          <div className="flex flex-wrap gap-2 mb-2">
+          {/* Filters — compact single row on normal desktop widths, wraps
+              naturally on narrower screens. */}
+          <div className="flex flex-wrap items-center gap-2 mb-5">
             {/* Start date */}
             <DatePickerField value={startDate} onChange={setStartDate} />
             {/* End date */}
@@ -270,33 +297,35 @@ export const StudentLeft = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleFilter()}
-              sx={{ ...inputSx, width: 200 }}
+              sx={{ ...inputSx, width: 170, flexShrink: 0 }}
             />
             {/* Course */}
-            <Select displayEmpty size="small" value={course} onChange={(e) => setCourse(e.target.value)} sx={{ ...selectSx, width: 150 }}>
+            <Select displayEmpty size="small" value={course} onChange={(e) => setCourse(e.target.value)} sx={{ ...selectSx, width: 130, flexShrink: 0 }}>
               <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.course")}</em></MenuItem>
               {COURSES.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
             </Select>
             {/* Group */}
-            <Select displayEmpty size="small" value={groupId} onChange={(e) => setGroupId(e.target.value)} sx={{ ...selectSx, width: 150 }}>
+            <Select displayEmpty size="small" value={groupId} onChange={(e) => setGroupId(e.target.value)} sx={{ ...selectSx, width: 130, flexShrink: 0 }}>
               <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.group")}</em></MenuItem>
               {GROUPS.map((g) => <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>)}
             </Select>
             {/* Teachers */}
-            <Select displayEmpty size="small" value={teacher} onChange={(e) => setTeacher(e.target.value)} sx={{ ...selectSx, width: 170 }}>
+            <Select displayEmpty size="small" value={teacher} onChange={(e) => setTeacher(e.target.value)} sx={{ ...selectSx, width: 140, flexShrink: 0 }}>
               <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.teachers")}</em></MenuItem>
               {TEACHERS.map((tc) => <MenuItem key={tc} value={tc}>{tc}</MenuItem>)}
             </Select>
+            {/* Staff */}
+            <Select displayEmpty size="small" value={staff} onChange={(e) => setStaff(e.target.value)} sx={{ ...selectSx, width: 130, flexShrink: 0 }}>
+              <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.staff")}</em></MenuItem>
+              {STAFF_NAMES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+            </Select>
             {/* Reasons */}
-            <Select displayEmpty size="small" value={reasonId} onChange={(e) => setReasonId(e.target.value)} sx={{ ...selectSx, width: 190 }}>
+            <Select displayEmpty size="small" value={reasonId} onChange={(e) => setReasonId(e.target.value)} sx={{ ...selectSx, width: 160, flexShrink: 0 }}>
               <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.reasonsForArchiving")}</em></MenuItem>
               {(reasonOptions ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>)}
             </Select>
-          </div>
-
-          {/* Filters Row 2 */}
-          <div className="flex items-center gap-2 mb-5">
-            <Select displayEmpty size="small" value={status} onChange={(e) => setStatus(e.target.value as "" | StudentGroupStatus)} sx={{ ...selectSx, width: 140 }}>
+            {/* Status */}
+            <Select displayEmpty size="small" value={status} onChange={(e) => setStatus(e.target.value as "" | StudentGroupStatus)} sx={{ ...selectSx, width: 120, flexShrink: 0 }}>
               <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.status")}</em></MenuItem>
               {STATUSES.map((s) => <MenuItem key={s} value={s}>{statusLabel(s)}</MenuItem>)}
             </Select>
@@ -312,13 +341,14 @@ export const StudentLeft = () => {
                 height: 38,
                 px: 3,
                 boxShadow: "none",
+                flexShrink: 0,
               }}
             >
               {t("settings.office.studentLeft.filters.filter")}
             </Button>
             <button
               onClick={handleReset}
-              className="flex items-center justify-center w-9 h-9 border border-gray-200 rounded-md bg-white text-gray-500 hover:bg-gray-50 transition-colors"
+              className="flex items-center justify-center w-9 h-9 border border-gray-200 rounded-md bg-white text-gray-500 hover:bg-gray-50 transition-colors flex-shrink-0"
             >
               <MdRefresh size={18} />
             </button>

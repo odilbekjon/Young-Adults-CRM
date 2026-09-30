@@ -84,7 +84,7 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
       <div style={{ width: "100%", userSelect: "none" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <NavBtn onClick={() => setYearPageStart((p) => p - YEARS_PER_PAGE)}>«</NavBtn>
-          <span style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>
+          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)" }}>
             {years[0]} – {years[years.length - 1]}
           </span>
           <NavBtn onClick={() => setYearPageStart((p) => p + YEARS_PER_PAGE)}>»</NavBtn>
@@ -97,8 +97,8 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
               onClick={() => { setViewDate(new Date(y, month, 1)); setViewMode("days"); }}
               style={{
                 border: "none",
-                background: y === year ? "#185FA5" : "transparent",
-                color: y === year ? "#fff" : y === today.getFullYear() ? "#185FA5" : "#1a1a1a",
+                background: y === year ? "var(--color-primary)" : "transparent",
+                color: y === year ? "#fff" : y === today.getFullYear() ? "var(--color-primary)" : "var(--color-text-primary)",
                 fontWeight: y === year || y === today.getFullYear() ? 700 : 400,
                 fontSize: 13,
                 borderRadius: 8,
@@ -121,7 +121,7 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
           <NavBtn onClick={goPrevYear}>«</NavBtn>
           <span
             onClick={openYears}
-            style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a", cursor: "pointer" }}
+            style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)", cursor: "pointer" }}
           >
             {year}
           </span>
@@ -135,8 +135,8 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
               onClick={() => { setViewDate(new Date(year, i, 1)); setViewMode("days"); }}
               style={{
                 border: "none",
-                background: i === month ? "#185FA5" : "transparent",
-                color: i === month ? "#fff" : "#1a1a1a",
+                background: i === month ? "var(--color-primary)" : "transparent",
+                color: i === month ? "#fff" : "var(--color-text-primary)",
                 fontWeight: i === month ? 700 : 400,
                 fontSize: 12,
                 borderRadius: 8,
@@ -162,7 +162,7 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
           <NavBtn onClick={goPrevYear}>«</NavBtn>
           <NavBtn onClick={goPrevMonth}>‹</NavBtn>
         </div>
-        <span style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a", display: "flex", gap: 6 }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)", display: "flex", gap: 6 }}>
           <span onClick={openYears} style={{ cursor: "pointer" }}>{year}</span>
           <span onClick={openMonths} style={{ cursor: "pointer" }}>
             {t(`singleGroup.calendar.months.${MONTH_KEYS[month]}`)}
@@ -176,7 +176,7 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 4 }}>
         {WEEKDAY_KEYS.map((w) => (
-          <div key={w} style={{ textAlign: "center", fontSize: 12, color: "#9ca3af", padding: "4px 0" }}>
+          <div key={w} style={{ textAlign: "center", fontSize: 12, color: "var(--color-text-muted)", padding: "4px 0" }}>
             {t(`singleGroup.calendar.weekdays.${w}`)}
           </div>
         ))}
@@ -195,8 +195,8 @@ export const Calendar = ({ value, onChange, min, max }: CalendarProps) => {
               onClick={() => onChange(c.date)}
               style={{
                 border: "none",
-                background: isSelected ? "#185FA5" : "transparent",
-                color: disabled ? "#e0e0e0" : isSelected ? "#fff" : isToday ? "#185FA5" : c.inMonth ? "#1a1a1a" : "#d1d5db",
+                background: isSelected ? "var(--color-primary)" : "transparent",
+                color: disabled ? "var(--color-text-muted)" : isSelected ? "#fff" : isToday ? "var(--color-primary)" : c.inMonth ? "var(--color-text-primary)" : "var(--color-text-muted)",
                 fontWeight: isToday || isSelected ? 700 : 400,
                 fontSize: 13,
                 borderRadius: 8,
@@ -218,10 +218,10 @@ const NavBtn = ({ onClick, children }: { onClick: () => void; children: React.Re
     type="button"
     onClick={onClick}
     style={{
-      border: "none", background: "transparent", color: "#9ca3af",
+      border: "none", background: "transparent", color: "var(--color-text-muted)",
       fontSize: 15, cursor: "pointer", padding: "2px 6px", borderRadius: 6,
     }}
-    onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
   >
     {children}

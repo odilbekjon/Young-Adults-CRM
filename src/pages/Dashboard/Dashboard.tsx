@@ -20,7 +20,8 @@ import {
 } from "../../app/api/dashboardApi/dashboardApi";
 import type { ScheduleItem } from "../../app/api/dashboardApi/types";
 import { useAllLeadsQuery } from "../../app/api/leadsApi";
-import { useStudentGroupsQuery } from "../../app/api/groupsApi";
+import { useAllGroupsQuery, useStudentGroupsQuery } from "../../app/api/groupsApi";
+import type { Group } from "../../app/api/groupsApi/types";
 import { useDebtorsQuery, usePaymentsListQuery, useFinanceChartQuery } from "../../app/api/financeApi";
 import { useReportLeftStudentsQuery } from "../../app/api/reportsApi";
 import {
@@ -47,21 +48,65 @@ const mapDaysType = (daysType: string): ScheduleTab => {
   return "other";
 };
 
-const toScheduleEvents = (items: ScheduleItem[]): ScheduleEvent[] =>
-  items.map((item, i) => ({
-    id: item.groupId,
-    room: item.roomName,
-    start: parseTimeToMinutes(item.time),
-    duration: DEFAULT_LESSON_DURATION,
-    groupName: item.groupName,
-    courseName: item.courseName,
-    teacher: item.teachers,
-    dateRange: "",
-    students: 0,
-    maxStudents: 0,
-    color: SCHEDULE_COLORS[i % SCHEDULE_COLORS.length],
-    days: [mapDaysType(item.daysType)],
-  }));
+// A course ending within this many days gets the "X days left" ribbon —
+// matches the reference design, which only flags imminent endings, not
+// every lesson.
+const DAYS_LEFT_THRESHOLD = 5;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const formatDateRange = (start: string | null | undefined, end: string | null | undefined, locale: string): string => {
+  if (!start || !end) return "";
+  const fmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
+  return `${fmt.format(new Date(`${start}T00:00:00`))} – ${fmt.format(new Date(`${end}T00:00:00`))}`;
+};
+
+// GroupDetail.students (the legacy relation Group.students comes from) keeps
+// listing a student after they've been removed from the group — same quirk
+// already worked around on the Groups list page. archivedMembershipKeys
+// (confirmed-real INACTIVE/DELETED /student-groups rows) strips those back
+// out so this card's student count is the real current headcount, not a
+// stale one.
+const realStudentCount = (group: Group, archivedMembershipKeys: Set<string>): number =>
+  (group.students ?? []).filter((s) => !archivedMembershipKeys.has(`${s.id}|${group.id}`)).length;
+
+// Enriches the backend's own schedule rows (which only carry group/course/
+// room/time/teacher — see ScheduleItem) with real data cross-referenced by
+// groupId from GET /groups: training date range, room capacity, and current
+// active headcount — the same values Groups/SingleGroup already treat as
+// authoritative, not invented placeholders.
+const toScheduleEvents = (
+  items: ScheduleItem[],
+  groupById: Map<string, Group>,
+  archivedMembershipKeys: Set<string>,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  locale: string,
+): ScheduleEvent[] =>
+  items.map((item, i) => {
+    const group = groupById.get(item.groupId);
+    let daysLeftLabel: string | undefined;
+    if (group?.trainingEnd) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const daysLeft = Math.round((new Date(`${group.trainingEnd}T00:00:00`).getTime() - today.getTime()) / MS_PER_DAY);
+      if (daysLeft >= 0 && daysLeft <= DAYS_LEFT_THRESHOLD) {
+        daysLeftLabel = t("dashboard.schedule.daysLeft", { count: daysLeft });
+      }
+    }
+    return {
+      id: item.groupId,
+      room: item.roomName,
+      start: parseTimeToMinutes(item.time),
+      duration: DEFAULT_LESSON_DURATION,
+      groupName: item.groupName,
+      courseName: item.courseName,
+      teacher: item.teachers,
+      dateRange: formatDateRange(group?.trainingStart, group?.trainingEnd, locale),
+      students: group ? realStudentCount(group, archivedMembershipKeys) : 0,
+      maxStudents: group?.room?.capacity ?? 0,
+      color: SCHEDULE_COLORS[i % SCHEDULE_COLORS.length],
+      daysLeftLabel,
+      days: [mapDaysType(item.daysType)],
+    };
+  });
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
@@ -108,7 +153,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const Dashboard = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [tab,         setTab        ] = useState<ScheduleTab>("odd");
   const [orientation, setOrientation] = useState<ScheduleOrientation>("horizontal");
@@ -132,6 +177,14 @@ export const Dashboard = () => {
   const refetchOnMount = { refetchOnMountOrArgChange: true };
   const { data: statsData } = useDashboardStatsQuery(undefined, refetchOnMount);
   const { data: scheduleData, isLoading: scheduleLoading, isError: scheduleError } = useDashboardScheduleQuery(undefined, refetchOnMount);
+  // Enrichment source for the schedule cards below (real training dates, room
+  // capacity, current headcount) — GET /groups' own schedule endpoint
+  // (ScheduleItem) only carries group/course/room/time/teacher, nothing else.
+  const { data: scheduleGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 }, refetchOnMount);
+  // Same "legacy relation keeps listing removed students" workaround already
+  // used on the Groups list page — see realStudentCount's own comment.
+  const { data: inactiveMembershipsData } = useStudentGroupsQuery({ status: "INACTIVE", branchId, limit: 1000 });
+  const { data: deletedMembershipsData } = useStudentGroupsQuery({ status: "DELETED", branchId, limit: 1000 });
   const { data: attendanceData, isLoading: attendanceLoading, isError: attendanceError } = useDashboardAttendanceStatsQuery(undefined, refetchOnMount);
   const { data: activitiesData, isLoading: activitiesLoading, isError: activitiesError } = useDashboardRecentActivitiesQuery(undefined, refetchOnMount);
   const { data: teacherPerfData, isLoading: teacherPerfLoading, isError: teacherPerfError } = useDashboardTeacherPerformanceQuery(undefined, refetchOnMount);
@@ -203,9 +256,20 @@ export const Dashboard = () => {
   const activities = activitiesData?.data ?? [];
   const teacherPerf = teacherPerfData?.data ?? [];
 
+  const groupById = useMemo(
+    () => new Map((scheduleGroupsData?.data ?? []).map((g) => [g.id, g])),
+    [scheduleGroupsData],
+  );
+  const archivedMembershipKeys = useMemo(() => {
+    const set = new Set<string>();
+    [...(inactiveMembershipsData?.rows ?? []), ...(deletedMembershipsData?.rows ?? [])].forEach((r) => {
+      if (r.studentId && r.groupId) set.add(`${r.studentId}|${r.groupId}`);
+    });
+    return set;
+  }, [inactiveMembershipsData, deletedMembershipsData]);
   const events = useMemo(
-    () => toScheduleEvents(scheduleData?.data ?? []),
-    [scheduleData],
+    () => toScheduleEvents(scheduleData?.data ?? [], groupById, archivedMembershipKeys, t, i18n.language),
+    [scheduleData, groupById, archivedMembershipKeys, t, i18n.language],
   );
   const rooms = useMemo(
     () => [...new Set(events.map((e) => e.room))],
@@ -559,23 +623,28 @@ export const Dashboard = () => {
                 background: "var(--color-surface-alt)",
               }}>
                 <Box sx={{ borderRight: "1px solid var(--color-border)", py: 1 }} />
-                <Box sx={{ position: "relative", height: 32 }}>
-                  {TIME_LABELS.map((t, i) => (
-                    <Typography
-                      key={t}
-                      sx={{
-                        position: "absolute",
-                        left: `${(i / (TIME_LABELS.length - 1)) * 100}%`,
-                        transform: "translateX(-50%)",
-                        top: "50%", mt: "-9px",
-                        fontSize: 10, whiteSpace: "nowrap",
-                        fontWeight: 500,
-                        color: (t === "10:30" || t === "11:00") ? "#f97316" : "var(--color-text-muted)",
-                      }}
-                    >
-                      {t}
-                    </Typography>
-                  ))}
+                <Box sx={{ position: "relative", height: 30 }}>
+                  {TIME_LABELS.map((t, i) => {
+                    const isHourMark = t.endsWith(":00");
+                    return (
+                      <Typography
+                        key={t}
+                        sx={{
+                          position: "absolute",
+                          left: `${(i / (TIME_LABELS.length - 1)) * 100}%`,
+                          transform: "translateX(-50%)",
+                          top: "50%", mt: "-9px",
+                          fontSize: isHourMark ? 11 : 9.5, whiteSpace: "nowrap",
+                          fontWeight: isHourMark ? 700 : 400,
+                          color: (t === "10:30" || t === "11:00")
+                            ? "#f97316"
+                            : isHourMark ? "var(--color-text-secondary)" : "var(--color-text-muted)",
+                        }}
+                      >
+                        {t}
+                      </Typography>
+                    );
+                  })}
                 </Box>
               </Box>
 
@@ -589,7 +658,7 @@ export const Dashboard = () => {
                       display: "grid",
                       gridTemplateColumns: "110px 1fr",
                       borderBottom: "1px solid var(--color-border-subtle)",
-                      minHeight: 68,
+                      minHeight: 56,
                       "&:hover": { background: "var(--color-surface-hover)" },
                     }}
                   >
@@ -601,7 +670,7 @@ export const Dashboard = () => {
                         {room}
                       </Typography>
                     </Box>
-                    <Box sx={{ position: "relative", minHeight: 68 }}>
+                    <Box sx={{ position: "relative", minHeight: 56 }}>
                       {/* Grid lines */}
                       {TIME_LABELS.map((t, i) => (
                         <Box key={t} sx={{
@@ -612,60 +681,68 @@ export const Dashboard = () => {
                         }} />
                       ))}
                       {/* Events */}
-                      {roomEvents.map((ev: { id: string; groupName: string; courseName: string; teacher: string; dateRange: string; start: number; duration: number; color: string; tag?: string; tagColor?: string; students?: number; maxStudents?: number }) => {
+                      {roomEvents.map((ev: ScheduleEvent) => {
                         const startOff = ev.start - TIME_START;
                         return (
                           <Tooltip
                             key={ev.id}
-                            title={`${ev.groupName} · ${ev.courseName} · ${ev.teacher} · ${ev.dateRange}`}
+                            title={`${ev.groupName} · ${ev.courseName} · ${ev.teacher}${ev.dateRange ? ` · ${ev.dateRange}` : ""}`}
                             placement="top"
                             arrow
                           >
                             <Box
+                              onClick={() => navigate(`/groups/${ev.id}`)}
                               sx={{
                                 position: "absolute",
                                 left: pct(startOff),
                                 width: pct(ev.duration),
-                                top: 8, bottom: 8,
+                                top: 4, bottom: 4,
                                 backgroundColor: ev.color,
                                 borderRadius: "8px",
-                                px: 1, py: 0.5,
-                                overflow: "hidden",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                                px: 1.1, py: 0.6,
+                                overflow: "visible",
                                 cursor: "pointer",
                                 transition: "filter 0.15s",
                                 "&:hover": { filter: "brightness(0.9)" },
                               }}
                             >
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap" }}>
-                                {ev.tag && (
-                                  <Box sx={{
-                                    background: ev.tagColor, borderRadius: "3px",
-                                    px: 0.6, fontSize: 9, fontWeight: 700,
-                                    color: "var(--color-surface)", lineHeight: 1.5,
-                                  }}>
-                                    {ev.tag}
-                                  </Box>
-                                )}
-                                <Typography sx={{ fontSize: 10, fontWeight: 700, color: "var(--color-surface)", lineHeight: 1.3 }}>
+                              {ev.daysLeftLabel && (
+                                <Box sx={{
+                                  position: "absolute", top: -7, right: 6,
+                                  background: "var(--color-danger)", borderRadius: "10px",
+                                  px: 0.8, py: 0.15, fontSize: 8.5, fontWeight: 700,
+                                  color: "#fff", whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+                                }}>
+                                  {ev.daysLeftLabel}
+                                </Box>
+                              )}
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap", overflow: "hidden" }}>
+                                <Box sx={{
+                                  background: "rgba(255,255,255,0.25)", borderRadius: "4px",
+                                  px: 0.6, fontSize: 9.5, fontWeight: 700,
+                                  color: "#fff", lineHeight: 1.5, whiteSpace: "nowrap",
+                                }}>
                                   {ev.groupName}
+                                </Box>
+                                <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: "#fff", lineHeight: 1.3, whiteSpace: "nowrap" }}>
+                                  {ev.courseName}
                                 </Typography>
                               </Box>
-                              <Typography sx={{ fontSize: 9, color: "rgba(255,255,255,0.9)", lineHeight: 1.3 }}>
-                                {ev.courseName}
+                              <Typography sx={{ fontSize: 10, color: "rgba(255,255,255,0.9)", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {ev.teacher}
                               </Typography>
                               {ev.dateRange && (
                                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.3 }}>
-                                  <Typography sx={{ fontSize: 9, color: "rgba(255,255,255,0.8)" }}>
+                                  <Typography sx={{ fontSize: 9, color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
                                     {ev.dateRange}
                                   </Typography>
-                                  {(ev.students ?? 0) > 0 && (
-                                    <Box sx={{
-                                      background: "rgba(0,0,0,0.2)", borderRadius: "3px",
-                                      px: 0.6, fontSize: 9, color: "var(--color-surface)", fontWeight: 700,
-                                    }}>
-                                      {t("dashboard.schedule.studentsFractionSlash", { count: ev.students ?? 0, max: ev.maxStudents })}
-                                    </Box>
-                                  )}
+                                  <Box sx={{
+                                    background: "rgba(0,0,0,0.2)", borderRadius: "3px",
+                                    px: 0.6, fontSize: 9, color: "#fff", fontWeight: 700, whiteSpace: "nowrap", ml: 0.5,
+                                  }}>
+                                    {t("dashboard.schedule.studentsFractionSlash", { count: ev.students, max: ev.maxStudents || "-" })}
+                                  </Box>
                                 </Box>
                               )}
                             </Box>
@@ -709,6 +786,8 @@ export const Dashboard = () => {
                 // For each time slot row, find events that START in this 30-min window
                 const slotStart = TIME_START + tIdx * 30;
                 const slotEnd   = slotStart + 30;
+                const isHourMark = timeLabel.endsWith(":00");
+                const rowHeight = 40;
 
                 return (
                   <Box
@@ -717,18 +796,20 @@ export const Dashboard = () => {
                       display: "grid",
                       gridTemplateColumns: `80px repeat(${rooms.length}, 1fr)`,
                       borderBottom: "1px solid var(--color-border-subtle)",
-                      minHeight: 48,
+                      minHeight: rowHeight,
                     }}
                   >
                     {/* Time label */}
                     <Box sx={{
                       px: 1.5,
-                      display: "flex", alignItems: "flex-start", pt: 1,
+                      display: "flex", alignItems: "flex-start", pt: 0.75,
                       borderRight: "1px solid var(--color-border)",
                     }}>
                       <Typography sx={{
-                        fontSize: 10, fontWeight: 500,
-                        color: (timeLabel === "10:30" || timeLabel === "11:00") ? "#f97316" : "var(--color-text-muted)",
+                        fontSize: isHourMark ? 11 : 9.5, fontWeight: isHourMark ? 700 : 500,
+                        color: (timeLabel === "10:30" || timeLabel === "11:00")
+                          ? "#f97316"
+                          : isHourMark ? "var(--color-text-secondary)" : "var(--color-text-muted)",
                         whiteSpace: "nowrap",
                       }}>
                         {timeLabel}
@@ -754,49 +835,58 @@ export const Dashboard = () => {
                           key={room}
                           sx={{
                             borderRight: "1px solid var(--color-border)",
-                            p: 0.5, minHeight: 48,
+                            p: 0.4, minHeight: rowHeight,
                             background: tIdx % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-alt)",
                           }}
                         >
                           {cellEvents.map((ev) => (
                             <Tooltip
                               key={ev.id}
-                              title={`${ev.groupName} · ${ev.courseName} · ${ev.teacher}`}
+                              title={`${ev.groupName} · ${ev.courseName} · ${ev.teacher}${ev.dateRange ? ` · ${ev.dateRange}` : ""}`}
                               placement="top" arrow
                             >
                               <Box
+                                onClick={() => navigate(`/groups/${ev.id}`)}
                                 sx={{
+                                  position: "relative",
                                   backgroundColor: ev.color,
                                   borderRadius: "6px",
+                                  boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
                                   px: 1, py: 0.5,
-                                  mb: 0.5,
+                                  mb: 0.4,
                                   cursor: "pointer",
                                   transition: "filter 0.15s",
                                   "&:hover": { filter: "brightness(0.9)" },
                                   // span multiple rows via minHeight proportional to duration
-                                  minHeight: Math.max(40, (ev.duration / 30) * 48 - 4),
+                                  minHeight: Math.max(34, (ev.duration / 30) * rowHeight - 4),
                                 }}
                               >
-                                {ev.tag && (
+                                {ev.daysLeftLabel && (
                                   <Box sx={{
-                                    background: ev.tagColor, borderRadius: "3px",
-                                    px: 0.5, mb: 0.25, display: "inline-block",
-                                    fontSize: 8, fontWeight: 700, color: "var(--color-surface)",
+                                    position: "absolute", top: -6, right: 4,
+                                    background: "var(--color-danger)", borderRadius: "8px",
+                                    px: 0.6, fontSize: 7.5, fontWeight: 700,
+                                    color: "#fff", whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
                                   }}>
-                                    {ev.tag}
+                                    {ev.daysLeftLabel}
                                   </Box>
                                 )}
-                                <Typography sx={{ fontSize: 9, fontWeight: 700, color: "var(--color-surface)", lineHeight: 1.3 }}>
+                                <Box sx={{
+                                  background: "rgba(255,255,255,0.25)", borderRadius: "3px",
+                                  px: 0.5, mb: 0.25, display: "inline-block",
+                                  fontSize: 8, fontWeight: 700, color: "#fff",
+                                }}>
                                   {ev.groupName}
-                                </Typography>
-                                <Typography sx={{ fontSize: 8, color: "rgba(255,255,255,0.85)", lineHeight: 1.2 }}>
+                                </Box>
+                                <Typography sx={{ fontSize: 9.5, fontWeight: 700, color: "#fff", lineHeight: 1.25 }}>
                                   {ev.courseName}
                                 </Typography>
-                                {ev.students > 0 && (
-                                  <Typography sx={{ fontSize: 8, color: "rgba(255,255,255,0.8)", mt: 0.25 }}>
-                                    {t("dashboard.schedule.studentsCountSuffix", { count: ev.students, max: ev.maxStudents })}
-                                  </Typography>
-                                )}
+                                <Typography sx={{ fontSize: 8.5, color: "rgba(255,255,255,0.85)", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {ev.teacher}
+                                </Typography>
+                                <Typography sx={{ fontSize: 8.5, color: "rgba(255,255,255,0.8)", mt: 0.25 }}>
+                                  {t("dashboard.schedule.studentsCountSuffix", { count: ev.students, max: ev.maxStudents || "-" })}
+                                </Typography>
                               </Box>
                             </Tooltip>
                           ))}
@@ -806,7 +896,7 @@ export const Dashboard = () => {
                               background: spanningEvents[0].color,
                               opacity: 0.3,
                               borderRadius: "4px",
-                              height: 40,
+                              height: 32,
                             }} />
                           )}
                         </Box>

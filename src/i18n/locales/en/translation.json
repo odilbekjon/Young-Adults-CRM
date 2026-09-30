@@ -241,8 +241,9 @@
       "horizontal": "Horizontal",
       "verticalViewTitle": "Vertical view",
       "vertical": "Vertical",
-      "studentsFractionSlash": "{{count}} st./{{max}}",
-      "studentsCountSuffix": "{{count}}/{{max}} st.",
+      "studentsFractionSlash": "{{count}} st. / {{max}}",
+      "studentsCountSuffix": "{{count}} / {{max}} st.",
+      "daysLeft": "{{count}} days left",
       "emptyState": "No schedule available for this day type"
     },
     "chart": {
@@ -1433,11 +1434,11 @@
     },
     "activateModal": {
       "title": "Activate student",
-      "description": "Unfreeze this student and resume their attendance in this group?",
+      "description": "The student will be moved to ACTIVE status, and payment will start being calculated from the selected date.",
       "submit": "Submit",
       "saving": "Activating...",
       "toast": {
-        "success": "Student activated",
+        "success": "Student activated, payment calculation started",
         "error": "Failed to activate the student",
         "notFound": "No active freeze record found for this student"
       }
@@ -1495,7 +1496,8 @@
       "cancel": "Cancel",
       "toast": {
         "success": "Student added to the group",
-        "error": "Failed to add student. Please try again."
+        "error": "Failed to add student. Please try again.",
+        "freezeError": "Student added, but couldn't be set to frozen — check their status manually"
       }
     },
     "deleteDropdown": {

@@ -1,8 +1,9 @@
 // src/pages/groups/DatePickerField.tsx
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { MdCalendarToday } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { Calendar } from "../Calendar";
+import { PortalPopover } from "../../../components/common/PortalPopover";
 
 interface DatePickerFieldProps {
   /** ISO date string, e.g. "2026-07-19", or "" when nothing is selected */
@@ -51,15 +52,6 @@ export const DatePickerField = ({ value, onChange, placeholder, min, max, disabl
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
   const selectedDate = value ? new Date(`${value}T00:00:00`) : null;
   const handlePick = (d: Date) => { onChange(toIso(d)); setOpen(false); };
 
@@ -69,50 +61,51 @@ export const DatePickerField = ({ value, onChange, placeholder, min, max, disabl
         onClick={() => !disabled && setOpen((p) => !p)}
         style={{
           display: "flex", alignItems: "center", gap: 10,
-          border: "1px solid #e0e0e0", borderRadius: 10,
+          border: "1px solid var(--color-border)", borderRadius: 10,
           padding: "12px 14px", cursor: disabled ? "not-allowed" : "pointer",
-          background: disabled ? "#f5f5f5" : "#fff",
+          background: disabled ? "var(--color-surface-alt)" : "var(--color-surface)",
           opacity: disabled ? 0.6 : 1,
         }}
       >
-        <MdCalendarToday size={17} color="#9e9e9e" />
-        <span style={{ fontSize: 14, color: value ? "#1a1a1a" : "#b0b0b0" }}>
+        <MdCalendarToday size={17} color="var(--color-text-muted)" />
+        <span style={{ fontSize: 14, color: value ? "var(--color-text-primary)" : "var(--color-text-muted)" }}>
           {value ? formatDisplay(value) : resolvedPlaceholder}
         </span>
       </div>
 
-      {open && !disabled && (
-        <div
-          style={{
-            position: "absolute", top: "calc(100% + 8px)", left: 0,
-            display: "flex", zIndex: 50,
-            background: "#fff", border: "1px solid #eee",
-            borderRadius: 12, boxShadow: "0 12px 32px rgba(0,0,0,0.14)",
-            overflow: "hidden",
-          }}
-        >
-          {shortcuts && (
-            <div style={{ borderRight: "1px solid #eee", padding: "12px 0", minWidth: 150 }}>
-              {buildShortcuts(t).map((sc) => (
-                <div
-                  key={sc.label}
-                  onClick={() => handlePick(sc.date)}
-                  style={{
-                    padding: "9px 16px", fontSize: 13, color: "#1a1a1a",
-                    cursor: "pointer", whiteSpace: "nowrap",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                >
-                  {sc.label}
-                </div>
-              ))}
+      {!disabled && (
+        <PortalPopover open={open} onClose={() => setOpen(false)} anchorRef={wrapRef}>
+          <div
+            style={{
+              display: "flex",
+              background: "var(--color-surface)", border: "1px solid var(--color-border)",
+              borderRadius: 12, boxShadow: "0 12px 32px var(--color-shadow)",
+              overflow: "hidden",
+            }}
+          >
+            {shortcuts && (
+              <div style={{ borderRight: "1px solid var(--color-border)", padding: "12px 0", minWidth: 150 }}>
+                {buildShortcuts(t).map((sc) => (
+                  <div
+                    key={sc.label}
+                    onClick={() => handlePick(sc.date)}
+                    style={{
+                      padding: "9px 16px", fontSize: 13, color: "var(--color-text-primary)",
+                      cursor: "pointer", whiteSpace: "nowrap",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    {sc.label}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ width: "100%", minWidth: 300, padding: 16 }}>
+              <Calendar value={selectedDate} onChange={handlePick} min={min} max={max} />
             </div>
-          )}
-          <div style={{ width: "100%", minWidth: 300, padding: 16 }}>
-            <Calendar value={selectedDate} onChange={handlePick} min={min} max={max} />
           </div>
-        </div>
+        </PortalPopover>
       )}
     </div>
   );

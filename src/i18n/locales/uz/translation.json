@@ -241,8 +241,9 @@
       "horizontal": "Gorizontal",
       "verticalViewTitle": "Vertikal ko'rinish",
       "vertical": "Vertikal",
-      "studentsFractionSlash": "{{count}} o'q./{{max}}",
-      "studentsCountSuffix": "{{count}}/{{max}} o'q.",
+      "studentsFractionSlash": "{{count}} o'q. / {{max}}",
+      "studentsCountSuffix": "{{count}} / {{max}} o'q.",
+      "daysLeft": "{{count}} kun qoldi",
       "emptyState": "Bu kun turi uchun jadval mavjud emas"
     },
     "chart": {
@@ -1433,11 +1434,11 @@
     },
     "activateModal": {
       "title": "O'quvchini faollashtirish",
-      "description": "Ushbu o'quvchini muzlatishdan chiqarib, guruhdagi qatnashuvini davom ettirilsinmi?",
+      "description": "O'quvchi ACTIVE holatiga o'tkaziladi va tanlangan sanadan boshlab to'lov hisoblanadi.",
       "submit": "Yuborish",
       "saving": "Faollashtirilmoqda...",
       "toast": {
-        "success": "O'quvchi faollashtirildi",
+        "success": "O'quvchi faollashtirildi, to'lov hisoblana boshladi",
         "error": "O'quvchini faollashtirib bo'lmadi",
         "notFound": "Bu o'quvchi uchun aktiv muzlatish yozuvi topilmadi"
       }
@@ -1495,7 +1496,8 @@
       "cancel": "Bekor qilish",
       "toast": {
         "success": "O'quvchi guruhga qo'shildi",
-        "error": "O'quvchini qo'shib bo'lmadi. Qaytadan urinib ko'ring."
+        "error": "O'quvchini qo'shib bo'lmadi. Qaytadan urinib ko'ring.",
+        "freezeError": "O'quvchi qo'shildi, lekin uni muzlatib qo'yib bo'lmadi — holatini qo'lda tekshiring"
       }
     },
     "deleteDropdown": {

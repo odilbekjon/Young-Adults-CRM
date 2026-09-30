@@ -12,12 +12,15 @@ export interface ScheduleEvent {
   groupName: string;
   courseName: string;
   teacher: string;
+  /** "6 jul – 6 nov", derived from the group's real trainingStart/trainingEnd */
   dateRange: string;
+  /** Real active membership count (student-groups, not the legacy GET /groups relation) */
   students: number;
+  /** Real room capacity, 0 when the room has none set */
   maxStudents: number;
   color: string;
-  tag?: string;
-  tagColor?: string;
+  /** "3 days left" — only set when trainingEnd is within DAYS_LEFT_THRESHOLD */
+  daysLeftLabel?: string;
   days: Array<"odd" | "even" | "other">;
 }
 

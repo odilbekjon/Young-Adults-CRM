@@ -10,7 +10,12 @@ import { RightDrawer } from "../common/RightDrawer";
 import { useToast } from "../../Context/ToastContext";
 import { useCreateStudentMutation } from "../../app/api/studentsApi/studentsApi";
 import type { StudentGender } from "../../app/api/studentsApi/types";
-import { useAllGroupsQuery, useAssignStudentsToGroupMutation } from "../../app/api/groupsApi/groupsApi";
+import {
+  useAllGroupsQuery,
+  useAddStudentToGroupMutation,
+  useFreezeStudentGroupMutation,
+  useLazyStudentGroupsQuery,
+} from "../../app/api/groupsApi/groupsApi";
 import type { RootState } from "../../app/store";
 import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
 
@@ -71,7 +76,9 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
     { page: 1, limit: 100 },
     { skip: !open }
   );
-  const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
+  const [addStudentToGroup, { isLoading: isAssigning }] = useAddStudentToGroupMutation();
+  const [freezeStudentGroup] = useFreezeStudentGroupMutation();
+  const [fetchNewMembership] = useLazyStudentGroupsQuery();
   const groups = groupsData?.data ?? [];
 
   const [phone, setPhone] = useState("");
@@ -154,7 +161,29 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
 
       if (showGroupField && group) {
         try {
-          await assignStudentsToGroup({ id: group, studentIds: [created.data.id] }).unwrap();
+          // POST /student-groups (not POST /groups/{id}/students/assign):
+          // confirmed live (see the same note in SingleGroup's
+          // handleAddStudentSubmit) that the assign endpoint never creates a
+          // /student-groups row, silently breaking freeze/unfreeze/
+          // status-change for every student added through it. Starts on
+          // PROBATION, then is immediately frozen — same "added → frozen,
+          // staff activates later" flow SingleGroup's own Add student modal
+          // uses, so a student added from here isn't treated as active
+          // (and billed) before anyone meant it to be.
+          await addStudentToGroup({ studentId: created.data.id, groupId: group, status: "PROBATION" }).unwrap();
+          try {
+            const membership = await fetchNewMembership({ groupId: group, studentId: created.data.id, limit: 1 }).unwrap();
+            const newMembershipId = membership.rows[0]?.id;
+            if (newMembershipId) {
+              await freezeStudentGroup({
+                id: newMembershipId,
+                startDate: new Date().toISOString().split("T")[0],
+              }).unwrap();
+            }
+          } catch {
+            // Non-fatal — the student is still added to the group, just not
+            // frozen; staff can freeze/activate them manually from there.
+          }
           toast.success(t("addStudent.toast.created"));
         } catch {
           toast.error(t("addStudent.toast.groupAssignFailed"));

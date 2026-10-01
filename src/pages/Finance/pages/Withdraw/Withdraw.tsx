@@ -19,6 +19,8 @@ import { AddWithdrawal } from "../../../../components/AddWithdrawal";
 import { useToast } from "../../../../Context/ToastContext";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import type { RootState } from "../../../../app/store";
+import { useBranch } from "../../../../Context/BranchContext";
+import { downloadExcelBlob } from "../../../../utils/downloadExcel";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -51,6 +53,7 @@ export const Withdraw = () => {
   const { t } = useTranslation();
   const toast = useToast();
   const branchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { branchLabel } = useBranch();
   const [addWithdrawalOpen, setAddWithdrawalOpen] = useState(false);
 
   const [draftSearch, setDraftSearch] = useState("");
@@ -101,13 +104,10 @@ export const Withdraw = () => {
 
   const handleExportExcel = async () => {
     try {
-      const blob = await fetchWithdrawalsExcel(queryArgs).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `withdrawals-${applied.page}.xlsx`;
-      link.click();
-      URL.revokeObjectURL(url);
+      // The export always covers every matching row, not just the page on screen
+      // (queryArgs carries the current page/limit for the on-screen table).
+      const blob = await fetchWithdrawalsExcel({ ...queryArgs, page: 1, limit: 3000 }).unwrap();
+      downloadExcelBlob(blob, "withdrawals", branchLabel);
     } catch {
       toast.error(t("finance.withdraw.exportError"));
     }

@@ -4,6 +4,7 @@ import { HiChevronDown } from "react-icons/hi";
 import { useTranslation } from "react-i18next";
 import { Chip, Stack, CircularProgress, Select, MenuItem, Checkbox, ListItemText } from "@mui/material";
 import { RightDrawer } from "../../../components/RightDrawer";
+import { GroupTagsSelect, getGroupTagIds } from "../../../components/GroupTagsSelect";
 import { inputStyle, labelStyle, submitBtn, cancelBtn } from "../styles";
 import { DatePickerField } from "../DatePickerField";
 import { TimeSelectField } from "../TimeSelectField";
@@ -81,6 +82,7 @@ interface EditGroupFormState {
   time: string;
   trainingStart: string;
   trainingEnd: string;
+  tagIds: string[];
 }
 
 // GroupDetail.trainingStart/trainingEnd can arrive as a plain "YYYY-MM-DD" or
@@ -95,15 +97,28 @@ const toDateOnly = (value?: string | null): string => {
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 };
 
-const toFormState = (group: GroupDetail): EditGroupFormState => ({
+// GET /groups/{id}/for-edit may describe the group's teachers either as the
+// usual `teachers` objects or as a flat `teacherIds` list (the shape the other
+// for-edit endpoints use, e.g. users' `branchIds`) — both are read so the
+// current teacher(s) are always pre-selected.
+type GroupForEditShape = GroupDetail & { teacherIds?: string[] };
+
+const currentTeacherIds = (group: GroupForEditShape): string[] => {
+  const fromObjects = (group.teachers ?? []).map((t) => t.id).filter(Boolean);
+  if (fromObjects.length) return fromObjects;
+  return (group.teacherIds ?? []).filter(Boolean);
+};
+
+const toFormState = (group: GroupForEditShape): EditGroupFormState => ({
   name: group.name ?? "",
   courseId: group.courseId ?? "",
-  teacherIds: group.teachers?.map((t) => t.id) ?? [],
+  teacherIds: currentTeacherIds(group),
   roomId: group.roomId ?? "",
   days: group.days ?? [],
   time: group.time ?? "",
   trainingStart: toDateOnly(group.trainingStart),
   trainingEnd: toDateOnly(group.trainingEnd),
+  tagIds: getGroupTagIds(group),
 });
 
 export const EditGroupDrawer = ({
@@ -116,7 +131,7 @@ export const EditGroupDrawer = ({
   onSave,
   isSaving,
 }: {
-  group: GroupDetail;
+  group: GroupForEditShape;
   open: boolean;
   onClose: () => void;
   courses: { id: string; name: string; months?: number | null }[];
@@ -153,8 +168,11 @@ export const EditGroupDrawer = ({
     (group.teachers ?? []).forEach((gt) => {
       if (!list.some((tc) => tc.id === gt.id)) list.push({ id: gt.id, name: gt.name });
     });
+    currentTeacherIds(group).forEach((tid) => {
+      if (!list.some((tc) => tc.id === tid)) list.push({ id: tid, name: tid });
+    });
     return list;
-  }, [teachers, group.teachers]);
+  }, [teachers, group]);
 
   const DAY_OPTIONS = [
     { value: "Odd days",     label: t("groups.options.days.odd") },
@@ -184,6 +202,7 @@ export const EditGroupDrawer = ({
       time: form.time || undefined,
       trainingStart: toDateOnly(form.trainingStart) || undefined,
       trainingEnd: toDateOnly(form.trainingEnd) || undefined,
+      tagIds: form.tagIds.length ? form.tagIds : undefined,
     });
   };
 
@@ -294,14 +313,13 @@ export const EditGroupDrawer = ({
           placeholder={t("singleGroup.editGroupDrawer.selectRoom")}
         />
 
-        {/* Tags aren't stored anywhere on the backend Group model — shown as a
-            disabled placeholder to match the reference design rather than a
-            field that would silently fail to save. */}
         <div>
           <label style={labelStyle}>{t("singleGroup.editGroupDrawer.tags")}</label>
-          <div style={{ ...inputStyle, display: "flex", alignItems: "center", color: "#b0b0b0", cursor: "not-allowed", background: "#f9fafb" }}>
-            {t("singleGroup.editGroupDrawer.addNewTags")}
-          </div>
+          <GroupTagsSelect
+            value={form.tagIds}
+            onChange={(tagIds) => setForm((f) => ({ ...f, tagIds }))}
+            placeholder={t("singleGroup.editGroupDrawer.addNewTags")}
+          />
         </div>
 
         <div>

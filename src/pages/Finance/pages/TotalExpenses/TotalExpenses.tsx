@@ -34,6 +34,8 @@ import { useToast } from "../../../../Context/ToastContext";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import { formatUZS } from "../../../../utils";
 import type { RootState } from "../../../../app/store";
+import { useBranch } from "../../../../Context/BranchContext";
+import { downloadExcelBlob } from "../../../../utils/downloadExcel";
 
 // ---------- Helpers ----------
 const fmtDate = (d: string | null) => (d ? d.split("-").reverse().join(".") : "—");
@@ -49,6 +51,7 @@ export const TotalExpenses = () => {
   const { t } = useTranslation();
   const toast = useToast();
   const headerBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { branchLabel } = useBranch();
 
   // ── Summary + chart: real data from GET /finance/chart ──────────────────
   const currentYear = new Date().getFullYear();
@@ -122,13 +125,10 @@ export const TotalExpenses = () => {
 
   const handleExportExpensesExcel = async () => {
     try {
-      const blob = await fetchExpensesExcel(queryArgs).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `expenses-${applied.page}.xlsx`;
-      link.click();
-      URL.revokeObjectURL(url);
+      // The export always covers every matching row, not just the page on screen
+      // (queryArgs carries the current page/limit for the on-screen table).
+      const blob = await fetchExpensesExcel({ ...queryArgs, page: 1, limit: 3000 }).unwrap();
+      downloadExcelBlob(blob, "expenses", branchLabel);
     } catch {
       toast.error(t("finance.totalExpenses.exportError"));
     }

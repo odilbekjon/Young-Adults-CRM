@@ -45,6 +45,7 @@ import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { RemoveStudentDialog } from "../SingleGroup/RemoveStudentDialog";
 import { extractApiError } from "../../utils/extractApiError";
 import { AddPayment } from "../../components/AddPayment";
+import { StudentTagsSelect } from "../../components/StudentTagsSelect";
 import { StudentPaymentsSection } from "./payments/StudentPaymentsSection";
 import { FreezeModal } from "../SingleGroup/FreezeModal";
 import { ActivateModal } from "../SingleGroup/ActivateModal";
@@ -84,7 +85,7 @@ const EditStudentDrawer = ({
   open: boolean;
   onClose: () => void;
   student: FlatStudent;
-  onSave: (data: { name: string; phone: string; gender: StudentGender; birthdate: string }) => Promise<boolean>;
+  onSave: (data: { name: string; phone: string; gender: StudentGender; birthdate: string; tagIds: string[] }) => Promise<boolean>;
   saving?: boolean;
   error?: string | null;
 }) => {
@@ -92,10 +93,10 @@ const EditStudentDrawer = ({
   const [phone, setPhone] = useState(student.phone);
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("male");
-  const [tags, setTags] = useState("");
+  const [tagIds, setTagIds] = useState<string[]>([]);
 
   useEffect(() => {
-    if (open) { setName(student.name); setPhone(student.phone); }
+    if (open) { setName(student.name); setPhone(student.phone); setTagIds(student.tagIds ?? []); }
   }, [open, student]);
 
   const additionalContactIcons = [
@@ -364,21 +365,7 @@ const EditStudentDrawer = ({
           >
             Tags
           </label>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Add new tags"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <FiChevronDown size={16} color="#9ca3af" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 } }}
-          />
+          <StudentTagsSelect value={tagIds} onChange={setTagIds} />
         </div>
 
         {/* Set password */}
@@ -412,6 +399,7 @@ const EditStudentDrawer = ({
               phone,
               gender: gender === "female" ? "FEMALE" : "MALE",
               birthdate: dob,
+              tagIds,
             });
             if (ok) onClose();
           }}
@@ -1421,7 +1409,7 @@ export const StudentProfile = () => {
     );
   }
 
-  const handleSaveStudent = async (data: { name: string; phone: string; gender: StudentGender; birthdate: string }): Promise<boolean> => {
+  const handleSaveStudent = async (data: { name: string; phone: string; gender: StudentGender; birthdate: string; tagIds: string[] }): Promise<boolean> => {
     setSaveError(null);
     try {
       await updateStudent({
@@ -1430,6 +1418,7 @@ export const StudentProfile = () => {
         phone: data.phone,
         gender: data.gender,
         birthdate: data.birthdate || undefined,
+        tagIds: data.tagIds.length ? data.tagIds : undefined,
       }).unwrap();
       toast.success("Student updated successfully");
       return true;

@@ -14,6 +14,10 @@ import type {
 import { useAllBranchesQuery } from "../../../../app/api/branchesApi";
 import { useGroupsSelectQuery } from "../../../../app/api/groupsApi";
 import { useToast } from "../../../../Context/ToastContext";
+import { useBranch } from "../../../../Context/BranchContext";
+import { downloadExcelBlob } from "../../../../utils/downloadExcel";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../../app/store";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 
 type SortKey = "name" | "status" | "group" | "attendance";
@@ -176,6 +180,8 @@ export const AttendanceReports = () => {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const { data: branchesData } = useAllBranchesQuery();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { branchLabel } = useBranch();
   const { data: groupsData } = useGroupsSelectQuery();
 
   const branchOptions: Option[] = useMemo(
@@ -218,13 +224,11 @@ export const AttendanceReports = () => {
 
   const handleExportExcel = async () => {
     try {
-      const blob = await fetchExcel(queryArgs).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "attendance-report.xlsx";
-      link.click();
-      URL.revokeObjectURL(url);
+      // Report-level branch filter wins; otherwise scope to the branch selected
+      // in the header so the file never mixes branches.
+      const blob = await fetchExcel({ ...queryArgs, branchId: queryArgs.branchId ?? selectedBranchId ?? undefined }).unwrap();
+      const reportBranch = branchOptions.find((o) => o.value === queryArgs.branchId)?.label;
+      downloadExcelBlob(blob, "attendance-report", reportBranch ?? branchLabel);
     } catch {
       toast.error(t("reports.common.exportError"));
     }

@@ -18,6 +18,7 @@ import {
 } from "../../app/api/groupsApi/groupsApi";
 import type { RootState } from "../../app/store";
 import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
+import { StudentTagsSelect } from "../StudentTagsSelect";
 
 /* ─── shared styles ─── */
 const inputStyle: React.CSSProperties = {
@@ -90,6 +91,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [group, setGroup] = useState("");
   const [password, setPassword] = useState("");
+  const [tagIds, setTagIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // har bir additional field uchun ochiq/yopiqligi
@@ -118,7 +120,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
 
   const handleClose = () => {
     setPhone(""); setName(""); setDob(""); setGender("");
-    setComment(""); setGroup(""); setPassword(""); setError(null);
+    setComment(""); setGroup(""); setPassword(""); setTagIds([]); setError(null);
     setShowGroupField(false); setShowPasswordField(false);
     setOpenFields({
       parentPhone: false, passport: false, parentName: false, email: false,
@@ -157,6 +159,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
         // Without this, the backend enrolled the new student in every branch
         // instead of just the one currently active in the header.
         branchIds: [selectedBranchId],
+        tagIds: tagIds.length ? tagIds : undefined,
       }).unwrap();
 
       if (showGroupField && group) {
@@ -368,6 +371,12 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
               )}
             </>
           )}
+        </div>
+
+        {/* Tags — sent as tagIds */}
+        <div>
+          <label style={labelStyle}>{t("addStudent.tags", { defaultValue: "Tags" })}</label>
+          <StudentTagsSelect value={tagIds} onChange={setTagIds} placeholder={t("addStudent.tagsPlaceholder", { defaultValue: "Add new tags" })} />
         </div>
 
         {/* Set password */}

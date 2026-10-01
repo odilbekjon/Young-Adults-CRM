@@ -33,13 +33,14 @@ import { useTeachersSelectQuery } from "../../app/api/teachersApi";
 import { useTagsSelectQuery } from "../../app/api/tagsApi";
 import type { RootState } from "../../app/store";
 import { PortalPopover } from "../../components/common/PortalPopover";
+import { GroupTagsSelect, getGroupTagIds } from "../../components/GroupTagsSelect";
 import { useBranch } from "../../Context/BranchContext";
 import { useToast } from "../../Context/ToastContext";
 import { Calendar } from "../SingleGroup/Calendar";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { TimeSelectField } from "../SingleGroup/TimeSelectField";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
-import { extractApiError, formatTrainingDate, addMonthsToIsoDate, classifyDays, classifyDayList, DAYS_PRESETS } from "../../utils";
+import { extractApiError, formatTrainingDate, addMonthsToIsoDate, classifyDays, classifyDayList, DAYS_PRESETS, downloadExcelBlob } from "../../utils";
 
 /* ─── types ─────────────────────────────────────────────── */
 type SortKey = keyof GroupRow | "";
@@ -63,6 +64,7 @@ interface GroupRow {
   endDate: string;
   studentCount: number;
   studentIds: string[];
+  tagIds: string[];
   status: string;
   createdAt: string;
 }
@@ -86,6 +88,7 @@ interface FormState {
   time: string;
   trainingStart: string;
   trainingEnd: string;
+  tagIds: string[];
 }
 
 /* ─── static ─────────────────────────────────────────────── */
@@ -111,7 +114,7 @@ const FILTER_BLUE = "#185FA5";
 
 const EMPTY_FORM: FormState = {
   name: "", courseId: "", teacherIds: [], roomId: "", days: [],
-  time: "", trainingStart: "", trainingEnd: "",
+  time: "", trainingStart: "", trainingEnd: "", tagIds: [],
 };
 
 /* ─── shared input sx ────────────────────────────────────── */
@@ -169,6 +172,7 @@ const toGroupRow = (g: Group, archivedMembershipKeys: Set<string>): GroupRow => 
   endDate: g.trainingEnd ?? "",
   studentCount: (g.students ?? []).filter((s) => !archivedMembershipKeys.has(`${s.id}|${g.id}`)).length,
   studentIds: g.students?.map((s) => s.id) ?? [],
+  tagIds: getGroupTagIds(g),
   status: g.status,
   createdAt: g.createdAt,
 });
@@ -627,12 +631,7 @@ export const Groups = () => {
         // asks the backend for every matching record.
         limit: 1_000_000,
       }).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "groups.xlsx";
-      link.click();
-      URL.revokeObjectURL(url);
+      downloadExcelBlob(blob, "groups", branchLabel);
     } catch {
       toast.error(t("groups.actions.exportError"));
     }
@@ -686,6 +685,7 @@ export const Groups = () => {
       time: group.lessonStartTime,
       trainingStart: group.startDate,
       trainingEnd: group.endDate,
+      tagIds: group.tagIds,
     });
     setDaysMode(classifyDayList(group.dayList));
     setFormErrors({});
@@ -714,6 +714,7 @@ export const Groups = () => {
       time: form.time || undefined,
       trainingStart: form.trainingStart || undefined,
       trainingEnd: form.trainingEnd || undefined,
+      tagIds: form.tagIds.length ? form.tagIds : undefined,
     };
     try {
       if (editingId !== null) {
@@ -1335,6 +1336,18 @@ export const Groups = () => {
               {t("groups.form.endDate")}
             </Typography>
             <DatePickerField value={form.trainingEnd} onChange={(iso) => setForm((prev) => ({ ...prev, trainingEnd: iso }))} />
+          </Box>
+
+          {/* Tags — GROUP-type tags from Settings > Tags (GET /tags/select) */}
+          <Box mb={2.5}>
+            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+              {t("groups.form.tags")}
+            </Typography>
+            <GroupTagsSelect
+              value={form.tagIds}
+              onChange={(tagIds) => setForm((p) => ({ ...p, tagIds }))}
+              placeholder={t("singleGroup.editGroupDrawer.addNewTags")}
+            />
           </Box>
 
           {saveError && (

@@ -53,7 +53,7 @@ import {
 // base field name (teacherIds) is unaffected since brackets are stripped
 // during parsing.
 const appendGroupFormData = (formData: FormData, data: Partial<CreateGroupRequest>) => {
-    const { days, teacherIds, studentIds, ...rest } = data;
+    const { days, teacherIds, studentIds, tagIds, ...rest } = data;
     (Object.keys(rest) as (keyof typeof rest)[]).forEach((key) => {
         const value = rest[key];
         if (value !== undefined && value !== null && value !== "") formData.append(key, String(value));
@@ -61,6 +61,9 @@ const appendGroupFormData = (formData: FormData, data: Partial<CreateGroupReques
     days?.forEach((day) => formData.append("days[]", day));
     teacherIds?.forEach((id) => formData.append("teacherIds[]", id));
     studentIds?.forEach((id) => formData.append("studentIds[]", id));
+    // Same bracket convention as the other array fields. An empty list sends
+    // nothing (multipart can't express "no tags").
+    tagIds?.forEach((id) => formData.append("tagIds[]", id));
 };
 
 // Backend ba'zan ro'yxatni tekis massiv, ba'zan {data: [...], meta} ko'rinishida
@@ -431,6 +434,7 @@ const buildGroupsExcelQueryString = (args: GroupsExcelQueryArgs = {}): string =>
     if (args.daysType) qs.set("daysType", args.daysType);
     if (args.startDate) qs.set("startDate", args.startDate);
     if (args.endDate) qs.set("endDate", args.endDate);
+    if (args.tagId) qs.set("tagId", args.tagId);
     return qs.toString();
 };
 

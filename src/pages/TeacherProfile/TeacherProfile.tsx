@@ -79,7 +79,7 @@ const EditDrawer = ({
   open: boolean;
   onClose: () => void;
   branches: { id: string; name: string }[];
-  onSave: (data: { name: string; phone: string; gender: TeacherGender | undefined; birthdate: string; branchIds: string[]; photo?: File }) => void;
+  onSave: (data: { name: string; phone: string; gender: TeacherGender | undefined; birthdate: string; branchIds: string[]; photo?: File; password?: string }) => void;
   isSaving: boolean;
 }) => {
   const [phone, setPhone] = useState(teacher.phone ?? "");
@@ -90,6 +90,10 @@ const EditDrawer = ({
     teacher.branches?.map((b) => b.id) ?? []
   );
   const [photo, setPhoto] = useState<File | undefined>(undefined);
+  // "Set password" is collapsed by default (same as the student forms); an
+  // empty value is never sent, so the current password stays untouched.
+  const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -99,6 +103,8 @@ const EditDrawer = ({
       setDob(teacher.birthdate ?? "");
       setSelectedBranches(teacher.branches?.map((b) => b.id) ?? []);
       setPhoto(undefined);
+      setShowPassword(false);
+      setPassword("");
     }
   }, [open, teacher]);
 
@@ -169,8 +175,26 @@ const EditDrawer = ({
               </label>
             </div>
           </div>
+          <div>
+            <span
+              onClick={() => { setShowPassword((p) => !p); setPassword(""); }}
+              style={{ fontSize: 13, color: "#555", cursor: "pointer", userSelect: "none" }}
+            >
+              {showPassword ? "− Set password" : "+ Set password"}
+            </span>
+            {showPassword && (
+              <input
+                type="password"
+                autoComplete="new-password"
+                style={{ ...inputStyle, marginTop: 8 }}
+                placeholder="New password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            )}
+          </div>
           <button
-            onClick={() => onSave({ name, phone, gender: gender || undefined, birthdate: dob, branchIds: selectedBranches, photo })}
+            onClick={() => onSave({ name, phone, gender: gender || undefined, birthdate: dob, branchIds: selectedBranches, photo, password: password.trim() || undefined })}
             disabled={isSaving}
             style={{ background: "#1a3a5c", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start", opacity: isSaving ? 0.7 : 1 }}
           >
@@ -682,7 +706,7 @@ export const TeacherProfile = () => {
       }));
   }, [allGroupsData, teacher]);
 
-  const handleSaveTeacher = async (data: { name: string; phone: string; gender: TeacherGender | undefined; birthdate: string; branchIds: string[]; photo?: File }) => {
+  const handleSaveTeacher = async (data: { name: string; phone: string; gender: TeacherGender | undefined; birthdate: string; branchIds: string[]; photo?: File; password?: string }) => {
     if (!id) return;
     try {
       await updateTeacher({
@@ -693,6 +717,7 @@ export const TeacherProfile = () => {
         birthdate: data.birthdate || undefined,
         branchIds: data.branchIds,
         photo: data.photo,
+        password: data.password,
       }).unwrap();
       toast.success(t("teacherProfile.toast.updated"));
       setEditOpen(false);
@@ -771,12 +796,13 @@ export const TeacherProfile = () => {
             </div>
             <div style={{ fontSize: 13, marginBottom: 4 }}>ID: <span style={{ color: "#185FA5", fontWeight: 500 }}>{teacher.id}</span></div>
             {teacher.phone && <div style={{ fontSize: 13, marginBottom: 4 }}>Phone: <span style={{ color: "#185FA5", fontWeight: 500 }}>{teacher.phone}</span></div>}
-            <div style={{ fontSize: 13, marginBottom: 4 }}>Role: <span style={{ color: "#185FA5", fontWeight: 500 }}>Teacher</span></div>
+            <div style={{ fontSize: 13, marginBottom: 4 }}>Date of birth: <span style={{ color: "#185FA5", fontWeight: 500 }}>{formatDate(teacher.birthdate)}</span></div>
             {teacher.email && <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{teacher.email}</div>}
             {teacher.specialization && <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{teacher.specialization}</div>}
             <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "12px 0" }} />
-            <div style={{ fontSize: 11, color: "#aaa", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.4px" }}>Status</div>
-            <span style={{ display: "inline-block", fontSize: 12, padding: "4px 12px", borderRadius: 14, background: "#E6F1FB", color: "#185FA5", border: "1px solid #B5D4F4" }}>{teacher.status}</span>
+            <div style={{ fontSize: 11, color: "#aaa", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.4px" }}>Roles</div>
+            {/* The teacher payload carries no role field — everyone on this page is a teacher. */}
+            <span style={{ display: "inline-block", fontSize: 12, padding: "4px 12px", borderRadius: 14, background: "#E6F1FB", color: "#185FA5", border: "1px solid #B5D4F4" }}>Teacher</span>
             <div style={{ fontSize: 11, color: "#aaa", marginTop: 12, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.4px" }}>Branches</div>
             {(teacher.branches ?? []).length === 0 ? (
               <span style={{ fontSize: 12, color: "#aaa" }}>—</span>

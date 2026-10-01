@@ -169,6 +169,8 @@ export const usersApi = baseApi.injectEndpoints({
             transformResponse: (response: unknown) => normalizeStaffUserForEdit(pickRow(response)),
             providesTags: ["staff"],
         }),
+        // GET /users/excel — no documented query params; branch scoping is the
+        // x-branch-id header.
         staffUsersExcel: builder.query<Blob, void>({
             query: () => ({
                 url: `${PATHS.USERS}/excel`,

@@ -46,7 +46,8 @@ import { useTranslation } from "react-i18next";
 import { SendSmsModal } from "../../../../../components/SendSmsModal";
 import { useToast } from "../../../../../Context/ToastContext";
 import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
-import { extractApiError } from "../../../../../utils";
+import { extractApiError, downloadExcelBlob } from "../../../../../utils";
+import { useBranch } from "../../../../../Context/BranchContext";
 import type { RootState } from "../../../../../app/store";
 import {
   useStaffUsersQuery,
@@ -138,6 +139,7 @@ export const Staff = () => {
   const toast = useToast();
   const navigate = useNavigate();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { branchLabel } = useBranch();
 
   const [searchValue, setSearchValue] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -391,13 +393,10 @@ export const Staff = () => {
 
   const handleExportExcel = async () => {
     try {
+      // No query params: /users/excel's own parameters aren't documented, and
+      // the selected branch already travels in the x-branch-id header.
       const blob = await fetchStaffUsersExcel().unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "staff.xlsx";
-      link.click();
-      URL.revokeObjectURL(url);
+      downloadExcelBlob(blob, "staff", branchLabel);
     } catch (err) {
       toast.error(extractApiError(err) || t("settings.ceo.staff.exportError"));
     }

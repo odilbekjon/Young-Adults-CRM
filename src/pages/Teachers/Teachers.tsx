@@ -45,6 +45,7 @@ import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils/extractApiError";
+import { downloadExcelBlob } from "../../utils/downloadExcel";
 import {
   useAllTeachersQuery,
   useCreateTeacherMutation,
@@ -227,12 +228,7 @@ export const Teachers = () => {
         // this always asks the backend for every matching record.
         limit: 1_000_000,
       }).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "teachers.xlsx";
-      link.click();
-      URL.revokeObjectURL(url);
+      downloadExcelBlob(blob, "teachers", branchLabel);
     } catch {
       toast.error(t("teachers.actions.exportError"));
     }

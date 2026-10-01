@@ -27,6 +27,8 @@ import {
 import { useToast } from "../../../../Context/ToastContext";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import type { RootState } from "../../../../app/store";
+import { useBranch } from "../../../../Context/BranchContext";
+import { downloadExcelBlob } from "../../../../utils/downloadExcel";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,6 +62,7 @@ export const AllPayments = () => {
   const { t } = useTranslation();
   const toast = useToast();
   const branchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { branchLabel } = useBranch();
 
   // Dashboard's "Paid during the month" card links here with ?startDate=
   // &endDate= (the current month's range) so the list opens pre-filtered
@@ -116,13 +119,10 @@ export const AllPayments = () => {
 
   const handleExportExcel = async () => {
     try {
-      const blob = await fetchPaymentsExcel(queryArgs).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `payments-${applied.page}.xlsx`;
-      link.click();
-      URL.revokeObjectURL(url);
+      // The export always covers every matching row, not just the page on screen
+      // (queryArgs carries the current page/limit for the on-screen table).
+      const blob = await fetchPaymentsExcel({ ...queryArgs, page: 1, limit: 3000 }).unwrap();
+      downloadExcelBlob(blob, "payments", branchLabel);
     } catch {
       toast.error(t("finance.allPayments.exportError"));
     }

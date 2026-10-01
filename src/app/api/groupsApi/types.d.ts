@@ -48,6 +48,11 @@ export interface GroupPersonRef {
   phone: string;
 }
 
+export interface GroupTagRef {
+  id: string;
+  name: string;
+}
+
 export interface Group {
   id: string;
   name: string;
@@ -68,6 +73,9 @@ export interface Group {
   daysType: "EVEN" | "ODD" | string;
   teachers: GroupPersonRef[];
   students: GroupPersonRef[];
+  // Tags attached to the group — backend shape not confirmed, either may come.
+  tags?: GroupTagRef[];
+  tagIds?: string[];
 }
 
 export interface groupsRequest {
@@ -114,6 +122,8 @@ export interface GroupDetail {
   trainingEnd: string | null;
   teachers: GroupPersonRef[];
   students?: GroupPersonRef[];
+  tags?: GroupTagRef[];
+  tagIds?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -135,6 +145,7 @@ export interface CreateGroupRequest {
   trainingEnd?: string;
   teacherIds?: string[];
   studentIds?: string[];
+  tagIds?: string[];
 }
 
 export interface UpdateGroupRequest extends Partial<Omit<CreateGroupRequest, "name" | "courseId">> {
@@ -412,4 +423,6 @@ export interface GroupsExcelQueryArgs {
   daysType?: string;
   startDate?: string;
   endDate?: string;
+  // Same tag filter GET /groups accepts, so the file matches the Tags filter.
+  tagId?: string;
 }

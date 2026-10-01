@@ -9,6 +9,10 @@ import {
 } from "../../../../app/api/reportsApi";
 import { useAllLeadSourcesQuery } from "../../../../app/api/leadSourcesApi";
 import { useToast } from "../../../../Context/ToastContext";
+import { useBranch } from "../../../../Context/BranchContext";
+import { downloadExcelBlob } from "../../../../utils/downloadExcel";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../../app/store";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 
 type FunnelStage = "Incoming" | "Waiting" | "Set" | "Attended" | "Paid";
@@ -121,6 +125,8 @@ const FunnelChart = ({ counts }: { counts: number[] }) => {
 export const ConversionReports = () => {
   const { t } = useTranslation();
   const toast = useToast();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { branchLabel } = useBranch();
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -184,13 +190,9 @@ export const ConversionReports = () => {
 
   const handleExportExcel = async () => {
     try {
-      const blob = await fetchExcel(queryArgs).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "conversion-report.xlsx";
-      link.click();
-      URL.revokeObjectURL(url);
+      // Scope to the branch selected in the header explicitly, not only via the header.
+      const blob = await fetchExcel({ ...queryArgs, branchId: selectedBranchId ?? undefined }).unwrap();
+      downloadExcelBlob(blob, "conversion-report", branchLabel);
     } catch {
       toast.error(t("reports.common.exportError"));
     }

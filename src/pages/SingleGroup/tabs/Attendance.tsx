@@ -35,6 +35,7 @@ import {
 } from "../../../app/api/attendancesApi";
 import type { AttendanceStatus } from "../../../app/api/attendancesApi/types";
 import { useToast } from "../../../Context/ToastContext";
+import { downloadExcelBlob } from "../../../utils/downloadExcel";
 
 type AttendanceStudent = Student & { realId: string };
 
@@ -46,6 +47,9 @@ interface Props {
   // months to check history is still allowed, only the edit picker/remove
   // button are gated per-cell.
   restrictToToday?: boolean;
+  // Only used to build a readable download file name for the Excel export.
+  groupName?: string;
+  branchName?: string;
 }
 
 const MONTH_KEYS = [
@@ -77,7 +81,7 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 
 type AttVal = "Was" | "Not" | null;
 
-export const Attendance = ({ groupId, students, restrictToToday }: Props) => {
+export const Attendance = ({ groupId, students, restrictToToday, groupName, branchName }: Props) => {
   const { t } = useTranslation();
   const toast = useToast();
   const now = new Date();
@@ -103,12 +107,7 @@ export const Attendance = ({ groupId, students, restrictToToday }: Props) => {
   const handleExportExcel = async () => {
     try {
       const blob = await fetchExcel({ groupId, month: monthStr }).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `attendance-${groupId}-${monthStr}.xlsx`;
-      link.click();
-      URL.revokeObjectURL(url);
+      downloadExcelBlob(blob, `attendance-${groupName || groupId}-${monthStr}`, branchName);
     } catch {
       toast.error(t("singleGroup.tabs.attendance.exportError"));
     }

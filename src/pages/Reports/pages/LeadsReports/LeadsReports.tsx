@@ -23,6 +23,10 @@ import {
   useLazyReportLeadsExcelQuery,
 } from "../../../../app/api/reportsApi";
 import { useToast } from "../../../../Context/ToastContext";
+import { useBranch } from "../../../../Context/BranchContext";
+import { downloadExcelBlob } from "../../../../utils/downloadExcel";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../../app/store";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 
 // Known sources keep their established colours; anything else the backend
@@ -51,6 +55,8 @@ const formatMonth = (name: string, locale: string) => {
 export const LeadsReports = () => {
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { branchLabel } = useBranch();
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -78,13 +84,9 @@ export const LeadsReports = () => {
 
   const handleExportExcel = async () => {
     try {
-      const blob = await fetchExcel(queryArgs).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "leads-report.xlsx";
-      link.click();
-      URL.revokeObjectURL(url);
+      // Scope to the branch selected in the header explicitly, not only via the header.
+      const blob = await fetchExcel({ ...queryArgs, branchId: selectedBranchId ?? undefined }).unwrap();
+      downloadExcelBlob(blob, "leads-report", branchLabel);
     } catch {
       toast.error(t("reports.common.exportError"));
     }

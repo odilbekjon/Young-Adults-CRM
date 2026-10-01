@@ -17,6 +17,10 @@ import { useAllTeachersQuery } from "../../../../app/api/teachersApi";
 import { useReasonsSelectQuery } from "../../../../app/api/reasonsApi";
 import { useAllBranchesQuery } from "../../../../app/api/branchesApi";
 import { useToast } from "../../../../Context/ToastContext";
+import { useBranch } from "../../../../Context/BranchContext";
+import { downloadExcelBlob } from "../../../../utils/downloadExcel";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../../app/store";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 
 interface SelectOption {
@@ -118,6 +122,8 @@ export const StudentsLeftGroup = () => {
   const { data: teachersData } = useAllTeachersQuery({ page: 1, limit: 100 });
   const { data: reasonOptions } = useReasonsSelectQuery();
   const { data: branchesData } = useAllBranchesQuery();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { branchLabel } = useBranch();
 
   const courseOptions = useMemo(() => (coursesData?.data ?? []).map((c) => ({ value: c.name, label: c.name })), [coursesData]);
   const teacherOptions = useMemo(() => (teachersData?.data ?? []).map((tc) => ({ value: tc.name, label: tc.name })), [teachersData]);
@@ -146,13 +152,11 @@ export const StudentsLeftGroup = () => {
 
   const handleExportExcel = async () => {
     try {
-      const blob = await fetchExcel(queryArgs).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "left-students-report.xlsx";
-      link.click();
-      URL.revokeObjectURL(url);
+      // Report-level branch filter wins; otherwise scope to the branch selected
+      // in the header so the file never mixes branches.
+      const blob = await fetchExcel({ ...queryArgs, branchId: queryArgs.branchId ?? selectedBranchId ?? undefined }).unwrap();
+      const reportBranch = branchOptions.find((o) => o.value === queryArgs.branchId)?.label;
+      downloadExcelBlob(blob, "left-students-report", reportBranch ?? branchLabel);
     } catch {
       toast.error(t("reports.common.exportError"));
     }

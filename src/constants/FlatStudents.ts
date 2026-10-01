@@ -31,6 +31,7 @@ export interface FlatStudent {
   address?: string | null;
   createdAt?: string | null;
   groupsCount?: number;
+  tagIds?: string[];
 }
 
 export const buildFlatStudents = (): FlatStudent[] => {
@@ -76,6 +77,12 @@ export const mapApiStudentToFlat = (s: Student | StudentDetail): FlatStudent => 
   const active = "status" in s ? s.status === "ACTIVE" : true;
   const comment = "comments" in s ? s.comments : "comment" in s ? s.comment : null;
   const groupsStart = "groupsStart" in s ? s.groupsStart : null;
+  // GET /students rows carry the span as one string, "2026-10-15 - 2026-11-15"
+  // (the earliest group start to the latest group end).
+  const [trainingFrom = "", trainingTo = ""] =
+    "trainingDates" in s && typeof s.trainingDates === "string"
+      ? s.trainingDates.split(/\s+[-–—]\s+/).map((d) => d.trim())
+      : [];
   return {
     uid: s.id,
     id: 0,
@@ -90,8 +97,8 @@ export const mapApiStudentToFlat = (s: Student | StudentDetail): FlatStudent => 
     course: group?.name ?? "—",
     teacher: teacher?.name ?? "—",
     teacherId: 0,
-    startDate: groupsStart ?? "",
-    endDate: "",
+    startDate: trainingFrom || groupsStart || "",
+    endDate: trainingTo,
     branch: branchName,
     room: "",
     price: 0,
@@ -104,6 +111,7 @@ export const mapApiStudentToFlat = (s: Student | StudentDetail): FlatStudent => 
     address: s.location ?? undefined,
     createdAt: s.createdAt ?? undefined,
     groupsCount: "groups" in s ? s.groups?.length ?? 0 : undefined,
+    tagIds: s.tagIds ?? s.tags?.map((tag) => tag.id) ?? undefined,
   };
 };
 

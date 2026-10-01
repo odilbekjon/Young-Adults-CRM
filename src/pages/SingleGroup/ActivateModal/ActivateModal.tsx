@@ -18,19 +18,22 @@ const todayISO = () => {
 };
 
 export const ActivateModal = ({
-  open, onClose, onConfirm, isSaving,
+  open, onClose, onConfirm, isSaving, defaultDate,
 }: {
   open: boolean;
   onClose: () => void;
   onConfirm: (paymentStartDate: string) => void;
   isSaving?: boolean;
+  // Pre-filled "since when" (the day the student joined the group); falls
+  // back to today when the membership carries no join date.
+  defaultDate?: string;
 }) => {
   const { t } = useTranslation();
   const [paymentStartDate, setPaymentStartDate] = useState(todayISO());
 
   useEffect(() => {
-    if (open) setPaymentStartDate(todayISO());
-  }, [open]);
+    if (open) setPaymentStartDate(defaultDate || todayISO());
+  }, [open, defaultDate]);
 
   const handleSubmit = () => {
     if (!paymentStartDate) return;

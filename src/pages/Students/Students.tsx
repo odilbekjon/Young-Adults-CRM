@@ -44,6 +44,7 @@ import { FiUser } from "react-icons/fi";
 import { PiMicrosoftExcelLogoFill } from "react-icons/pi";
 
 import { FlatStudent, mapApiStudentToFlat, formatDate } from "../../constants/FlatStudents";
+import { StudentTagsSelect } from "../../components/StudentTagsSelect";
 import { ALL_COLUMNS, CONTACT_ICONS, BADGE_COLORS } from "../../constants/StudentsTable";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -73,6 +74,8 @@ import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { RemoveStudentDialog } from "../SingleGroup/RemoveStudentDialog";
 import { extractApiError } from "../../utils/extractApiError";
+import { downloadExcelBlob } from "../../utils/downloadExcel";
+import { useBranch } from "../../Context/BranchContext";
 import type { RootState } from "../../app/store";
 
 import { SendSmsModal } from "../../components/SendSmsModal";
@@ -433,7 +436,7 @@ const EditStudentDrawer = ({
   open: boolean;
   student: FlatStudent | null;
   onClose: () => void;
-  onSave: (uid: string, data: { name: string; phone: string }) => Promise<boolean>;
+  onSave: (uid: string, data: { name: string; phone: string; tagIds: string[] }) => Promise<boolean>;
   saving?: boolean;
   error?: string | null;
 }) => {
@@ -442,9 +445,10 @@ const EditStudentDrawer = ({
   const [phone,  setPhone]  = useState("");
   const [dob,    setDob]    = useState("");
   const [gender, setGender] = useState("male");
+  const [tagIds, setTagIds] = useState<string[]>([]);
 
   React.useEffect(() => {
-    if (student) { setName(student.name); setPhone(student.phone); }
+    if (student) { setName(student.name); setPhone(student.phone); setTagIds(student.tagIds ?? []); }
   }, [student]);
 
   return (
@@ -507,6 +511,11 @@ const EditStudentDrawer = ({
           </Stack>
         </Box>
 
+        <Box mb={2.5}>
+          <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={1}>{t("students.editDrawer.tags", { defaultValue: "Tags" })}</Typography>
+          <StudentTagsSelect value={tagIds} onChange={setTagIds} placeholder={t("students.editDrawer.tagsPlaceholder", { defaultValue: "Add new tags" })} />
+        </Box>
+
         <Stack alignItems="flex-end" gap={0.5} mb={3}>
           <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>{t("students.editDrawer.addToGroup")}</Button>
           <Button variant="text" size="small" sx={{ fontSize: 13, color: "#5c7fa3", textTransform: "none", p: 0, minWidth: 0 }}>{t("students.editDrawer.setPassword")}</Button>
@@ -519,7 +528,7 @@ const EditStudentDrawer = ({
         <Button
           variant="contained" fullWidth
           disabled={saving}
-          onClick={async () => { if (!student) return; const ok = await onSave(student.uid, { name, phone }); if (ok) onClose(); }}
+          onClick={async () => { if (!student) return; const ok = await onSave(student.uid, { name, phone, tagIds }); if (ok) onClose(); }}
           sx={{ borderRadius: "20px", py: 1.2, fontWeight: 600, fontSize: 14, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" }, boxShadow: "none", textTransform: "none" }}
         >
           {saving ? t("students.editDrawer.saving") : t("students.editDrawer.submit")}
@@ -542,7 +551,8 @@ export const Students = () => {
   const [page, setPage] = useState(1);
   const limit = 20;
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
-  const [updateStudent, { isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
+  const { branchLabel } = useBranch();
+  const [updateStudent,{ isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
   const [updateStudentStatus] = useUpdateStudentStatusMutation();
   const [updateStudentGroupStatus] = useUpdateStudentGroupStatusMutation();
   const [fetchMemberships] = useLazyStudentGroupsQuery();
@@ -1027,10 +1037,10 @@ export const Students = () => {
     await handleBulkDelete();
   };
 
-  const handleSaveEdit = async (uid: string, data: { name: string; phone: string }): Promise<boolean> => {
+  const handleSaveEdit = async (uid: string, data: { name: string; phone: string; tagIds: string[] }): Promise<boolean> => {
     setActionError(null);
     try {
-      await updateStudent({ id: uid, name: data.name, phone: data.phone }).unwrap();
+      await updateStudent({ id: uid, name: data.name, phone: data.phone, tagIds: data.tagIds.length ? data.tagIds : undefined }).unwrap();
       toast.success(t("students.toast.updated"));
       return true;
     } catch {
@@ -1120,12 +1130,7 @@ export const Students = () => {
         // large fixed limit instead so the export always covers every match.
         limit: 1_000_000,
       }).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "students.xlsx";
-      link.click();
-      URL.revokeObjectURL(url);
+      downloadExcelBlob(blob, "students", branchLabel);
     } catch {
       toast.error(t("students.actions.exportError"));
     }

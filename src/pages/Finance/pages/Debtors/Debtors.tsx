@@ -19,6 +19,8 @@ import { extractApiError } from "../../../../utils/extractApiError";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import { formatUZS } from "../../../../utils";
 import type { RootState } from "../../../../app/store";
+import { useBranch } from "../../../../Context/BranchContext";
+import { downloadExcelBlob } from "../../../../utils/downloadExcel";
 
 const PAGE_SIZE_OPTIONS = [20, 25, 50];
 
@@ -35,6 +37,7 @@ export const Debtors = () => {
   const { t } = useTranslation();
   const toast = useToast();
   const branchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { branchLabel } = useBranch();
 
   // Draft inputs — only committed to the request on "Filter" click
   const [draftSearch, setDraftSearch] = useState("");
@@ -129,13 +132,10 @@ export const Debtors = () => {
 
   const handleExportExcel = async () => {
     try {
-      const blob = await fetchDebtorsExcel(queryArgs).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `debtors-${applied.page}.xlsx`;
-      link.click();
-      URL.revokeObjectURL(url);
+      // The export always covers every matching row, not just the page on screen
+      // (queryArgs carries the current page/limit for the on-screen table).
+      const blob = await fetchDebtorsExcel({ ...queryArgs, page: 1, limit: 3000 }).unwrap();
+      downloadExcelBlob(blob, "debtors", branchLabel);
     } catch {
       toast.error(t("finance.debtors.exportError"));
     }

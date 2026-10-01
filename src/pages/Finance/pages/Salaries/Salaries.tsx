@@ -17,7 +17,8 @@ import {
 import type { PayrollRow, PayrollStatus } from "../../../../app/api/salariesApi/types";
 import { usePaymentMethodsQuery } from "../../../../app/api/financeApi";
 import { useToast } from "../../../../Context/ToastContext";
-import { extractApiError } from "../../../../utils";
+import { extractApiError, downloadExcelBlob } from "../../../../utils";
+import { useBranch } from "../../../../Context/BranchContext";
 import type { RootState } from "../../../../app/store";
 
 const PAGE_SIZE = 10;
@@ -183,6 +184,7 @@ export const Salaries = () => {
   // comes from the Redux branch slice (the same source baseApi uses for the
   // x-branch-id header) rather than being hardcoded.
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { branchLabel } = useBranch();
 
   const [settingsOpen, setSettingsOpen] = useState(true);
 
@@ -258,13 +260,15 @@ export const Salaries = () => {
 
   const handleExportPayrolls = async () => {
     try {
-      const blob = await fetchPayrollsExcel(payrollArgs).unwrap();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "payrolls.xlsx";
-      link.click();
-      URL.revokeObjectURL(url);
+      // Every matching payroll (current period/status filters), not just the
+      // page on screen, scoped to the selected branch.
+      const blob = await fetchPayrollsExcel({
+        ...payrollArgs,
+        page: 1,
+        limit: 1_000_000,
+        branchId: selectedBranchId ?? undefined,
+      }).unwrap();
+      downloadExcelBlob(blob, "payrolls", branchLabel);
     } catch {
       toast.error(t("finance.salaries.payrolls.exportError"));
     }

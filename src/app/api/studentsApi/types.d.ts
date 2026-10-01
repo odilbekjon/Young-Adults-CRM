@@ -32,6 +32,11 @@ export interface StudentExtraFields {
   telegram?: string | null;
   instagram?: string | null;
   createdAt?: string | null;
+  // Tags attached to the student (PATCH/POST accept `tagIds`). The GET shape
+  // isn't documented, so both a `tags` object list and a flat `tagIds` list
+  // are tolerated when prefilling the edit forms.
+  tags?: { id: string; name: string }[] | null;
+  tagIds?: string[] | null;
 }
 
 export interface Student extends StudentExtraFields {
@@ -93,6 +98,9 @@ export interface StudentsExcelQueryArgs {
   search?: string;
   status?: StudentExcelStatus;
   branchId?: string;
+  // Same tag filter GET /students accepts — forwarded so the file matches
+  // the Tags filter applied on the page.
+  tagId?: string;
 }
 
 // Backend `data` ni to'g'ridan-to'g'ri massiv qilib qaytaradi (RoomsResponse/CoursesResponse
@@ -133,6 +141,7 @@ export interface CreateStudentRequest {
   telegram?: string;
   instagram?: string;
   branchIds?: string[];
+  tagIds?: string[];
 }
 
 export interface UpdateStudentRequest extends Partial<Omit<CreateStudentRequest, "name" | "password">> {

@@ -339,12 +339,15 @@ const normalizeStudentAttendanceReport = (raw: unknown): StudentAttendanceReport
 };
 
 const appendStudentFormData = (formData: FormData, data: Partial<CreateStudentRequest>) => {
-    const { branchIds, ...rest } = data;
+    const { branchIds, tagIds, ...rest } = data;
     (Object.keys(rest) as (keyof typeof rest)[]).forEach((key) => {
         const value = rest[key];
         if (value !== undefined && value !== null) formData.append(key, String(value));
     });
     if (branchIds) branchIds.forEach((id) => formData.append("branchIds", id));
+    // Repeated multipart field, same as branchIds. An empty list sends nothing
+    // (multipart can't express "no tags"), so the backend keeps what it has.
+    if (tagIds) tagIds.forEach((id) => formData.append("tagIds", id));
 };
 
 export const studentsApi = baseApi.injectEndpoints({
@@ -387,13 +390,14 @@ export const studentsApi = baseApi.injectEndpoints({
         // endpoints — query params confirmed against Swagger (search,
         // status, page, limit, branchId).
         studentsExcel: builder.query<Blob, StudentsExcelQueryArgs | void>({
-            query: ({ page, limit, search, status, branchId } = {}) => {
+            query: ({ page, limit, search, status, branchId, tagId } = {}) => {
                 const params = new URLSearchParams();
                 if (page) params.set("page", String(page));
                 if (limit) params.set("limit", String(limit));
                 if (search) params.set("search", search);
                 if (status) params.set("status", status);
                 if (branchId) params.set("branchId", branchId);
+                if (tagId) params.set("tagId", tagId);
                 return {
                     url: `${PATHS.STUDENTS}/excel?${params.toString()}`,
                     method: "GET",

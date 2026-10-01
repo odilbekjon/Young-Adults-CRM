@@ -21,9 +21,12 @@ import { logout, setToken } from "../../store/authSlice";
 // cold starts, which don't apply to this host, but harmless to keep as a
 // general resilience margin against transient network errors.
 
+const API_BASE_URL = "https://api.youngadults-crm.uz/api/v1";
+
 const fetchQuery = fetchBaseQuery({
-  baseUrl: import.meta.env.VITE_API_URL || "https://api.youngadults-crm.uz/api/v1",
-  // baseUrl: "https://young-adults-dj7r.onrender.com/api/v1/",
+  // Fixed on purpose: a stale VITE_API_URL left in the hosting dashboard
+  // (Vercel) kept builds pointing at the old Render backend.
+  baseUrl: API_BASE_URL,
   credentials: 'include',
   prepareHeaders: (headers, { getState }) => {
     const token = useStorage.getTokens()?.accessToken;

@@ -1,213 +1,175 @@
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import {
   Box,
   Typography,
   Chip,
-  Button,
   Divider,
+  CircularProgress,
+  MenuItem,
+  Pagination,
+  Select,
+  TextField,
 } from "@mui/material";
 import { FiCircle } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
+import { useSmsHistoryQuery } from "../../../../../app/api/smsApi";
+import type { RootState } from "../../../../../app/store";
 
-interface SmsLog {
-  id: number;
-  message: string;
-  quantity: number;
-  date: string;
-  time: string;
-}
+const PAGE_SIZE = 10;
+const SMS_PER_CHAR = 160;
+const ROLES = ["TEACHER", "STUDENT"];
 
-const smsLogs: SmsLog[] = [
-  {
-    id: 1,
-    message: "Hurmatli, Muhiddinova Mahliyo! Oxford guruhi uchun to'lovingiz muvaffaqiyatli amalga oshirildi: 270000. Ustoz: Muhiddin Baratov.",
-    quantity: 1,
-    date: "14.05.2026",
-    time: "13:22",
-  },
-  {
-    id: 2,
-    message: "Hurmatli, Xolmurodova Lola! Junior Academics guruhi uchun to'lovingiz muvaffaqiyatli amalga oshirildi: 175000. Ustoz: Nodirbek Xurramov.",
-    quantity: 1,
-    date: "14.05.2026",
-    time: "10:57",
-  },
-  {
-    id: 3,
-    message: "Hurmatli, Trafimova Natsiya! Success Seekers guruhi uchun to'lovingiz muvaffaqiyatli amalga oshirildi: 250000. Ustoz: Tojimurodov Elchin.",
-    quantity: 1,
-    date: "14.05.2026",
-    time: "10:52",
-  },
-  {
-    id: 4,
-    message: "Hurmatli, To'rayev Jasur! Success Seekers guruhi uchun to'lovingiz muvaffaqiyatli amalga oshirildi: 250000. Ustoz: Tojimurodov Elchin.",
-    quantity: 1,
-    date: "14.05.2026",
-    time: "10:52",
-  },
-  {
-    id: 5,
-    message: "Hurmatli, O'rolov Davlatbek 2! Junior developers guruhi uchun to'lovingiz muvaffaqiyatli amalga oshirildi: 300000. Ustoz: Odilbek Safarov.",
-    quantity: 1,
-    date: "14.05.2026",
-    time: "10:51",
-  },
-  {
-    id: 6,
-    message: "Hurmatli, Tursunmurodova E'zoza Dilshod qizi! Siz o'quv guruhiga qo'shildingiz. O'qituvchi: Khabib Abdullaev O'quv kunlari: Se, Pa, Sha Vaqt: 09:00 Kabinet: 6-xona Sizni Young Adultsda kutamiz!",
-    quantity: 1,
-    date: "14.05.2026",
-    time: "10:47",
-  },
-  {
-    id: 7,
-    message: "Hurmatli, Normuhammadov Samir! Bright minds guruhi uchun to'lovingiz muvaffaqiyatli amalga oshirildi: 250000. Ustoz: Khabib Abdullaev.",
-    quantity: 1,
-    date: "14.05.2026",
-    time: "10:44",
-  },
-  {
-    id: 8,
-    message: "Hurmatli, G'ulomboyeva Mushtariy! Siz o'quv guruhiga qo'shildingiz. O'qituvchi: Odilbek Safarov O'quv kunlari: Se, Pa, Sha Vaqt: 09:00 Kabinet: 8-xona Sizni Young Adultsda kutamiz!",
-    quantity: 1,
-    date: "14.05.2026",
-    time: "10:33",
-  },
-  {
-    id: 9,
-    message: "Hurmatli, Kazakova Farzona! Siz o'quv guruhiga qo'shildingiz. O'qituvchi: Bekhruz Mansurov O'quv kunlari: Se, Pa, Sha Vaqt: 09:00 Kabinet: Room 3 Sizni Young Adultsda kutamiz!",
-    quantity: 1,
-    date: "14.05.2026",
-    time: "10:18",
-  },
-  {
-    id: 10,
-    message: "Hurmatli, Sharafiddinova Hadya! Siz o'quv guruhiga qo'shildingiz. O'qituvchi: Bekhruz Mansurov O'quv kunlari: Se, Pa, Sha Vaqt: 09:00 Kabinet: Room 3 Sizni Young Adultsda kutamiz!",
-    quantity: 1,
-    date: "14.05.2026",
-    time: "10:17",
-  },
-  {
-    id: 11,
-    message: "Hurmatli, Abdurashidov Muhammadali 2! Siz o'quv guruhiga qo'shildingiz. O'qituvchi: Bekhruz Mansurov O'quv kunlari: Se, Pa, Sha Vaqt: 09:00 Kabinet: Room 3 Sizni Young Adultsda kutamiz!",
-    quantity: 1,
-    date: "14.05.2026",
-    time: "10:17",
-  },
-];
+// "2026-09-24T22:28:08+05:00" -> { date: "24.09.2026", time: "22:28" } (shown
+// in the viewer's local time zone).
+const splitDateTime = (iso: string) => {
+  const d = new Date(iso);
+  if (!iso || Number.isNaN(d.getTime())) return { date: "—", time: "" };
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    date: `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+};
 
 export const Sms = () => {
   const { t } = useTranslation();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [role, setRole] = useState("");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [search]);
+
+  // GET /sms/history
+  const { data, isLoading, isFetching, isError } = useSmsHistoryQuery({
+    search: debouncedSearch || undefined,
+    role: role || undefined,
+    branchId: selectedBranchId ?? "all",
+    page,
+    limit: PAGE_SIZE,
+  });
+
+  const rows = data?.rows ?? [];
+  const totalPages = data?.meta.totalPages ?? 1;
+
   return (
-    <Box sx={{ m:5, minHeight: "100vh", bgcolor: "#fff", p: 3 }}>
+    <Box sx={{ m: 5, minHeight: "100vh", bgcolor: "#fff", p: 3 }}>
       <Typography variant="h5" sx={{ fontWeight: 500, mb: 3, color: "#212121" }}>
         {t("reports.logs.sms.title")}
       </Typography>
 
-      <Box>
-        {smsLogs.map((sms, index) => (
-          <Box key={sms.id}>
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 1.5,
-                py: 1.5,
-              }}
-            >
-              {/* Circle icon */}
-              <Box sx={{ mt: 0.3, flexShrink: 0 }}>
-                <FiCircle size={18} color="#9e9e9e" />
-              </Box>
-
-              {/* System badge */}
-              <Box sx={{ flexShrink: 0, mt: 0.1 }}>
-                <Chip
-                  label={t("reports.logs.sms.system")}
-                  size="small"
-                  variant="outlined"
-                  sx={{
-                    fontSize: "0.75rem",
-                    height: 22,
-                    borderColor: "#bdbdbd",
-                    color: "#555",
-                    borderRadius: "4px",
-                  }}
-                />
-              </Box>
-
-              {/* Message */}
-              <Typography
-                variant="body2"
-                sx={{ flex: 1, color: "#212121", lineHeight: 1.6 }}
-              >
-                {sms.message}
-              </Typography>
-
-              {/* SMS quantity button */}
-              <Box sx={{ flexShrink: 0, ml: 1 }}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  disableElevation
-                  sx={{
-                    bgcolor: "#1a3a5c",
-                    color: "#fff",
-                    fontSize: "0.75rem",
-                    textTransform: "none",
-                    borderRadius: "4px",
-                    px: 1.5,
-                    py: 0.4,
-                    whiteSpace: "nowrap",
-                    "&:hover": { bgcolor: "#122a45" },
-                  }}
-                >
-                  {t("reports.logs.sms.quantity", { count: sms.quantity })}
-                </Button>
-              </Box>
-
-              {/* Not info button */}
-              <Box sx={{ flexShrink: 0 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  disableElevation
-                  sx={{
-                    fontSize: "0.75rem",
-                    textTransform: "none",
-                    borderRadius: "4px",
-                    px: 1.5,
-                    py: 0.4,
-                    borderColor: "#bdbdbd",
-                    color: "#555",
-                    whiteSpace: "nowrap",
-                    "&:hover": { borderColor: "#9e9e9e", bgcolor: "transparent" },
-                  }}
-                >
-                  {t("reports.logs.sms.notInfo")}
-                </Button>
-              </Box>
-
-              {/* Date & Time */}
-              <Box
-                sx={{
-                  flexShrink: 0,
-                  textAlign: "right",
-                  minWidth: 80,
-                }}
-              >
-                <Typography variant="caption" sx={{ color: "#555", display: "block" }}>
-                  {sms.date}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "#555", display: "block" }}>
-                  {sms.time}
-                </Typography>
-              </Box>
-            </Box>
-            {index < smsLogs.length - 1 && <Divider />}
-          </Box>
-        ))}
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2 }}>
+        <TextField
+          size="small"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("reports.logs.sms.searchPlaceholder")}
+          sx={{ minWidth: 260 }}
+        />
+        <Select
+          size="small"
+          displayEmpty
+          value={role}
+          onChange={(e) => { setRole(e.target.value); setPage(1); }}
+          sx={{ minWidth: 160, fontSize: 14 }}
+        >
+          <MenuItem value="">{t("reports.logs.sms.allRoles")}</MenuItem>
+          {ROLES.map((r) => (
+            <MenuItem key={r} value={r}>{t(`reports.logs.sms.roles.${r}`)}</MenuItem>
+          ))}
+        </Select>
+        {isFetching && !isLoading && <CircularProgress size={20} sx={{ alignSelf: "center" }} />}
       </Box>
+
+      <Box>
+        {isLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress size={26} /></Box>
+        ) : isError ? (
+          <Typography sx={{ py: 4, color: "error.main" }}>{t("reports.logs.sms.loadError")}</Typography>
+        ) : rows.length === 0 ? (
+          <Typography sx={{ py: 4, color: "text.secondary" }}>{t("reports.logs.sms.empty")}</Typography>
+        ) : (
+          rows.map((sms, index) => {
+            const { date, time } = splitDateTime(sms.createdAt);
+            const failed = sms.status === "FAILED";
+            return (
+              <Box key={sms.id}>
+                <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, py: 1.5 }}>
+                  {/* Circle icon */}
+                  <Box sx={{ mt: 0.3, flexShrink: 0 }}>
+                    <FiCircle size={18} color={failed ? "#e53935" : "#9e9e9e"} />
+                  </Box>
+
+                  {/* Recipient badge */}
+                  <Box sx={{ flexShrink: 0, mt: 0.1 }}>
+                    <Chip
+                      label={sms.userRole ? t(`reports.logs.sms.roles.${sms.userRole}`, { defaultValue: sms.userRole }) : t("reports.logs.sms.system")}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: "0.75rem", height: 22, borderColor: "#bdbdbd", color: "#555", borderRadius: "4px" }}
+                    />
+                  </Box>
+
+                  {/* Recipient + message */}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="caption" sx={{ color: "#555", display: "block" }}>
+                      {[sms.userName, sms.phone].filter(Boolean).join(" · ")}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: "#212121", lineHeight: 1.6, wordBreak: "break-word" }}>
+                      {sms.message}
+                    </Typography>
+                    {failed && sms.providerError && (
+                      <Typography variant="caption" sx={{ color: "error.main", display: "block", mt: 0.5, wordBreak: "break-word" }}>
+                        {sms.providerError}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {/* Status + SMS quantity */}
+                  <Box sx={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0.5 }}>
+                    <Chip
+                      label={t(`reports.logs.sms.status.${sms.status}`, { defaultValue: sms.status || "—" })}
+                      size="small"
+                      sx={{
+                        fontSize: "0.7rem",
+                        height: 20,
+                        borderRadius: "4px",
+                        bgcolor: failed ? "#fdecea" : "#e8f5e9",
+                        color: failed ? "#c62828" : "#2e7d32",
+                      }}
+                    />
+                    <Typography variant="caption" sx={{ color: "#555", whiteSpace: "nowrap" }}>
+                      {t("reports.logs.sms.quantity", { count: Math.max(1, Math.ceil(sms.message.length / SMS_PER_CHAR)) })}
+                    </Typography>
+                  </Box>
+
+                  {/* Date & Time */}
+                  <Box sx={{ flexShrink: 0, textAlign: "right", minWidth: 80 }}>
+                    <Typography variant="caption" sx={{ color: "#555", display: "block" }}>{date}</Typography>
+                    <Typography variant="caption" sx={{ color: "#555", display: "block" }}>{time}</Typography>
+                  </Box>
+                </Box>
+                {index < rows.length - 1 && <Divider />}
+              </Box>
+            );
+          })
+        )}
+      </Box>
+
+      {totalPages > 1 && (
+        <Box sx={{ display: "flex", justifyContent: "center", pt: 2 }}>
+          <Pagination count={totalPages} page={page} onChange={(_, v) => setPage(v)} size="small" />
+        </Box>
+      )}
     </Box>
   );
 };

@@ -155,7 +155,9 @@ export const studentFreezesApi = baseApi.injectEndpoints({
                 method: "PATCH",
                 body: appendFreezeFormData(data),
             }),
-            invalidatesTags: ["studentFreeze"],
+            // Changing the dates can flip the freeze's status (ACTIVE/EXPIRED)
+            // and with it the student's status in the group.
+            invalidatesTags: ["studentFreeze", "student", "group"],
         }),
         // DELETE /student-freezes/{id} — "Muzlatishni o'chiradi va talabaning
         // statusini qayta aktiv holatga keltirishni ta'minlaydi", hence also

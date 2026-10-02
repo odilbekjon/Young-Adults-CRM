@@ -25,6 +25,7 @@ import { useToast } from "../../../../../Context/ToastContext";
 import { extractApiError } from "../../../../../utils";
 import type { RootState } from "../../../../../app/store";
 import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
+import { StudentSearchField, type SearchedStudent } from "../../../../../components/AddPayment/StudentSearchField";
 
 const PAGE_SIZE = 10;
 const STATUSES: StudentFreezeStatus[] = ["ACTIVE", "EXPIRED", "CANCELLED"];
@@ -84,16 +85,22 @@ export const StudentFreezes = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<CreateFormState>(EMPTY_CREATE_FORM);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [createStudent, setCreateStudent] = useState<SearchedStudent | null>(null);
   const [createStudentFreeze, { isLoading: isCreating }] = useCreateStudentFreezeMutation();
 
   const openCreate = () => {
     setCreateForm(EMPTY_CREATE_FORM);
+    setCreateStudent(null);
     setCreateError(null);
     setCreateOpen(true);
   };
 
   const handleCreate = async () => {
     if (!createForm.studentId || !createForm.startDate) return;
+    if (createForm.endDate && createForm.endDate < createForm.startDate) {
+      setCreateError(t("settings.office.studentFreezes.form.endBeforeStart"));
+      return;
+    }
     setCreateError(null);
     try {
       await createStudentFreeze({
@@ -135,6 +142,10 @@ export const StudentFreezes = () => {
 
   const handleUpdate = async () => {
     if (!editTarget) return;
+    if (editForm.startDate && editForm.endDate && editForm.endDate < editForm.startDate) {
+      setEditError(t("settings.office.studentFreezes.form.endBeforeStart"));
+      return;
+    }
     setEditError(null);
     try {
       await updateStudentFreeze({
@@ -335,16 +346,14 @@ export const StudentFreezes = () => {
             <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
               {t("settings.office.studentFreezes.form.student")} <span style={{ color: "red" }}>*</span>
             </Typography>
-            <Select
-              fullWidth size="small" displayEmpty
-              value={createForm.studentId}
-              onChange={(e) => setCreateForm((p) => ({ ...p, studentId: e.target.value }))}
-            >
-              <MenuItem value="" disabled><em style={{ fontStyle: "normal", color: "#9ca3af" }}>{t("settings.office.studentFreezes.form.selectStudent")}</em></MenuItem>
-              {students.map((s) => (
-                <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
-              ))}
-            </Select>
+            <StudentSearchField
+              active={createOpen}
+              value={createStudent}
+              onChange={(st) => {
+                setCreateStudent(st);
+                setCreateForm((p) => ({ ...p, studentId: st?.id ?? "" }));
+              }}
+            />
           </Box>
 
           <Box>

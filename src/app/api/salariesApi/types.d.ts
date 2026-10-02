@@ -90,6 +90,24 @@ export interface TeacherSalaryRow {
   paidAt: string;
 }
 
+// POST /salaries/settings — multipart/form-data: salaryType* and amount* are
+// required; teacherId / courseId / groupId / studentId (any combination,
+// usually one) bind the rate to that entity, none of them = global default.
+// FIXED = fixed monthly amount, PER_STUDENT = amount per student,
+// PERCENTAGE_COURSE = percent of the course price, PERCENTAGE_PAYMENT =
+// percent of what the student actually paid.
+export type SalaryType = "FIXED" | "PER_STUDENT" | "PERCENTAGE_COURSE" | "PERCENTAGE_PAYMENT";
+
+export interface CreateSalarySettingRequest {
+  salaryType: SalaryType;
+  amount: number;
+  teacherId?: string;
+  courseId?: string;
+  groupId?: string;
+  studentId?: string;
+  branchId?: string;
+}
+
 // POST /salaries/calculate — multipart/form-data: year* and month* are
 // required, branchId optional (or "all").
 export interface CalculateSalariesRequest {

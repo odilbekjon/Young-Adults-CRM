@@ -980,9 +980,16 @@
       "showInTeacherProfile": "Show in teacher's profile",
       "loadError": "Failed to load salary settings.",
       "deleteConfirm": "Delete this salary setting?",
-      "createNotSupported": "Creating a salary rate is not available in the current API contract.",
+      "salaryTypes": {
+        "FIXED": "Fixed salary",
+        "PER_STUDENT": "Per student",
+        "PERCENTAGE_COURSE": "Percent of course price",
+        "PERCENTAGE_PAYMENT": "Percent of payment"
+      },
       "toast": {
         "deleted": "Salary setting deleted",
+        "created": "Salary setting added",
+        "createError": "Failed to add the setting",
         "deleteError": "Failed to delete the setting. Please try again.",
         "calculated": "Payrolls calculated",
         "calculateError": "Failed to calculate payrolls. Please try again.",
@@ -1322,7 +1329,13 @@
         "title": "Sent SMS log",
         "system": "System",
         "quantity": "SMS quantity: {{count}}",
-        "notInfo": "No info"
+        "notInfo": "No info",
+        "searchPlaceholder": "Search by phone, name or text",
+        "allRoles": "All roles",
+        "roles": { "TEACHER": "Teacher", "STUDENT": "Student" },
+        "status": { "SENT": "Sent", "FAILED": "Failed", "PENDING": "Pending" },
+        "loadError": "Failed to load the SMS history.",
+        "empty": "No SMS found"
       },
       "workly": {
         "title": "Workly Report",
@@ -1858,9 +1871,19 @@
     },
     "sms": {
       "title": "Auto-SMS",
+      "config": {
+        "title": "Eskiz SMS provider",
+        "description": "Eskiz.uz account credentials used to send SMS.",
+        "email": "Email",
+        "password": "Password",
+        "alias": "Alias (sender name)",
+        "saved": "Eskiz settings saved",
+        "error": "Failed to save the Eskiz settings",
+        "notConfigured": "Not configured yet — enter the credentials."
+      },
       "tabs": {
         "autoSms": "Auto-SMS",
-        "templates": "SMS templates"
+        "templates": "SMS templates", "config": "Eskiz settings"
       },
       "smsTypeHeading": "SMS type",
       "smsTextHeading": "SMS text: {{label}}",
@@ -2339,6 +2362,7 @@
         "createTitle": "New freeze",
         "editTitle": "Edit freeze",
         "form": {
+          "endBeforeStart": "The end date can't be before the start date",
           "student": "Student",
           "selectStudent": "Select a student",
           "group": "Group",

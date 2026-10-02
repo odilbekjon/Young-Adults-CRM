@@ -207,6 +207,19 @@ export const usersApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ["staff"],
         }),
+        // PATCH /users/profile/staff — Swagger: the logged-in admin/superadmin
+        // editing their OWN profile (name, phone, email, password, jobTitle,
+        // photo, birthdate), multipart/form-data. Unlike PATCH /users/{id} it
+        // needs no permission to manage other staff. Refreshes GET /auth/me
+        // (tag "user") too.
+        updateOwnStaffProfile: builder.mutation<UserActionResponse, Partial<CreateUserRequest>>({
+            query: (data) => ({
+                url: `${PATHS.USERS}/profile/staff`,
+                method: "PATCH",
+                body: appendUserFormData(data),
+            }),
+            invalidatesTags: ["staff", "user"],
+        }),
         toggleStaffUserStatus: builder.mutation<UserActionResponse, string>({
             query: (id) => ({
                 url: `${PATHS.USERS}/${id}/toggle-status`,
@@ -239,6 +252,7 @@ export const {
     useStaffUsersSelectQuery,
     useCreateStaffUserMutation,
     useUpdateStaffUserMutation,
+    useUpdateOwnStaffProfileMutation,
     useToggleStaffUserStatusMutation,
     useDeleteStaffUserMutation,
 } = usersApi;

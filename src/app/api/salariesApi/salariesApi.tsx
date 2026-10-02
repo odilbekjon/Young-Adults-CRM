@@ -9,6 +9,7 @@ import {
     SalarySetting,
     TeacherSalaryRow,
     CalculateSalariesRequest,
+    CreateSalarySettingRequest,
     PayPayrollRequest,
     SalaryMutationResponse,
 } from "./types";
@@ -267,6 +268,27 @@ export const salariesApi = baseApi.injectEndpoints({
             },
             invalidatesTags: ["salary", "payment"],
         }),
+        // POST /salaries/settings — multipart/form-data (Swagger). Only the
+        // entity ids that are actually set are appended, so an unscoped call
+        // creates the global default rate.
+        createSalarySetting: builder.mutation<SalaryMutationResponse, CreateSalarySettingRequest>({
+            query: ({ salaryType, amount, teacherId, courseId, groupId, studentId, branchId }) => {
+                const formData = new FormData();
+                formData.append("salaryType", salaryType);
+                formData.append("amount", String(amount));
+                if (teacherId) formData.append("teacherId", teacherId);
+                if (courseId) formData.append("courseId", courseId);
+                if (groupId) formData.append("groupId", groupId);
+                if (studentId) formData.append("studentId", studentId);
+                if (branchId) formData.append("branchId", branchId);
+                return {
+                    url: `${PATHS.SALARIES}/settings`,
+                    method: "POST",
+                    body: formData,
+                };
+            },
+            invalidatesTags: ["salary"],
+        }),
         deleteSalarySetting: builder.mutation<SalaryMutationResponse, string>({
             query: (id) => ({
                 url: `${PATHS.SALARIES}/settings/${id}`,
@@ -284,6 +306,7 @@ export const {
     useSalarySettingsQuery,
     useTeacherSalariesQuery,
     useCalculateSalariesMutation,
+    useCreateSalarySettingMutation,
     usePublishSalaryPayrollMutation,
     usePaySalaryPayrollMutation,
     useDeleteSalarySettingMutation,

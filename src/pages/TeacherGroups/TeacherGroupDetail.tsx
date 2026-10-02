@@ -36,8 +36,15 @@ export const TeacherGroupDetail = () => {
     () => (rosterData ?? (rosterError ? group?.students : undefined) ?? []).filter((s) => s.id && s.name),
     [rosterData, rosterError, group],
   );
+  // Students who already left the group (INACTIVE/DELETED) stay out of the
+  // attendance grid — same as the admin group page, which hides archived
+  // members — so a mark is never attempted for someone the backend no longer
+  // counts as a member (it rejects those).
   const attendanceStudents = useMemo(
-    () => students.map((s, i) => ({ id: i + 1, realId: s.id, name: s.name, phone: s.phone ?? "", active: true })),
+    () =>
+      students
+        .filter((s) => s.status !== "INACTIVE" && s.status !== "DELETED")
+        .map((s, i) => ({ id: i + 1, realId: s.id, name: s.name, phone: s.phone ?? "", active: true })),
     [students],
   );
 

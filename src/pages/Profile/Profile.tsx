@@ -6,7 +6,7 @@ import {
 } from "@mui/material";
 import { FiFlag, FiEdit2, FiTrash2 } from "react-icons/fi";
 import { useGetMeQuery } from "../../app/api/authApi/authApi";
-import { useStaffUserByIdQuery, useUpdateStaffUserMutation, useToggleStaffUserStatusMutation } from "../../app/api/usersApi";
+import { useStaffUserByIdQuery, useUpdateOwnStaffProfileMutation, useToggleStaffUserStatusMutation } from "../../app/api/usersApi";
 import { logout } from "../../app/store/authSlice";
 import type { AppDispatch } from "../../app/store";
 import { useToast } from "../../Context/ToastContext";
@@ -50,7 +50,7 @@ const AdminProfilePage = () => {
   const { data: staffUserData, isLoading: staffLoading } = useStaffUserByIdQuery(id ?? "", { skip: !isOtherProfile });
   const isLoading = isOtherProfile ? staffLoading : meLoading;
 
-  const [updateStaffUser, { isLoading: isSaving }] = useUpdateStaffUserMutation();
+  const [updateOwnProfile, { isLoading: isSaving }] = useUpdateOwnStaffProfileMutation();
   const [toggleStaffUserStatus, { isLoading: isDeactivating }] = useToggleStaffUserStatusMutation();
 
   // Memoized so its identity is stable across renders (only changes when the
@@ -103,12 +103,9 @@ const AdminProfilePage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // PATCH /users/{id} — the same endpoint the Staff (admin) page uses, called
-  // here with the logged-in user's own id (GET /auth/me). Only the safe,
-  // self-editable fields are ever sent — role, rolePermissionId, branchIds,
-  // status and password are simply never included in this payload, so this
-  // can't touch permissions/branches/account status no matter what the form
-  // does. Backend authorization still applies on top of this either way.
+  // PATCH /users/profile/staff — the dedicated "edit my own profile"
+  // endpoint for admin/superadmin. Only name/phone/email/jobTitle are sent,
+  // so this can't touch permissions/branches/account status.
   const handleSave = async () => {
     if (!meData?.data?.id) return;
     if (!formData.name.trim()) {
@@ -117,8 +114,7 @@ const AdminProfilePage = () => {
     }
     setFormError(null);
     try {
-      await updateStaffUser({
-        id: meData.data.id,
+      await updateOwnProfile({
         name: formData.name.trim(),
         phone: formData.phone.trim() || undefined,
         email: formData.email.trim() || undefined,

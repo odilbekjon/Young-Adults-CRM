@@ -980,9 +980,16 @@
       "showInTeacherProfile": "Показывать в профиле учителя",
       "loadError": "Не удалось загрузить настройки зарплат.",
       "deleteConfirm": "Удалить эту настройку зарплаты?",
-      "createNotSupported": "Создание ставки зарплаты недоступно в текущем контракте API.",
+      "salaryTypes": {
+        "FIXED": "Фиксированный оклад",
+        "PER_STUDENT": "За каждого ученика",
+        "PERCENTAGE_COURSE": "Процент от цены курса",
+        "PERCENTAGE_PAYMENT": "Процент от оплаты"
+      },
       "toast": {
         "deleted": "Настройка удалена",
+        "created": "Ставка зарплаты добавлена",
+        "createError": "Не удалось добавить ставку",
         "deleteError": "Не удалось удалить настройку. Попробуйте снова.",
         "calculated": "Ведомости рассчитаны",
         "calculateError": "Не удалось рассчитать ведомости. Попробуйте снова.",
@@ -1322,7 +1329,13 @@
         "title": "Журнал отправленных SMS",
         "system": "Система",
         "quantity": "Количество SMS: {{count}}",
-        "notInfo": "Нет информации"
+        "notInfo": "Нет информации",
+        "searchPlaceholder": "Поиск по телефону, имени или тексту",
+        "allRoles": "Все роли",
+        "roles": { "TEACHER": "Преподаватель", "STUDENT": "Ученик" },
+        "status": { "SENT": "Отправлено", "FAILED": "Ошибка", "PENDING": "В ожидании" },
+        "loadError": "Не удалось загрузить историю SMS.",
+        "empty": "SMS не найдены"
       },
       "workly": {
         "title": "Отчёт Workly",
@@ -1858,9 +1871,19 @@
     },
     "sms": {
       "title": "Авто-SMS",
+      "config": {
+        "title": "SMS-провайдер Eskiz",
+        "description": "Данные аккаунта Eskiz.uz для отправки SMS.",
+        "email": "Email",
+        "password": "Пароль",
+        "alias": "Alias (имя отправителя)",
+        "saved": "Настройки Eskiz сохранены",
+        "error": "Не удалось сохранить настройки Eskiz",
+        "notConfigured": "Пока не настроено — введите данные."
+      },
       "tabs": {
         "autoSms": "Авто-SMS",
-        "templates": "Шаблоны SMS"
+        "templates": "Шаблоны SMS", "config": "Настройки Eskiz"
       },
       "smsTypeHeading": "Тип SMS",
       "smsTextHeading": "Текст SMS: {{label}}",
@@ -2341,6 +2364,7 @@
         "createTitle": "Новая заморозка",
         "editTitle": "Редактировать заморозку",
         "form": {
+          "endBeforeStart": "Дата окончания не может быть раньше даты начала",
           "student": "Студент",
           "selectStudent": "Выберите студента",
           "group": "Группа",

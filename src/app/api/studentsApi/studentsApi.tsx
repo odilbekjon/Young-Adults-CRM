@@ -120,6 +120,10 @@ const normalizeStudentSmsHistory = (raw: unknown): StudentSmsEntry[] => {
 const normalizeStudentPayments = (raw: unknown): StudentPaymentsResult => {
     const container = (raw ?? {}) as Record<string, unknown>;
     const dataBlock = (container.data ?? container) as Record<string, unknown>;
+    // Confirmed live: `data` is the bare rows array, with pagination in
+    // top-level `meta`; the totals block, when sent, is a sibling `summary`
+    // (or sits on `data` itself in the object-shaped variant).
+    const summaryBlock = ((container.summary ?? (Array.isArray(dataBlock) ? {} : dataBlock)) as Record<string, unknown>);
     const list: unknown[] = Array.isArray(dataBlock)
         ? dataBlock
         : Array.isArray(dataBlock.rows)
@@ -164,10 +168,10 @@ const normalizeStudentPayments = (raw: unknown): StudentPaymentsResult => {
     return {
         rows,
         summary: {
-            totalPaid: asMoney(dataBlock.totalPaid),
-            totalCharged: asMoney(dataBlock.totalCharged),
-            balance: asMoney(dataBlock.balance),
-            totalDebt: asMoney(dataBlock.totalDebt),
+            totalPaid: asMoney(summaryBlock.totalPaid),
+            totalCharged: asMoney(summaryBlock.totalCharged),
+            balance: asMoney(summaryBlock.balance),
+            totalDebt: asMoney(summaryBlock.totalDebt),
         },
         meta: {
             total,

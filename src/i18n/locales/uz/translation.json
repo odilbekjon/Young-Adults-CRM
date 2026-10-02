@@ -980,9 +980,16 @@
       "showInTeacherProfile": "O'qituvchi profilida ko'rsatish",
       "loadError": "Maosh sozlamalarini yuklab bo'lmadi.",
       "deleteConfirm": "Ushbu maosh sozlamasi o'chirilsinmi?",
-      "createNotSupported": "Joriy API shartnomasida maosh stavkasini yaratish mavjud emas.",
+      "salaryTypes": {
+        "FIXED": "Qat'iy oylik",
+        "PER_STUDENT": "Har bir o'quvchi uchun",
+        "PERCENTAGE_COURSE": "Kurs narxidan foiz",
+        "PERCENTAGE_PAYMENT": "To'lovdan foiz"
+      },
       "toast": {
         "deleted": "Sozlama o'chirildi",
+        "created": "Maosh sozlamasi qo'shildi",
+        "createError": "Sozlamani qo'shib bo'lmadi",
         "deleteError": "Sozlamani o'chirib bo'lmadi. Qaytadan urinib ko'ring.",
         "calculated": "Vedomostlar hisoblandi",
         "calculateError": "Vedomostlarni hisoblab bo'lmadi. Qaytadan urinib ko'ring.",
@@ -1322,7 +1329,13 @@
         "title": "Yuborilgan SMS jurnali",
         "system": "Tizim",
         "quantity": "SMS soni: {{count}}",
-        "notInfo": "Ma'lumot yo'q"
+        "notInfo": "Ma'lumot yo'q",
+        "searchPlaceholder": "Telefon, ism yoki matn bo'yicha qidirish",
+        "allRoles": "Barcha rollar",
+        "roles": { "TEACHER": "O'qituvchi", "STUDENT": "O'quvchi" },
+        "status": { "SENT": "Yuborildi", "FAILED": "Xato", "PENDING": "Kutilmoqda" },
+        "loadError": "SMS tarixini yuklab bo'lmadi.",
+        "empty": "SMS topilmadi"
       },
       "workly": {
         "title": "Workly hisoboti",
@@ -1858,9 +1871,19 @@
     },
     "sms": {
       "title": "Avto-SMS",
+      "config": {
+        "title": "Eskiz SMS provayderi",
+        "description": "SMS yuborish uchun Eskiz.uz hisobi ma'lumotlari.",
+        "email": "Email",
+        "password": "Parol",
+        "alias": "Alias (jo'natuvchi nomi)",
+        "saved": "Eskiz sozlamalari saqlandi",
+        "error": "Eskiz sozlamalarini saqlab bo'lmadi",
+        "notConfigured": "Hozircha sozlanmagan — ma'lumotlarni kiriting."
+      },
       "tabs": {
         "autoSms": "Avto-SMS",
-        "templates": "SMS shablonlari"
+        "templates": "SMS shablonlari", "config": "Eskiz sozlamalari"
       },
       "smsTypeHeading": "SMS turi",
       "smsTextHeading": "SMS matni: {{label}}",
@@ -2339,6 +2362,7 @@
         "createTitle": "Yangi muzlatish",
         "editTitle": "Muzlatishni tahrirlash",
         "form": {
+          "endBeforeStart": "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas",
           "student": "O'quvchi",
           "selectStudent": "O'quvchini tanlang",
           "group": "Guruh",

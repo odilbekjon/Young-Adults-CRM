@@ -36,6 +36,7 @@ import {
 import type { AttendanceStatus } from "../../../app/api/attendancesApi/types";
 import { useToast } from "../../../Context/ToastContext";
 import { downloadExcelBlob } from "../../../utils/downloadExcel";
+import { extractApiError } from "../../../utils/extractApiError";
 
 type AttendanceStudent = Student & { realId: string };
 
@@ -43,9 +44,10 @@ interface Props {
   groupId: string;
   students: AttendanceStudent[];
   // TEACHER-role sessions (SingleGroup passed via TeacherGroupDetail) can
-  // only mark today's lesson, never a past or future date — viewing other
-  // months to check history is still allowed, only the edit picker/remove
-  // button are gated per-cell.
+  // only mark today's lesson, never a past or future date — and only when
+  // today actually is one of the group's lesson days. Every other column is
+  // frozen (read-only); viewing other months to check history is still
+  // allowed, only the edit picker/remove button are gated per-cell.
   restrictToToday?: boolean;
   // Only used to build a readable download file name for the Excel export.
   groupName?: string;
@@ -160,9 +162,19 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
 
   const todayIso = dateFor(today);
 
+  // Whether a given day column may be marked. Staff can mark any column; a
+  // TEACHER only today's column, and only if it is a scheduled lesson day
+  // (when the backend returned a lesson-day list for this month — if it
+  // returned none, every day is shown and the server stays the judge).
+  const isDayEditable = (day: number) => {
+    if (!restrictToToday) return true;
+    if (!isCurrentMonth || day !== today) return false;
+    return lessonDates.length === 0 || lessonDates.some((d) => d.slice(0, 10) === todayIso);
+  };
+
   const handleSet = (studentId: string, day: number, val: "Was" | "Not") => {
     const date = dateFor(day);
-    if (restrictToToday && (!isCurrentMonth || date !== todayIso)) return;
+    if (!isDayEditable(day)) return;
     setOverrides((prev) => ({
       ...prev,
       [studentId]: { ...(prev[studentId] || {}), [date]: val },
@@ -172,7 +184,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
       records: [{ studentId, groupId, date, status: VAL_TO_STATUS[val] }],
     })
       .unwrap()
-      .catch(() => {
+      .catch((err) => {
         setOverrides((prev) => ({
           ...prev,
           [studentId]: {
@@ -180,7 +192,11 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
             [date]: serverMap[studentId]?.[date] ?? null,
           },
         }));
-        toast.error(t("singleGroup.tabs.attendance.saveError"));
+        // Show the backend's own reason (e.g. "not a lesson day", "student is
+        // frozen") instead of a generic message, so the cause is visible.
+        const detail = extractApiError(err);
+        const generic = t("singleGroup.tabs.attendance.saveError");
+        toast.error(detail ? `${generic} ${detail}` : generic);
       });
   };
 
@@ -193,6 +209,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
     day: number
   ) => {
     e.stopPropagation();
+    if (!isDayEditable(day)) return;
     setOverrides((prev) => ({
       ...prev,
       [studentId]: { ...(prev[studentId] || {}), [dateFor(day)]: null },
@@ -348,7 +365,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                     (year === now.getFullYear() &&
                       month < now.getMonth()) ||
                     (isCurrentMonth && d < today);
-                  const isEditable = !restrictToToday || isToday;
+                  const isEditable = isDayEditable(d);
 
                   return (
                     <TableCell
@@ -395,6 +412,9 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                             fontSize: 11,
                             fontWeight: 600,
                             userSelect: "none",
+                            cursor: isEditable ? "default" : "not-allowed",
+                            // Frozen (read-only) day for a TEACHER session.
+                            opacity: restrictToToday && !isEditable ? 0.55 : 1,
                             border: isToday
                               ? "2px solid #1976d2"
                               : "1px solid #e0e0e0",

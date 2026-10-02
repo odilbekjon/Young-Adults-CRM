@@ -11,11 +11,16 @@ import {
   useSalaryPayrollByIdQuery,
   useLazySalaryPayrollsExcelQuery,
   useCalculateSalariesMutation,
+  useCreateSalarySettingMutation,
   usePublishSalaryPayrollMutation,
   usePaySalaryPayrollMutation,
 } from "../../../../app/api/salariesApi";
-import type { PayrollRow, PayrollStatus } from "../../../../app/api/salariesApi/types";
+import type { PayrollRow, PayrollStatus, SalaryType } from "../../../../app/api/salariesApi/types";
 import { usePaymentMethodsQuery } from "../../../../app/api/financeApi";
+import { useTeachersSelectQuery } from "../../../../app/api/teachersApi";
+import { useCoursesSelectQuery } from "../../../../app/api/coursesApi";
+import { useGroupsSelectQuery } from "../../../../app/api/groupsApi";
+import { StudentSearchField, type SearchedStudent } from "../../../../components/AddPayment/StudentSearchField";
 import { useToast } from "../../../../Context/ToastContext";
 import { extractApiError, downloadExcelBlob } from "../../../../utils";
 import { useBranch } from "../../../../Context/BranchContext";
@@ -23,6 +28,12 @@ import type { RootState } from "../../../../app/store";
 
 const PAGE_SIZE = 10;
 const STATUSES: PayrollStatus[] = ["DRAFT", "PUBLISHED", "PAID"];
+const SALARY_TYPES: SalaryType[] = ["FIXED", "PER_STUDENT", "PERCENTAGE_COURSE", "PERCENTAGE_PAYMENT"];
+const isPercentType = (type: string) => type === "PERCENTAGE_COURSE" || type === "PERCENTAGE_PAYMENT";
+
+// What a salary rate can be bound to (POST /salaries/settings body fields).
+type SettingScope = "teacher" | "course" | "group" | "student";
+const SETTING_SCOPES: SettingScope[] = ["teacher", "course", "group", "student"];
 
 // "2026-05" → { year: 2026, month: 5 }; empty input yields nothing so the
 // filter/period simply isn't sent.
@@ -210,6 +221,80 @@ export const Salaries = () => {
     }
   };
 
+  // ── Create setting (POST /salaries/settings) ────────────────────────────────
+  const [createSetting, { isLoading: isCreatingSetting }] = useCreateSalarySettingMutation();
+
+  // Step 1 — global default rate (no teacher/course/group/student bound).
+  const [defaultType, setDefaultType] = useState("");
+  const [defaultAmount, setDefaultAmount] = useState("");
+
+  // Step 2 — rate bound to one teacher / course / group / student.
+  const [scope, setScope] = useState("");
+  const [entityId, setEntityId] = useState("");
+  const [student, setStudent] = useState<SearchedStudent | null>(null);
+  const [scopedType, setScopedType] = useState("");
+  const [scopedAmount, setScopedAmount] = useState("");
+
+  const branchArg = selectedBranchId ?? "all";
+  const { data: teacherOptions } = useTeachersSelectQuery({ branchId: branchArg }, { skip: scope !== "teacher" });
+  const { data: courseOptions } = useCoursesSelectQuery({ branchId: branchArg }, { skip: scope !== "course" });
+  const { data: groupOptions } = useGroupsSelectQuery(undefined, { skip: scope !== "group" });
+
+  const entityOptions =
+    scope === "teacher" ? teacherOptions
+    : scope === "course" ? courseOptions
+    : scope === "group" ? groupOptions
+    : undefined;
+
+  const validAmount = (type: string, raw: string) => {
+    const n = Number(raw);
+    return raw.trim() !== "" && Number.isFinite(n) && n > 0 && (!isPercentType(type) || n <= 100);
+  };
+
+  const submitSetting = async (
+    body: { salaryType: SalaryType; amount: number; teacherId?: string; courseId?: string; groupId?: string; studentId?: string },
+    onDone: () => void,
+  ) => {
+    try {
+      await createSetting({ ...body, branchId: selectedBranchId ?? undefined }).unwrap();
+      toast.success(t("finance.salaries.toast.created"));
+      onDone();
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("finance.salaries.toast.createError");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
+    }
+  };
+
+  const canAddDefault = defaultType !== "" && validAmount(defaultType, defaultAmount);
+  const canAddScoped =
+    scope !== "" && scopedType !== "" && validAmount(scopedType, scopedAmount) &&
+    (scope === "student" ? Boolean(student) : entityId !== "");
+
+  const handleAddDefault = () =>
+    submitSetting({ salaryType: defaultType as SalaryType, amount: Number(defaultAmount) }, () => {
+      setDefaultType("");
+      setDefaultAmount("");
+    });
+
+  const handleAddScoped = () =>
+    submitSetting(
+      {
+        salaryType: scopedType as SalaryType,
+        amount: Number(scopedAmount),
+        teacherId: scope === "teacher" ? entityId : undefined,
+        courseId: scope === "course" ? entityId : undefined,
+        groupId: scope === "group" ? entityId : undefined,
+        studentId: scope === "student" ? student?.id : undefined,
+      },
+      () => {
+        setEntityId("");
+        setStudent(null);
+        setScopedType("");
+        setScopedAmount("");
+      },
+    );
+
   // ── Calculate (POST /salaries/calculate) ────────────────────────────────────
   const [monthDate, setMonthDate] = useState("");
   const [calculateSalaries, { isLoading: isCalculating }] = useCalculateSalariesMutation();
@@ -309,6 +394,9 @@ export const Salaries = () => {
     }
   };
 
+  const salaryTypeLabel = (type: string) =>
+    (SALARY_TYPES as string[]).includes(type) ? t(`finance.salaries.salaryTypes.${type}`) : type || "—";
+
   const statusLabel = (status: string) => {
     const key = status.toLowerCase();
     return ["draft", "published", "paid"].includes(key)
@@ -372,15 +460,31 @@ export const Salaries = () => {
                 </p>
               </div>
 
-              <div className="mb-1.5">
+              <div className="grid grid-cols-2 gap-4 mb-1.5">
+                <label className="text-sm text-gray-600">{t("finance.salaries.table.salaryType")}</label>
                 <label className="text-sm text-gray-600">{t("finance.salaries.calcValueLabel")}</label>
               </div>
               <div className="flex items-center gap-3">
-                <input type="text" className={inputCls} disabled />
+                <div className="w-64 flex-shrink-0">
+                  <Select
+                    value={defaultType}
+                    onChange={setDefaultType}
+                    options={SALARY_TYPES.map((v) => ({ value: v, label: salaryTypeLabel(v) }))}
+                    placeholder={t("finance.salaries.selectOptionPlaceholder")}
+                  />
+                </div>
+                <input
+                  type="number"
+                  min={0}
+                  className={inputCls}
+                  value={defaultAmount}
+                  onChange={(e) => setDefaultAmount(e.target.value)}
+                  placeholder={isPercentType(defaultType) ? "40" : "150000"}
+                />
                 <button
-                  disabled
-                  title={t("finance.salaries.createNotSupported")}
-                  className="border border-gray-300 text-gray-400 rounded-full px-5 py-1.5 text-sm font-medium cursor-not-allowed"
+                  onClick={handleAddDefault}
+                  disabled={!canAddDefault || isCreatingSetting}
+                  className="flex items-center gap-2 border border-blue-500 text-blue-600 rounded-full px-5 py-1.5 text-sm font-medium hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {t("finance.salaries.addButton")}
                 </button>
@@ -400,24 +504,62 @@ export const Salaries = () => {
                 </p>
               </div>
 
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <div>
+                  <label className="mb-1.5 block text-sm text-gray-600">{t("finance.salaries.calcSettingLabel")}</label>
+                  <Select
+                    value={scope}
+                    onChange={(v) => { setScope(v); setEntityId(""); setStudent(null); }}
+                    options={SETTING_SCOPES.map((v) => ({ value: v, label: t(`finance.salaries.table.${v}`) }))}
+                    placeholder={t("finance.salaries.selectOptionPlaceholder")}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm text-gray-600">
+                    {scope ? t(`finance.salaries.table.${scope}`) : " "}
+                  </label>
+                  {scope === "student" ? (
+                    <StudentSearchField active value={student} onChange={setStudent} />
+                  ) : (
+                    <Select
+                      value={entityId}
+                      onChange={setEntityId}
+                      options={(entityOptions ?? []).map((o) => ({ value: o.id, label: o.name }))}
+                      placeholder={t("finance.salaries.selectOptionPlaceholder")}
+                    />
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4 mb-1.5">
-                <label className="text-sm text-gray-600">{t("finance.salaries.calcSettingLabel")}</label>
+                <label className="text-sm text-gray-600">{t("finance.salaries.table.salaryType")}</label>
                 <label className="text-sm text-gray-600">{t("finance.salaries.calcValueLabel")}</label>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-48 flex-shrink-0">
-                  <input type="text" className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-50" disabled />
+                <div className="w-64 flex-shrink-0">
+                  <Select
+                    value={scopedType}
+                    onChange={setScopedType}
+                    options={SALARY_TYPES.map((v) => ({ value: v, label: salaryTypeLabel(v) }))}
+                    placeholder={t("finance.salaries.selectOptionPlaceholder")}
+                  />
                 </div>
-                <input type="text" className={inputCls} disabled />
+                <input
+                  type="number"
+                  min={0}
+                  className={inputCls}
+                  value={scopedAmount}
+                  onChange={(e) => setScopedAmount(e.target.value)}
+                  placeholder={isPercentType(scopedType) ? "40" : "150000"}
+                />
                 <button
-                  disabled
-                  title={t("finance.salaries.createNotSupported")}
-                  className="border border-gray-300 text-gray-400 rounded-full px-5 py-1.5 text-sm font-medium cursor-not-allowed"
+                  onClick={handleAddScoped}
+                  disabled={!canAddScoped || isCreatingSetting}
+                  className="flex items-center gap-2 border border-blue-500 text-blue-600 rounded-full px-5 py-1.5 text-sm font-medium hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {t("finance.salaries.addButton")}
                 </button>
               </div>
-              <p className="mt-2 text-xs text-gray-400">{t("finance.salaries.createNotSupported")}</p>
             </div>
 
             {/* ---- Settings table (GET /salaries/settings) ---- */}
@@ -447,7 +589,7 @@ export const Salaries = () => {
                     rows.map((row) => (
                       <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="px-4 py-3 whitespace-nowrap">{row.calcSetting || "—"}</td>
-                        <td className="px-4 py-3 whitespace-nowrap">{row.salaryType || "—"}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">{salaryTypeLabel(row.salaryType)}</td>
                         <td className="px-4 py-3">{row.amount === "" || row.amount === null ? "—" : String(row.amount)}</td>
                         <td className="px-4 py-3">{row.courseName || "—"}</td>
                         <td className="px-4 py-3">{row.groupName || "—"}</td>

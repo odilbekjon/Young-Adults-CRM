@@ -345,14 +345,13 @@ export const Teachers = () => {
         </TableContainer>
       )}
 
-      {/* POST /sms/send/students is the only send endpoint this backend
-          exposes — there's no way to actually message a teacher yet, so
-          this stays permanently empty (Send disabled) rather than sending
-          to the wrong recipient. */}
+      {/* POST /sms/send/teachers — messages the teacher whose row menu was
+          used (selectedTeacherId stays set after the menu closes). */}
       <SendSmsModal
         open={smsOpen}
         onClose={() => setSmsOpen(false)}
         studentIds={[]}
+        teacherIds={selectedTeacherId ? [selectedTeacherId] : []}
         recipientLabel={t("teachers.sms.recipientLabel")}
         sender="3700"
       />

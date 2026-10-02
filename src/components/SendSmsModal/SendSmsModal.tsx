@@ -10,9 +10,15 @@ import {
   Button,
   Divider,
   CircularProgress,
+  MenuItem,
+  Select,
 } from "@mui/material";
 import { MdClose } from "react-icons/md";
-import { useSendSmsToStudentsMutation } from "../../app/api/smsApi";
+import {
+  useSendSmsToStudentsMutation,
+  useSendSmsToTeachersMutation,
+  useSmsTemplatesQuery,
+} from "../../app/api/smsApi";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils";
 
@@ -20,13 +26,16 @@ interface SendSmsModalProps {
   open: boolean;
   onClose: () => void;
   /**
-   * Real backend student ids this SMS will be sent to — POST /sms/send/
-   * students (the only send endpoint this backend exposes) requires them.
-   * Pass an empty array for a recipient type that endpoint can't target
-   * (e.g. a teacher/staff row); Send stays disabled rather than silently
-   * no-oping.
+   * Real backend student ids this SMS will be sent to (POST /sms/send/
+   * students). Pass an empty array for a recipient this can't target; Send
+   * stays disabled rather than silently no-oping.
    */
   studentIds: string[];
+  /**
+   * Real backend teacher ids — when given (even empty), the SMS goes through
+   * POST /sms/send/teachers instead and `studentIds` is ignored.
+   */
+  teacherIds?: string[];
   /** Kimga yuborilayapti (ixtiyoriy, title uchun) */
   recipientLabel?: string; // e.g. "student" | "staff" | "debtor"
   sender?: string;
@@ -38,26 +47,45 @@ export const SendSmsModal = ({
   open,
   onClose,
   studentIds,
+  teacherIds,
   recipientLabel = "student",
   sender = "3700",
 }: SendSmsModalProps) => {
   const toast = useToast();
-  const [sendSms, { isLoading }] = useSendSmsToStudentsMutation();
+  const [sendToStudents, { isLoading: isSendingStudents }] = useSendSmsToStudentsMutation();
+  const [sendToTeachers, { isLoading: isSendingTeachers }] = useSendSmsToTeachersMutation();
+  const isLoading = isSendingStudents || isSendingTeachers;
+  const { data: templates } = useSmsTemplatesQuery(undefined, { skip: !open });
   const [message, setMessage] = useState("");
+  const [templateId, setTemplateId] = useState("");
 
+  const recipientIds = teacherIds ?? studentIds;
   const symbolCount = message.length;
   const smsCount = symbolCount === 0 ? 1 : Math.ceil(symbolCount / SMS_PER_CHAR);
-  const canSend = message.trim().length > 0 && studentIds.length > 0 && !isLoading;
+  const canSend = message.trim().length > 0 && recipientIds.length > 0 && !isLoading;
 
   const handleClose = () => {
     setMessage("");
+    setTemplateId("");
     onClose();
+  };
+
+  // Picking a template only fills the textarea (the text can still be edited
+  // before sending); the message itself is what gets sent.
+  const handlePickTemplate = (id: string) => {
+    setTemplateId(id);
+    const picked = (templates ?? []).find((tpl) => tpl.id === id);
+    if (picked) setMessage(picked.content);
   };
 
   const handleSend = async () => {
     if (!canSend) return;
     try {
-      await sendSms({ studentIds, text: message.trim() }).unwrap();
+      if (teacherIds !== undefined) {
+        await sendToTeachers({ teacherIds, text: message.trim() }).unwrap();
+      } else {
+        await sendToStudents({ studentIds, text: message.trim() }).unwrap();
+      }
       toast.success("SMS sent");
       handleClose();
     } catch (err) {
@@ -109,6 +137,28 @@ export const SendSmsModal = ({
           </Box>
         </Typography>
 
+        {/* Saved templates (GET /sms/templates) */}
+        {(templates ?? []).length > 0 && (
+          <Select
+            size="small"
+            displayEmpty
+            fullWidth
+            value={templateId}
+            onChange={(e) => handlePickTemplate(e.target.value)}
+            disabled={isLoading}
+            sx={{ fontSize: 14 }}
+          >
+            <MenuItem value="">
+              <em style={{ fontStyle: "normal", color: "#9ca3af" }}>Choose a template</em>
+            </MenuItem>
+            {(templates ?? []).map((tpl) => (
+              <MenuItem key={tpl.id} value={tpl.id}>
+                {tpl.title}
+              </MenuItem>
+            ))}
+          </Select>
+        )}
+
         {/* Textarea */}
         <TextField
           multiline
@@ -132,8 +182,8 @@ export const SendSmsModal = ({
             {symbolCount} symbols ( ~ {smsCount} SMS )
           </Typography>
           <Typography fontSize={12} color="text.secondary">
-            {studentIds.length} selected {recipientLabel}
-            {studentIds.length !== 1 ? "s" : ""}
+            {recipientIds.length} selected {recipientLabel}
+            {recipientIds.length !== 1 ? "s" : ""}
           </Typography>
         </Box>
 

@@ -9,9 +9,12 @@ import {
   useCreateSmsTemplateMutation,
   useUpdateSmsTemplateMutation,
   useDeleteSmsTemplateMutation,
+  useSmsConfigQuery,
+  useUpdateSmsConfigMutation,
 } from "../../../../app/api/smsApi";
 import type { AutoSmsSetting, SmsTemplate } from "../../../../app/api/smsApi/types";
 import { useToast } from "../../../../Context/ToastContext";
+import { extractApiError } from "../../../../utils";
 import type { RootState } from "../../../../app/store";
 
 // NOTE: `desc` holds an i18n key (not raw text) because this array is defined
@@ -67,8 +70,34 @@ const AUTO_SMS_TYPE_META: Record<string, { label: string; description: string }>
   },
 };
 
-const humanizeType = (type: string) =>
-  type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+// The backend names auto-SMS types in UPPER_CASE (confirmed live:
+// PAYMENT_ADVANCE, PAYMENT_SUCCESS, ...), so lookups are case-insensitive and
+// a few synonyms map onto the same label/description.
+const AUTO_SMS_TYPE_ALIASES: Record<string, string> = {
+  payment_advance: "advance_payment",
+  payment_success: "payment_done",
+  payment_received: "payment_done",
+  balance_low: "balance_not_enough",
+  low_balance: "balance_not_enough",
+  insufficient_balance: "balance_not_enough",
+  student_joined: "student_added",
+  group_joined: "student_added",
+  new_student: "student_added",
+  birthday: "student_birthday",
+  attendance_absent: "absent_attendance",
+  student_absent: "absent_attendance",
+  absent: "absent_attendance",
+};
+
+const metaFor = (type: string) => {
+  const key = type.trim().toLowerCase();
+  return AUTO_SMS_TYPE_META[AUTO_SMS_TYPE_ALIASES[key] ?? key];
+};
+
+const humanizeType = (type: string) => {
+  const words = type.replace(/_/g, " ").toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
 
 const Toggle = ({
   enabled,
@@ -94,10 +123,16 @@ const Toggle = ({
   </button>
 );
 
+// Appends the backend's own reason (when it sent one) to a generic message.
+const withDetail = (generic: string, err: unknown) => {
+  const detail = extractApiError(err);
+  return detail ? `${generic}: ${detail}` : generic;
+};
+
 export const SettingsSms = () => {
   const { t } = useTranslation();
   const toast = useToast();
-  const [activeTab, setActiveTab] = useState<"auto-sms" | "templates">("auto-sms");
+  const [activeTab, setActiveTab] = useState<"auto-sms" | "templates" | "config">("auto-sms");
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const {
@@ -129,8 +164,8 @@ export const SettingsSms = () => {
     setSavingType(item.type);
     try {
       await updateAutoSmsSetting({ type: item.type, isActive: !item.isActive, template: item.template }).unwrap();
-    } catch {
-      toast.error(t("settings.sms.toast.error"));
+    } catch (err) {
+      toast.error(withDetail(t("settings.sms.toast.error"), err));
     } finally {
       setSavingType(null);
     }
@@ -142,8 +177,8 @@ export const SettingsSms = () => {
     try {
       await updateAutoSmsSetting({ type: selected.type, isActive: selected.isActive, template: draftTemplate }).unwrap();
       toast.success(t("settings.sms.toast.settingSaved"));
-    } catch {
-      toast.error(t("settings.sms.toast.error"));
+    } catch (err) {
+      toast.error(withDetail(t("settings.sms.toast.error"), err));
     } finally {
       setSavingType(null);
     }
@@ -193,8 +228,8 @@ export const SettingsSms = () => {
         toast.success(t("settings.sms.toast.templateCreated"));
       }
       setDrawerOpen(false);
-    } catch {
-      toast.error(t("settings.sms.toast.error"));
+    } catch (err) {
+      toast.error(withDetail(t("settings.sms.toast.error"), err));
     }
   };
 
@@ -203,26 +238,52 @@ export const SettingsSms = () => {
     try {
       await deleteSmsTemplate(deleteTarget.id).unwrap();
       toast.success(t("settings.sms.toast.templateDeleted"));
-    } catch {
-      toast.error(t("settings.sms.toast.error"));
+    } catch (err) {
+      toast.error(withDetail(t("settings.sms.toast.error"), err));
     } finally {
       setDeleteTarget(null);
     }
   };
 
+  // GET/PUT /sms/config — Eskiz provider credentials. GET 400s while nothing
+  // is configured yet, so a failed load just leaves the form empty.
+  const { data: smsConfig, isError: smsConfigError, error: smsConfigErr } = useSmsConfigQuery(undefined, {
+    skip: activeTab !== "config",
+  });
+  const [updateSmsConfig, { isLoading: isSavingConfig }] = useUpdateSmsConfigMutation();
+  const [configForm, setConfigForm] = useState({ email: "", password: "", alias: "" });
+  useEffect(() => {
+    if (smsConfig) setConfigForm(smsConfig);
+  }, [smsConfig]);
+
+  const canSaveConfig = configForm.email.trim() !== "" && configForm.password !== "" && configForm.alias.trim() !== "";
+  const handleSaveConfig = async () => {
+    if (!canSaveConfig) return;
+    try {
+      await updateSmsConfig({
+        email: configForm.email.trim(),
+        password: configForm.password,
+        alias: configForm.alias.trim(),
+      }).unwrap();
+      toast.success(t("settings.sms.config.saved"));
+    } catch (err) {
+      toast.error(withDetail(t("settings.sms.config.error"), err));
+    }
+  };
+
   const exampleText = draftTemplate
-    .replace("(STUDENT)", "Ibrohim")
-    .replace("(GROUP)", "Young Adults")
-    .replace("(LC)", "Young Adults")
-    .replace("(SUM)", "500 000 UZS")
-    .replace("(BALANCE)", "0 UZS")
-    .replace("(TEACHER)", "Sardor")
-    .replace("(TIME)", "14:00")
-    .replace("(ROOM)", "101");
+    .replace(/\(STUDENT\)/g, "Ibrohim")
+    .replace(/\(GROUP\)/g, "Young Adults")
+    .replace(/\(LC\)/g, "Young Adults")
+    .replace(/\(SUM\)/g, "500 000 UZS")
+    .replace(/\(BALANCE\)/g, "0 UZS")
+    .replace(/\(TEACHER\)/g, "Sardor")
+    .replace(/\(TIME\)/g, "14:00")
+    .replace(/\(ROOM\)/g, "101");
 
   const symbolCount = exampleText.length;
   const smsCount = Math.ceil(symbolCount / 160);
-  const selectedMeta = selected ? AUTO_SMS_TYPE_META[selected.type] : undefined;
+  const selectedMeta = selected ? metaFor(selected.type) : undefined;
   const selectedLabel = selected ? (selectedMeta ? t(selectedMeta.label) : humanizeType(selected.type)) : "";
 
   return (
@@ -255,6 +316,16 @@ export const SettingsSms = () => {
         >
           {t("settings.sms.tabs.templates")}
         </button>
+        <button
+          onClick={() => setActiveTab("config")}
+          className={`px-5 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "config"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          {t("settings.sms.tabs.config")}
+        </button>
       </div>
 
       {/* AUTO-SMS TAB */}
@@ -274,7 +345,7 @@ export const SettingsSms = () => {
                 )
               ) : (
                 (autoSettings ?? []).map((sms) => {
-                  const meta = AUTO_SMS_TYPE_META[sms.type];
+                  const meta = metaFor(sms.type);
                   return (
                     <div
                       key={sms.type}
@@ -361,6 +432,58 @@ export const SettingsSms = () => {
             )}
           </div>
         </>
+      )}
+
+      {/* PROVIDER CONFIG TAB (GET/PUT /sms/config) */}
+      {activeTab === "config" && (
+        <div className="max-w-xl bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <h2 className="text-base font-semibold text-gray-700 mb-1">{t("settings.sms.config.title")}</h2>
+          <p className="text-sm text-gray-500 mb-5">{t("settings.sms.config.description")}</p>
+          {smsConfigError && (
+            <p className="text-xs text-amber-600 mb-4">
+              {t("settings.sms.config.notConfigured")}
+              {extractApiError(smsConfigErr) ? ` (${extractApiError(smsConfigErr)})` : ""}
+            </p>
+          )}
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="block text-sm text-gray-700 mb-1.5">{t("settings.sms.config.email")}</label>
+              <input
+                type="text"
+                value={configForm.email}
+                onChange={(e) => setConfigForm((p) => ({ ...p, email: e.target.value }))}
+                className="w-full text-sm text-gray-700 border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1.5">{t("settings.sms.config.password")}</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={configForm.password}
+                onChange={(e) => setConfigForm((p) => ({ ...p, password: e.target.value }))}
+                className="w-full text-sm text-gray-700 border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1.5">{t("settings.sms.config.alias")}</label>
+              <input
+                type="text"
+                value={configForm.alias}
+                onChange={(e) => setConfigForm((p) => ({ ...p, alias: e.target.value }))}
+                className="w-full text-sm text-gray-700 border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+              />
+            </div>
+            <button
+              onClick={handleSaveConfig}
+              disabled={!canSaveConfig || isSavingConfig}
+              className="flex items-center gap-2 w-fit bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white text-sm font-medium px-6 py-2 rounded-md transition-colors"
+            >
+              <MdSave size={16} />
+              {isSavingConfig ? t("settings.sms.saving") : t("settings.sms.saveButton")}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* TEMPLATES TAB */}

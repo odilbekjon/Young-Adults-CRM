@@ -6,6 +6,8 @@
 // `type` maydoni ham qo'shilgan (studentsApi/teachersApi'dagi *Ref pattern
 // bilan bir xil ehtiyotkorlik).
 export interface AutoSmsSetting {
+  id?: string;
+  branchId?: string | null;
   type: string;
   isActive: boolean;
   template: string;
@@ -88,4 +90,57 @@ export interface SendSmsToStudentsRequest {
 export interface SendSmsToStudentsResponse {
   success?: boolean;
   message?: string;
+}
+
+// POST /sms/send/teachers — Swagger: application/json {teacherIds (required),
+// text?, templateId?}; same shape as the students endpoint.
+export interface SendSmsToTeachersRequest {
+  teacherIds: string[];
+  text?: string;
+  templateId?: string;
+}
+
+export interface SendSmsToTeachersResponse {
+  success?: boolean;
+  message?: string;
+}
+
+// GET /sms/history — query: search, status, page, limit, branchId, role.
+// Confirmed live: {success, message, data: {data: [...], total, ...}} where a
+// row is {id, userId, phone, message, status ("FAILED" ...), providerError,
+// createdAt, branchId, user: {id, name, role}}. The envelope's pagination
+// fields aren't fully visible in Swagger, so they are read defensively.
+export interface SmsHistoryRequest {
+  search?: string;
+  status?: string;
+  role?: string;
+  branchId?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface SmsHistoryRow {
+  id: string;
+  phone: string;
+  message: string;
+  status: string;
+  providerError: string | null;
+  createdAt: string;
+  userName: string;
+  userRole: string;
+}
+
+export interface SmsHistoryResult {
+  rows: SmsHistoryRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+// GET/PUT /sms/config — the Eskiz.uz provider credentials ("Eskiz SMS
+// sozlamalari"): PUT body {email, password, alias}. GET's response shape is
+// undocumented (it 400s while nothing is configured), so it is read
+// defensively.
+export interface SmsConfig {
+  email: string;
+  password: string;
+  alias: string;
 }

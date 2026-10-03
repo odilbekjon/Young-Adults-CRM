@@ -30,6 +30,9 @@ export interface StaffUser {
   phone: string | null;
   role: string;
   rolePermission: RolePermissionRef | null;
+  // Every assigned position when the backend returns the full list (a user
+  // can hold several; `rolePermission` above is only the primary one).
+  rolePermissions: RolePermissionRef[];
   jobTitle: string | null;
   photo: string | null;
   status: UserStatus | string;

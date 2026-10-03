@@ -713,7 +713,8 @@ export const Groups = () => {
       days: form.days.length ? form.days : undefined,
       time: form.time || undefined,
       trainingStart: form.trainingStart || undefined,
-      trainingEnd: form.trainingEnd || undefined,
+      // Only sent when editing; on create the backend computes it from the course.
+      trainingEnd: editingId !== null ? form.trainingEnd || undefined : undefined,
       tagIds: form.tagIds.length ? form.tagIds : undefined,
     };
     try {
@@ -1279,28 +1280,26 @@ export const Groups = () => {
             )}
           </Box>
 
-          {/* Select room — edit only; not part of the fields a new group asks for */}
-          {editingId !== null && (
-            <Box mb={2.5}>
-              <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-                {t("groups.form.room")}
-              </Typography>
-              <TextField
-                select
-                name="roomId"
-                value={form.roomId}
-                onChange={handleChange}
-                size="small"
-                fullWidth
-                sx={inputSx}
-              >
-                <MenuItem value="" sx={{ fontSize: 13 }}>—</MenuItem>
-                {activeRooms.map((r) => (
-                  <MenuItem key={r.id} value={r.id} sx={{ fontSize: 13 }}>{r.name}</MenuItem>
-                ))}
-              </TextField>
-            </Box>
-          )}
+          {/* Select room — right after Days, for both create and edit */}
+          <Box mb={2.5}>
+            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+              {t("groups.form.room")}
+            </Typography>
+            <TextField
+              select
+              name="roomId"
+              value={form.roomId}
+              onChange={handleChange}
+              size="small"
+              fullWidth
+              sx={inputSx}
+            >
+              <MenuItem value="" sx={{ fontSize: 13 }}>—</MenuItem>
+              {activeRooms.map((r) => (
+                <MenuItem key={r.id} value={r.id} sx={{ fontSize: 13 }}>{r.name}</MenuItem>
+              ))}
+            </TextField>
+          </Box>
 
           {/* Lesson start time — 08:00–20:00 in 1-hour steps */}
           <Box mb={2.5}>
@@ -1326,17 +1325,17 @@ export const Groups = () => {
             />
           </Box>
 
-          {/* Group end date — auto-filled from the selected course's
-              duration (Course.months) once both a course and a start date
-              are picked, but stays a normal editable field so it can still
-              be overridden by hand; picking a different course or start
-              date recomputes it again. */}
-          <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
-              {t("groups.form.endDate")}
-            </Typography>
-            <DatePickerField value={form.trainingEnd} onChange={(iso) => setForm((prev) => ({ ...prev, trainingEnd: iso }))} />
-          </Box>
+          {/* Group end date — edit only. A new group isn't asked for it (and
+              none is posted): the backend derives it from the course's
+              duration. */}
+          {editingId !== null && (
+            <Box mb={2.5}>
+              <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+                {t("groups.form.endDate")}
+              </Typography>
+              <DatePickerField value={form.trainingEnd} onChange={(iso) => setForm((prev) => ({ ...prev, trainingEnd: iso }))} />
+            </Box>
+          )}
 
           {/* Tags — GROUP-type tags from Settings > Tags (GET /tags/select) */}
           <Box mb={2.5}>

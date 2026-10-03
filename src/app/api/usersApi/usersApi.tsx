@@ -38,6 +38,16 @@ const normalizeRolePermission = (raw: unknown): RolePermissionRef | null => {
     return { id, name: str(r.name) };
 };
 
+const normalizeRolePermissions = (raw: unknown, primary: RolePermissionRef | null): RolePermissionRef[] => {
+    const list = Array.isArray(raw)
+        ? (raw as Row[])
+              .map((entry) => normalizeRolePermission(entry.rolePermission ?? entry))
+              .filter((rp): rp is RolePermissionRef => rp !== null)
+        : [];
+    if (primary && !list.some((rp) => rp.id === primary.id)) list.unshift(primary);
+    return list;
+};
+
 const normalizeStaffUserBranches = (raw: unknown): StaffUserBranchRef[] => {
     if (!Array.isArray(raw)) return [];
     return (raw as Row[])
@@ -50,19 +60,23 @@ const normalizeStaffUserBranches = (raw: unknown): StaffUserBranchRef[] => {
         .filter((b): b is StaffUserBranchRef => b !== null);
 };
 
-const normalizeStaffUser = (r: Row): StaffUser => ({
+const normalizeStaffUser = (r: Row): StaffUser => {
+    const rolePermission = normalizeRolePermission(r.rolePermission);
+    return {
     id: str(r.id, r._id),
     name: str(r.name),
     email: strOrNull(r.email),
     phone: strOrNull(r.phone),
     role: str(r.role).toUpperCase(),
-    rolePermission: normalizeRolePermission(r.rolePermission),
+    rolePermission,
+    rolePermissions: normalizeRolePermissions(r.rolePermissions, rolePermission),
     jobTitle: strOrNull(r.jobTitle),
     photo: strOrNull(r.photo),
     status: str(r.status).toUpperCase() || "ACTIVE",
     createdAt: strOrNull(r.createdAt),
     branches: normalizeStaffUserBranches(r.branches),
-});
+    };
+};
 
 const normalizeStaffUserForEdit = (r: Row): StaffUserForEdit => ({
     id: str(r.id, r._id),

@@ -546,6 +546,14 @@ const SendSmsDrawer = ({
   );
 };
 
+// Local calendar date as YYYY-MM-DD (toISOString() is UTC and lands on the
+// previous day for the first hours after midnight in UTC+5).
+const todayLocalISO = () => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 /* ─── DELETE CONFIRM DIALOG ──────────────────────────── */
 const AddToGroupModal = ({
   open,
@@ -556,14 +564,15 @@ const AddToGroupModal = ({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (groupId: string) => Promise<boolean>;
+  onSubmit: (groupId: string, joinedAt: string) => Promise<boolean>;
   groups: { id: string; name: string }[];
   isSubmitting?: boolean;
 }) => {
   const [groupId, setGroupId] = useState("");
+  const [joinedAt, setJoinedAt] = useState(todayLocalISO());
 
   useEffect(() => {
-    if (!open) setGroupId("");
+    if (!open) { setGroupId(""); setJoinedAt(todayLocalISO()); }
   }, [open]);
 
   const handleClose = () => {
@@ -573,8 +582,8 @@ const AddToGroupModal = ({
 
   const handleSubmit = async () => {
     if (!groupId || isSubmitting) return;
-    const success = await onSubmit(groupId);
-    if (success) setGroupId("");
+    const success = await onSubmit(groupId, joinedAt || todayLocalISO());
+    if (success) { setGroupId(""); setJoinedAt(todayLocalISO()); }
   };
 
   return (
@@ -612,6 +621,10 @@ const AddToGroupModal = ({
             </option>
           ))}
         </select>
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "#4b5563", marginBottom: 6 }}>Joined on</div>
+          <DatePickerField value={joinedAt} onChange={setJoinedAt} disabled={isSubmitting} />
+        </div>
         <Button
           variant="contained"
           onClick={handleSubmit}
@@ -1455,9 +1468,9 @@ export const StudentProfile = () => {
   // group id, unlike the students-list shape used on the Students page, so
   // there's no client-side "already in this group" check here — the backend
   // is relied on to reject/ignore a duplicate membership.
-  const handleAddToGroup = async (groupId: string): Promise<boolean> => {
+  const handleAddToGroup = async (groupId: string, joinedAt: string): Promise<boolean> => {
     try {
-      await addStudentToGroup({ studentId: student.uid, groupId }).unwrap();
+      await addStudentToGroup({ studentId: student.uid, groupId, joinedAt }).unwrap();
       toast.success("Student added to the group");
       return true;
     } catch (err) {
@@ -1728,8 +1741,8 @@ export const StudentProfile = () => {
       <AddToGroupModal
         open={addToGroupOpen}
         onClose={() => setAddToGroupOpen(false)}
-        onSubmit={async (groupId) => {
-          const ok = await handleAddToGroup(groupId);
+        onSubmit={async (groupId, joinedAt) => {
+          const ok = await handleAddToGroup(groupId, joinedAt);
           if (ok) setAddToGroupOpen(false);
           return ok;
         }}

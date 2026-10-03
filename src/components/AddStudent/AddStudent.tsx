@@ -42,6 +42,14 @@ const labelStyle: React.CSSProperties = {
   display: "block",
 };
 
+// Local calendar date as YYYY-MM-DD (toISOString() is UTC and lands on the
+// previous day for the first hours after midnight in UTC+5).
+const todayLocalISO = () => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 /* ─── additional contact fields config (studentsApi maydonlariga mos) ─── */
 type AdditionalFieldId = "parentPhone" | "passport" | "parentName" | "email" | "telegram" | "schoolName" | "location" | "instagram";
 
@@ -90,6 +98,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
   const [showGroupField, setShowGroupField] = useState(false);
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [group, setGroup] = useState("");
+  const [joinedAt, setJoinedAt] = useState(todayLocalISO());
   const [password, setPassword] = useState("");
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +129,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
 
   const handleClose = () => {
     setPhone(""); setName(""); setDob(""); setGender("");
-    setComment(""); setGroup(""); setPassword(""); setTagIds([]); setError(null);
+    setComment(""); setGroup(""); setJoinedAt(todayLocalISO()); setPassword(""); setTagIds([]); setError(null);
     setShowGroupField(false); setShowPasswordField(false);
     setOpenFields({
       parentPhone: false, passport: false, parentName: false, email: false,
@@ -173,14 +182,14 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
           // staff activates later" flow SingleGroup's own Add student modal
           // uses, so a student added from here isn't treated as active
           // (and billed) before anyone meant it to be.
-          await addStudentToGroup({ studentId: created.data.id, groupId: group, status: "PROBATION" }).unwrap();
+          await addStudentToGroup({ studentId: created.data.id, groupId: group, status: "PROBATION", joinedAt: joinedAt || todayLocalISO() }).unwrap();
           try {
             const membership = await fetchNewMembership({ groupId: group, studentId: created.data.id, limit: 1 }).unwrap();
             const newMembershipId = membership.rows[0]?.id;
             if (newMembershipId) {
               await freezeStudentGroup({
                 id: newMembershipId,
-                startDate: new Date().toISOString().split("T")[0],
+                startDate: joinedAt || todayLocalISO(),
               }).unwrap();
             }
           } catch {
@@ -359,6 +368,10 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
                   </option>
                 ))}
               </select>
+              <div style={{ marginTop: 12 }}>
+                <label style={labelStyle}>{t("students.addToGroup.joinedAt")}</label>
+                <DatePickerField value={joinedAt} onChange={setJoinedAt} />
+              </div>
               {isGroupsError && (
                 <div style={{ fontSize: 12, color: "#d93f4f", marginTop: 6 }}>
                   {t("addStudent.groupError")}

@@ -58,6 +58,8 @@ import {
   useLazyStaffUsersExcelQuery,
 } from "../../../../../app/api/usersApi";
 import type { UserStatus } from "../../../../../app/api/usersApi/types";
+import { useCreateTeacherMutation } from "../../../../../app/api/teachersApi";
+import type { TeacherGender } from "../../../../../app/api/teachersApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi";
 import {
   useRolePermissionsSelectQuery,
@@ -74,6 +76,13 @@ import {
 // ("Faqat SUPERADMIN va ADMIN foydalana oladi"); editing an existing
 // account's role is left untouched (see openEditDrawer/handleSubmit below).
 const DEFAULT_STAFF_ROLE = "ADMIN";
+
+// POST /users only creates ADMIN/SUPERADMIN accounts, so a "Teacher" position
+// picked here would produce an ADMIN user that GET /teachers (the Teachers
+// page) never lists. Teacher positions are therefore created through
+// POST /teachers instead (see handleSubmit). Positions are free-form names,
+// so they're recognised by name.
+const TEACHER_POSITION_RE = /teacher|ustoz|o['’`ʻ]?qituvchi|учител|преподават/i;
 
 interface StaffForm {
   name: string;
@@ -171,7 +180,9 @@ export const Staff = () => {
   const { data: usersData, isLoading: usersLoading, isError: usersError } = useStaffUsersQuery(usersQueryArgs);
   const { data: branchesData } = useAllBranchesQuery();
   const { data: rolePermissionOptions } = useRolePermissionsSelectQuery();
-  const [createStaffUser, { isLoading: isCreating }] = useCreateStaffUserMutation();
+  const [createStaffUser, { isLoading: isCreatingUser }] = useCreateStaffUserMutation();
+  const [createTeacher, { isLoading: isCreatingTeacher }] = useCreateTeacherMutation();
+  const isCreating = isCreatingUser || isCreatingTeacher;
   const [updateStaffUser, { isLoading: isUpdating }] = useUpdateStaffUserMutation();
   const [assignRolePermission] = useAssignRolePermissionToUserMutation();
   const [removeRolePermission] = useRemoveRolePermissionFromUserMutation();
@@ -188,7 +199,7 @@ export const Staff = () => {
       (usersData?.rows ?? []).map((u) => ({
         id: u.id,
         name: u.name,
-        roleTags: [u.role, u.rolePermission?.name].filter((v): v is string => Boolean(v)),
+        roleTags: [u.role, ...u.rolePermissions.map((rp) => rp.name)].filter((v): v is string => Boolean(v)),
         jobTitle: u.jobTitle || "—",
         phone: u.phone,
         email: u.email,
@@ -320,7 +331,18 @@ export const Staff = () => {
   const handleSubmit = async () => {
     setFormError(null);
     if (!validate()) return;
-    const [primaryRolePermissionId, ...extraRolePermissionIds] = form.rolePermissionIds;
+    const [primaryRolePermissionId, ...userExtraRolePermissionIds] = form.rolePermissionIds;
+    const teacherPositionIds = isEdit
+      ? []
+      : (rolePermissionOptions ?? [])
+          .filter((o) => form.rolePermissionIds.includes(o.id) && TEACHER_POSITION_RE.test(o.name))
+          .map((o) => o.id);
+    const createAsTeacher = teacherPositionIds.length > 0;
+    // A created teacher already carries the teacher access; only the other
+    // selected positions are attached on top of it below.
+    const extraRolePermissionIds = createAsTeacher
+      ? form.rolePermissionIds.filter((id) => !teacherPositionIds.includes(id))
+      : userExtraRolePermissionIds;
     const payload = {
       name: form.name.trim(),
       email: form.email.trim() || undefined,
@@ -339,6 +361,22 @@ export const Staff = () => {
       if (isEdit && selectedMember) {
         await updateStaffUser({ id: selectedMember.id, ...payload }).unwrap();
         userId = selectedMember.id;
+      } else if (createAsTeacher) {
+        if (!form.branchIds.length && !selectedBranchId) {
+          setFormError(t("teachers.validation.branchRequired"));
+          return;
+        }
+        const created = await createTeacher({
+          name: form.name.trim(),
+          email: payload.email,
+          phone: payload.phone,
+          password: payload.password,
+          birthdate: payload.birthdate,
+          gender: (payload.gender || undefined) as TeacherGender | undefined,
+          photo: payload.photo,
+          branchIds: form.branchIds.length ? form.branchIds : [selectedBranchId!],
+        }).unwrap();
+        userId = extractUserId(created);
       } else {
         const created = await createStaffUser({
           ...payload,

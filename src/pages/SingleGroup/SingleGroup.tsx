@@ -1340,7 +1340,7 @@ export const SingleGroup = () => {
               {tabIndex === 0 && <Attendance groupId={id ?? ""} students={visibleStudents} groupName={group.name} branchName={branchName} />}
               {tabIndex === 1 && <Grade students={visibleStudents} />}
               {tabIndex === 2 && <OnlineLessons />}
-              {tabIndex === 3 && <DiscountPrices students={visibleStudents} />}
+              {tabIndex === 3 && <DiscountPrices groupId={id ?? ""} groupPrice={group?.price ?? 0} students={visibleStudents} />}
               {tabIndex === 4 && <Exams />}
               {tabIndex === 5 && (
                 <History

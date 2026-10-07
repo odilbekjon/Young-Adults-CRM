@@ -21,6 +21,7 @@ export * from "./reportsApi";
 export * from "./salariesApi";
 export * from "./settingsApi";
 export * from "./studentFreezesApi";
+export * from "./studentDiscountsApi";
 export * from "./studentPortalApi";
 export * from "./teacherPortalApi";
 export * from "./usersApi";

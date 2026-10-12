@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   IconButton,
   Paper,
@@ -99,10 +100,13 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
 
   const monthStr = `${year}-${pad2(month + 1)}`;
 
-  const { data: lessonDates = [], isFetching: datesLoading } =
-    useGroupAttendanceDatesQuery({ groupId, month: monthStr }, { skip: !groupId });
-  const { data: records = [], isFetching: recordsLoading } =
-    useGroupAttendanceQuery({ groupId, month: monthStr }, { skip: !groupId });
+  const {
+    data: lessonDates = [], isFetching: datesLoading, isError: datesError, error: datesErr, refetch: refetchDates,
+  } = useGroupAttendanceDatesQuery({ groupId, month: monthStr }, { skip: !groupId });
+  const {
+    data: records = [], isFetching: recordsLoading, isError: recordsError, error: recordsErr, refetch: refetchRecords,
+  } = useGroupAttendanceQuery({ groupId, month: monthStr }, { skip: !groupId });
+  const loadFailed = datesError || recordsError;
   const [saveAttendance] = useSaveAttendanceMutation();
   const [fetchExcel, { isFetching: isExporting }] = useLazyGroupAttendanceExcelQuery();
 
@@ -168,9 +172,17 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
   // returned none, every day is shown and the server stays the judge).
   const isDayEditable = (day: number) => {
     if (!restrictToToday) return true;
+    // TEACHER: nothing is markable while the month failed to load — whether
+    // today is a lesson day can't be verified. Staff keep the old behavior
+    // (all-days fallback grid, the server stays the judge).
+    if (loadFailed) return false;
     if (!isCurrentMonth || day !== today) return false;
     return lessonDates.length === 0 || lessonDates.some((d) => d.slice(0, 10) === todayIso);
   };
+  // TEACHER view: today's column exists in the grid but isn't a lesson day, so
+  // every cell is frozen — say why instead of leaving a silently dead table.
+  const showNotLessonDay =
+    !!restrictToToday && !loadFailed && !datesLoading && isCurrentMonth && !isDayEditable(today);
 
   const handleSet = (studentId: string, day: number, val: "Was" | "Not") => {
     const date = dateFor(day);
@@ -184,6 +196,11 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
       records: [{ studentId, groupId, date, status: VAL_TO_STATUS[val] }],
     })
       .unwrap()
+      .then(() => {
+        // Teacher view only — staff mark many cells in a row, a toast per
+        // click would just stack up.
+        if (restrictToToday) toast.success(t("singleGroup.tabs.attendance.saveSuccess"));
+      })
       .catch((err) => {
         setOverrides((prev) => ({
           ...prev,
@@ -209,7 +226,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
     day: number
   ) => {
     e.stopPropagation();
-    if (!isDayEditable(day)) return;
+    if (!isDayEditable(day) || restrictToToday) return;
     setOverrides((prev) => ({
       ...prev,
       [studentId]: { ...(prev[studentId] || {}), [dateFor(day)]: null },
@@ -270,6 +287,35 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
           </Tooltip>
         </Stack>
       </Stack>
+
+      {loadFailed && (
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                if (datesError) void refetchDates();
+                if (recordsError) void refetchRecords();
+              }}
+            >
+              {t("singleGroup.tabs.attendance.retry")}
+            </Button>
+          }
+        >
+          {[
+            t("singleGroup.tabs.attendance.loadError"),
+            extractApiError(datesErr) ?? extractApiError(recordsErr),
+          ].filter(Boolean).join(" ")}
+        </Alert>
+      )}
+      {showNotLessonDay && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          {t("singleGroup.tabs.attendance.notLessonDay")}
+        </Alert>
+      )}
 
       {/* TABLE — o'zi X scroll qiladi */}
       <TableContainer
@@ -396,7 +442,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                           } : undefined,
                           "& .remove-btn": { display: "none" },
                           "&:hover .remove-btn": {
-                            display: isEditable && val ? "flex" : "none",
+                            display: isEditable && val && !restrictToToday ? "flex" : "none",
                           },
                         }}
                       >

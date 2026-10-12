@@ -1,5 +1,6 @@
 import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
+import { decimalToNumber } from "../../../utils/decimal";
 import type {
   CreateStudentDiscountRequest,
   StudentDiscountRecord,
@@ -35,22 +36,9 @@ const asId = (value: unknown): string => {
 };
 
 const asValue = (raw: unknown): number => {
-  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-  if (typeof raw === "string" && raw.trim() !== "") {
-    const value = Number(raw);
-    if (Number.isFinite(value)) return value;
-  }
-  if (raw && typeof raw === "object") {
-    const decimal = asRecord(raw);
-    if (Array.isArray(decimal.d) && decimal.d.length > 0) {
-      const digits = decimal.d.map(Number).join("");
-      const exponent = Number(decimal.e);
-      const sign = Number(decimal.s) < 0 ? -1 : 1;
-      const value = sign * Number(`${digits}e${exponent - digits.length + 1}`);
-      if (Number.isFinite(value)) return value;
-    }
-  }
-  throw new Error("Unexpected student discount value");
+  const value = decimalToNumber(raw);
+  if (value === null) throw new Error("Unexpected student discount value");
+  return value;
 };
 
 const normalizeRecord = (raw: unknown): StudentDiscountRecord => {
@@ -103,7 +91,7 @@ const normalizeOne = (raw: unknown): StudentDiscountRecord => {
 const appendFormData = (data: Record<string, string | number | undefined>): FormData => {
   const formData = new FormData();
   Object.entries(data).forEach(([key, value]) => {
-    if (value !== undefined && value !== "") formData.append(key, String(value));
+    if (value !== undefined) formData.append(key, String(value));
   });
   return formData;
 };

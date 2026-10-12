@@ -16,6 +16,8 @@ import {
   TableHead,
   TableRow,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import { MdClose, MdOutlineLocalOffer } from "react-icons/md";
@@ -78,6 +80,15 @@ const formatDate = (date: string) => {
 const formatMoney = (amount: number) =>
   new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount);
 
+// Discount in SUM for a course price. PERCENTAGE is taken off the price, FIXED
+// is a flat amount; either way it can never exceed the price, so the final
+// price never goes negative.
+const calcDiscount = (price: number, type: StudentDiscountType, value: number) => {
+  const raw = type === "PERCENTAGE" ? (price * value) / 100 : value;
+  const amount = Math.min(Math.max(Number.isFinite(raw) ? raw : 0, 0), Math.max(price, 0));
+  return { amount, finalPrice: Math.max(price - amount, 0) };
+};
+
 const latestDiscountsByStudent = (records: StudentDiscountRecord[]) => {
   const latest = new Map<string, StudentDiscountRecord>();
   [...records]
@@ -105,6 +116,10 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
   const [draft, setDraft] = useState<DiscountDraft | null>(null);
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const discountsByStudent = useMemo(() => latestDiscountsByStudent(records), [records]);
+  const discountPreview = useMemo(
+    () => calcDiscount(groupPrice, draft?.type ?? "FIXED", Number(draft?.value) || 0),
+    [groupPrice, draft?.type, draft?.value],
+  );
 
   const startEdit = async (student: DiscountStudent, existing?: StudentDiscountRecord) => {
     if (existing) {
@@ -154,6 +169,7 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
     }
 
     try {
+      const reason = draft.reason.trim();
       if (existing) {
         await updateDiscount({
           id: existing.id,
@@ -161,7 +177,9 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
           value,
           startDate: draft.startDate,
           endDate: draft.endDate,
-          reason: draft.reason.trim(),
+          // An unchanged reason is left out of the request; a cleared one is
+          // sent as "" so the old text is actually removed on the backend.
+          reason: reason === existing.reason.trim() ? undefined : reason,
         }).unwrap();
       } else {
         await createDiscount({
@@ -172,9 +190,10 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
           value,
           startDate: draft.startDate,
           endDate: draft.endDate,
-          reason: draft.reason.trim(),
+          reason: reason || undefined,
         }).unwrap();
       }
+      toast.success(t("singleGroup.tabs.discountPrices.saveSuccess"));
       cancelEdit();
     } catch (error) {
       const detail = extractApiError(error);
@@ -185,6 +204,7 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
   const handleDelete = async (record: StudentDiscountRecord) => {
     try {
       await deleteDiscount(record.id).unwrap();
+      toast.success(t("singleGroup.tabs.discountPrices.deleteSuccess"));
       if (editingStudent?.realId === record.studentId) cancelEdit();
     } catch (error) {
       const detail = extractApiError(error);
@@ -295,6 +315,11 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
                           <Typography fontSize={12} color="text.secondary">
                             {formatDate(saved.startDate)}—{formatDate(saved.endDate)}
                           </Typography>
+                          {saved.status === "INACTIVE" || saved.status === "EXPIRED" ? (
+                            <Typography fontSize={12} color="warning.main">
+                              {t(`singleGroup.tabs.discountPrices.${saved.status === "EXPIRED" ? "expired" : "inactive"}`)}
+                            </Typography>
+                          ) : null}
                         </Stack>
                       ) : (
                         <Button
@@ -335,13 +360,30 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
                     {t("singleGroup.tabs.discountPrices.price")}: SUM {formatMoney(groupPrice)}
                   </Typography>
                   <Typography color="text.secondary">
-                    {t("singleGroup.tabs.discountPrices.discounts")}: SUM {formatMoney(0)}
-                  </Typography>
-                  <Typography color="text.secondary">
                     {t("singleGroup.tabs.discountPrices.individualDiscount")}:{" "}
                     {draft.type === "PERCENTAGE" ? `${draft.value || "0"}%` : `SUM ${formatMoney(Number(draft.value) || 0)}`}
                   </Typography>
+                  <Typography color="text.secondary">
+                    {t("singleGroup.tabs.discountPrices.discounts")}: SUM {formatMoney(discountPreview.amount)}
+                  </Typography>
+                  <Typography fontWeight={600}>
+                    {t("singleGroup.tabs.discountPrices.finalPrice")}: SUM {formatMoney(discountPreview.finalPrice)}
+                  </Typography>
                 </Box>
+
+                <ToggleButtonGroup
+                  exclusive
+                  size="small"
+                  value={draft.type}
+                  onChange={(_, type: StudentDiscountType | null) => type && setDraft({ ...draft, type })}
+                >
+                  <ToggleButton value="FIXED" sx={{ textTransform: "none", px: 2 }}>
+                    {t("singleGroup.tabs.discountPrices.fixed")}
+                  </ToggleButton>
+                  <ToggleButton value="PERCENTAGE" sx={{ textTransform: "none", px: 2 }}>
+                    {t("singleGroup.tabs.discountPrices.percentage")}
+                  </ToggleButton>
+                </ToggleButtonGroup>
 
                 <Box>
                   <Typography fontSize={14} mb={0.75}>

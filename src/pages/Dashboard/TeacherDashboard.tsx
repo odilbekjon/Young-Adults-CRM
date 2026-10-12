@@ -12,6 +12,7 @@ import { MdViewColumn, MdViewStream } from "react-icons/md";
 import { TbCalendarEvent, TbUsers, TbUsersGroup } from "react-icons/tb";
 import {
   useTeacherPortalDashboardQuery,
+  useTeacherPortalGroupsQuery,
   useTeacherPortalScheduleQuery,
 } from "../../app/api/teacherPortalApi";
 import type { TeacherPortalScheduleItem } from "../../app/api/teacherPortalApi/types";
@@ -227,11 +228,22 @@ export const TeacherDashboard = () => {
     data: scheduleData, isLoading: scheduleLoading, isError: scheduleError, refetch: refetchSchedule,
   } = useTeacherPortalScheduleQuery(undefined, refetchOnMount);
 
+  // Defense in depth on top of the backend's own scoping: when this teacher's
+  // own group list is known, a schedule row for any other group is dropped.
+  const { data: ownGroups } = useTeacherPortalGroupsQuery();
+  // Ids AND names: a schedule row without a real group id falls back to the
+  // group's name as its `groupId` (see normalizeScheduleItem).
+  const ownGroupKeys = useMemo(
+    () => (ownGroups && ownGroups.length > 0 ? new Set(ownGroups.flatMap((g) => [g.id, g.name])) : null),
+    [ownGroups],
+  );
+
   const events = useMemo<TeacherEvent[]>(() => {
     const colorByGroup = new Map<string, string>();
     const seen = new Set<string>();
     const result: TeacherEvent[] = [];
     (scheduleData ?? []).forEach((item, i) => {
+      if (ownGroupKeys && item.groupId && !ownGroupKeys.has(item.groupId) && !ownGroupKeys.has(item.groupName)) return;
       const { start, end } = parseTimeRange(item.time);
       const eventTab = toTab(item);
       const room = item.roomName;
@@ -269,7 +281,7 @@ export const TeacherDashboard = () => {
       });
     });
     return result;
-  }, [scheduleData, t]);
+  }, [scheduleData, ownGroupKeys, t]);
 
   // Rooms come from every day type so an empty tab still draws its rows.
   const rooms = useMemo(() => {

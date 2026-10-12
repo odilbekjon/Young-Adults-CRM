@@ -5,3 +5,4 @@ export * from "./paymentProvider";
 export * from "./formatTrainingDate";
 export * from "./groupDays";
 export * from "./downloadExcel";
+export * from "./decimal";

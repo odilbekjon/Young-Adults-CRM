@@ -249,7 +249,8 @@
       "finance": "Moliya",
       "reports": "Hisobotlar",
       "settings": "Sozlamalar",
-      "salary": "Oylik"
+      "salary": "Oylik",
+      "myProfile": "Profilim"
     },
     "finance": {
       "allPayments": "Barcha to'lovlar",
@@ -1447,7 +1448,11 @@
         "notPresent": "Yo'q",
         "saveError": "Davomatni saqlab bo'lmadi. Qaytadan urinib ko'ring.",
         "exportExcel": "Excelga eksport qilish",
-        "exportError": "Davomatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring."
+        "exportError": "Davomatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring.",
+        "saveSuccess": "Davomat saqlandi.",
+        "loadError": "Davomatni yuklab bo'lmadi.",
+        "retry": "Qayta urinish",
+        "notLessonDay": "Bugun bu guruhning dars kuni emas — davomat faqat dars kunida belgilanadi."
       },
       "grade": {
         "tabLabel": "Baho",
@@ -1496,7 +1501,10 @@
         "price": "Narx",
         "discounts": "Chegirmalar",
         "sum": "Summa",
-        "submit": "Yuborish"
+        "submit": "Yuborish",
+        "finalPrice": "Yakuniy narx",
+        "saveSuccess": "Chegirma saqlandi.",
+        "deleteSuccess": "Chegirma o'chirildi."
       },
       "exams": {
         "tabLabel": "Imtihonlar",

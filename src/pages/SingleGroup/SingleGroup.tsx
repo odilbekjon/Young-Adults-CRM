@@ -78,6 +78,7 @@ import { ReminderDrawer } from "./ReminderDrawer";
 import { AddPayment } from "../../components/AddPayment";
 import { MoveStudentDialog } from "./MoveStudentDialog";
 import { RemoveStudentDialog } from "./RemoveStudentDialog";
+import { decimalToNumber } from "../../utils/decimal";
 
 const TAB_KEYS = [
   "attendance", "grade", "onlineLessons",
@@ -129,7 +130,7 @@ const toLegacyGroup = (d: GroupDetail): LegacyGroup => ({
   course: d.courseName,
   teacher: d.teachers?.map((tch) => tch.name).join(", ") || "—",
   teacherId: 0,
-  price: d.coursePrice?.d?.[0] ?? undefined,
+  price: decimalToNumber(d.coursePrice) ?? undefined,
   days: d.daysType === "EVEN" ? "Even days" : d.daysType === "ODD" ? "Odd days" : (d.daysType || "—"),
   lessonStartTime: d.time ?? "",
   branch: undefined,

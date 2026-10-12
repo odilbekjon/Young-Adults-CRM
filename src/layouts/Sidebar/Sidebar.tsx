@@ -10,7 +10,7 @@ import {
   FiBriefcase, FiBook, FiMap, FiArchive, FiCalendar,
   FiGrid, FiUserMinus, FiSmartphone, FiTrendingUp, FiList, FiPauseCircle
 } from "react-icons/fi";
-import { MdOutlineDiamond, MdOutlinePaid } from "react-icons/md";
+import { MdOutlineDiamond } from "react-icons/md";
 import { PiStudentDuotone } from "react-icons/pi";
 import { IoMdSettings } from "react-icons/io";
 // import { IoTrophyOutline } from "react-icons/io5";
@@ -629,11 +629,12 @@ const MobileNavItem = ({ item }: { item: NavEntry }) => {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-// TEACHER gets a completely different rail (see the teacher UI reference):
-// Dashboard (their own schedule) on top, then one entry per group they teach
-// (GET /teacher-portal/groups → /groups/:id), then Salary. Everything else in
-// NAV_ITEMS (Leads, Teachers, Students, Finance, Settings, Reports...) is
-// admin/CEO territory, matching ProtectedRoute's own teacher path allowlist.
+// TEACHER gets a completely different rail: Dashboard (their own lesson
+// schedule), "My groups" (/groups — the list page), then one entry per group
+// they teach right below it (GET /teacher-portal/groups → /groups/:id), then
+// their own Profile. Everything else in NAV_ITEMS (Leads, Teachers, Students,
+// Finance, Settings, Reports...) is admin/CEO territory, matching
+// ProtectedRoute's own teacher path allowlist.
 const useTeacherNavItems = (enabled: boolean): { items: NavEntry[]; isLoading: boolean } => {
   const { data: groups, isLoading } = useTeacherPortalGroupsQuery(undefined, { skip: !enabled });
 
@@ -643,13 +644,14 @@ const useTeacherNavItems = (enabled: boolean): { items: NavEntry[]; isLoading: b
       .map((g) => ({
         label: g.name || g.courseName || "—",
         path: `/groups/${g.id}`,
-        icon: <FiLayers size={40} />,
+        icon: <FiUsers size={40} />,
         truncate: true,
       }));
     return [
       { labelKey: "sidebar.nav.dashboard", path: "/dashboard", icon: <FiHome size={40} /> },
+      { labelKey: "teacherPortal.nav.groups", path: "/groups", icon: <FiLayers size={40} /> },
       ...groupItems,
-      { labelKey: "sidebar.nav.salary", path: "/salary", icon: <MdOutlinePaid size={40} /> },
+      { labelKey: "sidebar.nav.myProfile", path: "/profile", icon: <FiUser size={40} /> },
     ];
   }, [groups]);
 

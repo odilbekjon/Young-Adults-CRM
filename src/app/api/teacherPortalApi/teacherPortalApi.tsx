@@ -100,14 +100,17 @@ const normalizeDashboard = (r: Row): TeacherPortalDashboard => ({
 });
 
 // The roster endpoint may return plain students or membership rows that wrap
-// one ({ student: {...}, status }) — both are flattened here.
+// one ({ student: {...}, status }) or carry flat `studentId` / `studentName` /
+// `studentPhone` fields (same as GET /student-groups rows) — all are flattened
+// here. `id` must always end up being the STUDENT's id (never the membership
+// row's own id): attendance marks are keyed by it.
 const normalizeGroupStudent = (raw: Row): TeacherPortalGroupStudent => {
     const inner = raw.student && typeof raw.student === "object" ? (raw.student as Row) : null;
     const r = inner ? { ...raw, ...inner } : raw;
     return {
         id: str(inner?.id, raw.studentId, r.id, r._id),
-        name: str(r.name, r.fullName),
-        phone: strOrNull(r.phone, r.phoneNumber),
+        name: str(r.name, r.fullName, raw.studentName),
+        phone: strOrNull(r.phone, r.phoneNumber, raw.studentPhone),
         status: str(raw.status, r.status).toUpperCase(),
     };
 };

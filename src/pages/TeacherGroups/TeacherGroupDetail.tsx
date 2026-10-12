@@ -9,13 +9,14 @@
 // freeze/remove/move/payment/edit actions, and no per-student profile links
 // (StudentProfile is outside ProtectedRoute's TEACHER_ALLOWED_PREFIXES
 // anyway, so the rows simply aren't clickable — nothing dead-ended).
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Box, Paper, Typography, CircularProgress, Chip, Avatar, Stack, Button } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { IoArrowBack } from "react-icons/io5";
 import {
   useTeacherPortalGroupByIdQuery,
+  useTeacherPortalGroupsQuery,
   useTeacherPortalGroupStudentsQuery,
 } from "../../app/api/teacherPortalApi";
 import { formatTrainingDate } from "../../utils/formatTrainingDate";
@@ -25,10 +26,27 @@ export const TeacherGroupDetail = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { data: group, isLoading, isError } = useTeacherPortalGroupByIdQuery(id ?? "", { skip: !id });
+  // Client-side ownership check on top of the backend's own scoping: a group
+  // id that isn't in this teacher's own group list (GET /teacher-portal/groups,
+  // refetched fresh so a just-assigned group isn't rejected from a stale
+  // cache) is treated as "not found" and nothing about it is fetched/shown —
+  // the group's own requests wait until that list has answered.
+  const { data: myGroups, isSuccess: myGroupsLoaded, isFetching: myGroupsFetching } =
+    useTeacherPortalGroupsQuery(undefined, { refetchOnMountOrArgChange: true });
+  // The query refetches on mount (effect), so the first render still sees the
+  // pre-mount cache — only trust the list once a fetch has run and finished.
+  const [sawListFetch, setSawListFetch] = useState(false);
+  useEffect(() => {
+    if (myGroupsFetching) setSawListFetch(true);
+  }, [myGroupsFetching]);
+  const ownListSettled = sawListFetch && !myGroupsFetching;
+  const notMine =
+    !!id && ownListSettled && myGroupsLoaded && (myGroups?.length ?? 0) > 0 && !myGroups?.some((g) => g.id === id);
+  const skipGroup = !id || notMine || !ownListSettled;
+  const { data: group, isLoading, isError } = useTeacherPortalGroupByIdQuery(id ?? "", { skip: skipGroup });
   const {
     data: rosterData, isLoading: rosterLoading, isError: rosterError, refetch: refetchRoster,
-  } = useTeacherPortalGroupStudentsQuery(id ?? "", { skip: !id });
+  } = useTeacherPortalGroupStudentsQuery(id ?? "", { skip: skipGroup });
 
   // The roster endpoint is the source of truth; the student list embedded in
   // the group payload (if any) is only used when that request itself failed.
@@ -48,11 +66,11 @@ export const TeacherGroupDetail = () => {
     [students],
   );
 
-  if (isLoading) {
+  if ((isLoading || !ownListSettled) && !notMine) {
     return <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}><CircularProgress /></Box>;
   }
 
-  if (isError || !group) {
+  if (notMine || isError || !group) {
     return (
       <Box sx={{ p: 4 }}>
         <Typography color="error" mb={2}>{t("teacherGroups.notFound")}</Typography>

@@ -249,7 +249,8 @@
       "finance": "Finance",
       "reports": "Reports",
       "settings": "Settings",
-      "salary": "Salary"
+      "salary": "Salary",
+      "myProfile": "My profile"
     },
     "finance": {
       "allPayments": "All payments",
@@ -1447,7 +1448,11 @@
         "notPresent": "Not",
         "saveError": "Failed to save attendance. Please try again.",
         "exportExcel": "Export to Excel",
-        "exportError": "Failed to export attendance. Please try again."
+        "exportError": "Failed to export attendance. Please try again.",
+        "saveSuccess": "Attendance saved.",
+        "loadError": "Could not load attendance.",
+        "retry": "Retry",
+        "notLessonDay": "Today is not a lesson day for this group — attendance can only be marked on a lesson day."
       },
       "grade": {
         "tabLabel": "Grade",
@@ -1496,7 +1501,10 @@
         "price": "Price",
         "discounts": "Discounts",
         "sum": "Sum",
-        "submit": "Submit"
+        "submit": "Submit",
+        "finalPrice": "Final price",
+        "saveSuccess": "Discount saved.",
+        "deleteSuccess": "Discount deleted."
       },
       "exams": {
         "tabLabel": "Exams",

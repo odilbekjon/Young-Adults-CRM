@@ -29,9 +29,18 @@ export interface TeacherPortalGroup {
   id: string;
   name: string;
   courseName: string;
+  // ODD / EVEN (or whatever the backend sends); derived from a weekday list
+  // when only that is returned.
   daysType: string | null;
   time: string | null;
   studentsCount: number;
+  // Not every one of these is documented for the portal endpoints — each is
+  // null when the backend leaves it out.
+  roomName: string | null;
+  roomCapacity: number | null;
+  price: number | null;
+  trainingStart: string | null;
+  trainingEnd: string | null;
 }
 
 // GET /teacher-portal/groups/{id} — "O'qituvchi o'ziga tegishli bo'lgan
@@ -40,9 +49,6 @@ export interface TeacherPortalGroup {
 // GroupDetail field names for the fields this description implies overlap
 // with (room, training dates, full student list).
 export interface TeacherPortalGroupDetail extends TeacherPortalGroup {
-  roomName: string | null;
-  trainingStart: string | null;
-  trainingEnd: string | null;
   students: TeacherPortalGroupStudent[];
 }
 

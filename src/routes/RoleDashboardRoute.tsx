@@ -8,14 +8,15 @@ import { useAuth } from "../hooks/useAuth";
 import { Layout } from "../layouts/layout";
 import { Dashboard } from "../pages/Dashboard";
 import { TeacherDashboard } from "../pages/Dashboard/TeacherDashboard";
-import { TeacherSalary } from "../pages/TeacherSalary/TeacherSalary";
+import { TeacherAccount } from "../pages/TeacherAccount/TeacherAccount";
 
 export const DashboardRoute = () => {
   const { isTeacher } = useAuth();
   return isTeacher ? <TeacherDashboard /> : <Dashboard />;
 };
 
-// `/salary` is the teacher's own payroll page. For staff the equivalent lives
+// `/salary` is the Salary tab of the teacher's Account page (same page as
+// /profile — see TeacherAccount). For staff the equivalent lives
 // under Finance → Salaries, so they're sent there (PermissionRoute still
 // applies to it). Renders its own Layout because only the teacher variant
 // needs one.
@@ -24,7 +25,7 @@ export const SalaryRoute = () => {
   if (!isTeacher) return <Navigate to="/finance/salaries" replace />;
   return (
     <Layout>
-      <TeacherSalary />
+      <TeacherAccount tab="salary" />
     </Layout>
   );
 };

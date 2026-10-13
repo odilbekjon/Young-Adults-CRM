@@ -12,7 +12,7 @@ import type { AppDispatch } from "../../app/store";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils";
 import { useAuth } from "../../hooks/useAuth";
-import TeacherOwnProfile from "./TeacherOwnProfile";
+import { TeacherAccount } from "../TeacherAccount/TeacherAccount";
 
 interface ProfileDisplayUser {
   name: string | null;
@@ -482,7 +482,7 @@ const AdminProfilePage = () => {
 const ProfilePage = () => {
   const { id } = useParams<{ id?: string }>();
   const { isTeacher } = useAuth();
-  return isTeacher && !id ? <TeacherOwnProfile /> : <AdminProfilePage />;
+  return isTeacher && !id ? <TeacherAccount tab="profile" /> : <AdminProfilePage />;
 };
 
 export default ProfilePage;

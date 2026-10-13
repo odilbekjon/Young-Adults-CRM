@@ -1,6 +1,7 @@
-// TEACHER-role /profile page (Profile.tsx renders this in place of the admin
-// staff profile when the session is a TEACHER — see the wrapper at the bottom
-// of Profile.tsx). Reads GET /teacher-portal/profile and updates it through
+// Profile tab of the TEACHER Account page (TeacherAccount renders this for
+// /profile; Profile.tsx swaps that page in for the admin staff profile when
+// the session is a TEACHER — see the wrapper at the bottom of Profile.tsx).
+// Left: own info + edit form; right: own groups (TeacherAccountGroups). Reads GET /teacher-portal/profile and updates it through
 // PATCH /teacher-portal/profile (multipart: photo, password, gender,
 // birthdate). Only fields that were actually changed are sent — in
 // particular an empty password field is never sent.
@@ -16,6 +17,7 @@ import {
 import type { TeacherPortalGender } from "../../app/api/teacherPortalApi/types";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils";
+import { TeacherAccountGroups } from "../TeacherAccount/TeacherAccountGroups";
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MIN_PASSWORD = 6;
@@ -152,15 +154,12 @@ export const TeacherOwnProfile = () => {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "var(--color-bg-page)", p: { xs: 2, md: 3 } }}>
-      <Typography variant="h5" fontWeight={600} sx={{ mb: 2.5, color: "var(--color-text-primary)" }}>
-        {t("teacherPortal.profile.title")}
-      </Typography>
-
+    <Box>
       <Box sx={{
-        display: "grid", gridTemplateColumns: "minmax(0, 420px) minmax(0, 480px)", gap: 2.5, alignItems: "start",
-        "@media(max-width:1000px)": { gridTemplateColumns: "minmax(0, 1fr)" },
+        display: "grid", gridTemplateColumns: "minmax(0, 420px) minmax(0, 1fr)", gap: 3, alignItems: "start",
+        "@media(max-width:1200px)": { gridTemplateColumns: "minmax(0, 1fr)" },
       }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, minWidth: 0 }}>
         {/* ── Read-only info ── */}
         <Paper elevation={0} sx={cardSx}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2.5 }}>
@@ -172,7 +171,18 @@ export const TeacherOwnProfile = () => {
             </Typography>
           </Box>
 
+          {profile.id && (
+            <Typography sx={{ color: "var(--color-text-muted)", fontSize: 13, mb: 1 }}>id: {profile.id}</Typography>
+          )}
           <InfoRow label={t("teacherPortal.profile.phone")}>{profile.phone || "—"}</InfoRow>
+          <InfoRow label={t("teacherPortal.profile.roles")}>
+            <Chip
+              label={t("teacherPortal.profile.teacherRole")}
+              size="small"
+              variant="outlined"
+              sx={{ borderColor: "#1a5490", color: "#1a5490", fontSize: 12, height: 26, borderRadius: "20px" }}
+            />
+          </InfoRow>
           <InfoRow label={t("teacherPortal.profile.email")}>{profile.email || "—"}</InfoRow>
           {profile.specialization && (
             <InfoRow label={t("teacherPortal.profile.specialization")}>{profile.specialization}</InfoRow>
@@ -298,6 +308,10 @@ export const TeacherOwnProfile = () => {
             {isSaving ? t("teacherPortal.profile.saving") : t("teacherPortal.profile.save")}
           </Button>
         </Paper>
+        </Box>
+
+        {/* ── Own groups ── */}
+        <TeacherAccountGroups />
       </Box>
     </Box>
   );

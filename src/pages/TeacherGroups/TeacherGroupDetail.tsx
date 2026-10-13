@@ -23,6 +23,7 @@ import {
   useTeacherPortalGroupByIdQuery,
   useTeacherPortalGroupsQuery,
   useTeacherPortalGroupStudentsQuery,
+  useTeacherPortalScheduleQuery,
 } from "../../app/api/teacherPortalApi";
 import { formatTrainingDate } from "../../utils/formatTrainingDate";
 import { useAuth } from "../../hooks/useAuth";
@@ -61,6 +62,10 @@ export const TeacherGroupDetail = () => {
     data: rosterData, isLoading: rosterLoading, isError: rosterError, refetch: refetchRoster,
   } = useTeacherPortalGroupStudentsQuery(id ?? "", { skip: skipGroup });
 
+  // The group endpoint can leave out schedule/room/price fields the list and
+  // schedule endpoints do carry — each one falls back to those (see `info`).
+  const { data: schedule } = useTeacherPortalScheduleQuery();
+
   // The roster endpoint is the source of truth; the student list embedded in
   // the group payload (if any) is only used when that request itself failed.
   const students = useMemo(
@@ -94,9 +99,20 @@ export const TeacherGroupDetail = () => {
     );
   }
 
-  const daysKey = group.daysType?.toUpperCase();
-  const daysLabel = daysKey === "ODD" || daysKey === "EVEN" ? t(`teacherGroups.days.${daysKey}`) : group.daysType;
-  const timeLabel = [daysLabel, group.time].filter(Boolean).join(" · ") || "—";
+  const listItem = myGroups?.find((g) => g.id === id);
+  const scheduleItem = schedule?.find((s) => s.groupId === id);
+  const info = {
+    daysType: group.daysType ?? listItem?.daysType ?? (scheduleItem?.daysType || null),
+    time: group.time ?? listItem?.time ?? scheduleItem?.time ?? null,
+    roomName: group.roomName ?? listItem?.roomName ?? (scheduleItem?.roomName || null),
+    roomCapacity: group.roomCapacity ?? listItem?.roomCapacity ?? scheduleItem?.maxStudents ?? null,
+    price: group.price ?? listItem?.price ?? null,
+    trainingStart: group.trainingStart ?? listItem?.trainingStart ?? scheduleItem?.trainingStart ?? null,
+    trainingEnd: group.trainingEnd ?? listItem?.trainingEnd ?? scheduleItem?.trainingEnd ?? null,
+  };
+  const daysKey = info.daysType?.toUpperCase();
+  const daysLabel = daysKey === "ODD" || daysKey === "EVEN" ? t(`teacherGroups.days.${daysKey}`) : info.daysType;
+  const timeLabel = [daysLabel, info.time].filter(Boolean).join(" · ") || "—";
   const teacherName = user?.name || "—";
 
   return (
@@ -119,11 +135,15 @@ export const TeacherGroupDetail = () => {
         <Paper sx={{ width: { xs: "100%", md: 300 }, flexShrink: 0, borderRadius: 3, p: 2.5 }}>
           <Typography fontSize={14}><b>{t("singleGroup.leftPanel.course")}:</b> {group.courseName || "—"}</Typography>
           <Typography fontSize={14}><b>{t("singleGroup.leftPanel.teacher")}:</b> {teacherName}</Typography>
+          <Typography fontSize={14}>
+            <b>{t("singleGroup.leftPanel.price")}:</b> {info.price ? `${info.price.toLocaleString()} UZS` : "—"}
+          </Typography>
           <Typography fontSize={14}><b>{t("singleGroup.leftPanel.time")}:</b> {timeLabel}</Typography>
 
           <Divider sx={{ my: 1.5 }} />
 
-          <Typography fontSize={14}><b>{t("singleGroup.leftPanel.rooms")}:</b> {group.roomName || "—"}</Typography>
+          <Typography fontSize={14}><b>{t("singleGroup.leftPanel.rooms")}:</b> {info.roomName || "—"}</Typography>
+          <Typography fontSize={14}><b>{t("singleGroup.leftPanel.roomCapacity")}:</b> {info.roomCapacity ?? "—"}</Typography>
 
           <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 2, bgcolor: "#f5f7fb", border: "1px solid #eef0f4" }}>
             <Stack direction="row" alignItems="center" spacing={0.8} mb={1}>
@@ -132,16 +152,16 @@ export const TeacherGroupDetail = () => {
                 {t("singleGroup.leftPanel.trainingDates")}
               </Typography>
             </Stack>
-            {group.trainingStart || group.trainingEnd ? (
+            {info.trainingStart || info.trainingEnd ? (
               <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" rowGap={1}>
                 <Box>
                   <Typography fontSize={10.5} color="text.secondary">{t("singleGroup.leftPanel.trainingStart")}</Typography>
-                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">{formatTrainingDate(group.trainingStart)}</Typography>
+                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">{formatTrainingDate(info.trainingStart)}</Typography>
                 </Box>
                 <Typography fontSize={14} color="#c1c7d0">→</Typography>
                 <Box>
                   <Typography fontSize={10.5} color="text.secondary">{t("singleGroup.leftPanel.trainingEnd")}</Typography>
-                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">{formatTrainingDate(group.trainingEnd)}</Typography>
+                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">{formatTrainingDate(info.trainingEnd)}</Typography>
                 </Box>
               </Stack>
             ) : (

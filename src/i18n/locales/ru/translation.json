@@ -2763,7 +2763,10 @@
   },
   "teacherPortal": {
     "nav": { "dashboard": "Главная", "groups": "Мои группы", "salary": "Зарплата", "profile": "Профиль" },
+    "account": { "groups": "Группы", "start": "Начало", "openGroup": "Открыть группу" },
     "profile": {
+      "roles": "Роли",
+      "teacherRole": "Учитель",
       "title": "Мой профиль",
       "loadError": "Не удалось загрузить профиль.",
       "name": "Имя",

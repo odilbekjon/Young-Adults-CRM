@@ -1,4 +1,4 @@
-// TEACHER-role "Salary" page — the teacher's own published/paid payroll
+// TEACHER-role "Salary" tab (rendered by TeacherAccount) — the teacher's own published/paid payroll
 // history from GET /teacher-portal/salaries. Same table as the admin
 // TeacherProfile salary tab (period / status / calculated / paid) plus the
 // payment date, but themed with the app's CSS variables so it follows dark
@@ -71,7 +71,7 @@ export const TeacherSalary = () => {
   );
 
   return (
-    <Box sx={{ minHeight: "100vh", backgroundColor: "var(--color-bg-page)", pt: 3, px: { xs: 2, md: 4 }, pb: 6 }}>
+    <Box>
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1.5, mb: 2.5 }}>
         <Box>
           <Typography sx={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)" }}>

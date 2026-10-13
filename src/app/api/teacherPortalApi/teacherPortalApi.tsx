@@ -1,5 +1,6 @@
 import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
+import { decimalToNumber } from "../../../utils/decimal";
 import {
     TeacherPortalDashboard,
     TeacherPortalGender,
@@ -115,29 +116,44 @@ const normalizeGroupStudent = (raw: Row): TeacherPortalGroupStudent => {
     };
 };
 
+const ODD_DAYS = ["MONDAY", "WEDNESDAY", "FRIDAY"];
+const EVEN_DAYS = ["TUESDAY", "THURSDAY", "SATURDAY"];
+
+// "ODD"/"EVEN" straight from the backend, else inferred from a weekday list
+// (Mon/Wed/Fri vs Tue/Thu/Sat — same convention as utils/groupDays).
+const normalizeDaysType = (r: Row): string | null => {
+    const direct = strOrNull(r.daysType);
+    if (direct) return direct.toUpperCase();
+    const days = strList(r.days).map((d) => d.toUpperCase());
+    if (days.length === 0) return null;
+    if (days.every((d) => ODD_DAYS.includes(d))) return "ODD";
+    if (days.every((d) => EVEN_DAYS.includes(d))) return "EVEN";
+    return null;
+};
+
 const normalizeGroup = (r: Row): TeacherPortalGroup => {
     const course = (r.course ?? {}) as Row;
+    const room = (r.room ?? {}) as Row;
     return {
         id: str(r.id, r._id, r.groupId),
         name: str(r.name, r.groupName),
         courseName: str(r.courseName, course.name),
-        daysType: strOrNull(r.daysType),
+        daysType: normalizeDaysType(r),
         time: strOrNull(r.time, r.startTime),
         studentsCount: countOrNull(r.studentsCount, r.totalStudents, r.activeStudentsCount, r.students) ?? 0,
+        roomName: strOrNull(r.roomName, room.name),
+        roomCapacity: numOrNull(r.roomCapacity, room.capacity),
+        // Course price: plain number/string or a serialized decimal.js object.
+        price: [r.coursePrice, r.price, course.price].map(decimalToNumber).find((n) => n !== null) ?? null,
+        trainingStart: strOrNull(r.trainingStart),
+        trainingEnd: strOrNull(r.trainingEnd),
     };
 };
 
-const normalizeGroupDetail = (r: Row): TeacherPortalGroupDetail => {
-    const room = (r.room ?? {}) as Row;
-    const studentsRaw = pickList(r.students, "students");
-    return {
-        ...normalizeGroup(r),
-        roomName: strOrNull(r.roomName, room.name),
-        trainingStart: strOrNull(r.trainingStart),
-        trainingEnd: strOrNull(r.trainingEnd),
-        students: studentsRaw.map(normalizeGroupStudent),
-    };
-};
+const normalizeGroupDetail = (r: Row): TeacherPortalGroupDetail => ({
+    ...normalizeGroup(r),
+    students: pickList(r.students, "students").map(normalizeGroupStudent),
+});
 
 const normalizeGender = (value: unknown): TeacherPortalGender | null => {
     const g = typeof value === "string" ? value.toUpperCase() : "";

@@ -2761,7 +2761,10 @@
   },
   "teacherPortal": {
     "nav": { "dashboard": "Bosh sahifa", "groups": "Mening guruhlarim", "salary": "Oylik", "profile": "Profil" },
+    "account": { "groups": "Guruhlar", "start": "Boshlanish vaqti", "openGroup": "Guruhni ochish" },
     "profile": {
+      "roles": "Rollar",
+      "teacherRole": "O'qituvchi",
       "title": "Mening profilim",
       "loadError": "Profilni yuklab bo'lmadi.",
       "name": "Ism",

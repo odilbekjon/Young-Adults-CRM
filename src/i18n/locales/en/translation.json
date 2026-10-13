@@ -2761,7 +2761,10 @@
   },
   "teacherPortal": {
     "nav": { "dashboard": "Dashboard", "groups": "My groups", "salary": "Salary", "profile": "Profile" },
+    "account": { "groups": "Groups", "start": "Start", "openGroup": "Open group" },
     "profile": {
+      "roles": "Roles",
+      "teacherRole": "Teacher",
       "title": "My profile",
       "loadError": "Failed to load your profile.",
       "name": "Name",

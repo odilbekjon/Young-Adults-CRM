@@ -249,8 +249,7 @@
       "finance": "Finance",
       "reports": "Reports",
       "settings": "Settings",
-      "salary": "Salary",
-      "myProfile": "My profile"
+      "salary": "Salary"
     },
     "finance": {
       "allPayments": "All payments",

@@ -1,5 +1,4 @@
-// TEACHER-role landing page: this teacher's own stats
-// (GET /teacher-portal/dashboard) above their own lesson schedule
+// TEACHER-role landing page: this teacher's own lesson schedule
 // (GET /teacher-portal/schedule). Independent of the admin Dashboard — that
 // page (and its schedule helpers) is left untouched; the grid below is a
 // small standalone version of the same Odd/Even/Other + Horizontal/Vertical
@@ -9,9 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Box, Button, CircularProgress, Paper, Tooltip, Typography } from "@mui/material";
 import { MdViewColumn, MdViewStream } from "react-icons/md";
-import { TbCalendarEvent, TbUsers, TbUsersGroup } from "react-icons/tb";
 import {
-  useTeacherPortalDashboardQuery,
   useTeacherPortalGroupsQuery,
   useTeacherPortalScheduleQuery,
 } from "../../app/api/teacherPortalApi";
@@ -120,35 +117,6 @@ const VERTICAL_ROOM_MIN_W = 210;
 const DIVIDER_HEAVY = "2px solid var(--color-text-muted)";
 const DIVIDER_LIGHT = "1px solid var(--color-border)";
 
-// ─── Stat card ───────────────────────────────────────────────────────────────
-
-const StatCard = ({
-  icon, label, value, loading, onClick,
-}: { icon: React.ReactNode; label: string; value: number | null; loading: boolean; onClick?: () => void }) => (
-  <Paper
-    elevation={0}
-    onClick={onClick}
-    sx={{
-      px: 2, py: 2.25, borderRadius: "12px",
-      border: "1px solid var(--color-border)", background: "var(--color-surface)",
-      display: "flex", alignItems: "center", gap: 2,
-      cursor: onClick ? "pointer" : "default", userSelect: "none",
-      transition: "all 0.18s ease",
-      ...(onClick && {
-        "&:hover": { borderColor: "#f97316", boxShadow: "0 4px 20px rgba(249,115,22,0.14)", transform: "translateY(-2px)" },
-      }),
-    }}
-  >
-    <Box sx={{ color: "#f97316", display: "flex", fontSize: 30 }}>{icon}</Box>
-    <Box sx={{ minWidth: 0 }}>
-      <Typography sx={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.3 }}>{label}</Typography>
-      <Typography sx={{ fontSize: 30, fontWeight: 700, color: "var(--color-primary)", lineHeight: 1.15 }}>
-        {loading ? <CircularProgress size={20} /> : value === null ? "—" : value}
-      </Typography>
-    </Box>
-  </Paper>
-);
-
 // ─── Lesson card ─────────────────────────────────────────────────────────────
 
 const LessonCard = ({ ev, orientation }: { ev: TeacherEvent; orientation: ScheduleOrientation }) => {
@@ -223,7 +191,6 @@ export const TeacherDashboard = () => {
   // Nothing invalidates these on lesson/attendance changes made elsewhere, so
   // refetch when the landing page is (re)opened.
   const refetchOnMount = { refetchOnMountOrArgChange: true };
-  const { data: stats, isLoading: statsLoading, isError: statsError } = useTeacherPortalDashboardQuery(undefined, refetchOnMount);
   const {
     data: scheduleData, isLoading: scheduleLoading, isError: scheduleError, refetch: refetchSchedule,
   } = useTeacherPortalScheduleQuery(undefined, refetchOnMount);
@@ -325,31 +292,6 @@ export const TeacherDashboard = () => {
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "var(--color-bg-page)", pt: 3, px: { xs: 2, md: 4 }, pb: 6 }}>
-      {/* ── Stats ── */}
-      <Box sx={{
-        display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1.5, mb: statsError ? 1 : 3,
-        "@media(max-width:760px)": { gridTemplateColumns: "1fr" },
-      }}>
-        <StatCard
-          icon={<TbCalendarEvent />} label={t("teacherDashboard.stats.todayLessons")}
-          value={statsError ? null : stats?.todayLessonsCount ?? 0} loading={statsLoading}
-        />
-        <StatCard
-          icon={<TbUsers />} label={t("teacherDashboard.stats.totalStudents")}
-          value={statsError ? null : stats?.totalStudentsCount ?? 0} loading={statsLoading}
-        />
-        <StatCard
-          icon={<TbUsersGroup />} label={t("teacherDashboard.stats.activeGroups")}
-          value={statsError ? null : stats?.activeGroupsCount ?? 0} loading={statsLoading}
-          onClick={() => navigate("/groups")}
-        />
-      </Box>
-      {statsError && (
-        <Typography sx={{ color: "var(--color-danger)", fontSize: 13, mb: 3 }}>
-          {t("teacherDashboard.statsError")}
-        </Typography>
-      )}
-
       {/* ── Schedule ── */}
       <Paper elevation={0} sx={{
         borderRadius: "16px", border: "1px solid var(--color-border)",

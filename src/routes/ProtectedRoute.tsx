@@ -4,8 +4,8 @@ import { useAuth } from "../hooks/useAuth";
 // A TEACHER-role session gets a small, self-contained slice of the CRM
 // (product direction, see the teacher sidebar in Sidebar.tsx): a Dashboard
 // (their own schedule — Router.tsx's DashboardRoute swaps in the teacher
-// variant), their own groups (`/groups`, `/groups/:id` — attendance only), and
-// their own profile (+ the header's notifications page). Everything else
+// variant), their own groups (`/groups`, `/groups/:id`), their Salary, and the
+// shared profile/notifications pages. Everything else
 // under ProtectedRoute (Students, Finance, Settings, Reports, other staff's
 // data, etc.) is admin/CEO territory. This is a path allowlist rather than
 // per-route guards sprinkled across Router.tsx, so a route can't be added
@@ -17,7 +17,7 @@ import { useAuth } from "../hooks/useAuth";
 //
 // Exact-match paths (no nested routes allowed): notably `/profile/:id`
 // (another staff member's profile) stays out of reach.
-const TEACHER_EXACT_PATHS = ["/dashboard", "/profile", "/notifications"];
+const TEACHER_EXACT_PATHS = ["/dashboard", "/salary", "/profile", "/notifications"];
 // Prefix paths (the path itself or anything nested beneath it).
 const TEACHER_PREFIX_PATHS = ["/groups"];
 

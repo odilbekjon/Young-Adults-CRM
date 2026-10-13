@@ -77,6 +77,11 @@ const VAL_TO_STATUS: Record<"Was" | "Not", AttendanceStatus> = {
   Not: "ABSENT",
 };
 
+const errorStatus = (err: unknown): string => {
+  const status = (err as { status?: unknown } | undefined)?.status;
+  return status === undefined ? "?" : String(status);
+};
+
 const getDaysInMonth = (year: number, month: number) =>
   new Date(year, month + 1, 0).getDate();
 
@@ -308,6 +313,12 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
           {[
             t("singleGroup.tabs.attendance.loadError"),
             extractApiError(datesErr) ?? extractApiError(recordsErr),
+            // Which request failed and with what status — makes a permission
+            // problem (403) easy to tell apart from a network/server one.
+            `[${[
+              datesError && `/attendances/group/…/dates: ${errorStatus(datesErr)}`,
+              recordsError && `/attendances/group/…: ${errorStatus(recordsErr)}`,
+            ].filter(Boolean).join(", ")}]`,
           ].filter(Boolean).join(" ")}
         </Alert>
       )}

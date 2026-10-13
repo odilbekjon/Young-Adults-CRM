@@ -1,31 +1,44 @@
-// TEACHER-role read-only detail view for one of their own groups — reached
-// at the same /groups/:id route the admin SingleGroup page uses, selected
-// by role in src/routes/RoleGroupsRoute.tsx. Backed by
+// TEACHER-role detail view for one of their own groups — reached at the same
+// /groups/:id route the admin SingleGroup page uses, selected by role in
+// src/routes/RoleGroupsRoute.tsx. Backed by
 //   GET /teacher-portal/groups/{id}           (header: name/course/days/room)
 //   GET /teacher-portal/groups/{id}/students  (roster with phones)
 // both scoped server-side to this teacher; a group that isn't theirs comes
 // back as an error, handled as "not found" below rather than trying to
-// distinguish 403 from 404. Shows only the roster + Attendance — no
-// freeze/remove/move/payment/edit actions, and no per-student profile links
-// (StudentProfile is outside ProtectedRoute's TEACHER_ALLOWED_PREFIXES
-// anyway, so the rows simply aren't clickable — nothing dead-ended).
+// distinguish 403 from 404. Laid out like the admin SingleGroup page (title,
+// info + roster panel on the left, tabs on the right) but with only the
+// Attendance / Grade / Online lessons tabs — no Discount prices, Exams,
+// History or Comments, no freeze/remove/move/payment/edit actions, and no
+// per-student profile links (StudentProfile is outside ProtectedRoute's
+// teacher allowlist anyway, so the rows simply aren't clickable).
 import { useEffect, useMemo, useState } from "react";
-import { Box, Paper, Typography, CircularProgress, Chip, Avatar, Stack, Button } from "@mui/material";
+import {
+  Box, Paper, Typography, CircularProgress, Stack, Button, Divider, List, ListItem, ListItemText, Tabs, Tab,
+} from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { IoArrowBack } from "react-icons/io5";
+import { MdCalendarToday } from "react-icons/md";
 import {
   useTeacherPortalGroupByIdQuery,
   useTeacherPortalGroupsQuery,
   useTeacherPortalGroupStudentsQuery,
 } from "../../app/api/teacherPortalApi";
 import { formatTrainingDate } from "../../utils/formatTrainingDate";
+import { useAuth } from "../../hooks/useAuth";
 import { Attendance } from "../SingleGroup/tabs/Attendance";
+import { Grade } from "../SingleGroup/tabs/Grade";
+import { OnlineLessons } from "../SingleGroup/tabs/OnlineLessons";
+
+// Tabs a TEACHER gets on a group page (keys of singleGroup.tabs.*).
+const TEACHER_TAB_KEYS = ["attendance", "grade", "onlineLessons"] as const;
 
 export const TeacherGroupDetail = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const [tabIndex, setTabIndex] = useState(0);
   // Client-side ownership check on top of the backend's own scoping: a group
   // id that isn't in this teacher's own group list (GET /teacher-portal/groups,
   // refetched fresh so a just-assigned group isn't rejected from a stale
@@ -74,7 +87,7 @@ export const TeacherGroupDetail = () => {
     return (
       <Box sx={{ p: 4 }}>
         <Typography color="error" mb={2}>{t("teacherGroups.notFound")}</Typography>
-        <Button startIcon={<IoArrowBack />} onClick={() => navigate("/groups")} sx={{ textTransform: "none" }}>
+        <Button startIcon={<IoArrowBack />} onClick={() => navigate("/dashboard")} sx={{ textTransform: "none" }}>
           {t("teacherGroups.backToGroups")}
         </Button>
       </Box>
@@ -83,86 +96,154 @@ export const TeacherGroupDetail = () => {
 
   const daysKey = group.daysType?.toUpperCase();
   const daysLabel = daysKey === "ODD" || daysKey === "EVEN" ? t(`teacherGroups.days.${daysKey}`) : group.daysType;
-  const dates = group.trainingStart || group.trainingEnd
-    ? `${formatTrainingDate(group.trainingStart)} – ${formatTrainingDate(group.trainingEnd)}`
-    : "";
-  const subtitle = [daysLabel, group.time, group.roomName && `${t("teacherGroups.room")}: ${group.roomName}`, dates]
-    .filter(Boolean)
-    .join(" · ");
+  const timeLabel = [daysLabel, group.time].filter(Boolean).join(" · ") || "—";
+  const teacherName = user?.name || "—";
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Button startIcon={<IoArrowBack />} onClick={() => navigate("/groups")} sx={{ textTransform: "none", mb: 2 }}>
-        {t("teacherGroups.backToGroups")}
-      </Button>
-
-      <Stack direction="row" alignItems="center" gap={1.5} flexWrap="wrap" mb={1}>
-        <Typography variant="h5" fontWeight={700} color="var(--color-text-primary)">{group.name}</Typography>
-        {group.courseName && <Chip label={group.courseName} size="small" />}
+    <Box sx={{ minHeight: "100vh", bgcolor: "#f7f8fa" }}>
+      {/* PAGE TITLE */}
+      <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" rowGap={0.5} px={3} pt={3} pb={2}>
+        <Typography variant="h5" fontWeight={700}>{group.name}</Typography>
+        {group.courseName && (
+          <>
+            <Typography variant="h5" color="text.secondary">·</Typography>
+            <Typography variant="h5" fontWeight={700}>{group.courseName}</Typography>
+          </>
+        )}
+        <Typography variant="h5" color="text.secondary">·</Typography>
+        <Typography variant="h5" fontWeight={700} sx={{ color: "#185FA5" }}>{teacherName}</Typography>
       </Stack>
-      <Typography fontSize={13} color="text.secondary" mb={2}>{subtitle || "—"}</Typography>
 
-      <Paper elevation={0} sx={{ border: "1px solid var(--color-border)", borderRadius: 2, p: 2, mb: 2.5, bgcolor: "var(--color-accent-surface)" }}>
-        <Typography fontSize={13} color="text.secondary">{t("teacherGroups.attendanceOnlyNote")}</Typography>
-      </Paper>
+      <Stack direction={{ xs: "column", md: "row" }} gap={2} px={3} pb={3} alignItems="flex-start">
+        {/* ── LEFT PANEL ── */}
+        <Paper sx={{ width: { xs: "100%", md: 300 }, flexShrink: 0, borderRadius: 3, p: 2.5 }}>
+          <Typography fontSize={14}><b>{t("singleGroup.leftPanel.course")}:</b> {group.courseName || "—"}</Typography>
+          <Typography fontSize={14}><b>{t("singleGroup.leftPanel.teacher")}:</b> {teacherName}</Typography>
+          <Typography fontSize={14}><b>{t("singleGroup.leftPanel.time")}:</b> {timeLabel}</Typography>
 
-      <Typography fontSize={14} fontWeight={600} mb={1} color="var(--color-text-primary)">
-        {t("teacherGroups.roster")}{!rosterLoading && !rosterError ? ` (${students.length})` : ""}
-      </Typography>
-      <Paper elevation={0} sx={{ border: "1px solid var(--color-border)", borderRadius: 2, background: "var(--color-surface)", mb: 3, overflow: "hidden" }}>
-        {rosterLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}><CircularProgress size={22} /></Box>
-        ) : rosterError && students.length === 0 ? (
-          <Box sx={{ p: 2 }}>
-            <Typography color="error" fontSize={13} mb={1}>{t("teacherGroups.rosterLoadError")}</Typography>
-            <Button size="small" variant="outlined" onClick={() => refetchRoster()} sx={{ textTransform: "none" }}>
-              {t("teacherDashboard.schedule.retry")}
-            </Button>
-          </Box>
-        ) : students.length === 0 ? (
-          <Typography fontSize={13} color="text.secondary" sx={{ p: 2 }}>{t("teacherGroups.rosterEmpty")}</Typography>
-        ) : (
-          <Box>
-            {students.map((s, i) => (
-              <Stack
-                key={s.id}
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                gap={2}
-                sx={{ px: 2, py: 1.1, borderTop: i === 0 ? "none" : "1px solid var(--color-border-subtle)" }}
-              >
-                <Stack direction="row" alignItems="center" gap={1.25} sx={{ minWidth: 0 }}>
-                  <Avatar sx={{ width: 28, height: 28, fontSize: 12 }}>{s.name[0]}</Avatar>
-                  <Typography fontSize={13.5} color="var(--color-text-primary)" noWrap>{s.name}</Typography>
-                </Stack>
-                {s.phone ? (
-                  <Typography
-                    component="a"
-                    href={`tel:${s.phone.replace(/\s+/g, "")}`}
-                    fontSize={13}
-                    sx={{ color: "var(--color-primary)", textDecoration: "none", whiteSpace: "nowrap" }}
-                  >
-                    {s.phone}
-                  </Typography>
-                ) : (
-                  <Typography fontSize={13} color="text.disabled" sx={{ whiteSpace: "nowrap" }}>
-                    {t("teacherGroups.noPhone")}
-                  </Typography>
-                )}
+          <Divider sx={{ my: 1.5 }} />
+
+          <Typography fontSize={14}><b>{t("singleGroup.leftPanel.rooms")}:</b> {group.roomName || "—"}</Typography>
+
+          <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 2, bgcolor: "#f5f7fb", border: "1px solid #eef0f4" }}>
+            <Stack direction="row" alignItems="center" spacing={0.8} mb={1}>
+              <MdCalendarToday size={14} color="#6b7280" />
+              <Typography fontSize={11.5} fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.4 }}>
+                {t("singleGroup.leftPanel.trainingDates")}
+              </Typography>
+            </Stack>
+            {group.trainingStart || group.trainingEnd ? (
+              <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" rowGap={1}>
+                <Box>
+                  <Typography fontSize={10.5} color="text.secondary">{t("singleGroup.leftPanel.trainingStart")}</Typography>
+                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">{formatTrainingDate(group.trainingStart)}</Typography>
+                </Box>
+                <Typography fontSize={14} color="#c1c7d0">→</Typography>
+                <Box>
+                  <Typography fontSize={10.5} color="text.secondary">{t("singleGroup.leftPanel.trainingEnd")}</Typography>
+                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">{formatTrainingDate(group.trainingEnd)}</Typography>
+                </Box>
               </Stack>
-            ))}
+            ) : (
+              <Typography fontSize={13} color="text.secondary">{t("singleGroup.leftPanel.notScheduled")}</Typography>
+            )}
           </Box>
-        )}
-      </Paper>
 
-      <Paper elevation={0} sx={{ border: "1px solid var(--color-border)", borderRadius: 2, p: { xs: 1.5, md: 2.5 }, background: "var(--color-surface)" }}>
-        {rosterLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
-        ) : (
-          <Attendance groupId={group.id || id || ""} students={attendanceStudents} restrictToToday />
-        )}
-      </Paper>
+          <Typography fontSize={12} color="text.secondary" sx={{ opacity: 0.55 }} mt={1.25}>
+            {t("singleGroup.header.groupId")}: #{group.id || id}
+          </Typography>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          <Typography fontSize={14} fontWeight={600} mb={0.5}>
+            {t("teacherGroups.roster")}{!rosterLoading && !rosterError ? ` (${students.length})` : ""}
+          </Typography>
+          {rosterLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
+          ) : rosterError && students.length === 0 ? (
+            <Box>
+              <Typography color="error" fontSize={13} mb={1}>{t("teacherGroups.rosterLoadError")}</Typography>
+              <Button size="small" variant="outlined" onClick={() => refetchRoster()} sx={{ textTransform: "none" }}>
+                {t("teacherDashboard.schedule.retry")}
+              </Button>
+            </Box>
+          ) : students.length === 0 ? (
+            <Typography fontSize={13} color="text.secondary">{t("teacherGroups.rosterEmpty")}</Typography>
+          ) : (
+            <List dense disablePadding>
+              {students.map((s, i) => {
+                const isArchived = s.status === "INACTIVE" || s.status === "DELETED";
+                const isFrozen = s.status === "FROZEN";
+                return (
+                  <ListItem key={s.id} disablePadding sx={{ py: 0.6, opacity: isArchived ? 0.75 : 1 }}>
+                    <Typography fontSize={12} color="text.secondary" sx={{ minWidth: 22, flexShrink: 0 }}>{i + 1}</Typography>
+                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: isArchived ? "#bdbdbd" : "#43a047", mx: 1, flexShrink: 0 }} />
+                    <ListItemText
+                      primary={
+                        <Typography
+                          component="span"
+                          fontSize={13}
+                          fontWeight={500}
+                          sx={{
+                            display: "inline-block",
+                            px: isFrozen ? 1 : 0,
+                            py: isFrozen ? 0.35 : 0,
+                            borderRadius: isFrozen ? "6px" : 0,
+                            backgroundColor: isFrozen ? "#bfe3fa" : "transparent",
+                            color: isArchived ? "dimgray" : "#1a1a1a",
+                            textDecoration: isArchived ? "line-through" : "none",
+                          }}
+                        >
+                          {s.name}
+                        </Typography>
+                      }
+                      secondary={
+                        <Typography fontSize={12} color="text.secondary" component="span" display="block">
+                          {s.phone || t("teacherGroups.noPhone")}
+                        </Typography>
+                      }
+                      sx={{ my: 0 }}
+                    />
+                  </ListItem>
+                );
+              })}
+            </List>
+          )}
+        </Paper>
+
+        {/* ── RIGHT PANEL ── */}
+        <Box sx={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+          <Paper sx={{ borderRadius: 3, overflow: "visible" }}>
+            <Tabs
+              value={tabIndex}
+              onChange={(_, v) => setTabIndex(v)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                borderBottom: "1px solid #eee",
+                "& .MuiTab-root": { fontSize: 13, textTransform: "none", minWidth: "auto", px: 2 },
+              }}
+            >
+              {TEACHER_TAB_KEYS.map((key) => (
+                <Tab key={key} label={t(`singleGroup.tabs.${key}.tabLabel`)} />
+              ))}
+            </Tabs>
+            <Box sx={{ p: 3, maxHeight: "calc(100vh - 220px)", overflowY: "auto", overflowX: "visible" }}>
+              {rosterLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
+              ) : (
+                <>
+                  {tabIndex === 0 && (
+                    <Attendance groupId={group.id || id || ""} students={attendanceStudents} groupName={group.name} restrictToToday />
+                  )}
+                  {tabIndex === 1 && <Grade students={attendanceStudents} />}
+                  {tabIndex === 2 && <OnlineLessons />}
+                </>
+              )}
+            </Box>
+          </Paper>
+        </Box>
+      </Stack>
     </Box>
   );
 };

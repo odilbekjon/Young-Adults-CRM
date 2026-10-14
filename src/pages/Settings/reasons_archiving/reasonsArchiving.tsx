@@ -275,11 +275,11 @@ export const ReasonsArchiving = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("reasonsArchiving.searchPlaceholder")}
-            sx={{ minWidth: 220, bgcolor: "#fff", "& .MuiInputBase-root": { fontSize: 14 } }}
+            sx={{ minWidth: 220, bgcolor: "var(--color-surface)", "& .MuiInputBase-root": { fontSize: 14 } }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <MdSearch size={18} color="#9ca3af" />
+                  <MdSearch size={18} color="var(--color-text-muted)" />
                 </InputAdornment>
               ),
             }}
@@ -293,7 +293,7 @@ export const ReasonsArchiving = () => {
               setStatusFilter(e.target.value as ReasonStatus | "");
               setPage(1);
             }}
-            sx={{ minWidth: 150, fontSize: 14, bgcolor: "#fff" }}
+            sx={{ minWidth: 150, fontSize: 14, bgcolor: "var(--color-surface)" }}
           >
             <MenuItem value="">{t("reasonsArchiving.statusOptions.all")}</MenuItem>
             <MenuItem value="ACTIVE">{t("reasonsArchiving.statusOptions.active")}</MenuItem>
@@ -320,15 +320,15 @@ export const ReasonsArchiving = () => {
       <Box
         sx={{
           width: "100%",
-          backgroundColor: "#fff",
+          backgroundColor: "var(--color-surface)",
           borderRadius: 2,
-          border: "1px solid #e8eaed",
+          border: "1px solid var(--color-border)",
           p: 3,
         }}
       >
         <TableContainer
           component={Paper}
-          sx={{ borderRadius: "10px", boxShadow: "none", border: "1px solid #e5e5e5" }}
+          sx={{ borderRadius: "10px", boxShadow: "none", border: "1px solid var(--color-border)" }}
         >
           <Table>
             <TableHead>
@@ -357,7 +357,7 @@ export const ReasonsArchiving = () => {
                 </TableRow>
               ) : reasons.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={COLS} align="center" sx={{ py: 6, color: "#9ca3af" }}>
+                  <TableCell colSpan={COLS} align="center" sx={{ py: 6, color: "var(--color-text-muted)" }}>
                     {t("reasonsArchiving.emptyState")}
                   </TableCell>
                 </TableRow>
@@ -391,8 +391,8 @@ export const ReasonsArchiving = () => {
                                 : t("reasonsArchiving.statusOptions.inactive")
                             }
                             sx={{
-                              backgroundColor: isActive ? "#dcfce7" : "#f3f4f6",
-                              color: isActive ? "#15803d" : "#6b7280",
+                              backgroundColor: isActive ? "#dcfce7" : "var(--color-surface-alt)",
+                              color: isActive ? "#15803d" : "var(--color-text-secondary)",
                               fontWeight: 600,
                               borderRadius: "20px",
                             }}
@@ -436,27 +436,27 @@ export const ReasonsArchiving = () => {
 
       {/* Add / edit drawer */}
       <Drawer anchor="right" open={open} onClose={closeDrawer}>
-        <Box sx={{ width: 400, maxWidth: "100vw", height: "100%", backgroundColor: "#fff" }}>
+        <Box sx={{ width: 400, maxWidth: "100vw", height: "100%", backgroundColor: "var(--color-surface)" }}>
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               p: 2,
-              borderBottom: "1px solid #e5e5e5",
+              borderBottom: "1px solid var(--color-border)",
             }}
           >
             <h2 className="text-2xl font-medium">
               {editingReason ? t("reasonsArchiving.drawer.editTitle") : t("reasonsArchiving.drawer.addTitle")}
             </h2>
             <IconButton onClick={closeDrawer}>
-              <IoClose size={28} color="#888" />
+              <IoClose size={28} color="var(--color-text-muted)" />
             </IconButton>
           </Box>
 
           <Box sx={{ p: 4, display: "flex", flexDirection: "column", gap: 3 }}>
             <Box>
-              <p className="mb-3 text-[18px] text-gray-600">{t("reasonsArchiving.form.name")}</p>
+              <p className="mb-3 text-[18px] text-gray-600 dark:text-[var(--color-text-secondary)]">{t("reasonsArchiving.form.name")}</p>
               <TextField
                 fullWidth
                 variant="outlined"
@@ -471,7 +471,7 @@ export const ReasonsArchiving = () => {
             </Box>
 
             <Box>
-              <p className="mb-3 text-[18px] text-gray-600">{t("reasonsArchiving.form.type")}</p>
+              <p className="mb-3 text-[18px] text-gray-600 dark:text-[var(--color-text-secondary)]">{t("reasonsArchiving.form.type")}</p>
               <TextField
                 fullWidth
                 variant="outlined"

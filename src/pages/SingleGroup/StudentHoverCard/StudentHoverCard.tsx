@@ -76,8 +76,8 @@ export const StudentHoverCard = ({
         top: pos.top, left: pos.left,
         zIndex: 9999,
         width: pos.width,
-        background: "#fff",
-        border: "1px solid #e8e8e8",
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
         borderRadius: 12,
         boxShadow: "0 8px 32px rgba(0,0,0,0.13)",
         padding: "16px 20px 12px",
@@ -94,10 +94,10 @@ export const StudentHoverCard = ({
 
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: "#1a1a1a" }}>{student.name}</span>
-          <span style={{ fontSize: 12, color: "#aaa" }}>(id:{student.id})</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)" }}>{student.name}</span>
+          <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>(id:{student.id})</span>
         </div>
-        <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
+        <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 2 }}>
           {isInactiveStatus
             ? t("singleGroup.studentHoverCard.inactiveArchived")
             : isFrozenStatus
@@ -118,13 +118,13 @@ export const StudentHoverCard = ({
       {showStatusBox && (
         <>
           <div style={{
-            background: isDebtor ? "#fff5f5" : "#f1faf4",
-            border: `1px solid ${isDebtor ? "#ffcdd2" : "#c8e6c9"}`,
+            background: isDebtor ? "rgba(229,57,53,0.1)" : "var(--color-success-surface)",
+            border: `1px solid ${isDebtor ? "rgba(229,57,53,0.3)" : "var(--color-success-border)"}`,
             borderRadius: 10,
             padding: "12px 14px",
             marginBottom: 12,
           }}>
-            <div style={{ fontSize: 11, color: "#888", marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>
+            <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>
               {isDebtor ? t("singleGroup.studentHoverCard.debt") : t("singleGroup.studentHoverCard.balance")}
             </div>
             <div style={{
@@ -136,7 +136,7 @@ export const StudentHoverCard = ({
                 : "—"}
             </div>
             {isFrozenStatus && student.frozenAt && (
-              <div style={{ fontSize: 11, color: "#888", marginTop: 6 }}>
+              <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 6 }}>
                 {t("singleGroup.studentHoverCard.frozenAt")}: {student.frozenAt}
               </div>
             )}
@@ -145,18 +145,18 @@ export const StudentHoverCard = ({
         </>
       )}
 
-      <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
+      <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "0 0 10px" }} />
 
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.phone")}</div>
-        <div style={{ fontSize: 13, color: "#1a1a1a", fontWeight: 500 }}>{student.phone}</div>
+        <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.phone")}</div>
+        <div style={{ fontSize: 13, color: "var(--color-text-primary)", fontWeight: 500 }}>{student.phone}</div>
       </div>
 
-      <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
+      <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "0 0 10px" }} />
 
       {!showStatusBox && (
         <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>{t("singleGroup.studentHoverCard.balance")}</div>
+          <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 4 }}>{t("singleGroup.studentHoverCard.balance")}</div>
           {student.balance !== undefined && student.balance !== 0 ? (
             <span style={{
               display: "inline-block",
@@ -168,43 +168,43 @@ export const StudentHoverCard = ({
               {student.balance.toLocaleString()} UZS
             </span>
           ) : (
-            <span style={{ fontSize: 12, color: "#bbb" }}>—</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>—</span>
           )}
         </div>
       )}
 
-      <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
+      <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "0 0 10px" }} />
 
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.addedAt")}</div>
-        <div style={{ fontSize: 13, color: "#1a1a1a" }}>{student.addedAt || "—"}</div>
+        <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.addedAt")}</div>
+        <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{student.addedAt || "—"}</div>
       </div>
 
-      <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
+      <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "0 0 10px" }} />
 
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.joinedAt")}</div>
-        <div style={{ fontSize: 13, color: "#1a1a1a" }}>{student.joinedAt || "—"}</div>
+        <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.joinedAt")}</div>
+        <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{student.joinedAt || "—"}</div>
       </div>
 
       {student.note && (
         <>
-          <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
+          <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "0 0 10px" }} />
           <div style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.note")}</div>
-            <div style={{ fontSize: 13, color: "#1a1a1a", whiteSpace: "pre-wrap" }}>{student.note}</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.note")}</div>
+            <div style={{ fontSize: 13, color: "var(--color-text-primary)", whiteSpace: "pre-wrap" }}>{student.note}</div>
           </div>
         </>
       )}
 
-      <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "0 0 10px" }} />
+      <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "0 0 10px" }} />
 
       {/* Coins aren't tracked by the backend anywhere in this app yet — shown
           as a static 0 to match the reference design rather than a fetched
           value that doesn't exist. */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 11, color: "#aaa", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.allCoins")}</div>
-        <div style={{ fontSize: 13, color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.allCoins")}</div>
+        <div style={{ fontSize: 13, color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
           <span aria-hidden>🪙</span> 0
         </div>
       </div>

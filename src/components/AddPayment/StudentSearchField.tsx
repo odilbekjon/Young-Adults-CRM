@@ -109,7 +109,7 @@ export const StudentSearchField = ({ active, value, onChange, disabled }: {
           disabled={disabled}
           onClick={() => { onChange(null); setTimeout(() => searchRef.current?.focus(), 0); }}
           style={{
-            border: "1px solid var(--color-border, #e0e0e0)", background: "var(--color-surface, #fff)",
+            border: "1px solid var(--color-border)", background: "var(--color-surface, #fff)",
             color: "var(--color-primary, #185fa5)", borderRadius: 999, padding: "5px 14px",
             fontSize: 12.5, fontWeight: 600, cursor: disabled ? "default" : "pointer",
           }}
@@ -148,7 +148,7 @@ export const StudentSearchField = ({ active, value, onChange, disabled }: {
 
       <div style={{
         marginTop: 8, maxHeight: 220, overflowY: "auto",
-        border: "1px solid var(--color-border, #e0e0e0)", borderRadius: 10,
+        border: "1px solid var(--color-border)", borderRadius: 10,
         background: "var(--color-surface, #fff)",
       }}>
         {isError ? (
@@ -171,7 +171,7 @@ export const StudentSearchField = ({ active, value, onChange, disabled }: {
                 display: "flex", alignItems: "center", gap: 12, width: "100%",
                 padding: "9px 14px", border: "none", background: "transparent",
                 textAlign: "left", cursor: "pointer", fontFamily: "inherit",
-                borderBottom: "1px solid var(--color-border-subtle, #f0f0f0)",
+                borderBottom: "1px solid var(--color-border-subtle)",
               }}
             >
               <Avatar name={s.name} />

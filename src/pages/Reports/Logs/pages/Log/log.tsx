@@ -47,12 +47,12 @@ export const Log = () => {
   };
 
   return (
-    <Box sx={{ m:5, display: "flex", minHeight: "100vh", bgcolor: "#f5f5f5" }}>
+    <Box sx={{ m:5, display: "flex", minHeight: "100vh", bgcolor: "var(--color-surface-alt)" }}>
       {/* Left: Logs list */}
-      <Box sx={{ flex: 1, p: 3, borderRight: "1px solid #e0e0e0", bgcolor: "#fff" }}>
+      <Box sx={{ flex: 1, p: 3, borderRight: "1px solid var(--color-border)", bgcolor: "var(--color-surface)" }}>
         {/* Header */}
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
-          <Typography variant="h5" sx={{ fontWeight: 500, color: "#212121" }}>
+          <Typography variant="h5" sx={{ fontWeight: 500, color: "var(--color-text-primary)" }}>
             {t("reports.logs.log.title")}
           </Typography>
           <AvatarGroup
@@ -62,9 +62,9 @@ export const Log = () => {
                 width: 34,
                 height: 34,
                 fontSize: "0.68rem",
-                bgcolor: "#e0e0e0",
-                color: "#555",
-                border: "2px solid #fff",
+                bgcolor: "var(--color-border)",
+                color: "var(--color-text-secondary)",
+                border: "2px solid var(--color-surface)",
               },
             }}
           >
@@ -81,7 +81,7 @@ export const Log = () => {
             <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, py: 1.5 }}>
               {/* Circle icon */}
               <Box sx={{ mt: 0.4, flexShrink: 0 }}>
-                <FiCircle size={18} color="#9e9e9e" />
+                <FiCircle size={18} color="var(--color-text-muted)" />
               </Box>
 
               {/* Name chip + action */}
@@ -90,22 +90,22 @@ export const Log = () => {
                   label={log.name}
                   size="small"
                   sx={{
-                    bgcolor: "#eeeeee",
-                    color: "#333",
+                    bgcolor: "var(--color-surface-hover)",
+                    color: "var(--color-text-primary)",
                     fontSize: "0.75rem",
                     height: 24,
                     borderRadius: "4px",
                     mb: 0.5,
                   }}
                 />
-                <Typography variant="body2" sx={{ color: "#555", fontSize: "0.8rem" }}>
+                <Typography variant="body2" sx={{ color: "var(--color-text-secondary)", fontSize: "0.8rem" }}>
                   {log.action}
                 </Typography>
               </Box>
 
               {/* User icon + name + phone */}
               <Box sx={{ flex: 1, display: "flex", alignItems: "center", gap: 0.8 }}>
-                <FiUser size={14} color="#9e9e9e" />
+                <FiUser size={14} color="var(--color-text-muted)" />
                 <Typography
                   variant="body2"
                   sx={{ color: "#1976d2", fontSize: "0.85rem", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
@@ -122,7 +122,7 @@ export const Log = () => {
               </Box>
 
               {/* Date */}
-              <Typography variant="body2" sx={{ color: "#555", fontSize: "0.85rem", flexShrink: 0, whiteSpace: "nowrap" }}>
+              <Typography variant="body2" sx={{ color: "var(--color-text-secondary)", fontSize: "0.85rem", flexShrink: 0, whiteSpace: "nowrap" }}>
                 {log.datetime}
               </Typography>
             </Box>
@@ -132,8 +132,8 @@ export const Log = () => {
       </Box>
 
       {/* Right: Status filter */}
-      <Box sx={{ width: 280, p: 3, bgcolor: "#fff", borderLeft: "1px solid #e0e0e0" }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 2, color: "#212121" }}>
+      <Box sx={{ width: 280, p: 3, bgcolor: "var(--color-surface)", borderLeft: "1px solid var(--color-border)" }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 2, color: "var(--color-text-primary)" }}>
           {t("reports.logs.log.statusFilter")}
         </Typography>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
@@ -152,13 +152,13 @@ export const Log = () => {
                   borderRadius: "20px",
                   px: 1.5,
                   py: 0.3,
-                  borderColor: isActive ? "#1976d2" : "#d0d0d0",
-                  color: isActive ? "#1976d2" : "#666",
-                  bgcolor: isActive ? "#e3f2fd" : "transparent",
+                  borderColor: isActive ? "#1976d2" : "var(--color-border)",
+                  color: isActive ? "#1976d2" : "var(--color-text-secondary)",
+                  bgcolor: isActive ? "var(--color-primary-surface)" : "transparent",
                   minWidth: "unset",
                   "&:hover": {
                     borderColor: "#1976d2",
-                    bgcolor: "#e3f2fd",
+                    bgcolor: "var(--color-primary-surface)",
                     color: "#1976d2",
                   },
                 }}

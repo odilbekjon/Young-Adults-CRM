@@ -62,8 +62,8 @@ export const Sms = () => {
   const totalPages = data?.meta.totalPages ?? 1;
 
   return (
-    <Box sx={{ m: 5, minHeight: "100vh", bgcolor: "#fff", p: 3 }}>
-      <Typography variant="h5" sx={{ fontWeight: 500, mb: 3, color: "#212121" }}>
+    <Box sx={{ m: 5, minHeight: "100vh", bgcolor: "var(--color-surface)", p: 3 }}>
+      <Typography variant="h5" sx={{ fontWeight: 500, mb: 3, color: "var(--color-text-primary)" }}>
         {t("reports.logs.sms.title")}
       </Typography>
 
@@ -115,16 +115,16 @@ export const Sms = () => {
                       label={sms.userRole ? t(`reports.logs.sms.roles.${sms.userRole}`, { defaultValue: sms.userRole }) : t("reports.logs.sms.system")}
                       size="small"
                       variant="outlined"
-                      sx={{ fontSize: "0.75rem", height: 22, borderColor: "#bdbdbd", color: "#555", borderRadius: "4px" }}
+                      sx={{ fontSize: "0.75rem", height: 22, borderColor: "var(--color-border)", color: "var(--color-text-secondary)", borderRadius: "4px" }}
                     />
                   </Box>
 
                   {/* Recipient + message */}
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="caption" sx={{ color: "#555", display: "block" }}>
+                    <Typography variant="caption" sx={{ color: "var(--color-text-secondary)", display: "block" }}>
                       {[sms.userName, sms.phone].filter(Boolean).join(" · ")}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: "#212121", lineHeight: 1.6, wordBreak: "break-word" }}>
+                    <Typography variant="body2" sx={{ color: "var(--color-text-primary)", lineHeight: 1.6, wordBreak: "break-word" }}>
                       {sms.message}
                     </Typography>
                     {failed && sms.providerError && (
@@ -147,15 +147,15 @@ export const Sms = () => {
                         color: failed ? "#c62828" : "#2e7d32",
                       }}
                     />
-                    <Typography variant="caption" sx={{ color: "#555", whiteSpace: "nowrap" }}>
+                    <Typography variant="caption" sx={{ color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
                       {t("reports.logs.sms.quantity", { count: Math.max(1, Math.ceil(sms.message.length / SMS_PER_CHAR)) })}
                     </Typography>
                   </Box>
 
                   {/* Date & Time */}
                   <Box sx={{ flexShrink: 0, textAlign: "right", minWidth: 80 }}>
-                    <Typography variant="caption" sx={{ color: "#555", display: "block" }}>{date}</Typography>
-                    <Typography variant="caption" sx={{ color: "#555", display: "block" }}>{time}</Typography>
+                    <Typography variant="caption" sx={{ color: "var(--color-text-secondary)", display: "block" }}>{date}</Typography>
+                    <Typography variant="caption" sx={{ color: "var(--color-text-secondary)", display: "block" }}>{time}</Typography>
                   </Box>
                 </Box>
                 {index < rows.length - 1 && <Divider />}

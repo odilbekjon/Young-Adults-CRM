@@ -15,7 +15,7 @@ const FieldCard = ({
 }) => (
   <Box
     sx={{
-      border: "1px solid #d1d5db",
+      border: "1px solid var(--color-border)",
       borderRadius: "6px",
       pt: 2,
       pb: 3,
@@ -29,10 +29,10 @@ const FieldCard = ({
         position: "absolute",
         top: -10,
         left: 12,
-        background: "#fff",
+        background: "var(--color-surface)",
         px: 0.5,
         fontSize: 12,
-        color: "#6b7280",
+        color: "var(--color-text-secondary)",
       }}
     >
       {title}
@@ -60,7 +60,7 @@ const IntegrationRow = ({
       display: "flex",
       alignItems: "center",
       py: 2.5,
-      borderBottom: "1px solid #f3f4f6",
+      borderBottom: "1px solid var(--color-border-subtle)",
     }}
   >
     {/* Icon */}
@@ -82,18 +82,18 @@ const IntegrationRow = ({
 
     {/* Text */}
     <Box sx={{ flex: 1 }}>
-      <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>
+      <Typography sx={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>
         {name}
       </Typography>
-      <Typography sx={{ fontSize: 12, color: "#9ca3af", mt: 0.3 }}>
+      <Typography sx={{ fontSize: 12, color: "var(--color-text-muted)", mt: 0.3 }}>
         {description}
       </Typography>
     </Box>
 
     {/* Status */}
     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mr: 2 }}>
-      <MdOutlineWifiOff size={16} color="#9ca3af" />
-      <Typography sx={{ fontSize: 13, color: "#9ca3af" }}>{t("settings.ceo.general.integrations.notConnected")}</Typography>
+      <MdOutlineWifiOff size={16} color="var(--color-text-muted)" />
+      <Typography sx={{ fontSize: 13, color: "var(--color-text-muted)" }}>{t("settings.ceo.general.integrations.notConnected")}</Typography>
     </Box>
 
     {/* Connect button */}
@@ -130,10 +130,10 @@ const Integrations = () => {
     <Box sx={{ flex: 1, p: 5, maxWidth: 1200 }}>
 
       {/* ── Connected Integrations ── */}
-      <Typography variant="h6" sx={{ fontWeight: 700, color: "#111827" }}>
+      <Typography variant="h6" sx={{ fontWeight: 700, color: "var(--color-text-primary)" }}>
         {t("settings.ceo.general.integrations.connectedTitle")}
       </Typography>
-      <Typography sx={{ fontSize: 13, color: "#9ca3af", mb: 3 }}>
+      <Typography sx={{ fontSize: 13, color: "var(--color-text-muted)", mb: 3 }}>
         {t("settings.ceo.general.integrations.connectedSubtitle")}
       </Typography>
 
@@ -164,7 +164,7 @@ const Integrations = () => {
                 sx={{
                   width: 12,
                   height: 2,
-                  background: "#fff",
+                  background: "var(--color-surface)",
                   borderRadius: 1,
                   transform: "rotate(-45deg) translate(1px, 1px)",
                 }}
@@ -183,43 +183,43 @@ const Integrations = () => {
         <FieldCard title={t("settings.ceo.general.integrations.workly.title")} sx={{ flex: 1 }}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, mt: 0.5 }}>
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
                 {t("settings.ceo.general.integrations.workly.clientId")}
               </Typography>
               <TextField
                 fullWidth size="small" value={worklyClientId}
                 onChange={(e) => setWorklyClientId(e.target.value)}
-                sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
               />
             </Box>
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
                 {t("settings.ceo.general.integrations.workly.secret")}
               </Typography>
               <TextField
                 fullWidth size="small" value={worklySecret}
                 onChange={(e) => setWorklySecret(e.target.value)}
-                sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
               />
             </Box>
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
                 {t("settings.ceo.general.integrations.workly.username")}
               </Typography>
               <TextField
                 fullWidth size="small" value={worklyUsername}
                 onChange={(e) => setWorklyUsername(e.target.value)}
-                sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
               />
             </Box>
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
                 {t("settings.ceo.general.integrations.workly.password")}
               </Typography>
               <TextField
                 fullWidth size="small" type="password" value={worklyPassword}
                 onChange={(e) => setWorklyPassword(e.target.value)}
-                sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
               />
             </Box>
           </Box>
@@ -231,18 +231,18 @@ const Integrations = () => {
             <TextField
               fullWidth size="small" value={telegramReport}
               onChange={(e) => setTelegramReport(e.target.value)}
-              sx={{ mb: 2.5, background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+              sx={{ mb: 2.5, background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
             />
 
             <Box
               sx={{
-                border: "1px solid #e5e7eb",
+                border: "1px solid var(--color-border)",
                 borderRadius: "6px",
                 p: 2,
-                background: "#fafafa",
+                background: "var(--color-surface-alt)",
               }}
             >
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 1.5 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 1.5 }}>
                 {t("settings.ceo.general.integrations.telegramReport.intro")}
               </Typography>
               {[
@@ -252,7 +252,7 @@ const Integrations = () => {
                 <>{t("settings.ceo.general.integrations.telegramReport.step4")}</>,
                 <>{t("settings.ceo.general.integrations.telegramReport.step5Before")} ( <span style={{ color: "#3b82f6" }}>@modme_robot</span> ).</>,
               ].map((step, i) => (
-                <Typography key={i} sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+                <Typography key={i} sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
                   {i + 1}. {step}
                 </Typography>
               ))}
@@ -266,23 +266,23 @@ const Integrations = () => {
       <FieldCard title={t("settings.ceo.general.integrations.socialMedia.title")} sx={{ maxWidth: 760, mb: 4 }}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, mt: 0.5 }}>
           <Box>
-            <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+            <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
               {t("settings.ceo.general.integrations.socialMedia.facebookPixel")}
             </Typography>
             <TextField
               fullWidth size="small" value={facebookPixel}
               onChange={(e) => setFacebookPixel(e.target.value)}
-              sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+              sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
             />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+            <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
               {t("settings.ceo.general.integrations.socialMedia.telegram")}
             </Typography>
             <TextField
               fullWidth size="small" value={telegram}
               onChange={(e) => setTelegram(e.target.value)}
-              sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+              sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
             />
           </Box>
         </Box>

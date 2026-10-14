@@ -73,11 +73,11 @@ export const RichTextEditor = ({
   };
 
   const selStyle: React.CSSProperties = {
-    border: "1px solid #d1d5db",
+    border: "1px solid var(--color-border)",
     borderRadius: 4,
     padding: "2px 6px",
     fontSize: 13,
-    background: "#fff",
+    background: "var(--color-surface)",
     cursor: "pointer",
   };
   const btnStyle: React.CSSProperties = {
@@ -90,25 +90,25 @@ export const RichTextEditor = ({
   };
 
   return (
-    <Box sx={{ border: "1px solid #d1d5db", borderRadius: "6px", overflow: "hidden", background: "#fff" }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 0.8, borderBottom: "1px solid #e5e7eb", background: "#fafafa", flexWrap: "wrap" }}>
+    <Box sx={{ border: "1px solid var(--color-border)", borderRadius: "6px", overflow: "hidden", background: "var(--color-surface)" }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 0.8, borderBottom: "1px solid var(--color-border)", background: "var(--color-surface-alt)", flexWrap: "wrap" }}>
         <select value={fmt} onChange={(e) => { const id = e.target.value; setFmt(id); const opt = FORMAT_OPTIONS.find((o) => o.id === id); exec("formatBlock", opt ? opt.tag : "p"); }} style={selStyle}>
           {FORMAT_OPTIONS.map((f) => <option key={f.id} value={f.id}>{t(`settings.ceo.general.shared.richTextEditor.formats.${f.id}`)}</option>)}
         </select>
         <select value={font} onChange={(e) => { const id = e.target.value; setFont(id); const opt = FONTS.find((o) => o.id === id); exec("fontName", opt ? opt.value : "Sans Serif"); }} style={selStyle}>
           {FONTS.map((f) => <option key={f.id} value={f.id}>{t(`settings.ceo.general.shared.richTextEditor.fonts.${f.id}`)}</option>)}
         </select>
-        <Box sx={{ width: "1px", height: 20, background: "#e5e7eb", mx: 0.5 }} />
-        <button onClick={() => exec("justifyLeft")} style={btnStyle}><MdFormatAlignLeft size={18} color="#374151" /></button>
-        <button onClick={() => exec("insertOrderedList")} style={btnStyle}><MdFormatListNumbered size={18} color="#374151" /></button>
-        <button onClick={() => exec("insertUnorderedList")} style={btnStyle}><MdFormatListBulleted size={18} color="#374151" /></button>
-        <Box sx={{ width: "1px", height: 20, background: "#e5e7eb", mx: 0.5 }} />
-        <button onClick={() => { const u = prompt(t("settings.ceo.general.shared.richTextEditor.urlPrompt")); if (u) exec("createLink", u); }} style={btnStyle}><MdLink size={18} color="#374151" /></button>
-        <button onClick={() => { const u = prompt(t("settings.ceo.general.shared.richTextEditor.imageUrlPrompt")); if (u) exec("insertImage", u); }} style={btnStyle}><MdImage size={18} color="#374151" /></button>
-        <button style={btnStyle}><MdTableChart size={18} color="#374151" /></button>
-        <Box sx={{ width: "1px", height: 20, background: "#e5e7eb", mx: 0.5 }} />
-        <button style={btnStyle}><MdFormatColorText size={18} color="#374151" /></button>
-        <button onClick={() => exec("removeFormat")} style={btnStyle}><MdOutlineFormatColorReset size={18} color="#374151" /></button>
+        <Box sx={{ width: "1px", height: 20, background: "var(--color-surface-hover)", mx: 0.5 }} />
+        <button onClick={() => exec("justifyLeft")} style={btnStyle}><MdFormatAlignLeft size={18} color="var(--color-text-primary)" /></button>
+        <button onClick={() => exec("insertOrderedList")} style={btnStyle}><MdFormatListNumbered size={18} color="var(--color-text-primary)" /></button>
+        <button onClick={() => exec("insertUnorderedList")} style={btnStyle}><MdFormatListBulleted size={18} color="var(--color-text-primary)" /></button>
+        <Box sx={{ width: "1px", height: 20, background: "var(--color-surface-hover)", mx: 0.5 }} />
+        <button onClick={() => { const u = prompt(t("settings.ceo.general.shared.richTextEditor.urlPrompt")); if (u) exec("createLink", u); }} style={btnStyle}><MdLink size={18} color="var(--color-text-primary)" /></button>
+        <button onClick={() => { const u = prompt(t("settings.ceo.general.shared.richTextEditor.imageUrlPrompt")); if (u) exec("insertImage", u); }} style={btnStyle}><MdImage size={18} color="var(--color-text-primary)" /></button>
+        <button style={btnStyle}><MdTableChart size={18} color="var(--color-text-primary)" /></button>
+        <Box sx={{ width: "1px", height: 20, background: "var(--color-surface-hover)", mx: 0.5 }} />
+        <button style={btnStyle}><MdFormatColorText size={18} color="var(--color-text-primary)" /></button>
+        <button onClick={() => exec("removeFormat")} style={btnStyle}><MdOutlineFormatColorReset size={18} color="var(--color-text-primary)" /></button>
       </Box>
       <Box
         ref={editorRef}
@@ -116,7 +116,7 @@ export const RichTextEditor = ({
         suppressContentEditableWarning
         onInput={(e) => onChange((e.target as HTMLDivElement).innerHTML)}
         dangerouslySetInnerHTML={{ __html: value }}
-        sx={{ minHeight: 100, p: 2, fontSize: 14, color: "#374151", outline: "none", lineHeight: 1.7 }}
+        sx={{ minHeight: 100, p: 2, fontSize: 14, color: "var(--color-text-primary)", outline: "none", lineHeight: 1.7 }}
       />
     </Box>
   );
@@ -144,15 +144,15 @@ export const DropZone = ({ onFile }: { preview: string | null; onFile: (f: File)
       onDrop={handleDrop}
       onClick={() => inputRef.current?.click()}
       sx={{
-        border: `1.5px dashed ${dragging ? "#3b82f6" : "#d1d5db"}`,
+        border: `1.5px dashed ${dragging ? "#3b82f6" : "var(--color-border)"}`,
         borderRadius: "6px", minHeight: 160, display: "flex",
         flexDirection: "column", alignItems: "center", justifyContent: "center",
-        background: dragging ? "#eff6ff" : "#fafafa",
+        background: dragging ? "var(--color-primary-surface)" : "var(--color-surface-alt)",
         transition: "all 0.2s", cursor: "pointer", flex: 1,
       }}
     >
-      <BsCloudUpload size={48} color="#9ca3af" />
-      <Typography sx={{ fontSize: 13, color: "#6b7280", mt: 1.5 }}>
+      <BsCloudUpload size={48} color="var(--color-text-muted)" />
+      <Typography sx={{ fontSize: 13, color: "var(--color-text-secondary)", mt: 1.5 }}>
         {t("settings.ceo.general.shared.dropZone.dropFileHere")}{" "}
         <span style={{ color: "#3b82f6", textDecoration: "underline" }}>{t("settings.ceo.general.shared.dropZone.clickToUpload")}</span>
       </Typography>

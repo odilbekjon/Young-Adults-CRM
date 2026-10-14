@@ -44,8 +44,8 @@ const todayISO = () => new Date().toISOString().split("T")[0];
 const PAGE_LIMIT = 20;
 
 const inputCls =
-  "w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400 bg-white";
-const labelCls = "block text-sm font-medium text-gray-700 mb-1";
+  "w-full border border-gray-300 dark:border-[var(--color-border)] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400 bg-white dark:bg-[var(--color-surface)]";
+const labelCls = "block text-sm font-medium text-gray-700 dark:text-[var(--color-text-primary)] mb-1";
 
 export const TotalExpenses = () => {
   const { t } = useTranslation();
@@ -267,13 +267,13 @@ export const TotalExpenses = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 font-sans">
+    <div className="min-h-screen bg-gray-100 dark:bg-[var(--color-surface-hover)] p-6 font-sans">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold text-gray-800">{t("finance.totalExpenses.title")}</h1>
+        <h1 className="text-2xl font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("finance.totalExpenses.title")}</h1>
         <select
           value={year}
           onChange={(e) => setYear(Number(e.target.value))}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white text-gray-700"
+          className="border border-gray-300 dark:border-[var(--color-border)] rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-[var(--color-surface)] text-gray-700 dark:text-[var(--color-text-primary)]"
         >
           {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
@@ -284,10 +284,10 @@ export const TotalExpenses = () => {
         <div className="flex-1 flex flex-col gap-4 min-w-0">
 
           {/* Summary card (real data: GET /finance/chart) */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm border border-gray-200 dark:border-[var(--color-border)] px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-1 h-8 bg-blue-500 rounded-full mr-1" />
-              <span className="text-gray-700 font-medium">
+              <span className="text-gray-700 dark:text-[var(--color-text-primary)] font-medium">
                 {t("finance.totalExpenses.summary.totalExpenses")} {chartLoading ? "…" : formatUZS(totalExpensesThisYear)}
               </span>
             </div>
@@ -295,21 +295,21 @@ export const TotalExpenses = () => {
           </div>
 
           {/* Bar chart (real data: GET /finance/chart) */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm border border-gray-200 dark:border-[var(--color-border)] p-4">
             {chartLoading ? (
               <div className="h-[260px] flex items-center justify-center"><CircularProgress size={22} /></div>
             ) : chartError ? (
-              <div className="h-[260px] flex flex-col items-center justify-center gap-2 text-gray-500">
+              <div className="h-[260px] flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-[var(--color-text-secondary)]">
                 <FiAlertCircle size={20} className="text-red-400" />
                 <span className="text-sm">{t("finance.allPayments.chart.loadError")}</span>
-                <button onClick={() => refetchChart()} className="px-4 py-1.5 text-xs font-medium border border-gray-200 rounded hover:bg-gray-50">
+                <button onClick={() => refetchChart()} className="px-4 py-1.5 text-xs font-medium border border-gray-200 dark:border-[var(--color-border)] rounded hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]">
                   {t("finance.allPayments.chart.retry")}
                 </button>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={barData} margin={{ top: 10, right: 10, bottom: 0, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-subtle)" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
                   <YAxis
                     tickFormatter={(v) => `${Math.round(v / 1000000)}M`}
@@ -325,7 +325,7 @@ export const TotalExpenses = () => {
           </div>
 
           {/* Filter panel — only fields GET /finance/expenses actually accepts */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4">
+          <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm border border-gray-200 dark:border-[var(--color-border)] px-6 py-4">
             <div className="grid grid-cols-5 gap-3 items-end">
               <div>
                 <label className={labelCls}>{t("finance.totalExpenses.filters.dateFrom")}</label>
@@ -350,7 +350,7 @@ export const TotalExpenses = () => {
               </div>
               <div className="flex gap-2">
                 <button
-                  className="flex-1 border border-gray-200 text-gray-500 text-sm font-medium px-4 py-1.5 rounded hover:bg-gray-50 transition-colors"
+                  className="flex-1 border border-gray-200 dark:border-[var(--color-border)] text-gray-500 dark:text-[var(--color-text-secondary)] text-sm font-medium px-4 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors"
                   onClick={resetFilters}
                 >
                   {t("finance.allPayments.filters.reset")}
@@ -367,9 +367,9 @@ export const TotalExpenses = () => {
 
           {/* Filtered total (GET /finance/expenses/total) + export (GET /finance/expenses/excel) */}
           <div className="flex items-center justify-between px-1">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">
               {t("finance.totalExpenses.summary.filteredTotal")}{" "}
-              <strong className="text-gray-800">{isFilteredTotalFetching ? "…" : formatUZS(filteredTotalData?.total ?? 0)}</strong>
+              <strong className="text-gray-800 dark:text-[var(--color-text-primary)]">{isFilteredTotalFetching ? "…" : formatUZS(filteredTotalData?.total ?? 0)}</strong>
             </span>
             <MuiTooltip title={t("finance.totalExpenses.exportExcel")} placement="top" arrow>
               <span>
@@ -381,11 +381,11 @@ export const TotalExpenses = () => {
           </div>
 
           {/* Table (real data: GET /finance/expenses) */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm border border-gray-200 dark:border-[var(--color-border)] overflow-hidden">
             <TableContainer>
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "#f9fafb" }}>
+                  <TableRow sx={{ backgroundColor: "var(--color-surface-alt)" }}>
                     {[
                       t("finance.totalExpenses.filters.dateFrom"),
                       t("finance.totalExpenses.filters.selectCategory"),
@@ -397,7 +397,7 @@ export const TotalExpenses = () => {
                     ].map((label, i) => (
                       <TableCell
                         key={label || `col-${i}`}
-                        sx={{ fontWeight: 700, fontSize: 12, color: "#374151", whiteSpace: "nowrap", borderBottom: "2px solid #e5e9f0", py: 1.5 }}
+                        sx={{ fontWeight: 700, fontSize: 12, color: "var(--color-text-primary)", whiteSpace: "nowrap", borderBottom: "2px solid var(--color-border)", py: 1.5 }}
                       >
                         {label}
                       </TableCell>
@@ -415,10 +415,10 @@ export const TotalExpenses = () => {
                   ) : expensesError ? (
                     <TableRow>
                       <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                        <div className="flex flex-col items-center gap-2 text-gray-500">
+                        <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-[var(--color-text-secondary)]">
                           <FiAlertCircle size={20} className="text-red-400" />
                           <span className="text-sm">{t("finance.totalExpenses.table.loadError")}</span>
-                          <button onClick={() => refetchExpenses()} className="px-4 py-1.5 text-xs font-medium border border-gray-200 rounded hover:bg-gray-50">
+                          <button onClick={() => refetchExpenses()} className="px-4 py-1.5 text-xs font-medium border border-gray-200 dark:border-[var(--color-border)] rounded hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]">
                             {t("finance.totalExpenses.table.retry")}
                           </button>
                         </div>
@@ -426,7 +426,7 @@ export const TotalExpenses = () => {
                     </TableRow>
                   ) : rows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4, color: "#9ca3af", fontSize: 13 }}>
+                      <TableCell colSpan={7} align="center" sx={{ py: 4, color: "var(--color-text-muted)", fontSize: 13 }}>
                         {t("finance.totalExpenses.table.empty")}
                       </TableCell>
                     </TableRow>
@@ -434,25 +434,25 @@ export const TotalExpenses = () => {
                     rows.map((e, i) => (
                       <TableRow
                         key={e.id}
-                        sx={{ backgroundColor: i % 2 === 0 ? "#fff" : "#fafbfc", opacity: expensesFetching ? 0.6 : 1 }}
+                        sx={{ backgroundColor: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-alt)", opacity: expensesFetching ? 0.6 : 1 }}
                       >
-                        <TableCell sx={{ fontSize: 12, py: 1.4, whiteSpace: "nowrap", color: "#374151" }}>
+                        <TableCell sx={{ fontSize: 12, py: 1.4, whiteSpace: "nowrap", color: "var(--color-text-primary)" }}>
                           {fmtDate(e.date)}
                         </TableCell>
-                        <TableCell sx={{ fontSize: 12, py: 1.4, color: "#374151" }}>
+                        <TableCell sx={{ fontSize: 12, py: 1.4, color: "var(--color-text-primary)" }}>
                           {e.categoryName || "—"}
                         </TableCell>
-                        <TableCell sx={{ fontSize: 12, py: 1.4, color: "#374151" }}>
+                        <TableCell sx={{ fontSize: 12, py: 1.4, color: "var(--color-text-primary)" }}>
                           {e.description || "—"}
                         </TableCell>
-                        <TableCell sx={{ fontSize: 12, py: 1.4, color: "#374151" }}>
+                        <TableCell sx={{ fontSize: 12, py: 1.4, color: "var(--color-text-primary)" }}>
                           {e.paymentMethodName || "—"}
                         </TableCell>
                         <TableCell sx={{ fontSize: 12, py: 1.4, whiteSpace: "nowrap" }}>
-                          <span className="font-bold text-gray-900 text-sm">{e.amount.toLocaleString("ru-RU")}</span>
-                          <span className="text-[11px] text-gray-400 ml-1">UZS</span>
+                          <span className="font-bold text-gray-900 dark:text-[var(--color-text-primary)] text-sm">{e.amount.toLocaleString("ru-RU")}</span>
+                          <span className="text-[11px] text-gray-400 dark:text-[var(--color-text-muted)] ml-1">UZS</span>
                         </TableCell>
-                        <TableCell sx={{ fontSize: 12, py: 1.4, color: "#374151" }}>
+                        <TableCell sx={{ fontSize: 12, py: 1.4, color: "var(--color-text-primary)" }}>
                           {e.createdBy || "—"}
                         </TableCell>
                         <TableCell sx={{ py: 1.4 }}>
@@ -469,15 +469,15 @@ export const TotalExpenses = () => {
               </Table>
             </TableContainer>
 
-            <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100">
-              <span className="text-xs text-gray-500">
+            <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100 dark:border-[var(--color-border)]">
+              <span className="text-xs text-gray-500 dark:text-[var(--color-text-secondary)]">
                 {!expensesLoading && !expensesError && total > 0 && (
                   <>
                     {t("finance.allPayments.footer.showing")}{" "}
-                    <strong className="text-gray-700">
+                    <strong className="text-gray-700 dark:text-[var(--color-text-primary)]">
                       {(applied.page - 1) * PAGE_LIMIT + 1}–{Math.min(applied.page * PAGE_LIMIT, total)}
                     </strong>{" "}
-                    {t("finance.allPayments.footer.of")} <strong className="text-gray-700">{total}</strong>
+                    {t("finance.allPayments.footer.of")} <strong className="text-gray-700 dark:text-[var(--color-text-primary)]">{total}</strong>
                   </>
                 )}
               </span>
@@ -491,7 +491,7 @@ export const TotalExpenses = () => {
                     size="small"
                     shape="rounded"
                     sx={{
-                      "& .MuiPaginationItem-root": { fontSize: 12, color: "#374151" },
+                      "& .MuiPaginationItem-root": { fontSize: 12, color: "var(--color-text-primary)" },
                       "& .Mui-selected": { backgroundColor: "#003366 !important", color: "#fff !important" },
                     }}
                   />
@@ -508,8 +508,8 @@ export const TotalExpenses = () => {
         </div>
 
         {/* ===== Right: New expense form (real: POST /finance/expenses) ===== */}
-        <div className="w-72 bg-white rounded-lg shadow-sm border border-gray-200 px-5 py-5 flex flex-col gap-4 self-start shrink-0">
-          <h2 className="text-base font-semibold text-gray-800">{t("finance.totalExpenses.form.title")}</h2>
+        <div className="w-72 bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm border border-gray-200 dark:border-[var(--color-border)] px-5 py-5 flex flex-col gap-4 self-start shrink-0">
+          <h2 className="text-base font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("finance.totalExpenses.form.title")}</h2>
 
           <div>
             <label className={labelCls}>
@@ -586,7 +586,7 @@ export const TotalExpenses = () => {
 
           <div>
             <label className={labelCls}>{t("finance.totalExpenses.form.receipt")}</label>
-            <label className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white flex items-center gap-2 cursor-pointer text-gray-500">
+            <label className="w-full border border-gray-300 dark:border-[var(--color-border)] rounded px-3 py-1.5 text-sm bg-white dark:bg-[var(--color-surface)] flex items-center gap-2 cursor-pointer text-gray-500 dark:text-[var(--color-text-secondary)]">
               {receiptFile ? receiptFile.name : t("finance.totalExpenses.form.receiptPlaceholder")}
               <input
                 type="file"
@@ -612,55 +612,55 @@ export const TotalExpenses = () => {
       {/* ===== Manage categories modal (real: GET/POST/PATCH/DELETE /finance/expense-categories) ===== */}
       {addCategoryOpen && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={closeAddCategory}>
-          <div className="bg-white rounded-lg shadow-lg w-96 p-5 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-lg w-96 p-5 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-gray-800">{t("finance.totalExpenses.categoryModal.manageTitle")}</h3>
-              <button onClick={closeAddCategory} className="text-gray-400 hover:text-gray-600">
+              <h3 className="text-base font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("finance.totalExpenses.categoryModal.manageTitle")}</h3>
+              <button onClick={closeAddCategory} className="text-gray-400 dark:text-[var(--color-text-muted)] hover:text-gray-600 dark:hover:text-[var(--color-text-secondary)]">
                 <FiX size={18} />
               </button>
             </div>
 
             {/* Existing categories: rename, toggle status, delete */}
             <div className="mb-5">
-              <p className="text-xs font-semibold text-gray-500 mb-2">{t("finance.totalExpenses.categoryModal.existingTitle")}</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-[var(--color-text-secondary)] mb-2">{t("finance.totalExpenses.categoryModal.existingTitle")}</p>
               {categories.length === 0 ? (
-                <p className="text-xs text-gray-400">{t("finance.totalExpenses.categoryModal.noCategories")}</p>
+                <p className="text-xs text-gray-400 dark:text-[var(--color-text-muted)]">{t("finance.totalExpenses.categoryModal.noCategories")}</p>
               ) : (
                 <div className="flex flex-col gap-1.5">
                   {categories.map((c) => (
-                    <div key={c.id} className="flex items-center gap-2 border border-gray-100 rounded px-2 py-1.5">
+                    <div key={c.id} className="flex items-center gap-2 border border-gray-100 dark:border-[var(--color-border)] rounded px-2 py-1.5">
                       {editingCategoryId === c.id ? (
                         <>
                           <input
                             autoFocus
-                            className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-400"
+                            className="flex-1 border border-gray-300 dark:border-[var(--color-border)] rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-400"
                             value={editingCategoryName}
                             onChange={(e) => setEditingCategoryName(e.target.value)}
                           />
                           <button type="button" onClick={saveEditCategory} disabled={isUpdatingCategory} className="text-teal-600 hover:text-teal-700">
                             <FiCheck size={14} />
                           </button>
-                          <button type="button" onClick={cancelEditCategory} className="text-gray-400 hover:text-gray-600">
+                          <button type="button" onClick={cancelEditCategory} className="text-gray-400 dark:text-[var(--color-text-muted)] hover:text-gray-600 dark:hover:text-[var(--color-text-secondary)]">
                             <FiX size={14} />
                           </button>
                         </>
                       ) : (
                         <>
-                          <span className="flex-1 text-sm text-gray-800 truncate">{c.name}</span>
+                          <span className="flex-1 text-sm text-gray-800 dark:text-[var(--color-text-primary)] truncate">{c.name}</span>
                           <button
                             type="button"
                             onClick={() => toggleCategoryStatus(c)}
                             disabled={isUpdatingCategory}
                             className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                              c.status === "ACTIVE" ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-500"
+                              c.status === "ACTIVE" ? "bg-green-50 text-green-600" : "bg-gray-100 dark:bg-[var(--color-surface-hover)] text-gray-500 dark:text-[var(--color-text-secondary)]"
                             }`}
                           >
                             {c.status === "ACTIVE" ? t("finance.totalExpenses.categoryModal.statusActive") : t("finance.totalExpenses.categoryModal.statusInactive")}
                           </button>
-                          <button type="button" onClick={() => startEditCategory(c)} className="text-gray-400 hover:text-gray-600">
+                          <button type="button" onClick={() => startEditCategory(c)} className="text-gray-400 dark:text-[var(--color-text-muted)] hover:text-gray-600 dark:hover:text-[var(--color-text-secondary)]">
                             <FiEdit2 size={13} />
                           </button>
-                          <button type="button" onClick={() => { setCategoryDeleteError(null); setCategoryDeleteTarget(c); }} className="text-gray-400 hover:text-red-500">
+                          <button type="button" onClick={() => { setCategoryDeleteError(null); setCategoryDeleteTarget(c); }} className="text-gray-400 dark:text-[var(--color-text-muted)] hover:text-red-500">
                             <FiTrash2 size={13} />
                           </button>
                         </>
@@ -672,8 +672,8 @@ export const TotalExpenses = () => {
             </div>
 
             {/* Add a new category */}
-            <div className="border-t border-gray-100 pt-4">
-              <p className="text-xs font-semibold text-gray-500 mb-2">{t("finance.totalExpenses.categoryModal.title")}</p>
+            <div className="border-t border-gray-100 dark:border-[var(--color-border)] pt-4">
+              <p className="text-xs font-semibold text-gray-500 dark:text-[var(--color-text-secondary)] mb-2">{t("finance.totalExpenses.categoryModal.title")}</p>
               <div className="flex flex-col gap-3">
                 <div>
                   <label className={labelCls}>{t("finance.totalExpenses.categoryModal.name")}</label>

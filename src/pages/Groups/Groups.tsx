@@ -122,8 +122,8 @@ const inputSx = {
   "& .MuiOutlinedInput-root": {
     borderRadius: "6px",
     fontSize: 13,
-    bgcolor: "white",
-    "& fieldset": { borderColor: "#d0d5dd" },
+    bgcolor: "var(--color-surface)",
+    "& fieldset": { borderColor: "var(--color-border)" },
     "&:hover fieldset": { borderColor: "#a0aec0" },
     "&.Mui-focused fieldset": { borderColor: "#5c7fa3" },
   },
@@ -218,9 +218,9 @@ const filterTriggerSx = (active: boolean, open: boolean) => ({
   display: "flex", alignItems: "center", gap: "6px",
   width: FILTER_WIDTH, height: FILTER_HEIGHT, boxSizing: "border-box" as const,
   px: "10px", py: 0,
-  border: "1px solid", borderColor: active || open ? FILTER_BLUE : "#d0d5dd",
-  borderRadius: "6px", bgcolor: "white",
-  color: active ? FILTER_BLUE : "#667085",
+  border: "1px solid", borderColor: active || open ? FILTER_BLUE : "var(--color-border)",
+  borderRadius: "6px", bgcolor: "var(--color-surface)",
+  color: active ? FILTER_BLUE : "var(--color-text-secondary)",
   fontFamily: "inherit", fontSize: 13, fontWeight: 400, lineHeight: 1,
   textAlign: "left" as const, cursor: "pointer", outline: "none",
   "&:hover": { borderColor: FILTER_BLUE },
@@ -229,17 +229,17 @@ const filterTriggerSx = (active: boolean, open: boolean) => ({
 
 const filterMenuPaperSx = {
   mt: "4px", minWidth: FILTER_WIDTH, maxHeight: 300,
-  border: "1px solid #e4e7ec", borderRadius: "8px",
+  border: "1px solid var(--color-border)", borderRadius: "8px",
   boxShadow: "0 8px 24px rgba(16,24,40,0.12)",
   "& .MuiList-root": { py: "4px" },
 };
 
 const filterItemSx = (selected: boolean) => ({
   fontSize: 13, minHeight: 34, mx: "4px", px: "10px", py: "6px", borderRadius: "6px", gap: 1,
-  color: selected ? FILTER_BLUE : "#344054",
+  color: selected ? FILTER_BLUE : "var(--color-text-primary)",
   fontWeight: selected ? 700 : 400,
   "&.Mui-selected": { bgcolor: "transparent" },
-  "&:hover, &.Mui-selected:hover, &.Mui-focusVisible": { bgcolor: "#f2f4f7" },
+  "&:hover, &.Mui-selected:hover, &.Mui-focusVisible": { bgcolor: "var(--color-surface-alt)" },
 });
 
 /* ─── DropdownFilter ─────────────────────────────────────── */
@@ -283,7 +283,7 @@ const DropdownFilter = ({ label, value, options, onChange, multiple = false, cle
                 component="span"
                 sx={{
                   minWidth: 0, maxWidth: value.length > 1 ? 74 : "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  bgcolor: "#e8f1fa", borderRadius: "4px", px: "6px", py: "3px", fontSize: 12, fontWeight: 500,
+                  bgcolor: "var(--color-primary-surface)", borderRadius: "4px", px: "6px", py: "3px", fontSize: 12, fontWeight: 500,
                 }}
               >
                 {labelOf(value[0])}
@@ -308,7 +308,7 @@ const DropdownFilter = ({ label, value, options, onChange, multiple = false, cle
         )}
         <HiChevronDown
           size={14}
-          style={{ flexShrink: 0, color: "#98a2b3", transform: open ? "rotate(180deg)" : undefined, transition: "transform 0.15s" }}
+          style={{ flexShrink: 0, color: "var(--color-text-muted)", transform: open ? "rotate(180deg)" : undefined, transition: "transform 0.15s" }}
         />
       </Box>
       <Menu
@@ -328,7 +328,7 @@ const DropdownFilter = ({ label, value, options, onChange, multiple = false, cle
                 <Box
                   sx={{
                     width: 15, height: 15, borderRadius: "4px", border: "1.5px solid", flexShrink: 0,
-                    borderColor: selected ? FILTER_BLUE : "#d0d5dd", bgcolor: selected ? FILTER_BLUE : "transparent",
+                    borderColor: selected ? FILTER_BLUE : "var(--color-border)", bgcolor: selected ? FILTER_BLUE : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}
                 >
@@ -847,8 +847,8 @@ export const Groups = () => {
             onClick={clearAllFilters}
             title={t("groups.filters.clearAll")}
             sx={{
-              width: FILTER_HEIGHT, height: FILTER_HEIGHT, border: "1px solid #d0d5dd", borderRadius: "6px",
-              color: "#667085", bgcolor: "white", "&:hover": { borderColor: FILTER_BLUE, color: FILTER_BLUE, bgcolor: "white" },
+              width: FILTER_HEIGHT, height: FILTER_HEIGHT, border: "1px solid var(--color-border)", borderRadius: "6px",
+              color: "var(--color-text-secondary)", bgcolor: "var(--color-surface)", "&:hover": { borderColor: FILTER_BLUE, color: FILTER_BLUE, bgcolor: "var(--color-surface)" },
             }}
           >
             <IoClose size={16} />
@@ -866,9 +866,9 @@ export const Groups = () => {
             onClick={() => setShowFiltersPanel((p) => !p)}
             sx={{
               borderRadius: "6px", height: FILTER_HEIGHT,
-              borderColor: showFiltersPanel ? FILTER_BLUE : "#d0d5dd",
-              color: showFiltersPanel ? FILTER_BLUE : "#667085",
-              bgcolor: showFiltersPanel ? "#eff8ff" : "white",
+              borderColor: showFiltersPanel ? FILTER_BLUE : "var(--color-border)",
+              color: showFiltersPanel ? FILTER_BLUE : "var(--color-text-secondary)",
+              bgcolor: showFiltersPanel ? "var(--color-primary-surface)" : "var(--color-surface)",
               fontSize: 13, fontWeight: 500, px: 1.5, textTransform: "none",
             }}
           >
@@ -879,11 +879,11 @@ export const Groups = () => {
               variant="outlined"
               sx={{
                 position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 20,
-                borderRadius: 2, borderColor: "#e5e7eb", p: 2, width: 300,
+                borderRadius: 2, borderColor: "var(--color-border)", p: 2, width: 300,
                 boxShadow: "0 12px 32px rgba(0,0,0,0.14)",
               }}
             >
-              <Typography fontWeight={600} fontSize={13} color="#344054" mb={1.5}>
+              <Typography fontWeight={600} fontSize={13} color="var(--color-text-primary)" mb={1.5}>
                 {t("groups.filters.filtersButton")}
               </Typography>
               <Stack direction="row" flexWrap="wrap" gap={1}>
@@ -899,14 +899,14 @@ export const Groups = () => {
                       }
                       sx={{
                         display: "flex", alignItems: "center", gap: 1, cursor: "pointer",
-                        border: "1px solid", borderColor: checked ? "primary.main" : "#d0d5dd",
-                        borderRadius: "8px", px: 1.2, py: 0.6, bgcolor: checked ? "#eff8ff" : "white",
+                        border: "1px solid", borderColor: checked ? "primary.main" : "var(--color-border)",
+                        borderRadius: "8px", px: 1.2, py: 0.6, bgcolor: checked ? "var(--color-primary-surface)" : "var(--color-surface)",
                       }}
                     >
                       <Box
                         sx={{
                           width: 14, height: 14, borderRadius: 0.5, border: "2px solid",
-                          borderColor: checked ? "primary.main" : "#d0d5dd",
+                          borderColor: checked ? "primary.main" : "var(--color-border)",
                           bgcolor: checked ? "primary.main" : "transparent",
                           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                         }}
@@ -927,7 +927,7 @@ export const Groups = () => {
           variant="outlined"
           onClick={(e) => setColumnsAnchor(e.currentTarget)}
           sx={{
-            borderRadius: "6px", height: FILTER_HEIGHT, borderColor: "#d0d5dd", color: "#667085",
+            borderRadius: "6px", height: FILTER_HEIGHT, borderColor: "var(--color-border)", color: "var(--color-text-secondary)",
             fontSize: 13, fontWeight: 500, px: 1.5, textTransform: "none",
           }}
         >
@@ -954,7 +954,7 @@ export const Groups = () => {
               <Box
                 sx={{
                   width: 16, height: 16, borderRadius: 0.5, border: "2px solid",
-                  borderColor: visibleCols.includes(c.key) ? "primary.main" : "#d0d5dd",
+                  borderColor: visibleCols.includes(c.key) ? "primary.main" : "var(--color-border)",
                   bgcolor: visibleCols.includes(c.key) ? "primary.main" : "transparent",
                   display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 }}
@@ -990,7 +990,7 @@ export const Groups = () => {
               <TableRow
                 sx={{
                   "& th": {
-                    fontWeight: 600, fontSize: 13, color: "#374151",
+                    fontWeight: 600, fontSize: 13, color: "var(--color-text-primary)",
                     py: 1.5, border: "none",
                   },
                 }}
@@ -1024,22 +1024,22 @@ export const Groups = () => {
                   onClick={() => navigate(`/groups/${g.id}`)}
                   sx={{
                     cursor: "pointer",
-                    bgcolor: "white",
+                    bgcolor: "var(--color-surface)",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                     "& td": { border: "none", py: 1.8, fontSize: 13 },
                     "& td:first-of-type": { borderTopLeftRadius: 12, borderBottomLeftRadius: 12 },
                     "& td:last-of-type": { borderTopRightRadius: 12, borderBottomRightRadius: 12 },
-                    "&:hover": { bgcolor: "#f9fafb" },
+                    "&:hover": { bgcolor: "var(--color-surface-alt)" },
                   }}
                 >
-                  <TableCell sx={{ color: "#9ca3af", fontSize: 12 }}>{i + 1}.</TableCell>
-                  <TableCell sx={{ fontWeight: 500, color: "#111827" }}>{g.name}</TableCell>
+                  <TableCell sx={{ color: "var(--color-text-muted)", fontSize: 12 }}>{i + 1}.</TableCell>
+                  <TableCell sx={{ fontWeight: 500, color: "var(--color-text-primary)" }}>{g.name}</TableCell>
                   {col("course")       && <TableCell>{g.course}</TableCell>}
                   {col("teacher")      && <TableCell>{g.teacher}</TableCell>}
                   {col("days")         && (
                     <TableCell>
                       <Box>{g.days}</Box>
-                      <Box sx={{ color: "#9ca3af", fontSize: 12 }}>{g.lessonStartTime}</Box>
+                      <Box sx={{ color: "var(--color-text-muted)", fontSize: 12 }}>{g.lessonStartTime}</Box>
                     </TableCell>
                   )}
                   {col("training")     && (
@@ -1062,7 +1062,7 @@ export const Groups = () => {
                             : { el: e.currentTarget, id: g.id }
                         )
                       }
-                      sx={{ color: "#6b7280" }}
+                      sx={{ color: "var(--color-text-secondary)" }}
                     >
                       <BsThreeDotsVertical size={15} />
                     </IconButton>
@@ -1108,7 +1108,7 @@ export const Groups = () => {
               ))}
               {filteredGroups.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={12} align="center" sx={{ py: 6, color: "#9ca3af" }}>
+                  <TableCell colSpan={12} align="center" sx={{ py: 6, color: "var(--color-text-muted)" }}>
                     {t("groups.table.empty")}
                   </TableCell>
                 </TableRow>
@@ -1126,11 +1126,11 @@ export const Groups = () => {
             onClick={handleExportExcel}
             disabled={isExportingExcel}
             sx={{
-              bgcolor: "white", color: "#217346",
+              bgcolor: "var(--color-surface)", color: "#217346",
               width: 40, height: 40,
               boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-              border: "1px solid #e5e7eb",
-              "&:hover": { bgcolor: "#f0fdf4" },
+              border: "1px solid var(--color-border)",
+              "&:hover": { bgcolor: "var(--color-success-surface)" },
             }}
           >
             {isExportingExcel ? <CircularProgress size={18} /> : <PiMicrosoftExcelLogoFill size={20} />}
@@ -1143,19 +1143,19 @@ export const Groups = () => {
         anchor="right"
         open={open}
         onClose={() => setOpen(false)}
-        PaperProps={{ sx: { width: 420, bgcolor: "#f8f9fa" } }}
+        PaperProps={{ sx: { width: 420, bgcolor: "var(--color-surface-alt)" } }}
       >
         {/* Header */}
         <Stack
           direction="row"
           justifyContent="space-between"
           alignItems="center"
-          sx={{ px: 3, py: 2.5, bgcolor: "white", borderBottom: "1px solid #eaecf0" }}
+          sx={{ px: 3, py: 2.5, bgcolor: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}
         >
-          <Typography fontWeight={700} fontSize={17} color="#111827">
+          <Typography fontWeight={700} fontSize={17} color="var(--color-text-primary)">
             {editingId !== null ? t("groups.form.editTitle") : t("groups.form.addTitle")}
           </Typography>
-          <IconButton size="small" onClick={() => setOpen(false)} sx={{ color: "#9ca3af" }}>
+          <IconButton size="small" onClick={() => setOpen(false)} sx={{ color: "var(--color-text-muted)" }}>
             <IoClose size={20} />
           </IconButton>
         </Stack>
@@ -1165,7 +1165,7 @@ export const Groups = () => {
 
           {/* Name */}
           <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+            <Typography fontSize={13} fontWeight={500} color="var(--color-text-primary)" mb={0.8}>
               {t("groups.form.name")}
             </Typography>
             <TextField
@@ -1182,7 +1182,7 @@ export const Groups = () => {
 
           {/* Select course */}
           <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+            <Typography fontSize={13} fontWeight={500} color="var(--color-text-primary)" mb={0.8}>
               {t("groups.form.course")}
             </Typography>
             <TextField
@@ -1204,7 +1204,7 @@ export const Groups = () => {
 
           {/* Select teacher — single choice only, closes right after picking */}
           <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+            <Typography fontSize={13} fontWeight={500} color="var(--color-text-primary)" mb={0.8}>
               {t("groups.form.teacher")}
             </Typography>
             <TextField
@@ -1218,7 +1218,7 @@ export const Groups = () => {
                 renderValue: (selected) =>
                   selected
                     ? activeTeachers.find((tc) => tc.id === selected)?.name ?? String(selected)
-                    : <span style={{ color: "#9ca3af" }}>{t("groups.form.teacher")}</span>,
+                    : <span style={{ color: "var(--color-text-muted)" }}>{t("groups.form.teacher")}</span>,
               }}
               sx={inputSx}
             >
@@ -1230,7 +1230,7 @@ export const Groups = () => {
 
           {/* Days — quick presets (Odd/Even/Weekend/Every day), "Other" reveals the manual weekday picker */}
           <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+            <Typography fontSize={13} fontWeight={500} color="var(--color-text-primary)" mb={0.8}>
               {t("groups.form.days")}
             </Typography>
             <TextField
@@ -1248,7 +1248,7 @@ export const Groups = () => {
                 renderValue: (selected) =>
                   selected
                     ? DAY_FILTER_OPTIONS.find((o) => o.value === selected)?.label ?? String(selected)
-                    : <span style={{ color: "#9ca3af" }}>{t("groups.form.days")}</span>,
+                    : <span style={{ color: "var(--color-text-muted)" }}>{t("groups.form.days")}</span>,
               }}
               sx={inputSx}
             >
@@ -1269,7 +1269,7 @@ export const Groups = () => {
                   renderValue: (selected) =>
                     (selected as GroupDay[]).length
                       ? (selected as GroupDay[]).map((d) => WEEKDAY_LABELS[d]).join(", ")
-                      : <span style={{ color: "#9ca3af" }}>{t("groups.form.days")}</span>,
+                      : <span style={{ color: "var(--color-text-muted)" }}>{t("groups.form.days")}</span>,
                 }}
                 sx={{ ...inputSx, mt: 1 }}
               >
@@ -1282,7 +1282,7 @@ export const Groups = () => {
 
           {/* Select room — right after Days, for both create and edit */}
           <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+            <Typography fontSize={13} fontWeight={500} color="var(--color-text-primary)" mb={0.8}>
               {t("groups.form.room")}
             </Typography>
             <TextField
@@ -1303,7 +1303,7 @@ export const Groups = () => {
 
           {/* Lesson start time — 08:00–20:00 in 1-hour steps */}
           <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+            <Typography fontSize={13} fontWeight={500} color="var(--color-text-primary)" mb={0.8}>
               {t("groups.form.lessonStartTime")}
             </Typography>
             <TimeSelectField
@@ -1315,7 +1315,7 @@ export const Groups = () => {
 
           {/* Group start date */}
           <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+            <Typography fontSize={13} fontWeight={500} color="var(--color-text-primary)" mb={0.8}>
               {t("groups.form.startDate")}
             </Typography>
             <DatePickerField
@@ -1330,7 +1330,7 @@ export const Groups = () => {
               duration. */}
           {editingId !== null && (
             <Box mb={2.5}>
-              <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+              <Typography fontSize={13} fontWeight={500} color="var(--color-text-primary)" mb={0.8}>
                 {t("groups.form.endDate")}
               </Typography>
               <DatePickerField value={form.trainingEnd} onChange={(iso) => setForm((prev) => ({ ...prev, trainingEnd: iso }))} />
@@ -1339,7 +1339,7 @@ export const Groups = () => {
 
           {/* Tags — GROUP-type tags from Settings > Tags (GET /tags/select) */}
           <Box mb={2.5}>
-            <Typography fontSize={13} fontWeight={500} color="#344054" mb={0.8}>
+            <Typography fontSize={13} fontWeight={500} color="var(--color-text-primary)" mb={0.8}>
               {t("groups.form.tags")}
             </Typography>
             <GroupTagsSelect

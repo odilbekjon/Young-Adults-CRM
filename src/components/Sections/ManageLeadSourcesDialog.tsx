@@ -106,11 +106,11 @@ export const ManageLeadSourcesDialog = ({ open, onClose }: Props) => {
         ) : isError ? (
           <Typography sx={{ color: "#e53935", fontSize: 13, textAlign: "center", py: 3 }}>{t("leadsPage.sources.loadError")}</Typography>
         ) : sources.length === 0 ? (
-          <Typography sx={{ color: "#9ca3af", fontSize: 13, textAlign: "center", py: 3 }}>{t("leadsPage.sources.emptyState")}</Typography>
+          <Typography sx={{ color: "var(--color-text-muted)", fontSize: 13, textAlign: "center", py: 3 }}>{t("leadsPage.sources.emptyState")}</Typography>
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {sources.map((src) => (
-              <Box key={src.id} sx={{ border: "1px solid #eee", borderRadius: 1.5 }}>
+              <Box key={src.id} sx={{ border: "1px solid var(--color-border-subtle)", borderRadius: 1.5 }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 1 }}>
                   {editingId === src.id ? (
                     <>
@@ -130,7 +130,7 @@ export const ManageLeadSourcesDialog = ({ open, onClose }: Props) => {
                 </Box>
 
                 <Collapse in={confirmDeleteId === src.id}>
-                  <Box sx={{ px: 1.5, pb: 1.5, display: "flex", alignItems: "center", gap: 1, borderTop: "1px solid #f5f5f5", pt: 1 }}>
+                  <Box sx={{ px: 1.5, pb: 1.5, display: "flex", alignItems: "center", gap: 1, borderTop: "1px solid var(--color-border-subtle)", pt: 1 }}>
                     <Typography sx={{ fontSize: 12.5, color: "#e53935", flex: 1 }}>{t("leadsPage.sources.confirmDelete")}</Typography>
                     <Button size="small" onClick={() => setConfirmDeleteId(null)} sx={{ textTransform: "none" }}>{t("leadsPage.sources.cancel")}</Button>
                     <Button size="small" color="error" variant="contained" onClick={() => handleDelete(src.id)} disabled={isDeleting} sx={{ textTransform: "none" }}>

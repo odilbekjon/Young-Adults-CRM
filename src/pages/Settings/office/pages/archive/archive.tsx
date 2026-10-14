@@ -240,7 +240,7 @@ export const Archive = () => {
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
   const balanceColor = (b: number | null | undefined) =>
-    !b ? "text-gray-500" : b > 0 ? "text-green-600" : "text-red-500";
+    !b ? "text-gray-500 dark:text-[var(--color-text-secondary)]" : b > 0 ? "text-green-600" : "text-red-500";
 
   // Each archived record already carries the real underlying student/teacher/
   // staff id (the restore/permanent-delete actions above forward this same
@@ -265,22 +265,22 @@ export const Archive = () => {
       borderRadius: "6px",
       fontSize: "0.82rem",
       height: "38px",
-      backgroundColor: "#fff",
-      "& fieldset": { borderColor: "#e5e7eb" },
+      backgroundColor: "var(--color-surface)",
+      "& fieldset": { borderColor: "var(--color-border)" },
       "&:hover fieldset": { borderColor: "#9ca3af" },
       "&.Mui-focused fieldset": { borderColor: "#29b6f6" },
     },
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 dark:bg-[var(--color-surface-hover)] p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <Typography variant="h5" sx={{ fontWeight: 700, color: "#1f2937" }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: "var(--color-text-primary)" }}>
             {t("settings.office.archive.title")}
           </Typography>
-          <Typography variant="body2" sx={{ color: "#6b7280" }}>
+          <Typography variant="body2" sx={{ color: "var(--color-text-secondary)" }}>
             {t("settings.office.archive.quantity", { count: total })}
           </Typography>
         </div>
@@ -288,13 +288,13 @@ export const Archive = () => {
           variant="outlined"
           onClick={() => navigate("/settings/reasons_archiving")}
           sx={{
-            borderColor: "#e5e7eb",
-            color: "#374151",
+            borderColor: "var(--color-border)",
+            color: "var(--color-text-primary)",
             textTransform: "none",
             borderRadius: "6px",
             fontWeight: 500,
             fontSize: "0.85rem",
-            "&:hover": { borderColor: "#9ca3af", backgroundColor: "#f9fafb" },
+            "&:hover": { borderColor: "#9ca3af", backgroundColor: "var(--color-surface-alt)" },
           }}
         >
           {t("settings.office.archive.reasonsForArchiving")}
@@ -316,9 +316,9 @@ export const Archive = () => {
           size="small"
           value={filterRole}
           onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
-          sx={{ ...inputSx["& .MuiOutlinedInput-root"], width: 160, height: 38, fontSize: "0.82rem", borderRadius: "6px", backgroundColor: "#fff", "& fieldset": { borderColor: "#e5e7eb" } }}
+          sx={{ ...inputSx["& .MuiOutlinedInput-root"], width: 160, height: 38, fontSize: "0.82rem", borderRadius: "6px", backgroundColor: "var(--color-surface)", "& fieldset": { borderColor: "var(--color-border)" } }}
         >
-          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.archive.filters.filterByRole")}</em></MenuItem>
+          <MenuItem value=""><em style={{ color: "var(--color-text-muted)", fontStyle: "normal" }}>{t("settings.office.archive.filters.filterByRole")}</em></MenuItem>
           <MenuItem value="STUDENT">{t("settings.office.archive.filters.student")}</MenuItem>
           <MenuItem value="TEACHER">{t("settings.office.archive.filters.teacher")}</MenuItem>
           <MenuItem value="ADMIN">{t("settings.office.archive.filters.admin")}</MenuItem>
@@ -330,9 +330,9 @@ export const Archive = () => {
           size="small"
           value={filterReason}
           onChange={(e) => { setFilterReason(e.target.value); setPage(1); }}
-          sx={{ width: 180, height: 38, fontSize: "0.82rem", borderRadius: "6px", backgroundColor: "#fff", "& fieldset": { borderColor: "#e5e7eb" } }}
+          sx={{ width: 180, height: 38, fontSize: "0.82rem", borderRadius: "6px", backgroundColor: "var(--color-surface)", "& fieldset": { borderColor: "var(--color-border)" } }}
         >
-          <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.archive.filters.filterByReason")}</em></MenuItem>
+          <MenuItem value=""><em style={{ color: "var(--color-text-muted)", fontStyle: "normal" }}>{t("settings.office.archive.filters.filterByReason")}</em></MenuItem>
           {(reasonOptions ?? []).map((r) => (
             <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
           ))}
@@ -366,7 +366,7 @@ export const Archive = () => {
           >
             <MdRefresh size={18} /> {t("settings.office.archive.actions.reestablish")}
           </button>
-          <button className="flex items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors">
+          <button className="flex items-center gap-1 text-gray-500 dark:text-[var(--color-text-secondary)] hover:text-gray-700 dark:hover:text-[var(--color-text-primary)] transition-colors">
             <MdEmail size={18} />
           </button>
         </div>
@@ -377,10 +377,10 @@ export const Archive = () => {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+      <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-gray-100 dark:border-[var(--color-border)]">
               <th className="px-4 py-4 w-10">
                 <Checkbox
                   size="small"
@@ -398,7 +398,7 @@ export const Archive = () => {
                 t("settings.office.archive.table.archived"),
                 t("settings.office.archive.table.actions"),
               ].map((h) => (
-                <th key={h} className="text-left px-4 py-4 text-gray-600 font-semibold text-sm">
+                <th key={h} className="text-left px-4 py-4 text-gray-600 dark:text-[var(--color-text-secondary)] font-semibold text-sm">
                   {h}
                 </th>
               ))}
@@ -419,13 +419,13 @@ export const Archive = () => {
               </tr>
             ) : pageData.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-12 text-gray-400">
+                <td colSpan={8} className="text-center py-12 text-gray-400 dark:text-[var(--color-text-muted)]">
                   {t("settings.office.archive.noData")}
                 </td>
               </tr>
             ) : (
               pageData.map((r) => (
-                <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                <tr key={r.id} className="border-b border-gray-50 dark:border-[var(--color-border-subtle)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors">
                   <td className="px-4 py-3">
                     <Checkbox
                       size="small"
@@ -445,19 +445,19 @@ export const Archive = () => {
                       {r.name}
                     </div>
                     {r.branch?.name && (
-                      <div className="text-xs text-gray-400 mt-0.5">{r.branch.name}</div>
+                      <div className="text-xs text-gray-400 dark:text-[var(--color-text-muted)] mt-0.5">{r.branch.name}</div>
                     )}
                     <div className={`text-xs mt-0.5 font-medium ${balanceColor(r.balance)}`}>
                       {t("settings.office.archive.balance")}: {(r.balance ?? 0).toLocaleString()}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{r.phone}</td>
-                  <td className="px-4 py-3 text-gray-600">{r.role}</td>
-                  <td className="px-4 py-3 text-gray-500 text-sm">{r.reason?.name}</td>
-                  <td className="px-4 py-3 text-gray-500 text-sm max-w-[180px]">{r.comment}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-[var(--color-text-secondary)]">{r.phone}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-[var(--color-text-secondary)]">{r.role}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-[var(--color-text-secondary)] text-sm">{r.reason?.name}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-[var(--color-text-secondary)] text-sm max-w-[180px]">{r.comment}</td>
                   <td className="px-4 py-3">
-                    <div className="text-gray-600 text-sm">{r.archivedBy?.name}</div>
-                    <div className="text-gray-400 text-xs">{r.archivedAt}</div>
+                    <div className="text-gray-600 dark:text-[var(--color-text-secondary)] text-sm">{r.archivedBy?.name}</div>
+                    <div className="text-gray-400 dark:text-[var(--color-text-muted)] text-xs">{r.archivedAt}</div>
                   </td>
                   <td className="px-4 py-3">
                     <IconButton
@@ -485,7 +485,7 @@ export const Archive = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center py-4 border-t border-gray-100">
+          <div className="flex justify-center py-4 border-t border-gray-100 dark:border-[var(--color-border)]">
             <Pagination
               count={totalPages}
               page={page}
@@ -493,7 +493,7 @@ export const Archive = () => {
               size="small"
               sx={{
                 "& .MuiPaginationItem-root": {
-                  color: "#6b7280",
+                  color: "var(--color-text-secondary)",
                   borderRadius: "6px",
                 },
                 "& .Mui-selected": {

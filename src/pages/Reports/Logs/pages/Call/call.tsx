@@ -23,8 +23,8 @@ export const Call = () => {
   const [filter, setFilter] = useState("All");
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f5f5f5", p: 3 }}>
-      <Typography variant="h5" sx={{ fontWeight: 500, mb: 3, color: "#212121" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "var(--color-surface-alt)", p: 3 }}>
+      <Typography variant="h5" sx={{ fontWeight: 500, mb: 3, color: "var(--color-text-primary)" }}>
         {t("reports.logs.call.title")}
       </Typography>
 
@@ -34,14 +34,14 @@ export const Call = () => {
         <OutlinedInput
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          startAdornment={<BsCalendar3 size={14} color="#9e9e9e" style={{ marginRight: 8 }} />}
+          startAdornment={<BsCalendar3 size={14} color="var(--color-text-muted)" style={{ marginRight: 8 }} />}
           sx={{
-            bgcolor: "#fff",
+            bgcolor: "var(--color-surface)",
             fontSize: "0.875rem",
             height: 40,
             width: 200,
             borderRadius: 1,
-            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e0e0e0" },
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--color-border)" },
           }}
         />
 
@@ -51,12 +51,12 @@ export const Call = () => {
           onChange={(e) => setFilter(e.target.value)}
           input={<OutlinedInput />}
           sx={{
-            bgcolor: "#fff",
+            bgcolor: "var(--color-surface)",
             fontSize: "0.875rem",
             height: 40,
             width: 200,
             borderRadius: 1,
-            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e0e0e0" },
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--color-border)" },
           }}
         >
           <MenuItem value="All">{t("reports.logs.call.filter.all")}</MenuItem>
@@ -67,7 +67,7 @@ export const Call = () => {
       </Box>
 
       {/* Table */}
-      <Paper elevation={0} sx={{ border: "1px solid #e0e0e0", borderRadius: 1, overflow: "hidden" }}>
+      <Paper elevation={0} sx={{ border: "1px solid var(--color-border)", borderRadius: 1, overflow: "hidden" }}>
         <Table>
           <TableHead>
             <TableRow>
@@ -77,8 +77,8 @@ export const Call = () => {
                   sx={{
                     fontWeight: 600,
                     fontSize: "0.875rem",
-                    color: "#212121",
-                    borderBottom: "1px solid #e0e0e0",
+                    color: "var(--color-text-primary)",
+                    borderBottom: "1px solid var(--color-border)",
                     py: 2,
                     whiteSpace: "nowrap",
                   }}

@@ -334,7 +334,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
         elevation={0}
         sx={{
           borderRadius: 2,
-          border: "1px solid #e0e0e0",
+          border: "1px solid var(--color-border)",
           overflowX: "scroll",
           overflowY: "visible",
           // width: "100%",
@@ -355,8 +355,8 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                   position: "sticky",
                   left: 0,
                   zIndex: 3,
-                  bgcolor: "#fafafa",
-                  borderRight: "1px solid #e0e0e0",
+                  bgcolor: "var(--color-surface-alt)",
+                  borderRight: "1px solid var(--color-border)",
                 }}
               >
                 {t("singleGroup.tabs.attendance.name")}
@@ -374,7 +374,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                       fontWeight: isToday ? 700 : 400,
                       color: isToday ? "primary.main" : "text.secondary",
                       fontSize: 12,
-                      bgcolor: isToday ? "#e3f2fd" : "#fafafa",
+                      bgcolor: isToday ? "var(--color-primary-surface)" : "var(--color-surface-alt)",
                       borderBottom: isToday
                         ? "2px solid #1976d2"
                         : undefined,
@@ -401,7 +401,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                     left: 0,
                     zIndex: 1,
                     bgcolor: "background.paper",
-                    borderRight: "1px solid #e0e0e0",
+                    borderRight: "1px solid var(--color-border)",
                   }}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>
@@ -431,7 +431,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                       sx={{
                         px: 0.5,
                         overflow: "visible",
-                        bgcolor: isToday ? "#f0f7ff" : undefined,
+                        bgcolor: isToday ? "var(--color-primary-surface)" : undefined,
                       }}
                     >
                       <Box
@@ -474,15 +474,15 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                             opacity: restrictToToday && !isEditable ? 0.55 : 1,
                             border: isToday
                               ? "2px solid #1976d2"
-                              : "1px solid #e0e0e0",
+                              : "1px solid var(--color-border)",
                             bgcolor:
                               val === "Was"
                                 ? "#00897b"
                                 : val === "Not"
                                 ? "#ef5350"
                                 : isPast
-                                ? "#f5f5f5"
-                                : "#fff",
+                                ? "var(--color-surface-alt)"
+                                : "var(--color-surface)",
                             color:
                               val === "Was" || val === "Not"
                                 ? "#fff"
@@ -503,10 +503,10 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                             justifyContent: "center",
                             gap: 0.25,
                             px: 0.25,
-                            bgcolor: "#fff",
+                            bgcolor: "var(--color-surface)",
                             border: isToday
                               ? "2px solid #1976d2"
-                              : "1px solid #e0e0e0",
+                              : "1px solid var(--color-border)",
                             borderRadius: "6px",
                             boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
                           }}
@@ -543,10 +543,10 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                                 width: 20,
                                 height: 20,
                                 p: 0,
-                                bgcolor: "#fff",
+                                bgcolor: "var(--color-surface)",
                                 color: "#1976d2",
                                 border: "2px solid #1976d2",
-                                "&:hover": { bgcolor: "#e3f2fd" },
+                                "&:hover": { bgcolor: "var(--color-primary-surface)" },
                               }}
                             >
                               <MdClose size={13} />

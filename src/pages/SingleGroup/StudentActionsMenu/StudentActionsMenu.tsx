@@ -48,8 +48,8 @@ const itemSx = {
   gap: 1.6,
   py: 1.3,
   px: 2.2,
-  color: "#374151",
-  "&:hover": { backgroundColor: "#f5f6f8" },
+  color: "var(--color-text-primary)",
+  "&:hover": { backgroundColor: "var(--color-surface-alt)" },
 };
 
 const iconColor = "#374151";
@@ -95,9 +95,9 @@ const MoveToBranchModal = ({
 
   return (
     <Dialog open={open} onClose={handleClose} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
-      <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid #e5e7eb" }}>
+      <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid var(--color-border)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 16, fontWeight: 600, color: "#2e2e2e" }}>
+          <span style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-primary)" }}>
             {t("singleGroup.studentActionsMenu.moveToBranchModal.title")}
           </span>
           <IconButton size="small" onClick={handleClose} disabled={isSubmitting}>
@@ -112,11 +112,11 @@ const MoveToBranchModal = ({
           disabled={isSubmitting}
           style={{
             width: "100%",
-            border: "1px solid #e5e7eb",
+            border: "1px solid var(--color-border)",
             borderRadius: 8,
             height: 46,
             padding: "0 12px",
-            color: branch ? "#1f2937" : "#a8b0bb",
+            color: branch ? "var(--color-text-primary)" : "#a8b0bb",
             fontSize: 14,
             marginBottom: 12,
           }}
@@ -139,11 +139,11 @@ const MoveToBranchModal = ({
           style={{
             width: "100%",
             boxSizing: "border-box",
-            border: "1px solid #e5e7eb",
+            border: "1px solid var(--color-border)",
             borderRadius: 8,
             height: 42,
             padding: "0 12px",
-            color: "#1f2937",
+            color: "var(--color-text-primary)",
             fontSize: 14,
             marginBottom: 18,
           }}
@@ -211,7 +211,7 @@ export const StudentActionsMenu = ({
             borderRadius: 2.5,
             minWidth: 230,
             boxShadow: "0 8px 28px rgba(0,0,0,0.12)",
-            border: "1px solid #f0f0f0",
+            border: "1px solid var(--color-border-subtle)",
             py: 0.5,
           },
         }}

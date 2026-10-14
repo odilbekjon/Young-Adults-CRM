@@ -25,7 +25,7 @@ export const Comments = ({ groupId }: Props) => {
           {t("singleGroup.tabs.comments.loadError")}
         </Typography>
       ) : !comments || comments.length === 0 ? (
-        <Paper sx={{ p: 3, textAlign: "center", color: "#999", borderRadius: 2 }}>
+        <Paper sx={{ p: 3, textAlign: "center", color: "var(--color-text-muted)", borderRadius: 2 }}>
           {t("singleGroup.tabs.comments.noCommentsYet")}
         </Paper>
       ) : (

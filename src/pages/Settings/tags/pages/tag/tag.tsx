@@ -184,7 +184,7 @@ export const Tag = () => {
               setTypeFilter(e.target.value as TagType | "");
               setPage(1);
             }}
-            sx={{ minWidth: 160, fontSize: 14, bgcolor: "#fff" }}
+            sx={{ minWidth: 160, fontSize: 14, bgcolor: "var(--color-surface)" }}
           >
             <MenuItem value="">{t("settings.tags.tag.typeOptions.all")}</MenuItem>
             <MenuItem value="STUDENT">{t("settings.tags.tag.typeOptions.student")}</MenuItem>
@@ -211,9 +211,9 @@ export const Tag = () => {
       <Box
         sx={{
           width: "100%",
-          backgroundColor: "#fff",
+          backgroundColor: "var(--color-surface)",
           borderRadius: 2,
-          border: "1px solid #e8eaed",
+          border: "1px solid var(--color-border)",
           p: 3,
         }}
       >
@@ -222,7 +222,7 @@ export const Tag = () => {
           sx={{
             borderRadius: "10px",
             boxShadow: "none",
-            border: "1px solid #e5e5e5",
+            border: "1px solid var(--color-border)",
           }}
         >
           <Table>
@@ -250,7 +250,7 @@ export const Tag = () => {
                 </TableRow>
               ) : tags.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 6, color: "#9ca3af" }}>
+                  <TableCell colSpan={4} align="center" sx={{ py: 6, color: "var(--color-text-muted)" }}>
                     {t("settings.tags.tag.emptyState")}
                   </TableCell>
                 </TableRow>
@@ -299,7 +299,7 @@ export const Tag = () => {
 
       {/* Drawer Modal */}
       <Drawer anchor="right" open={open} onClose={closeDrawer}>
-        <Box sx={{ width: 400, height: "100%", backgroundColor: "#fff" }}>
+        <Box sx={{ width: 400, height: "100%", backgroundColor: "var(--color-surface)" }}>
           {/* Top */}
           <Box
             sx={{
@@ -307,7 +307,7 @@ export const Tag = () => {
               alignItems: "center",
               justifyContent: "space-between",
               p: 2,
-              borderBottom: "1px solid #e5e5e5",
+              borderBottom: "1px solid var(--color-border)",
             }}
           >
             <h2 className="text-2xl font-medium">
@@ -315,7 +315,7 @@ export const Tag = () => {
             </h2>
 
             <IconButton onClick={closeDrawer}>
-              <IoClose size={28} color="#888" />
+              <IoClose size={28} color="var(--color-text-muted)" />
             </IconButton>
           </Box>
 
@@ -323,7 +323,7 @@ export const Tag = () => {
           <Box sx={{ p: 4, display: "flex", flexDirection: "column", gap: 3 }}>
             {/* Name */}
             <Box>
-              <p className="mb-3 text-[18px] text-gray-600">{t("settings.tags.tag.form.name")}</p>
+              <p className="mb-3 text-[18px] text-gray-600 dark:text-[var(--color-text-secondary)]">{t("settings.tags.tag.form.name")}</p>
               <TextField
                 fullWidth
                 variant="outlined"
@@ -337,7 +337,7 @@ export const Tag = () => {
 
             {/* Type select */}
             <Box>
-              <p className="mb-3 text-[18px] text-gray-600">{t("settings.tags.tag.form.type")}</p>
+              <p className="mb-3 text-[18px] text-gray-600 dark:text-[var(--color-text-secondary)]">{t("settings.tags.tag.form.type")}</p>
               <Select
                 fullWidth
                 value={form.type}

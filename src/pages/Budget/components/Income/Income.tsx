@@ -54,7 +54,7 @@ export const Income = () => {
 
       <TableContainer color="primary">
         <Table
-          sx={{ minWidth: 650, bgcolor: "#fff" }}
+          sx={{ minWidth: 650, bgcolor: "var(--color-surface)" }}
           aria-label="simple table"
         >
           <TableHead>

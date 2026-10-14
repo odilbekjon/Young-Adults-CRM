@@ -38,20 +38,20 @@ const SelectBox = ({
   return (
     <div className="relative" ref={ref}>
       <button type="button" onClick={() => setOpen((o) => !o)}
-        className="flex min-w-[160px] items-center justify-between gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-600 transition-colors hover:border-slate-400">
-        <span className={selectedLabel ? "text-slate-700" : "text-slate-400"}>{selectedLabel || placeholder}</span>
-        <FiChevronDown size={14} className="flex-shrink-0 text-slate-400" />
+        className="flex min-w-[160px] items-center justify-between gap-2 rounded-xl border border-slate-300 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3.5 py-2.5 text-[15px] text-slate-600 dark:text-[var(--color-text-secondary)] transition-colors hover:border-slate-400">
+        <span className={selectedLabel ? "text-slate-700 dark:text-[var(--color-text-primary)]" : "text-slate-400 dark:text-[var(--color-text-muted)]"}>{selectedLabel || placeholder}</span>
+        <FiChevronDown size={14} className="flex-shrink-0 text-slate-400 dark:text-[var(--color-text-muted)]" />
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 min-w-full rounded-xl border border-slate-200 bg-white py-1 shadow-lg max-h-64 overflow-y-auto">
+        <div className="absolute left-0 top-full mt-1 z-50 min-w-full rounded-xl border border-slate-200 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] py-1 shadow-lg max-h-64 overflow-y-auto">
           <button type="button"
-            className="w-full whitespace-nowrap px-3 py-2 text-left text-[15px] text-slate-400 transition-colors hover:bg-slate-50"
+            className="w-full whitespace-nowrap px-3 py-2 text-left text-[15px] text-slate-400 dark:text-[var(--color-text-muted)] transition-colors hover:bg-slate-50 dark:hover:bg-[var(--color-surface-hover)]"
             onClick={() => { onChange(""); setOpen(false); }}>
             {placeholder}
           </button>
           {options.map((opt) => (
             <button key={opt.value} type="button"
-              className="w-full whitespace-nowrap px-3 py-2 text-left text-[15px] text-slate-700 transition-colors hover:bg-slate-50"
+              className="w-full whitespace-nowrap px-3 py-2 text-left text-[15px] text-slate-700 dark:text-[var(--color-text-primary)] transition-colors hover:bg-slate-50 dark:hover:bg-[var(--color-surface-hover)]"
               onClick={() => { onChange(opt.value); setOpen(false); }}>
               {opt.label}
             </button>
@@ -104,16 +104,16 @@ const FunnelChart = ({ counts }: { counts: number[] }) => {
         <line x1="150" y1="0" x2="150" y2="100" stroke="#D946EF" strokeWidth="1.5" opacity="0.6" />
       </svg>
 
-      <div className="mt-1 flex flex-col divide-y divide-slate-100">
+      <div className="mt-1 flex flex-col divide-y divide-slate-100 dark:divide-[var(--color-border)]">
         {STAGES.map((stage, i) => {
           const pct = i === 0 ? 100 : counts[0] > 0 ? Math.round((counts[i] / counts[0]) * 100) : 0;
           return (
             <div key={stage} className="flex items-center justify-between py-2.5">
               <div>
                 <div className="text-xl font-bold text-orange-500">{counts[i]}</div>
-                <div className="text-[13px] text-slate-500">{t(`reports.conversion.stages.${stage.toLowerCase()}`)}</div>
+                <div className="text-[13px] text-slate-500 dark:text-[var(--color-text-secondary)]">{t(`reports.conversion.stages.${stage.toLowerCase()}`)}</div>
               </div>
-              <div className="text-[13px] text-slate-400">{i === 0 ? "" : `${pct}%`}</div>
+              <div className="text-[13px] text-slate-400 dark:text-[var(--color-text-muted)]">{i === 0 ? "" : `${pct}%`}</div>
             </div>
           );
         })}
@@ -201,17 +201,17 @@ export const ConversionReports = () => {
   const busy = isLoading || isFetching;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-8 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-[var(--color-surface-alt)] p-6 md:p-8 font-sans">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-slate-900">{t("reports.conversion.title")}</h1>
-          <p className="mt-2 text-[15px] text-slate-600">{t("reports.conversion.subtitle")}</p>
+          <h1 className="text-3xl font-semibold text-slate-900 dark:text-[var(--color-text-primary)]">{t("reports.conversion.title")}</h1>
+          <p className="mt-2 text-[15px] text-slate-600 dark:text-[var(--color-text-secondary)]">{t("reports.conversion.subtitle")}</p>
         </div>
         <button
           onClick={handleExportExcel}
           disabled={isExporting}
           title={t("reports.common.exportExcel")}
-          className="flex flex-shrink-0 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-60"
+          className="flex flex-shrink-0 items-center gap-2 rounded-xl border border-slate-300 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3.5 py-2.5 text-[15px] text-slate-600 dark:text-[var(--color-text-secondary)] transition-colors hover:bg-slate-50 dark:hover:bg-[var(--color-surface-hover)] disabled:opacity-60"
         >
           {isExporting ? <CircularProgress size={15} /> : <FiDownload size={16} />}
           {t("reports.common.exportExcel")}
@@ -229,8 +229,8 @@ export const ConversionReports = () => {
 
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
         <div className="flex-1 flex flex-col gap-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-slate-800">{t("reports.conversion.conversionTitle")}</h2>
+          <div className="rounded-2xl border border-slate-200 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] p-5 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-[var(--color-text-primary)]">{t("reports.conversion.conversionTitle")}</h2>
 
             <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-5">
               {STAGES.map((stage) => (
@@ -238,17 +238,17 @@ export const ConversionReports = () => {
                   onClick={() => setActiveStage(activeStage === stage ? null : stage)}
                   className={`rounded-xl border py-2.5 text-[15px] font-medium transition-colors ${activeStage === stage
                     ? "border-blue-700 bg-blue-700 text-white"
-                    : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}>
+                    : "border-slate-300 dark:border-[var(--color-border)] text-slate-600 dark:text-[var(--color-text-secondary)] hover:bg-slate-50 dark:hover:bg-[var(--color-surface-hover)]"}`}>
                   {t(`reports.conversion.stages.${stage.toLowerCase()}`)}
                 </button>
               ))}
             </div>
 
-            <div className="border-t border-slate-100 pt-3">
+            <div className="border-t border-slate-100 dark:border-[var(--color-border)] pt-3">
               <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-                <div className="flex items-center text-[15px] font-semibold text-slate-700">{t("reports.conversion.total")}</div>
+                <div className="flex items-center text-[15px] font-semibold text-slate-700 dark:text-[var(--color-text-primary)]">{t("reports.conversion.total")}</div>
                 {STAGES.map((stage, i) => (
-                  <div key={stage} className="flex items-center text-[15px] text-slate-700">
+                  <div key={stage} className="flex items-center text-[15px] text-slate-700 dark:text-[var(--color-text-primary)]">
                     {counts[i]}
                   </div>
                 ))}
@@ -256,14 +256,14 @@ export const ConversionReports = () => {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] shadow-sm">
             <table className="min-w-full text-[15px]">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-5 py-3 text-left font-semibold text-slate-700">{t("reports.conversion.table.fullName")}</th>
-                  <th className="px-5 py-3 text-left font-semibold text-slate-700">{t("reports.conversion.table.phone")}</th>
-                  <th className="px-5 py-3 text-left font-semibold text-slate-700">{t("reports.conversion.table.status")}</th>
-                  <th className="px-5 py-3 text-left font-semibold text-slate-700">{t("reports.conversion.table.staffName")}</th>
+                <tr className="border-b border-slate-200 dark:border-[var(--color-border)] bg-slate-50 dark:bg-[var(--color-surface-alt)]">
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700 dark:text-[var(--color-text-primary)]">{t("reports.conversion.table.fullName")}</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700 dark:text-[var(--color-text-primary)]">{t("reports.conversion.table.phone")}</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700 dark:text-[var(--color-text-primary)]">{t("reports.conversion.table.status")}</th>
+                  <th className="px-5 py-3 text-left font-semibold text-slate-700 dark:text-[var(--color-text-primary)]">{t("reports.conversion.table.staffName")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -274,7 +274,7 @@ export const ConversionReports = () => {
                 ) : tableData.length === 0 ? (
                   <tr>
                     <td colSpan={4}>
-                      <div className="mx-4 my-3 rounded-xl bg-slate-50 px-4 py-5 text-center text-[15px] text-slate-500">
+                      <div className="mx-4 my-3 rounded-xl bg-slate-50 dark:bg-[var(--color-surface-alt)] px-4 py-5 text-center text-[15px] text-slate-500 dark:text-[var(--color-text-secondary)]">
                         {activeStage
                           ? t("reports.conversion.table.noDataForStage")
                           : t("reports.conversion.table.selectStagePrompt")}
@@ -283,15 +283,15 @@ export const ConversionReports = () => {
                   </tr>
                 ) : (
                   tableData.map((lead) => (
-                    <tr key={lead.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
-                      <td className="px-5 py-3 text-slate-800">{lead.fullName}</td>
-                      <td className="px-5 py-3 text-slate-600">{lead.phone}</td>
+                    <tr key={lead.id} className="border-b border-slate-100 dark:border-[var(--color-border)] transition-colors hover:bg-slate-50 dark:hover:bg-[var(--color-surface-hover)]">
+                      <td className="px-5 py-3 text-slate-800 dark:text-[var(--color-text-primary)]">{lead.fullName}</td>
+                      <td className="px-5 py-3 text-slate-600 dark:text-[var(--color-text-secondary)]">{lead.phone}</td>
                       <td className="px-5 py-3">
                         <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[13px] font-medium text-blue-700">
                           {lead.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-slate-600">{lead.staffName}</td>
+                      <td className="px-5 py-3 text-slate-600 dark:text-[var(--color-text-secondary)]">{lead.staffName}</td>
                     </tr>
                   ))
                 )}
@@ -300,8 +300,8 @@ export const ConversionReports = () => {
           </div>
         </div>
 
-        <div className="w-full flex-shrink-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:w-80">
-          <h2 className="mb-4 text-lg font-semibold text-slate-800">{t("reports.conversion.salesPipeline")}</h2>
+        <div className="w-full flex-shrink-0 rounded-2xl border border-slate-200 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] p-5 shadow-sm xl:w-80">
+          <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-[var(--color-text-primary)]">{t("reports.conversion.salesPipeline")}</h2>
           <FunnelChart counts={counts} />
         </div>
       </div>

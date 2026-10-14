@@ -86,8 +86,8 @@ const Accural = () => {
             )
           }
           sx={{
-            bgcolor: "#f5f6fa",
-            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e0e0e0" },
+            bgcolor: "var(--color-surface-alt)",
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--color-border)" },
             fontSize: 14,
           }}
         >
@@ -109,10 +109,10 @@ const Accural = () => {
             position: "absolute",
             top: -11,
             left: 12,
-            bgcolor: "#fff",
+            bgcolor: "var(--color-surface)",
             px: 0.5,
             fontSize: 13,
-            color: "#555",
+            color: "var(--color-text-secondary)",
           }}
         >
           {t("settings.ceo.general.accrual.others")}

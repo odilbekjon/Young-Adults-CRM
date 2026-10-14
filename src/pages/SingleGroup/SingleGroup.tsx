@@ -1029,7 +1029,7 @@ export const SingleGroup = () => {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f7f8fa" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "var(--color-surface-alt)" }}>
       {/* PAGE TITLE */}
       <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" rowGap={0.5} px={3} pt={3} pb={2}>
         <Typography
@@ -1092,11 +1092,11 @@ export const SingleGroup = () => {
           <Box
             sx={{
               mt: 1.5, p: 1.5, borderRadius: 2,
-              bgcolor: "#f5f7fb", border: "1px solid #eef0f4",
+              bgcolor: "var(--color-surface-alt)", border: "1px solid var(--color-border)",
             }}
           >
             <Stack direction="row" alignItems="center" spacing={0.8} mb={1}>
-              <MdCalendarToday size={14} color="#6b7280" />
+              <MdCalendarToday size={14} color="var(--color-text-secondary)" />
               <Typography
                 fontSize={11.5} fontWeight={700} color="text.secondary"
                 sx={{ textTransform: "uppercase", letterSpacing: 0.4 }}
@@ -1111,7 +1111,7 @@ export const SingleGroup = () => {
                   <Typography fontSize={10.5} color="text.secondary">
                     {t("singleGroup.leftPanel.trainingStart")}
                   </Typography>
-                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">
+                  <Typography fontSize={13.5} fontWeight={600} color="var(--color-text-primary)">
                     {formatTrainingDate(group.startDate)}
                   </Typography>
                 </Box>
@@ -1120,7 +1120,7 @@ export const SingleGroup = () => {
                   <Typography fontSize={10.5} color="text.secondary">
                     {t("singleGroup.leftPanel.trainingEnd")}
                   </Typography>
-                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">
+                  <Typography fontSize={13.5} fontWeight={600} color="var(--color-text-primary)">
                     {formatTrainingDate(group.endDate)}
                   </Typography>
                 </Box>
@@ -1179,7 +1179,7 @@ export const SingleGroup = () => {
                     cursor: "pointer",
                     transition: "background 0.15s",
                     opacity: isArchived ? 0.75 : 1,
-                    "&:hover": { backgroundColor: isFrozen ? "#e3f2fd" : "#f5f7fb" },
+                    "&:hover": { backgroundColor: isFrozen ? "var(--color-primary-surface)" : "var(--color-surface-alt)" },
                   }}
                   onMouseEnter={(e) => handleStudentMouseEnter(e, s)}
                   onMouseLeave={handleStudentMouseLeave}
@@ -1222,7 +1222,7 @@ export const SingleGroup = () => {
                             py: isFrozen ? 0.35 : 0,
                             borderRadius: isFrozen ? "6px" : 0,
                             backgroundColor: isFrozen ? "#bfe3fa" : "transparent",
-                            color: isArchived ? "dimgray" : "#1a1a1a",
+                            color: isArchived ? "dimgray" : "var(--color-text-primary)",
                             textDecoration: isArchived ? "line-through" : "none",
                           }}
                         >
@@ -1311,7 +1311,7 @@ export const SingleGroup = () => {
                 position: "absolute", top: 3,
                 left: showCoins ? 20 : 3,
                 width: 16, height: 16,
-                borderRadius: "50%", bgcolor: "#fff", transition: "0.2s",
+                borderRadius: "50%", bgcolor: "var(--color-surface)", transition: "0.2s",
               }} />
             </Box>
             <Typography fontSize={13} color={!showCoins ? "primary" : "text.secondary"}>{t("singleGroup.rightPanel.hideCoins")}</Typography>
@@ -1324,7 +1324,7 @@ export const SingleGroup = () => {
               variant="scrollable"
               scrollButtons="auto"
               sx={{
-                borderBottom: "1px solid #eee",
+                borderBottom: "1px solid var(--color-border-subtle)",
                 "& .MuiTab-root": { fontSize: 13, textTransform: "none", minWidth: "auto", px: 2 },
               }}
             >

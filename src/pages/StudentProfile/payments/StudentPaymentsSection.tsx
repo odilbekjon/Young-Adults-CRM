@@ -162,7 +162,7 @@ export const StudentPaymentsSection = ({
           {confirmError && <div style={{ marginTop: 12, fontSize: 13, color: "var(--color-danger, #ef4444)" }}>{confirmError}</div>}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setConfirm(null)} disabled={isDeleting} sx={{ color: "#6b7280", textTransform: "none" }}>
+          <Button onClick={() => setConfirm(null)} disabled={isDeleting} sx={{ color: "var(--color-text-secondary)", textTransform: "none" }}>
             {t("studentPayments.cancel", "Cancel")}
           </Button>
           <Button

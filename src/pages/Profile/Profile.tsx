@@ -159,7 +159,7 @@ const AdminProfilePage = () => {
 
   if (isLoading) {
     return (
-      <Box sx={{ bgcolor: "#f4f5f7", minHeight: "100vh", p: 3, display: "flex", justifyContent: "center", alignItems: "center" }}>
+      <Box sx={{ bgcolor: "var(--color-bg-page)", minHeight: "100vh", p: 3, display: "flex", justifyContent: "center", alignItems: "center" }}>
         <CircularProgress />
       </Box>
     );
@@ -169,15 +169,15 @@ const AdminProfilePage = () => {
   const avatarInitial = displayName.charAt(0).toUpperCase();
 
   return (
-    <Box sx={{ bgcolor: "#f4f5f7", minHeight: "100vh", p: 3 }}>
+    <Box sx={{ bgcolor: "var(--color-bg-page)", minHeight: "100vh", p: 3 }}>
 
       {/* ── Page header ── */}
-      <Typography variant="h5" fontWeight={600} sx={{ mb: 1, color: "#1a1a2e" }}>
+      <Typography variant="h5" fontWeight={600} sx={{ mb: 1, color: "var(--color-text-primary)" }}>
         {displayName}
       </Typography>
 
       {/* ── Tab bar ── */}
-      <Box sx={{ borderBottom: "1px solid #e0e5ec", mb: 3 }}>
+      <Box sx={{ borderBottom: "1px solid var(--color-border)", mb: 3 }}>
         <Box
           sx={{
             display: "inline-block",
@@ -199,7 +199,7 @@ const AdminProfilePage = () => {
       <Box
         sx={{
           width: 480,
-          bgcolor: "#fff",
+          bgcolor: "var(--color-surface)",
           borderRadius: 2,
           boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
           p: 3,
@@ -227,7 +227,7 @@ const AdminProfilePage = () => {
               color: "#4caf50",
               width: 36,
               height: 36,
-              "&:hover": { bgcolor: "#f0faf0" },
+              "&:hover": { bgcolor: "var(--color-success-surface)" },
             }}
           >
             <FiFlag size={16} />
@@ -239,10 +239,10 @@ const AdminProfilePage = () => {
             onClick={() => { setFormError(null); setEditOpen(true); }}
             sx={{
               border: "1.5px solid #003366",
-              color: "#003366",
+              color: "var(--color-nav-active)",
               width: 36,
               height: 36,
-              "&:hover": { bgcolor: "#eef2f9" },
+              "&:hover": { bgcolor: "var(--color-surface-hover)" },
             }}
           >
             <FiEdit2 size={16} />
@@ -257,7 +257,7 @@ const AdminProfilePage = () => {
               color: "#e53935",
               width: 36,
               height: 36,
-              "&:hover": { bgcolor: "#fff5f5" },
+              "&:hover": { bgcolor: "var(--color-surface-hover)" },
             }}
           >
             <FiTrash2 size={16} />
@@ -285,37 +285,37 @@ const AdminProfilePage = () => {
 
         {/* Email */}
         <Box sx={{ mb: 1.5 }}>
-          <Typography variant="body2" sx={{ color: "#9ca3af", fontSize: 13 }}>
+          <Typography variant="body2" sx={{ color: "var(--color-text-muted)", fontSize: 13 }}>
             Email:
           </Typography>
-          <Typography variant="body2" fontWeight={500} sx={{ color: "#1a1a2e" }}>
+          <Typography variant="body2" fontWeight={500} sx={{ color: "var(--color-text-primary)" }}>
             {user?.email || "—"}
           </Typography>
         </Box>
 
         {/* Phone */}
         <Box sx={{ mb: 1.5 }}>
-          <Typography variant="body2" sx={{ color: "#9ca3af", fontSize: 13 }}>
+          <Typography variant="body2" sx={{ color: "var(--color-text-muted)", fontSize: 13 }}>
             Phone:
           </Typography>
-          <Typography variant="body2" fontWeight={500} sx={{ color: "#1a1a2e" }}>
+          <Typography variant="body2" fontWeight={500} sx={{ color: "var(--color-text-primary)" }}>
             {user?.phone || "—"}
           </Typography>
         </Box>
 
         {/* Job title */}
         <Box sx={{ mb: 1.5 }}>
-          <Typography variant="body2" sx={{ color: "#9ca3af", fontSize: 13 }}>
+          <Typography variant="body2" sx={{ color: "var(--color-text-muted)", fontSize: 13 }}>
             Job title:
           </Typography>
-          <Typography variant="body2" fontWeight={500} sx={{ color: "#1a1a2e" }}>
+          <Typography variant="body2" fontWeight={500} sx={{ color: "var(--color-text-primary)" }}>
             {user?.jobTitle || "—"}
           </Typography>
         </Box>
 
         {/* Branches */}
         <Box sx={{ mb: 1.5 }}>
-          <Typography variant="body2" sx={{ color: "#9ca3af", fontSize: 13, mb: 0.8 }}>
+          <Typography variant="body2" sx={{ color: "var(--color-text-muted)", fontSize: 13, mb: 0.8 }}>
             Branches:
           </Typography>
           {user?.branches && user.branches.length > 0 ? (
@@ -337,7 +337,7 @@ const AdminProfilePage = () => {
               ))}
             </Box>
           ) : (
-            <Typography variant="body2" fontWeight={500} sx={{ color: "#1a1a2e" }}>
+            <Typography variant="body2" fontWeight={500} sx={{ color: "var(--color-text-primary)" }}>
               —
             </Typography>
           )}
@@ -345,7 +345,7 @@ const AdminProfilePage = () => {
 
         {/* Role */}
         <Box sx={{ mb: 1.5 }}>
-          <Typography variant="body2" sx={{ color: "#9ca3af", fontSize: 13, mb: 0.8 }}>
+          <Typography variant="body2" sx={{ color: "var(--color-text-muted)", fontSize: 13, mb: 0.8 }}>
             Role:
           </Typography>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
@@ -369,7 +369,7 @@ const AdminProfilePage = () => {
 
         {/* Status */}
         <Box>
-          <Typography variant="body2" sx={{ color: "#9ca3af", fontSize: 13, mb: 0.8 }}>
+          <Typography variant="body2" sx={{ color: "var(--color-text-muted)", fontSize: 13, mb: 0.8 }}>
             Status:
           </Typography>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
@@ -380,7 +380,7 @@ const AdminProfilePage = () => {
                 variant="outlined"
                 sx={{
                   borderColor: user.status === "ACTIVE" ? "#4caf50" : "#9ca3af",
-                  color: user.status === "ACTIVE" ? "#4caf50" : "#9ca3af",
+                  color: user.status === "ACTIVE" ? "#4caf50" : "var(--color-text-muted)",
                   fontSize: 12,
                   height: 26,
                   borderRadius: "20px",

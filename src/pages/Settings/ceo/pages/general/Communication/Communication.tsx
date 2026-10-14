@@ -12,7 +12,7 @@ const FieldCard = ({
 }) => (
   <Box
     sx={{
-      border: "1px solid #d1d5db",
+      border: "1px solid var(--color-border)",
       borderRadius: "6px",
       pt: 2,
       pb: 3,
@@ -26,10 +26,10 @@ const FieldCard = ({
         position: "absolute",
         top: -10,
         left: 12,
-        background: "#fff",
+        background: "var(--color-surface)",
         px: 0.5,
         fontSize: 12,
-        color: "#6b7280",
+        color: "var(--color-text-secondary)",
       }}
     >
       {title}
@@ -52,7 +52,7 @@ const Communication = () => {
 
   return (
     <Box sx={{ flex: 1, p: 5, maxWidth: 1200 }}>
-      <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "#111827" }}>
+      <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "var(--color-text-primary)" }}>
         {t("settings.ceo.general.communication.title")}
       </Typography>
 
@@ -63,7 +63,7 @@ const Communication = () => {
         <FieldCard title={t("settings.ceo.general.communication.playMobile.title")}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, mt: 0.5 }}>
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
                 {t("settings.ceo.general.communication.playMobile.username")}
               </Typography>
               <TextField
@@ -71,12 +71,12 @@ const Communication = () => {
                 size="small"
                 value={pmUsername}
                 onChange={(e) => setPmUsername(e.target.value)}
-                sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
               />
             </Box>
 
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
                 {t("settings.ceo.general.communication.playMobile.password")}
               </Typography>
               <TextField
@@ -85,12 +85,12 @@ const Communication = () => {
                 type="password"
                 value={pmPassword}
                 onChange={(e) => setPmPassword(e.target.value)}
-                sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
               />
             </Box>
 
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
                 {t("settings.ceo.general.communication.playMobile.nickname")}
               </Typography>
               <TextField
@@ -98,7 +98,7 @@ const Communication = () => {
                 size="small"
                 value={pmNickname}
                 onChange={(e) => setPmNickname(e.target.value)}
-                sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
               />
             </Box>
           </Box>
@@ -108,7 +108,7 @@ const Communication = () => {
         <FieldCard title={t("settings.ceo.general.communication.eskiz.title")}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, mt: 0.5 }}>
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
                 {t("settings.ceo.general.communication.eskiz.email")}
               </Typography>
               <TextField
@@ -116,12 +116,12 @@ const Communication = () => {
                 size="small"
                 value={eskizEmail}
                 onChange={(e) => setEskizEmail(e.target.value)}
-                sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
               />
             </Box>
 
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
                 {t("settings.ceo.general.communication.eskiz.secret")}
               </Typography>
               <TextField
@@ -130,12 +130,12 @@ const Communication = () => {
                 type="password"
                 value={eskizSecret}
                 onChange={(e) => setEskizSecret(e.target.value)}
-                sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
               />
             </Box>
 
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.8 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.8 }}>
                 {t("settings.ceo.general.communication.eskiz.nickname")}
               </Typography>
               <TextField
@@ -143,7 +143,7 @@ const Communication = () => {
                 size="small"
                 value={eskizNickname}
                 onChange={(e) => setEskizNickname(e.target.value)}
-                sx={{ background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                sx={{ background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13 } }}
               />
             </Box>
           </Box>

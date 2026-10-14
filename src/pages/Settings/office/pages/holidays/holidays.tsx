@@ -143,10 +143,10 @@ export const Holidays = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 dark:bg-[var(--color-surface-hover)] p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <Typography variant="h5" className="!font-semibold !text-gray-800">
+        <Typography variant="h5" className="!font-semibold !text-gray-800 dark:text-[var(--color-text-primary)]">
           {t("settings.office.holidays.title")}
         </Typography>
         <Button
@@ -169,18 +169,18 @@ export const Holidays = () => {
       </div>
 
       {/* Card */}
-      <div className="bg-white rounded-lg shadow-sm">
+      <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm">
         {/* Tabs */}
         <Tabs
           value={tab}
           onChange={(_, v) => setTab(v)}
           sx={{
-            borderBottom: "1px solid #e5e7eb",
+            borderBottom: "1px solid var(--color-border)",
             px: 2,
             "& .MuiTab-root": {
               textTransform: "none",
               fontWeight: 500,
-              color: "#9ca3af",
+              color: "var(--color-text-muted)",
               minWidth: 80,
             },
             "& .Mui-selected": { color: "#29b6f6 !important" },
@@ -195,7 +195,7 @@ export const Holidays = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="border-b border-gray-100 dark:border-[var(--color-border)]">
                 {[
                   t("settings.office.holidays.table.name"),
                   t("settings.office.holidays.table.dateOfHoliday"),
@@ -206,7 +206,7 @@ export const Holidays = () => {
                   (col) => (
                     <th
                       key={col}
-                      className="text-left px-6 py-4 text-gray-500 font-medium text-sm"
+                      className="text-left px-6 py-4 text-gray-500 dark:text-[var(--color-text-secondary)] font-medium text-sm"
                     >
                       {col}
                     </th>
@@ -233,22 +233,22 @@ export const Holidays = () => {
                 </tr>
               ) : displayed.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-10 text-gray-400">
+                  <td colSpan={5} className="text-center py-10 text-gray-400 dark:text-[var(--color-text-muted)]">
                     {t("settings.office.holidays.noData")}
                   </td>
                 </tr>
               ) : (
                 displayed.map((h) => (
-                  <tr key={h.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-gray-800 font-medium">{h.name}</td>
-                    <td className="px-6 py-4 text-gray-600">{formatDate(h.date)}</td>
-                    <td className="px-6 py-4 text-gray-600">{formatDate(h.createdAt)}</td>
+                  <tr key={h.id} className="border-b border-gray-50 dark:border-[var(--color-border-subtle)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors">
+                    <td className="px-6 py-4 text-gray-800 dark:text-[var(--color-text-primary)] font-medium">{h.name}</td>
+                    <td className="px-6 py-4 text-gray-600 dark:text-[var(--color-text-secondary)]">{formatDate(h.date)}</td>
+                    <td className="px-6 py-4 text-gray-600 dark:text-[var(--color-text-secondary)]">{formatDate(h.createdAt)}</td>
                     <td className="px-6 py-4">
                       <span
                         className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
                           h.affectsPayment
                             ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-500"
+                            : "bg-gray-100 dark:bg-[var(--color-surface-hover)] text-gray-500 dark:text-[var(--color-text-secondary)]"
                         }`}
                       >
                         {h.affectsPayment
@@ -317,12 +317,12 @@ export const Holidays = () => {
             px: 2,
           }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937", fontSize: "1.1rem" }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: "var(--color-text-primary)", fontSize: "1.1rem" }}>
             {editingId
               ? t("settings.office.holidays.editHoliday")
               : t("settings.office.holidays.addHoliday")}
           </Typography>
-          <IconButton onClick={() => setOpen(false)} size="small" sx={{ color: "#9ca3af" }}>
+          <IconButton onClick={() => setOpen(false)} size="small" sx={{ color: "var(--color-text-muted)" }}>
             <MdClose size={20} />
           </IconButton>
         </DialogTitle>
@@ -332,7 +332,7 @@ export const Holidays = () => {
           <div className="mb-4">
             <Typography
               variant="body2"
-              sx={{ mb: 1, color: "#374151", fontWeight: 500, fontSize: "0.875rem" }}
+              sx={{ mb: 1, color: "var(--color-text-primary)", fontWeight: 500, fontSize: "0.875rem" }}
             >
               {t("settings.office.holidays.form.name")}
             </Typography>
@@ -346,7 +346,7 @@ export const Holidays = () => {
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "6px",
-                  "& fieldset": { borderColor: "#d1d5db" },
+                  "& fieldset": { borderColor: "var(--color-border)" },
                   "&:hover fieldset": { borderColor: "#9ca3af" },
                   "&.Mui-focused fieldset": { borderColor: "#29b6f6" },
                 },
@@ -358,7 +358,7 @@ export const Holidays = () => {
           <div className="mb-6">
             <Typography
               variant="body2"
-              sx={{ mb: 1, color: "#374151", fontWeight: 500, fontSize: "0.875rem" }}
+              sx={{ mb: 1, color: "var(--color-text-primary)", fontWeight: 500, fontSize: "0.875rem" }}
             >
               {t("settings.office.holidays.form.date")}
             </Typography>

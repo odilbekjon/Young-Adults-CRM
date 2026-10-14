@@ -65,11 +65,11 @@ export const WhatsNew = () => {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", backgroundColor: "#f0f2f5", p: 3, fontFamily: "'DM Sans', sans-serif" }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "var(--color-surface-alt)", p: 3, fontFamily: "'DM Sans', sans-serif" }}>
       {/* ── Page header ── */}
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
         <Typography
-          sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#1a1a2e", fontFamily: "'DM Sans', sans-serif" }}
+          sx={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-text-primary)", fontFamily: "'DM Sans', sans-serif" }}
         >
           {t("settings.blog.whatsNew.title")}
         </Typography>
@@ -103,16 +103,16 @@ export const WhatsNew = () => {
           sx={{
             width: 280,
             flexShrink: 0,
-            backgroundColor: "#fff",
+            backgroundColor: "var(--color-surface)",
             borderRadius: 3,
-            border: "1px solid #e8eaed",
+            border: "1px solid var(--color-border)",
             overflow: "hidden",
             minHeight: 480,
           }}
         >
           {/* List header */}
-          <Box sx={{ px: 2.5, py: 1.8, borderBottom: "1px solid #f0f2f5" }}>
-            <Typography sx={{ fontSize: "0.9rem", fontWeight: 600, color: "#555", fontFamily: "'DM Sans', sans-serif" }}>
+          <Box sx={{ px: 2.5, py: 1.8, borderBottom: "1px solid var(--color-border-subtle)" }}>
+            <Typography sx={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--color-text-secondary)", fontFamily: "'DM Sans', sans-serif" }}>
               {t("settings.blog.whatsNew.list.header")}
             </Typography>
           </Box>
@@ -121,7 +121,7 @@ export const WhatsNew = () => {
           <Box>
             {blogs.length === 0 ? (
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 380 }}>
-                <Typography sx={{ color: "#bbb", fontSize: "0.9rem", fontFamily: "'DM Sans', sans-serif" }}>
+                <Typography sx={{ color: "var(--color-text-muted)", fontSize: "0.9rem", fontFamily: "'DM Sans', sans-serif" }}>
                   {t("settings.blog.whatsNew.list.empty")}
                 </Typography>
               </Box>
@@ -134,8 +134,8 @@ export const WhatsNew = () => {
                     px: 2.5,
                     py: 1.6,
                     cursor: "pointer",
-                    borderBottom: "1px solid #f5f6f8",
-                    backgroundColor: selected?.id === blog.id ? "#eef4fb" : "transparent",
+                    borderBottom: "1px solid var(--color-border-subtle)",
+                    backgroundColor: selected?.id === blog.id ? "var(--color-primary-surface)" : "transparent",
                     borderLeft: selected?.id === blog.id ? "3px solid #3b9ede" : "3px solid transparent",
                     transition: "all 0.15s",
                     "&:hover": { backgroundColor: "#f7f9fc" },
@@ -145,7 +145,7 @@ export const WhatsNew = () => {
                     sx={{
                       fontSize: "0.88rem",
                       fontWeight: selected?.id === blog.id ? 600 : 400,
-                      color: selected?.id === blog.id ? "#1a4d6e" : "#333",
+                      color: selected?.id === blog.id ? "var(--color-primary)" : "var(--color-text-primary)",
                       fontFamily: "'DM Sans', sans-serif",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -164,9 +164,9 @@ export const WhatsNew = () => {
         <Box
           sx={{
             flex: 1,
-            backgroundColor: "#fff",
+            backgroundColor: "var(--color-surface)",
             borderRadius: 3,
-            border: "1px solid #e8eaed",
+            border: "1px solid var(--color-border)",
             minHeight: 480,
             position: "relative",
             overflow: "hidden",
@@ -195,7 +195,7 @@ export const WhatsNew = () => {
                       height: 34,
                       border: "1.5px solid #f59e0b",
                       color: "#f59e0b",
-                      backgroundColor: "#fff",
+                      backgroundColor: "var(--color-surface)",
                       "&:hover": { backgroundColor: "#fffbeb" },
                     }}
                   >
@@ -211,7 +211,7 @@ export const WhatsNew = () => {
                       height: 34,
                       border: "1.5px solid #ef4444",
                       color: "#ef4444",
-                      backgroundColor: "#fff",
+                      backgroundColor: "var(--color-surface)",
                       "&:hover": { backgroundColor: "#fff5f5" },
                     }}
                   >
@@ -221,7 +221,7 @@ export const WhatsNew = () => {
               </Box>
 
               {/* Title area */}
-              <Box sx={{ px: 3, pt: 3, pb: 1.5, borderBottom: "1px solid #f0f2f5", pr: 10 }}>
+              <Box sx={{ px: 3, pt: 3, pb: 1.5, borderBottom: "1px solid var(--color-border-subtle)", pr: 10 }}>
                 {isEditing ? (
                   <TextField
                     fullWidth
@@ -232,12 +232,12 @@ export const WhatsNew = () => {
                     variant="standard"
                     InputProps={{
                       disableUnderline: false,
-                      style: { fontSize: "1.1rem", fontWeight: 600, color: "#1a1a2e" },
+                      style: { fontSize: "1.1rem", fontWeight: 600, color: "var(--color-text-primary)" },
                     }}
                   />
                 ) : (
                   <Typography
-                    sx={{ fontSize: "1.1rem", fontWeight: 600, color: "#1a1a2e", fontFamily: "'DM Sans', sans-serif" }}
+                    sx={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--color-text-primary)", fontFamily: "'DM Sans', sans-serif" }}
                   >
                     {selected.title}
                   </Typography>
@@ -248,7 +248,7 @@ export const WhatsNew = () => {
               <Box sx={{ p: 3 }}>
                 <Box
                   sx={{
-                    border: "1px solid #e8eaed",
+                    border: "1px solid var(--color-border)",
                     borderRadius: 2,
                     minHeight: 340,
                     overflow: "hidden",
@@ -268,7 +268,7 @@ export const WhatsNew = () => {
                           border: "none",
                           "& fieldset": { border: "none" },
                           fontSize: "0.9rem",
-                          color: "#333",
+                          color: "var(--color-text-primary)",
                           alignItems: "flex-start",
                           p: 2,
                         },
@@ -277,7 +277,7 @@ export const WhatsNew = () => {
                   ) : (
                     <Box sx={{ p: 2.5, minHeight: 340 }}>
                       <Typography
-                        sx={{ fontSize: "0.9rem", color: "#444", whiteSpace: "pre-wrap", fontFamily: "'DM Sans', sans-serif", lineHeight: 1.7 }}
+                        sx={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", whiteSpace: "pre-wrap", fontFamily: "'DM Sans', sans-serif", lineHeight: 1.7 }}
                       >
                         {selected.content || ""}
                       </Typography>
@@ -311,9 +311,9 @@ export const WhatsNew = () => {
                         textTransform: "none",
                         fontWeight: 500,
                         px: 3,
-                        borderColor: "#d0d5dd",
-                        color: "#555",
-                        "&:hover": { borderColor: "#aaa", backgroundColor: "#fafafa" },
+                        borderColor: "var(--color-border)",
+                        color: "var(--color-text-secondary)",
+                        "&:hover": { borderColor: "#aaa", backgroundColor: "var(--color-surface-alt)" },
                       }}
                     >
                       {t("settings.blog.whatsNew.actions.cancel")}
@@ -325,7 +325,7 @@ export const WhatsNew = () => {
           ) : (
             /* Empty right panel */
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 480 }}>
-              <Typography sx={{ color: "#ccc", fontSize: "0.9rem", fontFamily: "'DM Sans', sans-serif" }}>
+              <Typography sx={{ color: "var(--color-text-muted)", fontSize: "0.9rem", fontFamily: "'DM Sans', sans-serif" }}>
                 {t("settings.blog.whatsNew.emptyState.selectBlog")}
               </Typography>
             </Box>

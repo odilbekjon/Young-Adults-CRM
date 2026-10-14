@@ -112,27 +112,27 @@ const EditDrawer = ({
     setSelectedBranches((prev) => prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]);
 
   const inputStyle: React.CSSProperties = {
-    width: "100%", border: "1px solid #e0e0e0", borderRadius: 8,
-    padding: "10px 12px", fontSize: 13, color: "#1a1a1a", outline: "none",
-    boxSizing: "border-box", background: "#fff",
+    width: "100%", border: "1px solid var(--color-border)", borderRadius: 8,
+    padding: "10px 12px", fontSize: 13, color: "var(--color-text-primary)", outline: "none",
+    boxSizing: "border-box", background: "var(--color-surface)",
   };
   const labelStyle: React.CSSProperties = {
-    fontSize: 13, fontWeight: 500, color: "#1a1a1a", marginBottom: 6, display: "block",
+    fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 6, display: "block",
   };
 
   return (
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.18)", zIndex: 1200, opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none", transition: "opacity 0.25s" }} />
-      <div style={{ position: "fixed", top: 0, right: 0, width: 440, height: "100vh", background: "#fff", zIndex: 1300, boxShadow: "-4px 0 24px rgba(0,0,0,0.12)", transform: open ? "translateX(0)" : "translateX(100%)", transition: "transform 0.28s cubic-bezier(.4,0,.2,1)", display: "flex", flexDirection: "column", overflowY: "auto" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 16px", borderBottom: "1px solid #f0f0f0" }}>
-          <span style={{ fontSize: 17, fontWeight: 600, color: "#1a1a1a" }}>Edit Teacher</span>
-          <div onClick={onClose} style={{ cursor: "pointer", color: "#888", fontSize: 20 }}><MdClose /></div>
+      <div style={{ position: "fixed", top: 0, right: 0, width: 440, height: "100vh", background: "var(--color-surface)", zIndex: 1300, boxShadow: "-4px 0 24px rgba(0,0,0,0.12)", transform: open ? "translateX(0)" : "translateX(100%)", transition: "transform 0.28s cubic-bezier(.4,0,.2,1)", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 16px", borderBottom: "1px solid var(--color-border-subtle)" }}>
+          <span style={{ fontSize: 17, fontWeight: 600, color: "var(--color-text-primary)" }}>Edit Teacher</span>
+          <div onClick={onClose} style={{ cursor: "pointer", color: "var(--color-text-muted)", fontSize: 20 }}><MdClose /></div>
         </div>
         <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 20 }}>
           <div>
             <label style={labelStyle}>Phone</label>
             <div style={{ display: "flex", gap: 8 }}>
-              <div style={{ ...inputStyle, width: 72, flexShrink: 0, color: "#555", display: "flex", alignItems: "center", justifyContent: "center" }}>+998</div>
+              <div style={{ ...inputStyle, width: 72, flexShrink: 0, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", justifyContent: "center" }}>+998</div>
               <input style={{ ...inputStyle, flex: 1 }} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="93 986 66 76" />
             </div>
           </div>
@@ -144,7 +144,7 @@ const EditDrawer = ({
             <label style={labelStyle}>Branches</label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 12px" }}>
               {branches.map((b) => (
-                <label key={b.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#1a1a1a", cursor: "pointer" }}>
+                <label key={b.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-primary)", cursor: "pointer" }}>
                   <input type="checkbox" checked={selectedBranches.includes(b.id)} onChange={() => toggleBranch(b.id)} style={{ accentColor: "#185FA5", width: 15, height: 15 }} />
                   {b.name}
                 </label>
@@ -168,9 +168,9 @@ const EditDrawer = ({
           </div>
           <div>
             <label style={labelStyle}>Photo</label>
-            <div style={{ display: "flex", border: "1px solid #e0e0e0", borderRadius: 8, overflow: "hidden" }}>
-              <div style={{ flex: 1, padding: "10px 12px", fontSize: 13, color: photo ? "#1a1a1a" : "#aaa" }}>{photo ? photo.name : "No file chosen"}</div>
-              <label style={{ padding: "10px 18px", background: "#f5f5f5", borderLeft: "1px solid #e0e0e0", fontSize: 13, color: "#1a1a1a", cursor: "pointer", userSelect: "none" }}>
+            <div style={{ display: "flex", border: "1px solid var(--color-border)", borderRadius: 8, overflow: "hidden" }}>
+              <div style={{ flex: 1, padding: "10px 12px", fontSize: 13, color: photo ? "var(--color-text-primary)" : "var(--color-text-muted)" }}>{photo ? photo.name : "No file chosen"}</div>
+              <label style={{ padding: "10px 18px", background: "var(--color-surface-alt)", borderLeft: "1px solid var(--color-border)", fontSize: 13, color: "var(--color-text-primary)", cursor: "pointer", userSelect: "none" }}>
                 Browse<input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => setPhoto(e.target.files?.[0])} />
               </label>
             </div>
@@ -178,7 +178,7 @@ const EditDrawer = ({
           <div>
             <span
               onClick={() => { setShowPassword((p) => !p); setPassword(""); }}
-              style={{ fontSize: 13, color: "#555", cursor: "pointer", userSelect: "none" }}
+              style={{ fontSize: 13, color: "var(--color-text-secondary)", cursor: "pointer", userSelect: "none" }}
             >
               {showPassword ? "− Set password" : "+ Set password"}
             </span>
@@ -230,17 +230,17 @@ const FlagDropdown = ({ open, onClose, anchorRef }: { open: boolean; onClose: ()
 
   if (!open) return null;
   return (
-    <div ref={dropRef} style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 1400, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.13)", padding: "16px", width: 280, animation: "dropDown 0.18s ease" }}>
+    <div ref={dropRef} style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 1400, background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.13)", padding: "16px", width: 280, animation: "dropDown 0.18s ease" }}>
       <style>{`@keyframes dropDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
           <BsFlag size={14} color="#e05c5c" /> Add Comment
         </span>
-        <MdClose size={16} color="#aaa" style={{ cursor: "pointer" }} onClick={onClose} />
+        <MdClose size={16} color="var(--color-text-muted)" style={{ cursor: "pointer" }} onClick={onClose} />
       </div>
-      <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Write a comment..." style={{ width: "100%", minHeight: 90, border: "1px solid #e0e0e0", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+      <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Write a comment..." style={{ width: "100%", minHeight: 90, border: "1px solid var(--color-border)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "var(--color-text-primary)", outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
-        <button onClick={onClose} style={{ padding: "8px 14px", fontSize: 12, border: "1px solid #e0e0e0", borderRadius: 8, background: "#fff", cursor: "pointer", color: "#888" }}>Cancel</button>
+        <button onClick={onClose} style={{ padding: "8px 14px", fontSize: 12, border: "1px solid var(--color-border)", borderRadius: 8, background: "var(--color-surface)", cursor: "pointer", color: "var(--color-text-muted)" }}>Cancel</button>
         <button onClick={() => { onClose(); setComment(""); }} style={{ padding: "8px 14px", fontSize: 12, border: "none", borderRadius: 8, background: "#1a3a5c", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Save</button>
       </div>
     </div>
@@ -251,12 +251,12 @@ const FlagDropdown = ({ open, onClose, anchorRef }: { open: boolean; onClose: ()
 const GroupCard = ({ group, index, isSelected, onSelect }: { group: ProfileGroup; index: number; isSelected: boolean; onSelect: () => void }) => {
   const badgeStyle = BADGE_COLORS[index % BADGE_COLORS.length];
   return (
-    <div onClick={onSelect} style={{ border: isSelected ? "1.5px solid #185FA5" : "1px solid #e8e8e8", borderRadius: 10, padding: "11px 14px", cursor: "pointer", background: isSelected ? "#f7fbff" : "#fff", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 10 }}>
+    <div onClick={onSelect} style={{ border: isSelected ? "1.5px solid #185FA5" : "1px solid var(--color-border)", borderRadius: 10, padding: "11px 14px", cursor: "pointer", background: isSelected ? "#f7fbff" : "var(--color-surface)", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 10 }}>
       <div style={{ flexShrink: 0, width: 110 }}>
         <span style={{ display: "inline-block", fontSize: 10, fontWeight: 500, padding: "2px 7px", borderRadius: 5, background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border}`, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{group.courseName}</span>
-        <div style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{group.name}</div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{group.name}</div>
       </div>
-      <div style={{ flex: 1, textAlign: "center", fontSize: 11, color: "#888", lineHeight: 1.6 }}>
+      <div style={{ flex: 1, textAlign: "center", fontSize: 11, color: "var(--color-text-muted)", lineHeight: 1.6 }}>
         <div>{formatDate(group.startDate)} — {formatDate(group.endDate)}</div>
         <div>{group.schedule}</div>
       </div>
@@ -272,9 +272,9 @@ const GroupCard = ({ group, index, isSelected, onSelect }: { group: ProfileGroup
    so balance/status/dates come from GET /students/{id} (RTK-cached, fetched
    only while the card is open). */
 const TooltipField = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div style={{ borderTop: "1px solid #ececec", padding: "9px 0" }}>
-    <div style={{ fontSize: 12, color: "#8a8a8a", marginBottom: 3 }}>{label}</div>
-    <div style={{ fontSize: 14, color: "#1a1a1a" }}>{children}</div>
+  <div style={{ borderTop: "1px solid var(--color-border-subtle)", padding: "9px 0" }}>
+    <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 3 }}>{label}</div>
+    <div style={{ fontSize: 14, color: "var(--color-text-primary)" }}>{children}</div>
   </div>
 );
 
@@ -306,17 +306,17 @@ const StudentTooltip = ({
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      style={{ position: "fixed", top: position.top, left: position.left, zIndex: 2000, background: "#fff", border: "1px solid #e2e2e2", borderRadius: 4, boxShadow: "0 4px 18px rgba(0,0,0,0.16)", padding: "16px 22px 12px", width: TOOLTIP_WIDTH, animation: "tooltipFadeIn 0.15s ease" }}
+      style={{ position: "fixed", top: position.top, left: position.left, zIndex: 2000, background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 4, boxShadow: "0 4px 18px rgba(0,0,0,0.16)", padding: "16px 22px 12px", width: TOOLTIP_WIDTH, animation: "tooltipFadeIn 0.15s ease" }}
     >
       <style>{`@keyframes tooltipFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 2 }}>
-        <span style={{ fontSize: 16, color: "#1a1a1a" }}>{name}</span>
+        <span style={{ fontSize: 16, color: "var(--color-text-primary)" }}>{name}</span>
         <span style={{ fontSize: 12, color: "#9a9a9a", whiteSpace: "nowrap" }}>
           (id:{student.id.length > 8 ? `${student.id.slice(0, 8)}…` : student.id})
         </span>
       </div>
-      <div style={{ fontSize: 13, color: "#8a8a8a", marginBottom: 8 }}>{statusLabel}</div>
+      <div style={{ fontSize: 13, color: "var(--color-text-muted)", marginBottom: 8 }}>{statusLabel}</div>
       {isDebtor && (
         <span style={{ display: "inline-block", background: BALANCE_STATUS_COLOR.debtor, color: "#fff", fontSize: 11, fontWeight: 600, borderRadius: 20, padding: "3px 12px", marginBottom: 12 }}>
           {t("singleGroup.studentHoverCard.debtor")}
@@ -327,7 +327,7 @@ const StudentTooltip = ({
 
       <TooltipField label={t("singleGroup.studentHoverCard.balance")}>
         {balance === undefined || balance === 0 ? (
-          <span style={{ color: "#bbb" }}>—</span>
+          <span style={{ color: "var(--color-text-muted)" }}>—</span>
         ) : (
           <span style={{ display: "inline-block", background: BALANCE_STATUS_COLOR[classifyBalance(balance)], color: "#fff", fontSize: 12, fontWeight: 600, borderRadius: 20, padding: "3px 12px" }}>
             {balance > 0 ? "+" : ""}{balance.toLocaleString("ru-RU")} UZS
@@ -352,8 +352,8 @@ const StudentTooltip = ({
         </span>
       </TooltipField>
 
-      <div style={{ borderTop: "1px solid #ececec", paddingTop: 10, textAlign: "right" }}>
-        <span onClick={() => onNavigate(student.id)} style={{ fontSize: 14, color: "#1a1a1a", cursor: "pointer" }}>
+      <div style={{ borderTop: "1px solid var(--color-border-subtle)", paddingTop: 10, textAlign: "right" }}>
+        <span onClick={() => onNavigate(student.id)} style={{ fontSize: 14, color: "var(--color-text-primary)", cursor: "pointer" }}>
           {t("singleGroup.studentHoverCard.goToProfile")}
         </span>
       </div>
@@ -408,10 +408,10 @@ const StudentRow = ({
         onClick={() => onNavigate(student.id)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px", borderBottom: !isLast ? "1px solid #f5f5f5" : "none", cursor: "pointer", background: hovered ? "#f7fbff" : "transparent", transition: "background 0.12s" }}
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px", borderBottom: !isLast ? "1px solid var(--color-border-subtle)" : "none", cursor: "pointer", background: hovered ? "#f7fbff" : "transparent", transition: "background 0.12s" }}
       >
-        <span style={{ fontSize: 12, color: hovered ? "#185FA5" : "#1a1a1a", fontWeight: hovered ? 500 : 400, transition: "color 0.12s" }}>{student.name}</span>
-        <span style={{ fontSize: 11, color: "#888" }}>{student.phone}</span>
+        <span style={{ fontSize: 12, color: hovered ? "#185FA5" : "var(--color-text-primary)", fontWeight: hovered ? 500 : 400, transition: "color 0.12s" }}>{student.name}</span>
+        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>{student.phone}</span>
       </div>
       {hovered && (
         <StudentTooltip
@@ -435,11 +435,11 @@ const StudentsList = ({
   onNavigateToStudent: (id: string) => void;
 }) => {
   return (
-    <div style={{ border: "1px solid #e8e8e8", borderRadius: 12, overflow: "hidden", background: "#fff", display: "flex", flexDirection: "column" }}>
-      <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #f0f0f0", background: "#fafafa" }}>
-        <div style={{ fontSize: 15, fontWeight: 500, color: "#1a1a1a" }}>{group.name}</div>
-        <div style={{ fontSize: 12, color: "#888", marginTop: 3 }}>
-          Room: <strong style={{ color: "#1a1a1a" }}>{group.room}</strong>
+    <div style={{ border: "1px solid var(--color-border)", borderRadius: 12, overflow: "hidden", background: "var(--color-surface)", display: "flex", flexDirection: "column" }}>
+      <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid var(--color-border-subtle)", background: "var(--color-surface-alt)" }}>
+        <div style={{ fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>{group.name}</div>
+        <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 3 }}>
+          Room: <strong style={{ color: "var(--color-text-primary)" }}>{group.room}</strong>
         </div>
       </div>
       <div style={{ overflowY: "auto", maxHeight: 360 }}>
@@ -452,7 +452,7 @@ const StudentsList = ({
           />
         ))}
       </div>
-      <div style={{ padding: "10px 16px", borderTop: "1px solid #f0f0f0", textAlign: "right" }}>
+      <div style={{ padding: "10px 16px", borderTop: "1px solid var(--color-border-subtle)", textAlign: "right" }}>
         <span onClick={onGoToGroup} style={{ fontSize: 12, color: "#185FA5", cursor: "pointer", fontWeight: 500 }}>Go to group →</span>
       </div>
     </div>
@@ -474,7 +474,7 @@ const HistoryTab = ({ teacherId, teacherName, teacherPhone }: { teacherId: strin
     return <div style={{ textAlign: "center", padding: 40, color: "#e53935", fontSize: 14 }}>{t("teacherProfile.history.loadError")}</div>;
   }
   if (!entries || entries.length === 0) {
-    return <div style={{ textAlign: "center", padding: 40, color: "#aaa", fontSize: 14 }}>{t("teacherProfile.history.emptyState")}</div>;
+    return <div style={{ textAlign: "center", padding: 40, color: "var(--color-text-muted)", fontSize: 14 }}>{t("teacherProfile.history.emptyState")}</div>;
   }
 
   // Backend gives an ISO timestamp, shown as DD.MM.YYYY HH:mm:ss (24h).
@@ -491,7 +491,7 @@ const HistoryTab = ({ teacherId, teacherName, teacherPhone }: { teacherId: strin
         <div
           key={entry.id}
           style={{
-            background: "#fff",
+            background: "var(--color-surface)",
             borderRadius: 3,
             boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
             padding: "26px 32px 22px",
@@ -502,7 +502,7 @@ const HistoryTab = ({ teacherId, teacherName, teacherPhone }: { teacherId: strin
           }}
         >
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 20, color: "#1f1f1f", lineHeight: 1.25, marginBottom: 16 }}>
+            <div style={{ fontSize: 20, color: "var(--color-text-primary)", lineHeight: 1.25, marginBottom: 16 }}>
               {t(`teacherProfile.history.types.${entry.type}`, { defaultValue: entry.type.toLowerCase().split("_").filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") || "—" })}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#185FA5", flexWrap: "wrap" }}>
@@ -510,17 +510,17 @@ const HistoryTab = ({ teacherId, teacherName, teacherPhone }: { teacherId: strin
               <span>{teacherName}</span>
               {teacherPhone && (
                 <>
-                  <span style={{ color: "#555" }}>•</span>
+                  <span style={{ color: "var(--color-text-secondary)" }}>•</span>
                   <span>{teacherPhone}</span>
                 </>
               )}
             </div>
             {entry.detail && (
-              <div style={{ fontSize: 13, color: "#555", marginTop: 10 }}>{entry.detail}</div>
+              <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 10 }}>{entry.detail}</div>
             )}
           </div>
 
-          <div style={{ textAlign: "right", flexShrink: 0, fontSize: 14, color: "#8a8a8a", lineHeight: 1.5 }}>
+          <div style={{ textAlign: "right", flexShrink: 0, fontSize: 14, color: "var(--color-text-muted)", lineHeight: 1.5 }}>
             {entry.createdAt && <div>{formatStamp(entry.createdAt)}</div>}
             {entry.actor && <div>{entry.actor}</div>}
           </div>
@@ -565,16 +565,16 @@ const SalaryTab = ({ teacherId }: { teacherId: string }) => {
     padding: "12px 14px",
     fontSize: 13,
     fontWeight: 500,
-    color: "#6b7280",
+    color: "var(--color-text-secondary)",
     textAlign: "left",
-    borderBottom: "1px solid #e8e8e8",
+    borderBottom: "1px solid var(--color-border)",
     whiteSpace: "nowrap",
   };
   const tdStyle: React.CSSProperties = {
     padding: "12px 14px",
     fontSize: 13,
-    color: "#1a1a1a",
-    borderBottom: "1px solid #f2f2f2",
+    color: "var(--color-text-primary)",
+    borderBottom: "1px solid var(--color-border-subtle)",
     whiteSpace: "nowrap",
   };
 
@@ -591,7 +591,7 @@ const SalaryTab = ({ teacherId }: { teacherId: string }) => {
         <select
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-          style={{ border: "1px solid #e0e0e0", borderRadius: 6, padding: "5px 10px", fontSize: 13, color: "#1a1a1a", outline: "none", background: "#fff", cursor: "pointer" }}
+          style={{ border: "1px solid var(--color-border)", borderRadius: 6, padding: "5px 10px", fontSize: 13, color: "var(--color-text-primary)", outline: "none", background: "var(--color-surface)", cursor: "pointer" }}
         >
           <option value="">—</option>
           {months.map((m) => (
@@ -600,14 +600,14 @@ const SalaryTab = ({ teacherId }: { teacherId: string }) => {
         </select>
       </div>
 
-      <div style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
-        Total: <span style={{ color: "#1a1a1a", fontWeight: 500 }}>{total.toLocaleString("ru-RU")}</span>
+      <div style={{ fontSize: 13, color: "var(--color-text-muted)", marginBottom: 16 }}>
+        Total: <span style={{ color: "var(--color-text-primary)", fontWeight: 500 }}>{total.toLocaleString("ru-RU")}</span>
       </div>
 
-      <div style={{ border: "1px solid #e8e8e8", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+      <div style={{ border: "1px solid var(--color-border)", borderRadius: 12, overflow: "hidden", background: "var(--color-surface)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ background: "#fff" }}>
+            <tr style={{ background: "var(--color-surface)" }}>
               {[
                 t("finance.salaries.payrolls.table.period"),
                 t("finance.salaries.payrolls.table.status"),
@@ -633,7 +633,7 @@ const SalaryTab = ({ teacherId }: { teacherId: string }) => {
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={4} style={{ textAlign: "center", padding: "32px 0", fontSize: 14, color: "#aaa" }}>
+                <td colSpan={4} style={{ textAlign: "center", padding: "32px 0", fontSize: 14, color: "var(--color-text-muted)" }}>
                   {t("finance.salaries.payrolls.noData")}
                 </td>
               </tr>
@@ -732,7 +732,7 @@ export const TeacherProfile = () => {
 
   if (!teacher) {
     return (
-      <div style={{ padding: 40, textAlign: "center", color: "#888" }}>
+      <div style={{ padding: 40, textAlign: "center", color: "var(--color-text-muted)" }}>
         <p>Teacher not found.</p>
         <Button onClick={() => navigate("/teachers")} sx={{ mt: 2 }}>← Back to Teachers</Button>
       </div>
@@ -751,9 +751,9 @@ export const TeacherProfile = () => {
 
   const iconBtn = (icon: React.ReactNode, onClick: () => void, ref?: React.RefObject<HTMLDivElement>) => (
     <div ref={ref} onClick={onClick}
-      style={{ width: 30, height: 30, border: "1px solid #e0e0e0", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#888", background: "#fff", transition: "background 0.15s" }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f5f5")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+      style={{ width: 30, height: 30, border: "1px solid var(--color-border)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--color-text-muted)", background: "var(--color-surface)", transition: "background 0.15s" }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-surface)")}
     >
       {icon}
     </div>
@@ -766,10 +766,10 @@ export const TeacherProfile = () => {
         <span style={{ fontSize: 22, fontWeight: 500 }}>{teacher.name}</span>
       </div>
 
-      <div style={{ display: "flex", borderBottom: "1px solid #eee", marginBottom: 24 }}>
+      <div style={{ display: "flex", borderBottom: "1px solid var(--color-border-subtle)", marginBottom: 24 }}>
         {tabs.map((tab) => (
           <div key={tab.key} onClick={() => setActiveTab(tab.key)}
-            style={{ padding: "10px 18px 12px", cursor: "pointer", fontSize: 13, fontWeight: activeTab === tab.key ? 600 : 400, color: activeTab === tab.key ? "#185FA5" : "#888", borderBottom: activeTab === tab.key ? "2px solid #185FA5" : "2px solid transparent", transition: "all 0.15s" }}>
+            style={{ padding: "10px 18px 12px", cursor: "pointer", fontSize: 13, fontWeight: activeTab === tab.key ? 600 : 400, color: activeTab === tab.key ? "#185FA5" : "var(--color-text-muted)", borderBottom: activeTab === tab.key ? "2px solid #185FA5" : "2px solid transparent", transition: "all 0.15s" }}>
             {tab.label}
           </div>
         ))}
@@ -779,7 +779,7 @@ export const TeacherProfile = () => {
         <div style={{ display: "grid", gridTemplateColumns: "400px 1fr 300px", gap: 20, alignItems: "start" }}>
 
           {/* Left */}
-          <div style={{ border: "1px solid #e8e8e8", borderRadius: 12, padding: "20px 16px", background: "#fff", position: "relative" }}>
+          <div style={{ border: "1px solid var(--color-border)", borderRadius: 12, padding: "20px 16px", background: "var(--color-surface)", position: "relative" }}>
             <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 6 }}>
               {iconBtn(<BsFlag size={13} />, () => setFlagOpen((p) => !p), flagAnchorRef)}
               {iconBtn(<MdEdit size={13} />, () => setEditOpen(true))}
@@ -792,20 +792,20 @@ export const TeacherProfile = () => {
                   {getInitials(teacher.name)}
                 </div>
               )}
-              <div style={{ marginLeft: 12, marginTop: 10, fontSize: 15, fontWeight: 500, color: "#1a1a1a" }}>{teacher.name}</div>
+              <div style={{ marginLeft: 12, marginTop: 10, fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>{teacher.name}</div>
             </div>
             <div style={{ fontSize: 13, marginBottom: 4 }}>ID: <span style={{ color: "#185FA5", fontWeight: 500 }}>{teacher.id}</span></div>
             {teacher.phone && <div style={{ fontSize: 13, marginBottom: 4 }}>Phone: <span style={{ color: "#185FA5", fontWeight: 500 }}>{teacher.phone}</span></div>}
             <div style={{ fontSize: 13, marginBottom: 4 }}>Date of birth: <span style={{ color: "#185FA5", fontWeight: 500 }}>{formatDate(teacher.birthdate)}</span></div>
-            {teacher.email && <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{teacher.email}</div>}
-            {teacher.specialization && <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{teacher.specialization}</div>}
-            <hr style={{ border: "none", borderTop: "1px solid #f0f0f0", margin: "12px 0" }} />
-            <div style={{ fontSize: 11, color: "#aaa", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.4px" }}>Roles</div>
+            {teacher.email && <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 10 }}>{teacher.email}</div>}
+            {teacher.specialization && <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 10 }}>{teacher.specialization}</div>}
+            <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "12px 0" }} />
+            <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.4px" }}>Roles</div>
             {/* The teacher payload carries no role field — everyone on this page is a teacher. */}
             <span style={{ display: "inline-block", fontSize: 12, padding: "4px 12px", borderRadius: 14, background: "#E6F1FB", color: "#185FA5", border: "1px solid #B5D4F4" }}>Teacher</span>
-            <div style={{ fontSize: 11, color: "#aaa", marginTop: 12, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.4px" }}>Branches</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 12, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.4px" }}>Branches</div>
             {(teacher.branches ?? []).length === 0 ? (
-              <span style={{ fontSize: 12, color: "#aaa" }}>—</span>
+              <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>—</span>
             ) : (
               (teacher.branches ?? []).map((b) => (
                 <span key={b.id} style={{ display: "inline-block", fontSize: 12, padding: "4px 12px", borderRadius: 14, background: "#E1F5EE", color: "#0F6E56", border: "1px solid #9FE1CB", marginRight: 6, marginBottom: 6 }}>{b.name}</span>
@@ -815,9 +815,9 @@ export const TeacherProfile = () => {
 
           {/* Middle */}
           <div>
-            <div style={{ fontSize: 15, fontWeight: 500, color: "#1a1a1a", marginBottom: 12 }}>Groups</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 12 }}>Groups</div>
             {teacherGroups.length === 0 ? (
-              <div style={{ color: "#aaa", fontSize: 13, padding: "24px 0", textAlign: "center" }}>No groups assigned</div>
+              <div style={{ color: "var(--color-text-muted)", fontSize: 13, padding: "24px 0", textAlign: "center" }}>No groups assigned</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 440, overflowY: "auto", paddingRight: 2 }}>
                 {teacherGroups.map((group, i) => (

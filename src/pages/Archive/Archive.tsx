@@ -46,7 +46,7 @@ const data: DroppedStudent[] = [
 
 export const Archive = () => {
   return (
-    <Box p={4} bgcolor="#f5f7fb" minHeight="100vh">
+    <Box p={4} bgcolor="var(--color-surface-alt)" minHeight="100vh">
       
       {/* HEADER */}
       <Typography variant="h4" fontWeight={700} mb={3}>
@@ -54,9 +54,9 @@ export const Archive = () => {
       </Typography>
 
       {/* TABLE */}
-      <Box bgcolor="white" borderRadius={3} overflow="hidden">
+      <Box bgcolor="var(--color-surface)" borderRadius={3} overflow="hidden">
         <Table>
-          <TableHead sx={{ backgroundColor: "#f0f0f0" }}>
+          <TableHead sx={{ backgroundColor: "var(--color-surface-alt)" }}>
             <TableRow>
               <TableCell>Student</TableCell>
               <TableCell>Group</TableCell>

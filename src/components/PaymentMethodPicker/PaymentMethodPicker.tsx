@@ -21,8 +21,8 @@ interface PaymentMethodPickerProps {
 }
 
 const inputCls =
-  "w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400 bg-white text-gray-800";
-const labelCls = "block text-sm font-medium text-gray-700 mb-1";
+  "w-full border border-gray-300 dark:border-[var(--color-border)] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400 bg-white dark:bg-[var(--color-surface)] text-gray-800 dark:text-[var(--color-text-primary)]";
+const labelCls = "block text-sm font-medium text-gray-700 dark:text-[var(--color-text-primary)] mb-1";
 
 // Real payment methods (GET /finance/payment-methods) rendered as the same
 // two-column radio grid used across the app wherever a payment method is
@@ -127,27 +127,27 @@ export const PaymentMethodPicker = ({ value, onChange, loadingLabel, errorLabel,
               <div
                 style={{
                   width: 18, height: 18, borderRadius: "50%",
-                  border: `2px solid ${value === m.id ? "#185FA5" : "#ccc"}`,
+                  border: `2px solid ${value === m.id ? "#185FA5" : "var(--color-border)"}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   cursor: "pointer", flexShrink: 0,
-                  background: value === m.id ? "#185FA5" : "#fff",
+                  background: value === m.id ? "#185FA5" : "var(--color-surface)",
                 }}
               >
-                {value === m.id && <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff" }} />}
+                {value === m.id && <div style={{ width: 7, height: 7, borderRadius: "50%", background: "white" }} />}
               </div>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
             </label>
             <button
               type="button"
               onClick={(e) => openEditMethod(e, m)}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 2, flexShrink: 0 }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", padding: 2, flexShrink: 0 }}
             >
               <FiEdit2 size={12} />
             </button>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setDeleteError(null); setDeleteTarget(m); }}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 2, flexShrink: 0 }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", padding: 2, flexShrink: 0 }}
             >
               <FiTrash2 size={12} />
             </button>
@@ -156,7 +156,7 @@ export const PaymentMethodPicker = ({ value, onChange, loadingLabel, errorLabel,
       </div>
 
       {isFetching && (
-        <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 6 }}>{loadingLabel ?? "Loading..."}</div>
+        <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 6 }}>{loadingLabel ?? "Loading..."}</div>
       )}
       {isError && (
         <div style={{ fontSize: 12, color: "#d93f4f", marginTop: 6 }}>{errorLabel ?? "Failed to load payment methods"}</div>
@@ -180,14 +180,14 @@ export const PaymentMethodPicker = ({ value, onChange, loadingLabel, errorLabel,
           onClick={close}
         >
           <div
-            style={{ background: "#fff", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.2)", width: 320, padding: 20 }}
+            style={{ background: "var(--color-surface)", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.2)", width: 320, padding: 20 }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <span style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>
+              <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)" }}>
                 {editingId ? "Edit payment method" : (addLabel ?? "Add payment method")}
               </span>
-              <button type="button" onClick={close} style={{ background: "none", border: "none", cursor: "pointer", color: "#888" }}>
+              <button type="button" onClick={close} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)" }}>
                 <FiX size={18} />
               </button>
             </div>
@@ -214,7 +214,7 @@ export const PaymentMethodPicker = ({ value, onChange, loadingLabel, errorLabel,
                   </select>
                 </div>
               )}
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151", cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-primary)", cursor: "pointer" }}>
                 <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />
                 Set as default
               </label>
@@ -225,7 +225,7 @@ export const PaymentMethodPicker = ({ value, onChange, loadingLabel, errorLabel,
                 <button
                   type="button"
                   onClick={close}
-                  style={{ flex: 1, border: "1px solid #e0e0e0", borderRadius: 6, padding: "8px 0", fontSize: 13, color: "#666", background: "#fff", cursor: "pointer" }}
+                  style={{ flex: 1, border: "1px solid var(--color-border)", borderRadius: 6, padding: "8px 0", fontSize: 13, color: "var(--color-text-secondary)", background: "var(--color-surface)", cursor: "pointer" }}
                 >
                   Cancel
                 </button>

@@ -101,14 +101,14 @@ export const Billing = () => {
   const [period, setPeriod] = useState("");
 
   return (
-    <Box sx={{ p: 2, bgcolor: "#f5f5f5", minHeight: "100vh" }}>
+    <Box sx={{ p: 2, bgcolor: "var(--color-surface-alt)", minHeight: "100vh" }}>
       {/* License validity banner */}
       <Paper
         variant="outlined"
         sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 2, py: 1.2, mb: 2, borderRadius: 1 }}
       >
-        <MdOutlineCalendarToday size={16} color="#888" />
-        <Typography fontSize={13} color="#555">
+        <MdOutlineCalendarToday size={16} color="var(--color-text-muted)" />
+        <Typography fontSize={13} color="var(--color-text-secondary)">
           {t("settings.ceo.billing.licenseValidity")}{" "}
           <Box component="span" sx={{ color: "#1976d2", fontWeight: 500 }}>
             01.06.2026 - 23:59
@@ -141,7 +141,7 @@ export const Billing = () => {
                   <Typography color="text.disabled" fontSize={14}>{t("settings.ceo.billing.selectPlaceholder")}</Typography>
                 )
               }
-              sx={{ mb: 2.5, bgcolor: "#fff", fontSize: 14 }}
+              sx={{ mb: 2.5, bgcolor: "var(--color-surface)", fontSize: 14 }}
             >
               {periods.map((p) => (
                 <MenuItem key={p} value={p} sx={{ fontSize: 14 }}>{p}</MenuItem>
@@ -171,7 +171,7 @@ export const Billing = () => {
             <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "#fafafa" }}>
+                  <TableRow sx={{ bgcolor: "var(--color-surface-alt)" }}>
                     <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{t("settings.ceo.billing.table.sum")}</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{t("settings.ceo.billing.table.createdAt")}</TableCell>
                   </TableRow>
@@ -180,10 +180,10 @@ export const Billing = () => {
                   {historyPayments.map((row, i) => (
                     <TableRow
                       key={i}
-                      sx={{ bgcolor: i % 2 === 0 ? "#f9f9f9" : "#fff" }}
+                      sx={{ bgcolor: i % 2 === 0 ? "var(--color-surface-alt)" : "var(--color-surface)" }}
                     >
                       <TableCell sx={{ fontSize: 13 }}>{row.sum}</TableCell>
-                      <TableCell sx={{ fontSize: 13, color: "#555" }}>{row.createdAt}</TableCell>
+                      <TableCell sx={{ fontSize: 13, color: "var(--color-text-secondary)" }}>{row.createdAt}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -196,7 +196,7 @@ export const Billing = () => {
         <Box sx={{ flex: 1 }}>
           <Paper
             variant="outlined"
-            sx={{ borderRadius: 2, p: 2, bgcolor: "#fff" }}
+            sx={{ borderRadius: 2, p: 2, bgcolor: "var(--color-surface)" }}
           >
             {/* Plan headers */}
             <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, mb: 1 }}>
@@ -257,7 +257,7 @@ export const Billing = () => {
                           <>
                             <Typography
                               fontSize={10}
-                              sx={{ textDecoration: "line-through", color: "#aaa", lineHeight: 1.2 }}
+                              sx={{ textDecoration: "line-through", color: "var(--color-text-muted)", lineHeight: 1.2 }}
                             >
                               {fmt(row.price)}
                             </Typography>
@@ -280,8 +280,8 @@ export const Billing = () => {
                             right: -4,
                             top: "50%",
                             transform: "translateY(-50%)",
-                            bgcolor: "#fff",
-                            border: "1px solid #e0e0e0",
+                            bgcolor: "var(--color-surface)",
+                            border: "1px solid var(--color-border)",
                             borderRadius: "50%",
                             width: 28,
                             height: 28,
@@ -292,7 +292,7 @@ export const Billing = () => {
                             boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
                           }}
                         >
-                          <Typography fontSize={7} fontWeight={700} color="#1a1a1a" lineHeight={1}>
+                          <Typography fontSize={7} fontWeight={700} color="var(--color-text-primary)" lineHeight={1}>
                             {row.bonus}
                           </Typography>
                         </Box>
@@ -314,7 +314,7 @@ export const Billing = () => {
               >
                 {/* mod<Box component="span">me</Box> */}
               </Typography>
-              <Typography fontSize={13} color="#555">
+              <Typography fontSize={13} color="var(--color-text-secondary)">
                 {t("settings.ceo.billing.gamification")}{" "}
                 <Box component="span" sx={{ color: "#f5a623", fontWeight: 600 }}>
                   500 000

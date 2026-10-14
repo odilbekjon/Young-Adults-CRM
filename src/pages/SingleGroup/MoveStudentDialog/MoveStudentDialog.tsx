@@ -44,11 +44,11 @@ export const MoveStudentDialog = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: "#fff", borderRadius: 12, padding: 24, width: 360, display: "flex", flexDirection: "column", gap: 14 }}
+        style={{ background: "var(--color-surface)", borderRadius: 12, padding: 24, width: 360, display: "flex", flexDirection: "column", gap: 14 }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 16, fontWeight: 600 }}>{t("singleGroup.moveStudentDialog.title")} — {student?.name}</span>
-          <MdClose size={18} style={{ cursor: "pointer", color: "#888" }} onClick={onClose} />
+          <MdClose size={18} style={{ cursor: "pointer", color: "var(--color-text-muted)" }} onClick={onClose} />
         </div>
         <select
           style={inputStyle}

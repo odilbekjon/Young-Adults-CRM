@@ -96,7 +96,7 @@ const Row = ({
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              style={{ marginTop: 6, background: "var(--color-surface, #fff)", border: "1px solid var(--color-border, #d1d5db)", borderRadius: 999, padding: "3px 18px", fontSize: 12, cursor: "pointer", color: "var(--color-text-primary, #374151)" }}
+              style={{ marginTop: 6, background: "var(--color-surface, #fff)", border: "1px solid var(--color-border)", borderRadius: 999, padding: "3px 18px", fontSize: 12, cursor: "pointer", color: "var(--color-text-primary, #374151)" }}
             >
               {expanded ? t("studentPayments.less", "less") : t("studentPayments.more", "more")}
             </button>
@@ -189,7 +189,7 @@ export const PaymentsTable = ({
       <div
         style={{
           background: "var(--color-surface, #fff)",
-          border: "1px solid var(--color-border, #eaecf0)",
+          border: "1px solid var(--color-border)",
           borderRadius: 12,
           overflowX: "auto",
         }}

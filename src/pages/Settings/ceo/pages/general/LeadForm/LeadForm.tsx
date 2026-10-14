@@ -14,12 +14,12 @@ const LeadForm = () => {
 
   return (
     <Box sx={{ flex: 1, p: 5, maxWidth: 960 }}>
-      <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "#111827" }}>
+      <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "var(--color-text-primary)" }}>
         {t("settings.ceo.general.leadForm.title")}
       </Typography>
 
       {/* ── Company form background ── */}
-      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>
+      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "var(--color-text-primary)" }}>
         {t("settings.ceo.general.leadForm.companyFormBackground")}
       </Typography>
       <Box sx={{ display: "flex", gap: 2, mb: 0.5 }}>
@@ -50,12 +50,12 @@ const LeadForm = () => {
           )}
         </Box>
       </Box>
-      <Typography sx={{ fontSize: 12, color: "#9ca3af", mb: 4 }}>
+      <Typography sx={{ fontSize: 12, color: "var(--color-text-muted)", mb: 4 }}>
         {t("settings.ceo.general.leadForm.recommendedImageSize")}
       </Typography>
 
       {/* ── Text form ── */}
-      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>
+      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "var(--color-text-primary)" }}>
         {t("settings.ceo.general.leadForm.textForm")}
       </Typography>
       <Box sx={{ display: "flex", gap: 2, mb: 4 }}>
@@ -69,7 +69,7 @@ const LeadForm = () => {
           sx={{
             width: 260,
             flexShrink: 0,
-            border: "1px solid #e5e7eb",
+            border: "1px solid var(--color-border)",
             borderRadius: "6px",
             overflow: "hidden",
           }}
@@ -78,7 +78,7 @@ const LeadForm = () => {
           <Box sx={{ height: 6, background: "#e74c3c" }} />
           <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Typography
-              sx={{ fontSize: 13, color: "#374151", flex: 1, pr: 1 }}
+              sx={{ fontSize: 13, color: "var(--color-text-primary)", flex: 1, pr: 1 }}
               dangerouslySetInnerHTML={{
                 __html: textForm || t("settings.ceo.general.leadForm.defaultPreviewText"),
               }}
@@ -89,7 +89,7 @@ const LeadForm = () => {
       </Box>
 
       {/* ── Text after filling out the form ── */}
-      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>
+      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "var(--color-text-primary)" }}>
         {t("settings.ceo.general.leadForm.textAfterFilling")}
       </Typography>
       <Box sx={{ mb: 4 }}>
@@ -97,7 +97,7 @@ const LeadForm = () => {
       </Box>
 
       {/* ── Custom CSS ── */}
-      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 0.5, color: "#111827" }}>
+      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 0.5, color: "var(--color-text-primary)" }}>
         {t("settings.ceo.general.leadForm.customCss")}
       </Typography>
       <Typography sx={{ fontSize: 12, color: "#e74c3c", mb: 1, fontFamily: "monospace" }}>
@@ -112,7 +112,7 @@ const LeadForm = () => {
         onChange={(e) => setCustomCss(e.target.value)}
         sx={{
           mb: 4,
-          background: "#fff",
+          background: "var(--color-surface)",
           "& .MuiOutlinedInput-root": { fontSize: 13, fontFamily: "monospace" },
         }}
       />

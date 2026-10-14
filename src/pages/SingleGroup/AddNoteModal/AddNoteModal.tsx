@@ -50,7 +50,7 @@ export const AddNoteModal = ({
         {student && (
           <div>
             <label style={labelStyle}>{t("singleGroup.addNoteModal.student")}</label>
-            <input style={{ ...inputStyle, background: "#f5f5f5", color: "#666" }} value={student.name} readOnly />
+            <input style={{ ...inputStyle, background: "var(--color-surface-alt)", color: "var(--color-text-secondary)" }} value={student.name} readOnly />
           </div>
         )}
         <div>

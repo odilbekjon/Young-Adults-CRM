@@ -52,8 +52,8 @@ type SortDir = "asc" | "desc";
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   return (
     <span className="inline-flex flex-col ml-1 leading-none text-[10px]">
-      <span style={{ color: active && dir === "asc" ? "#3b82f6" : "#bbb" }}>▲</span>
-      <span style={{ color: active && dir === "desc" ? "#3b82f6" : "#bbb" }}>▼</span>
+      <span style={{ color: active && dir === "asc" ? "#3b82f6" : "var(--color-text-muted)" }}>▲</span>
+      <span style={{ color: active && dir === "desc" ? "#3b82f6" : "var(--color-text-muted)" }}>▼</span>
     </span>
   );
 }
@@ -116,7 +116,7 @@ export const Rating = () => {
   const headerCell = (label: string, key: SortKey) => (
     <TableCell
       onClick={() => toggleSort(key)}
-      sx={{ cursor: "pointer", fontWeight: 600, fontSize: 13, color: "#6b7280", userSelect: "none", whiteSpace: "nowrap" }}
+      sx={{ cursor: "pointer", fontWeight: 600, fontSize: 13, color: "var(--color-text-secondary)", userSelect: "none", whiteSpace: "nowrap" }}
     >
       {label}
       <SortIcon active={sortKey === key} dir={sortDir} />
@@ -126,7 +126,7 @@ export const Rating = () => {
   return (
     <div className="p-5 max-w-8xl mx-auto">
       {/* Title */}
-      <h1 className="text-2xl font-semibold text-gray-800 mb-5">Rating</h1>
+      <h1 className="text-2xl font-semibold text-gray-800 dark:text-[var(--color-text-primary)] mb-5">Rating</h1>
 
       {/* Date pickers */}
       <div className="flex gap-4 mb-4">
@@ -157,7 +157,7 @@ export const Rating = () => {
         <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
               <XAxis dataKey="group" tick={{ fontSize: 13 }} />
               <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
               <Tooltip
@@ -180,8 +180,8 @@ export const Rating = () => {
           <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ backgroundColor: "#fafafa" }}>
-                  <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "#6b7280", width: 56 }}>№</TableCell>
+                <TableRow sx={{ backgroundColor: "var(--color-surface-alt)" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-secondary)", width: 56 }}>№</TableCell>
                   {headerCell("Name", "name")}
                   {headerCell("Group", "group")}
                   {headerCell("Grade", "grade")}
@@ -190,7 +190,7 @@ export const Rating = () => {
               <TableBody>
                 {paged.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} align="center" sx={{ py: 6, color: "#9ca3af", fontSize: 14 }}>
+                    <TableCell colSpan={4} align="center" sx={{ py: 6, color: "var(--color-text-muted)", fontSize: 14 }}>
                       No Data
                     </TableCell>
                   </TableRow>
@@ -201,7 +201,7 @@ export const Rating = () => {
                       hover
                       sx={{ "&:last-child td": { borderBottom: 0 } }}
                     >
-                      <TableCell sx={{ color: "#9ca3af", fontSize: 13 }}>
+                      <TableCell sx={{ color: "var(--color-text-muted)", fontSize: 13 }}>
                         {(page - 1) * pageSize + i + 1}
                       </TableCell>
                       <TableCell sx={{ fontSize: 14, fontWeight: 500 }}>{row.name}</TableCell>
@@ -260,7 +260,7 @@ export const Rating = () => {
                 }, [])
                 .map((p, i) =>
                   p === "..." ? (
-                    <span key={`el-${i}`} className="px-1 text-gray-400 text-sm">…</span>
+                    <span key={`el-${i}`} className="px-1 text-gray-400 dark:text-[var(--color-text-muted)] text-sm">…</span>
                   ) : (
                     <button
                       key={p}
@@ -268,7 +268,7 @@ export const Rating = () => {
                       className={`w-8 h-8 rounded text-sm font-medium transition-colors ${
                         page === p
                           ? "bg-blue-500 text-white"
-                          : "text-gray-600 hover:bg-gray-100"
+                          : "text-gray-600 dark:text-[var(--color-text-secondary)] hover:bg-gray-100 dark:hover:bg-[var(--color-surface-hover)]"
                       }`}
                     >
                       {p}

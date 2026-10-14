@@ -54,7 +54,7 @@ export const BoldTabs = ({
                   minWidth: "auto",
                   color:
                     activeTabIdx === index
-                      ? "white"
+                      ? "#fff"
                       : theme.palette.primary.main,
                   borderColor: theme.palette.primary.main,
                   borderRight: tabs.length - 1 === index ? "none" : "1px solid",
@@ -62,14 +62,14 @@ export const BoldTabs = ({
                   backgroundColor:
                     activeTabIdx === index
                       ? theme.palette.primary.main
-                      : "white",
+                      : "var(--color-surface)",
 
                   boxShadow: "none",
                   "&:hover": {
                     backgroundColor:
                       activeTabIdx === index
                         ? theme.palette.primary.main
-                        : "white",
+                        : "var(--color-surface)",
                     boxShadow: "none",
                   },
                 }}

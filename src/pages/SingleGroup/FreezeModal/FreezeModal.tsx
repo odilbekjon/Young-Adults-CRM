@@ -71,18 +71,18 @@ export const FreezeModal = ({ open, onClose, isSaving, onConfirm }: FreezeModalP
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#fff", borderRadius: 14, width: 460, maxWidth: "92vw",
+          background: "var(--color-surface)", borderRadius: 14, width: 460, maxWidth: "92vw",
           boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
         }}
       >
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "20px 24px", borderBottom: "1px solid #f0f0f0",
+          padding: "20px 24px", borderBottom: "1px solid var(--color-border-subtle)",
         }}>
-          <span style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a" }}>
+          <span style={{ fontSize: 18, fontWeight: 600, color: "var(--color-text-primary)" }}>
             {t("singleGroup.freezeModal.title")}
           </span>
-          <MdClose size={20} color="#888" style={{ cursor: "pointer" }} onClick={onClose} />
+          <MdClose size={20} color="var(--color-text-muted)" style={{ cursor: "pointer" }} onClick={onClose} />
         </div>
 
         <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
@@ -98,7 +98,7 @@ export const FreezeModal = ({ open, onClose, isSaving, onConfirm }: FreezeModalP
             <DatePickerField value={startDate} onChange={setStartDate} />
           </div>
 
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151", cursor: "pointer" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-primary)", cursor: "pointer" }}>
             <input
               type="checkbox"
               checked={recalculateBalance}

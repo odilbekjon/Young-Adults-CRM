@@ -13,7 +13,7 @@ import { RiEdit2Fill } from "react-icons/ri";
 export const Category = () => (
   <div>
     <TableContainer color="primary">
-      <Table sx={{ minWidth: 650, bgcolor: "#fff" }} aria-label="simple table">
+      <Table sx={{ minWidth: 650, bgcolor: "var(--color-surface)" }} aria-label="simple table">
         <TableHead>
           <TableRow>
             <TableCell align="left" sx={{ width: "20px" }}></TableCell>

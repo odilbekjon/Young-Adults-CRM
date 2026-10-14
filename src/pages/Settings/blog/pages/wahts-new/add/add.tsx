@@ -26,12 +26,12 @@ const ToolbarSelect = ({
     value={value}
     onChange={(e) => onChange(e.target.value)}
     style={{
-      border: "1px solid #e0e0e0",
+      border: "1px solid var(--color-border)",
       borderRadius: 4,
       padding: "3px 6px",
       fontSize: 13,
-      color: "#333",
-      background: "#fff",
+      color: "var(--color-text-primary)",
+      background: "var(--color-surface)",
       cursor: "pointer",
       outline: "none",
     }}
@@ -58,7 +58,7 @@ const ToolbarBtn = ({
         borderRadius: 4,
         display: "flex",
         alignItems: "center",
-        color: "#444",
+        color: "var(--color-text-secondary)",
         fontSize: 18,
       }}
     >
@@ -112,7 +112,7 @@ export const BlogAdd = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        backgroundColor: "#f0f2f5",
+        backgroundColor: "var(--color-surface-alt)",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
@@ -123,9 +123,9 @@ export const BlogAdd = () => {
       <Box
         sx={{
           width: "100%",
-          backgroundColor: "#fff",
+          backgroundColor: "var(--color-surface)",
           borderRadius: 3,
-          border: "1px solid #e8eaed",
+          border: "1px solid var(--color-border)",
           p: 3,
         }}
       >
@@ -134,7 +134,7 @@ export const BlogAdd = () => {
           sx={{
             fontSize: "1rem",
             fontWeight: 600,
-            color: "#1a1a2e",
+            color: "var(--color-text-primary)",
             mb: 3,
             fontFamily: "'DM Sans', sans-serif",
           }}
@@ -144,14 +144,14 @@ export const BlogAdd = () => {
 
         {/* ── Title input ── */}
         <Typography
-          sx={{ fontSize: "0.85rem", fontWeight: 500, color: "#555", mb: 0.8, fontFamily: "'DM Sans', sans-serif" }}
+          sx={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--color-text-secondary)", mb: 0.8, fontFamily: "'DM Sans', sans-serif" }}
         >
           {t("settings.blog.add.fields.title")}
         </Typography>
         <Box
           sx={{
             position: "relative",
-            border: "1px solid #e0e0e0",
+            border: "1px solid var(--color-border)",
             borderRadius: 2,
             mb: 2.5,
             overflow: "hidden",
@@ -169,7 +169,7 @@ export const BlogAdd = () => {
               outline: "none",
               padding: "10px 60px 10px 14px",
               fontSize: 14,
-              color: "#333",
+              color: "var(--color-text-primary)",
               fontFamily: "'DM Sans', sans-serif",
               boxSizing: "border-box",
               background: "transparent",
@@ -182,7 +182,7 @@ export const BlogAdd = () => {
               top: "50%",
               transform: "translateY(-50%)",
               fontSize: 12,
-              color: "#aaa",
+              color: "var(--color-text-muted)",
               pointerEvents: "none",
               fontFamily: "'DM Sans', sans-serif",
             }}
@@ -194,7 +194,7 @@ export const BlogAdd = () => {
         {/* ── Rich text editor ── */}
         <Box
           sx={{
-            border: "1px solid #e0e0e0",
+            border: "1px solid var(--color-border)",
             borderRadius: 2,
             overflow: "hidden",
             mb: 2,
@@ -208,7 +208,7 @@ export const BlogAdd = () => {
               gap: 0.5,
               px: 1.5,
               py: 0.8,
-              borderBottom: "1px solid #f0f0f0",
+              borderBottom: "1px solid var(--color-border-subtle)",
               flexWrap: "wrap",
             }}
           >
@@ -235,7 +235,7 @@ export const BlogAdd = () => {
               onChange={applyFont}
             />
 
-            <Box sx={{ width: 1, height: 20, backgroundColor: "#e0e0e0", mx: 0.5 }} />
+            <Box sx={{ width: 1, height: 20, backgroundColor: "var(--color-border)", mx: 0.5 }} />
 
             <ToolbarBtn title={t("settings.blog.add.toolbar.alignLeft")} onClick={() => execCmd("justifyLeft")}>
               <MdFormatAlignLeft />
@@ -247,7 +247,7 @@ export const BlogAdd = () => {
               <MdFormatListBulleted />
             </ToolbarBtn>
 
-            <Box sx={{ width: 1, height: 20, backgroundColor: "#e0e0e0", mx: 0.5 }} />
+            <Box sx={{ width: 1, height: 20, backgroundColor: "var(--color-border)", mx: 0.5 }} />
 
             <ToolbarBtn
               title={t("settings.blog.add.toolbar.insertLink")}
@@ -271,7 +271,7 @@ export const BlogAdd = () => {
               <MdVideoLibrary />
             </ToolbarBtn>
 
-            <Box sx={{ width: 1, height: 20, backgroundColor: "#e0e0e0", mx: 0.5 }} />
+            <Box sx={{ width: 1, height: 20, backgroundColor: "var(--color-border)", mx: 0.5 }} />
 
             <ToolbarBtn title={t("settings.blog.add.toolbar.textColor")} onClick={() => {}}>
               <MdFormatColorText />
@@ -293,12 +293,12 @@ export const BlogAdd = () => {
               p: 2,
               outline: "none",
               fontSize: "0.9rem",
-              color: "#333",
+              color: "var(--color-text-primary)",
               fontFamily: "'DM Sans', sans-serif",
               lineHeight: 1.7,
               "&:empty::before": {
                 content: "attr(data-placeholder)",
-                color: "#bbb",
+                color: "var(--color-text-muted)",
                 pointerEvents: "none",
               },
             }}
@@ -316,7 +316,7 @@ export const BlogAdd = () => {
             />
           }
           label={
-            <Typography sx={{ fontSize: "0.9rem", color: "#444", fontFamily: "'DM Sans', sans-serif" }}>
+            <Typography sx={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", fontFamily: "'DM Sans', sans-serif" }}>
               {t("settings.blog.add.fields.public")}
             </Typography>
           }

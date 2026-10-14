@@ -113,7 +113,7 @@ export const EditPaymentDrawer = ({
           <select
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}
-            style={{ ...inputStyle, color: groupId ? "#1a1a1a" : "#aaa" }}
+            style={{ ...inputStyle, color: groupId ? "var(--color-text-primary)" : "var(--color-text-muted)" }}
           >
             <option value="">—</option>
             {groupOptions.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}

@@ -63,6 +63,20 @@ html.dark {
   --color-success-text: #6ee7b7;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
+/* Tailwind's preflight default border (#e5e7eb) for `border` utilities without a color. */
+:where(html.dark) :where(*, ::before, ::after) {
+  border-color: var(--color-border);
+}
+
+/* Zero-specificity: only fills native fields that no component styled itself. */
+:where(html.dark) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="button"], [type="submit"]), textarea, select) {
+  background-color: var(--color-surface);
+}
+
 html.dark ::-webkit-scrollbar-thumb {
   background-color: var(--color-scrollbar-thumb);
 }
@@ -132,4 +146,14 @@ textarea {
     font-size: 1rem !important;
     line-height: 1.5 !important;
   }
+}
+
+/* Recharts renders its own white tooltip and fixed-gray axis labels. */
+html.dark .recharts-default-tooltip {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+}
+
+html.dark .recharts-cartesian-axis-tick-value {
+  fill: var(--color-text-secondary);
 }

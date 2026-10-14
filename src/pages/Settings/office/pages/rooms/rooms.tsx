@@ -204,7 +204,7 @@ export const Rooms = () => {
   const isSaving = isCreating || isUpdating;
 
   return (
-    <Box sx={{ p: 3, bgcolor: "#f5f5f5", minHeight: "100vh" }}>
+    <Box sx={{ p: 3, bgcolor: "var(--color-surface-alt)", minHeight: "100vh" }}>
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -238,15 +238,15 @@ export const Rooms = () => {
       </Box>
 
       {/* Tabs */}
-      <Box sx={{ display: "inline-flex", borderRadius: "10px", bgcolor: "#eef2f6", p: 0.5, mb: 2 }}>
+      <Box sx={{ display: "inline-flex", borderRadius: "10px", bgcolor: "var(--color-surface-alt)", p: 0.5, mb: 2 }}>
         <Box
           component="button"
           type="button"
           onClick={() => setTab("faol")}
           sx={{
             border: "none", cursor: "pointer", borderRadius: "8px", px: 2, py: 0.7, fontSize: 13, fontWeight: 600,
-            bgcolor: tab === "faol" ? "#fff" : "transparent",
-            color: tab === "faol" ? "#1a3f6f" : "#667085",
+            bgcolor: tab === "faol" ? "var(--color-surface)" : "transparent",
+            color: tab === "faol" ? "#1a3f6f" : "var(--color-text-secondary)",
             boxShadow: tab === "faol" ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
           }}
         >
@@ -258,8 +258,8 @@ export const Rooms = () => {
           onClick={() => setTab("arxiv")}
           sx={{
             border: "none", cursor: "pointer", borderRadius: "8px", px: 2, py: 0.7, fontSize: 13, fontWeight: 600,
-            bgcolor: tab === "arxiv" ? "#fff" : "transparent",
-            color: tab === "arxiv" ? "#1a3f6f" : "#667085",
+            bgcolor: tab === "arxiv" ? "var(--color-surface)" : "transparent",
+            color: tab === "arxiv" ? "#1a3f6f" : "var(--color-text-secondary)",
             boxShadow: tab === "arxiv" ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
           }}
         >
@@ -288,27 +288,27 @@ export const Rooms = () => {
         <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
           <Table>
             <TableHead>
-              <TableRow sx={{ bgcolor: "#fafafa" }}>
-                <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "#333", width: "15%" }}>{t("settings.office.rooms.table.id")}</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "#333", width: "25%" }}>{t("settings.office.rooms.table.name")}</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "#333", width: "25%" }}>{t("settings.office.rooms.table.branch")}</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "#333", width: "20%" }}>{t("settings.office.rooms.table.capacity")}</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, fontSize: 13, color: "#333", width: "15%" }}>{t("settings.office.rooms.table.actions")}</TableCell>
+              <TableRow sx={{ bgcolor: "var(--color-surface-alt)" }}>
+                <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-primary)", width: "15%" }}>{t("settings.office.rooms.table.id")}</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-primary)", width: "25%" }}>{t("settings.office.rooms.table.name")}</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-primary)", width: "25%" }}>{t("settings.office.rooms.table.branch")}</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-primary)", width: "20%" }}>{t("settings.office.rooms.table.capacity")}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-primary)", width: "15%" }}>{t("settings.office.rooms.table.actions")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {rooms.map((room) => (
-                <TableRow key={room.id} sx={{ "&:hover": { bgcolor: "#fafafa" } }}>
-                  <TableCell sx={{ fontSize: 12, color: "#555" }}>{room.id.slice(0, 8)}</TableCell>
+                <TableRow key={room.id} sx={{ "&:hover": { bgcolor: "var(--color-surface-alt)" } }}>
+                  <TableCell sx={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{room.id.slice(0, 8)}</TableCell>
                   <TableCell sx={{ fontSize: 14 }}>{room.name}</TableCell>
-                  <TableCell sx={{ fontSize: 13, color: "#555" }}>{room.branch?.name ?? ""}</TableCell>
-                  <TableCell sx={{ fontSize: 13, color: "#555" }}>{room.capacity}</TableCell>
+                  <TableCell sx={{ fontSize: 13, color: "var(--color-text-secondary)" }}>{room.branch?.name ?? ""}</TableCell>
+                  <TableCell sx={{ fontSize: 13, color: "var(--color-text-secondary)" }}>{room.capacity}</TableCell>
                   <TableCell align="right">
                     <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
                       <IconButton
                         size="small"
                         onClick={() => openEditDrawer(room)}
-                        sx={{ color: "#555" }}
+                        sx={{ color: "var(--color-text-secondary)" }}
                         aria-label={t("settings.office.rooms.edit")}
                       >
                         <MdOutlineEdit size={18} />
@@ -352,7 +352,7 @@ export const Rooms = () => {
 
               {rooms.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} sx={{ textAlign: "center", color: "#9ca3af", fontSize: 13, py: 4 }}>
+                  <TableCell colSpan={5} sx={{ textAlign: "center", color: "var(--color-text-muted)", fontSize: 13, py: 4 }}>
                     {tab === "faol" ? t("settings.office.rooms.emptyState") : t("settings.office.rooms.emptyArchived")}
                   </TableCell>
                 </TableRow>
@@ -391,7 +391,7 @@ export const Rooms = () => {
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
               error={!!errors.name}
               helperText={errors.name}
-              sx={{ "& .MuiOutlinedInput-root": { bgcolor: "#fff" } }}
+              sx={{ "& .MuiOutlinedInput-root": { bgcolor: "var(--color-surface)" } }}
             />
           </Box>
 
@@ -404,7 +404,7 @@ export const Rooms = () => {
               value={form.branchId}
               onChange={(e) => setForm((p) => ({ ...p, branchId: e.target.value }))}
               error={!!errors.branchId}
-              sx={{ bgcolor: "#fff" }}
+              sx={{ bgcolor: "var(--color-surface)" }}
             >
               <MenuItem value="" disabled>
                 {t("settings.office.rooms.form.branchPlaceholder")}
@@ -431,7 +431,7 @@ export const Rooms = () => {
               error={!!errors.capacity}
               helperText={errors.capacity}
               inputProps={{ min: 0 }}
-              sx={{ "& .MuiOutlinedInput-root": { bgcolor: "#fff" } }}
+              sx={{ "& .MuiOutlinedInput-root": { bgcolor: "var(--color-surface)" } }}
             />
           </Box>
 

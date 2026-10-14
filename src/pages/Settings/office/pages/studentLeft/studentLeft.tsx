@@ -72,8 +72,8 @@ const selectSx = {
   height: FIELD_HEIGHT,
   fontSize: "0.82rem",
   borderRadius: "6px",
-  backgroundColor: "#fff",
-  "& fieldset": { borderColor: "#e5e7eb", borderWidth: 1 },
+  backgroundColor: "var(--color-surface)",
+  "& fieldset": { borderColor: "var(--color-border)", borderWidth: 1 },
   "&:hover fieldset": { borderColor: "#9ca3af" },
   "&.Mui-focused fieldset": { borderColor: FOCUS_BORDER, borderWidth: 1 },
 };
@@ -83,8 +83,8 @@ const inputSx = {
     borderRadius: "6px",
     fontSize: "0.82rem",
     height: FIELD_HEIGHT,
-    backgroundColor: "#fff",
-    "& fieldset": { borderColor: "#e5e7eb", borderWidth: 1 },
+    backgroundColor: "var(--color-surface)",
+    "& fieldset": { borderColor: "var(--color-border)", borderWidth: 1 },
     "&:hover fieldset": { borderColor: "#9ca3af" },
     "&.Mui-focused fieldset": { borderColor: FOCUS_BORDER, borderWidth: 1 },
   },
@@ -100,7 +100,7 @@ const menuProps = {
         mt: 0.5,
         maxHeight: 280,
         borderRadius: "6px",
-        border: "1px solid #e5e7eb",
+        border: "1px solid var(--color-border)",
         boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
         "& .MuiMenuItem-root": { fontSize: "0.82rem" },
       },
@@ -121,11 +121,11 @@ const DATE_FIELD_CSS = `
   padding: 0 12px !important;
   gap: 8px !important;
   border-radius: 6px !important;
-  border-color: #e5e7eb !important;
-  background: #fff !important;
+  border-color: var(--color-border) !important;
+  background: var(--color-surface) !important;
   min-width: 0;
 }
-.sl-date > div:first-child:hover { border-color: #9ca3af !important; }
+.sl-date > div:first-child:hover { border-color: var(--color-text-muted) !important; }
 .sl-date > div:first-child svg { flex-shrink: 0; width: 16px; height: 16px; }
 .sl-date > div:first-child span {
   font-size: 0.82rem !important;
@@ -374,13 +374,13 @@ export const StudentLeft = () => {
   const leftAsLabel = (s: LeftAs) => t(`settings.office.studentLeft.leftStatuses.${s}`);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 dark:bg-[var(--color-surface-hover)] p-6">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
-        <Typography variant="h5" sx={{ fontWeight: 700, color: "#1f2937" }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: "var(--color-text-primary)" }}>
           {t("settings.office.studentLeft.title")}
         </Typography>
-        <Typography variant="body2" sx={{ color: "#6b7280" }}>
+        <Typography variant="body2" sx={{ color: "var(--color-text-secondary)" }}>
           {t("settings.office.studentLeft.quantity", { count: filtered.length })}
         </Typography>
       </div>
@@ -401,15 +401,15 @@ export const StudentLeft = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-0 mb-5 border border-gray-200 rounded-md w-fit bg-white overflow-hidden">
+      <div className="flex gap-0 mb-5 border border-gray-200 dark:border-[var(--color-border)] rounded-md w-fit bg-white dark:bg-[var(--color-surface)] overflow-hidden">
         {(["new", "old"] as const).map((tabKey) => (
           <button
             key={tabKey}
             onClick={() => { setTab(tabKey); setPage(1); }}
             className={`px-5 py-1.5 text-sm font-medium capitalize transition-colors ${
               tab === tabKey
-                ? "bg-white text-gray-800 border-b-2 border-blue-400"
-                : "text-gray-500 hover:bg-gray-50"
+                ? "bg-white dark:bg-[var(--color-surface)] text-gray-800 dark:text-[var(--color-text-primary)] border-b-2 border-blue-400"
+                : "text-gray-500 dark:text-[var(--color-text-secondary)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]"
             }`}
           >
             {t(TAB_LABEL_KEYS[tabKey])}
@@ -418,7 +418,7 @@ export const StudentLeft = () => {
       </div>
 
       {tab === "old" ? (
-        <div className="bg-white rounded-lg shadow-sm py-16 text-center text-gray-400 text-sm">
+        <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm py-16 text-center text-gray-400 dark:text-[var(--color-text-muted)] text-sm">
           {t("settings.office.studentLeft.oldTableUnavailable")}
         </div>
       ) : (
@@ -456,32 +456,32 @@ export const StudentLeft = () => {
             />
             {/* Course */}
             <Select displayEmpty fullWidth size="small" value={course} onChange={(e) => setCourse(e.target.value)} MenuProps={menuProps} sx={selectSx}>
-              <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.course")}</em></MenuItem>
+              <MenuItem value=""><em style={{ color: "var(--color-text-muted)", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.course")}</em></MenuItem>
               {COURSES.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
             </Select>
             {/* Group */}
             <Select displayEmpty fullWidth size="small" value={groupId} onChange={(e) => setGroupId(e.target.value)} MenuProps={menuProps} sx={selectSx}>
-              <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.group")}</em></MenuItem>
+              <MenuItem value=""><em style={{ color: "var(--color-text-muted)", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.group")}</em></MenuItem>
               {GROUPS.map((g) => <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>)}
             </Select>
             {/* Teachers */}
             <Select displayEmpty fullWidth size="small" value={teacher} onChange={(e) => setTeacher(e.target.value)} MenuProps={menuProps} sx={selectSx}>
-              <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.teachers")}</em></MenuItem>
+              <MenuItem value=""><em style={{ color: "var(--color-text-muted)", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.teachers")}</em></MenuItem>
               {TEACHERS.map((tc) => <MenuItem key={tc} value={tc}>{tc}</MenuItem>)}
             </Select>
             {/* Staff */}
             <Select displayEmpty fullWidth size="small" value={staff} onChange={(e) => setStaff(e.target.value)} MenuProps={menuProps} sx={selectSx}>
-              <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.staff")}</em></MenuItem>
+              <MenuItem value=""><em style={{ color: "var(--color-text-muted)", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.staff")}</em></MenuItem>
               {STAFF_NAMES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
             {/* Reasons */}
             <Select displayEmpty fullWidth size="small" value={reasonId} onChange={(e) => setReasonId(e.target.value)} MenuProps={menuProps} sx={selectSx}>
-              <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.reasonsForArchiving")}</em></MenuItem>
+              <MenuItem value=""><em style={{ color: "var(--color-text-muted)", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.reasonsForArchiving")}</em></MenuItem>
               {(reasonOptions ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>)}
             </Select>
             {/* Status — what the student was when they left the group */}
             <Select displayEmpty fullWidth size="small" value={status} onChange={(e) => setStatus(e.target.value as "" | LeftAs)} MenuProps={menuProps} sx={selectSx}>
-              <MenuItem value=""><em style={{ color: "#9ca3af", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.status")}</em></MenuItem>
+              <MenuItem value=""><em style={{ color: "var(--color-text-muted)", fontStyle: "normal" }}>{t("settings.office.studentLeft.filters.status")}</em></MenuItem>
               {LEFT_AS_OPTIONS.map((s) => <MenuItem key={s} value={s}>{leftAsLabel(s)}</MenuItem>)}
             </Select>
             {/* Filter + Reset */}
@@ -508,7 +508,7 @@ export const StudentLeft = () => {
                 onClick={handleReset}
                 title={t("settings.office.studentLeft.filters.reset")}
                 aria-label={t("settings.office.studentLeft.filters.reset")}
-                className="flex items-center justify-center w-10 h-10 border border-gray-200 rounded-md bg-white text-gray-500 hover:bg-gray-50 transition-colors flex-shrink-0"
+                className="flex items-center justify-center w-10 h-10 border border-gray-200 dark:border-[var(--color-border)] rounded-md bg-white dark:bg-[var(--color-surface)] text-gray-500 dark:text-[var(--color-text-secondary)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors flex-shrink-0"
               >
                 <MdRefresh size={18} />
               </button>
@@ -517,19 +517,19 @@ export const StudentLeft = () => {
 
           {/* Table toolbar */}
           <div className="flex justify-end gap-2 mb-3">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-md bg-white text-gray-500 text-sm hover:bg-gray-50 transition-colors">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-[var(--color-border)] rounded-md bg-white dark:bg-[var(--color-surface)] text-gray-500 dark:text-[var(--color-text-secondary)] text-sm hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors">
               <MdTune size={15} /> {t("settings.office.studentLeft.toolbar.filters")}
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-md bg-white text-gray-500 text-sm hover:bg-gray-50 transition-colors">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-[var(--color-border)] rounded-md bg-white dark:bg-[var(--color-surface)] text-gray-500 dark:text-[var(--color-text-secondary)] text-sm hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors">
               <MdViewColumn size={15} /> {t("settings.office.studentLeft.toolbar.columns")}
             </button>
           </div>
 
           {/* Table */}
-          <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+          <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-gray-100 dark:border-[var(--color-border)]">
                   <th className="px-3 py-3 w-8 text-left">
                     <Checkbox size="small" sx={{ color: "#d1d5db", "&.Mui-checked": { color: "#29b6f6" } }} />
                   </th>
@@ -545,7 +545,7 @@ export const StudentLeft = () => {
                     t("settings.office.studentLeft.table.comment"),
                     t("settings.office.studentLeft.table.staff"),
                   ].map((h) => (
-                    <th key={h} className="text-left px-3 py-3 text-gray-600 font-semibold text-xs whitespace-nowrap">
+                    <th key={h} className="text-left px-3 py-3 text-gray-600 dark:text-[var(--color-text-secondary)] font-semibold text-xs whitespace-nowrap">
                       {h}
                     </th>
                   ))}
@@ -566,21 +566,21 @@ export const StudentLeft = () => {
                   </tr>
                 ) : pageData.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="text-center py-12 text-gray-400">{t("settings.office.studentLeft.noData")}</td>
+                    <td colSpan={11} className="text-center py-12 text-gray-400 dark:text-[var(--color-text-muted)]">{t("settings.office.studentLeft.noData")}</td>
                   </tr>
                 ) : (
                   pageData.map((r, idx) => (
-                    <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <tr key={r.id} className="border-b border-gray-50 dark:border-[var(--color-border-subtle)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors">
                       <td className="px-3 py-3">
                         <Checkbox size="small" sx={{ color: "#d1d5db", "&.Mui-checked": { color: "#29b6f6" } }} />
                       </td>
-                      <td className="px-3 py-3 text-gray-500 text-sm">{(page - 1) * PAGE_SIZE + idx + 1}</td>
+                      <td className="px-3 py-3 text-gray-500 dark:text-[var(--color-text-secondary)] text-sm">{(page - 1) * PAGE_SIZE + idx + 1}</td>
                       <td className="px-3 py-3">
                         <span className="text-blue-500 cursor-pointer hover:underline font-medium whitespace-nowrap">
                           {r.name}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-gray-700 font-medium whitespace-nowrap">{r.phone}</td>
+                      <td className="px-3 py-3 text-gray-700 dark:text-[var(--color-text-primary)] font-medium whitespace-nowrap">{r.phone}</td>
                       <td className="px-3 py-3">
                         <span className="text-blue-500 cursor-pointer hover:underline">{r.course}</span>
                       </td>
@@ -590,12 +590,12 @@ export const StudentLeft = () => {
                       <td className="px-3 py-3">
                         <span className="text-blue-500 cursor-pointer hover:underline whitespace-nowrap">{r.teacher}</span>
                       </td>
-                      <td className="px-3 py-3 text-gray-700">{statusLabel(r.status)}</td>
-                      <td className="px-3 py-3 text-gray-600 whitespace-nowrap">{r.reason}</td>
-                      <td className="px-3 py-3 text-gray-500">{r.comment}</td>
+                      <td className="px-3 py-3 text-gray-700 dark:text-[var(--color-text-primary)]">{statusLabel(r.status)}</td>
+                      <td className="px-3 py-3 text-gray-600 dark:text-[var(--color-text-secondary)] whitespace-nowrap">{r.reason}</td>
+                      <td className="px-3 py-3 text-gray-500 dark:text-[var(--color-text-secondary)]">{r.comment}</td>
                       <td className="px-3 py-3">
                         <div className="text-blue-500 cursor-pointer hover:underline whitespace-nowrap text-sm">{r.staff}</div>
-                        <div className="text-gray-400 text-xs">{r.staffTime}</div>
+                        <div className="text-gray-400 dark:text-[var(--color-text-muted)] text-xs">{r.staffTime}</div>
                       </td>
                     </tr>
                   ))
@@ -605,14 +605,14 @@ export const StudentLeft = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex justify-center py-4 border-t border-gray-100">
+              <div className="flex justify-center py-4 border-t border-gray-100 dark:border-[var(--color-border)]">
                 <Pagination
                   count={totalPages}
                   page={page}
                   onChange={(_, v) => setPage(v)}
                   size="small"
                   sx={{
-                    "& .MuiPaginationItem-root": { color: "#6b7280", borderRadius: "6px" },
+                    "& .MuiPaginationItem-root": { color: "var(--color-text-secondary)", borderRadius: "6px" },
                     "& .Mui-selected": { backgroundColor: "#29b6f6 !important", color: "#fff !important" },
                   }}
                 />

@@ -21,7 +21,7 @@ const FieldCard = ({
 }) => (
   <Box
     sx={{
-      border: "1px solid #d1d5db",
+      border: "1px solid var(--color-border)",
       borderRadius: "6px",
       pt: 1.5,
       pb: 2,
@@ -35,10 +35,10 @@ const FieldCard = ({
         position: "absolute",
         top: -10,
         left: 12,
-        background: "#fff",
+        background: "var(--color-surface)",
         px: 0.5,
         fontSize: 12,
-        color: "#6b7280",
+        color: "var(--color-text-secondary)",
       }}
     >
       {title}
@@ -58,7 +58,7 @@ const ServiceColumn = ({ title }: { title: string }) => {
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 0.5 }}>
         {BRANCHES.map((branch) => (
           <Box key={branch}>
-            <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
+            <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.5 }}>
               {branch}
             </Typography>
             <TextField
@@ -69,7 +69,7 @@ const ServiceColumn = ({ title }: { title: string }) => {
                 setValues((prev) => ({ ...prev, [branch]: e.target.value }))
               }
               sx={{
-                background: "#fff",
+                background: "var(--color-surface)",
                 "& .MuiOutlinedInput-root": { fontSize: 13 },
               }}
             />
@@ -92,7 +92,7 @@ const PaymentMethods = () => {
 
   return (
     <Box sx={{ flex: 1, p: 5, maxWidth: 1200 }}>
-      <Typography variant="h5" sx={{ fontWeight: 600, mb: 3, color: "#111827" }}>
+      <Typography variant="h5" sx={{ fontWeight: 600, mb: 3, color: "var(--color-text-primary)" }}>
         {t("settings.ceo.general.paymentMethods.title")}
       </Typography>
 
@@ -110,7 +110,7 @@ const PaymentMethods = () => {
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 0.5, flex: 1 }}>
             {/* Company link */}
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.5 }}>
                 {t("settings.ceo.general.paymentMethods.companyLink")}
               </Typography>
               <TextField
@@ -119,7 +119,7 @@ const PaymentMethods = () => {
                 value={companyLink}
                 InputProps={{ readOnly: true }}
                 sx={{
-                  background: "#f3f4f6",
+                  background: "var(--color-surface-alt)",
                   "& .MuiOutlinedInput-root": { fontSize: 13 },
                 }}
               />
@@ -127,7 +127,7 @@ const PaymentMethods = () => {
 
             {/* Paycom merchant id */}
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.5 }}>
                 {t("settings.ceo.general.paymentMethods.paycomMerchantId")}
               </Typography>
               <TextField
@@ -136,7 +136,7 @@ const PaymentMethods = () => {
                 value={merchantId}
                 onChange={(e) => setMerchantId(e.target.value)}
                 sx={{
-                  background: "#fff",
+                  background: "var(--color-surface)",
                   "& .MuiOutlinedInput-root": { fontSize: 13 },
                 }}
               />
@@ -144,7 +144,7 @@ const PaymentMethods = () => {
 
             {/* Paycom username */}
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.5 }}>
                 {t("settings.ceo.general.paymentMethods.paycomUsername")}
               </Typography>
               <TextField
@@ -153,7 +153,7 @@ const PaymentMethods = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 sx={{
-                  background: "#fff",
+                  background: "var(--color-surface)",
                   "& .MuiOutlinedInput-root": { fontSize: 13 },
                 }}
               />
@@ -161,7 +161,7 @@ const PaymentMethods = () => {
 
             {/* Paycom password */}
             <Box>
-              <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.5 }}>
                 {t("settings.ceo.general.paymentMethods.paycomPassword")}
               </Typography>
               <TextField
@@ -171,7 +171,7 @@ const PaymentMethods = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 sx={{
-                  background: "#fff",
+                  background: "var(--color-surface)",
                   "& .MuiOutlinedInput-root": { fontSize: 13 },
                 }}
               />
@@ -184,7 +184,7 @@ const PaymentMethods = () => {
           <FieldCard title={t("settings.ceo.general.paymentMethods.midtrans")}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 0.5 }}>
               <Box>
-                <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
+                <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.5 }}>
                   {t("settings.ceo.general.paymentMethods.midtransServerKey")}
                 </Typography>
                 <TextField
@@ -193,14 +193,14 @@ const PaymentMethods = () => {
                   value={midtransServer}
                   onChange={(e) => setMidtransServer(e.target.value)}
                   sx={{
-                    background: "#fff",
+                    background: "var(--color-surface)",
                     "& .MuiOutlinedInput-root": { fontSize: 13 },
                   }}
                 />
               </Box>
 
               <Box>
-                <Typography sx={{ fontSize: 13, color: "#374151", mb: 0.5 }}>
+                <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 0.5 }}>
                   {t("settings.ceo.general.paymentMethods.midtransClientKey")}
                 </Typography>
                 <TextField
@@ -209,7 +209,7 @@ const PaymentMethods = () => {
                   value={midtransClient}
                   onChange={(e) => setMidtransClient(e.target.value)}
                   sx={{
-                    background: "#fff",
+                    background: "var(--color-surface)",
                     "& .MuiOutlinedInput-root": { fontSize: 13 },
                   }}
                 />

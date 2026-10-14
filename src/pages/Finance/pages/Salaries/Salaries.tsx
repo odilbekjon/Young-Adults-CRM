@@ -78,18 +78,18 @@ const Select = ({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-2 text-sm bg-white text-left text-gray-600 hover:border-gray-400 transition-colors"
+        className="w-full flex items-center justify-between border border-gray-300 dark:border-[var(--color-border)] rounded px-3 py-2 text-sm bg-white dark:bg-[var(--color-surface)] text-left text-gray-600 dark:text-[var(--color-text-secondary)] hover:border-gray-400 transition-colors"
       >
-        <span className={selectedLabel ? "text-gray-800" : "text-gray-400"}>
+        <span className={selectedLabel ? "text-gray-800 dark:text-[var(--color-text-primary)]" : "text-gray-400 dark:text-[var(--color-text-muted)]"}>
           {selectedLabel || placeholder}
         </span>
-        <FiChevronDown size={14} className="text-gray-400" />
+        <FiChevronDown size={14} className="text-gray-400 dark:text-[var(--color-text-muted)]" />
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-full py-1 max-h-60 overflow-y-auto">
+        <div className="absolute left-0 top-full mt-1 bg-white dark:bg-[var(--color-surface)] border border-gray-200 dark:border-[var(--color-border)] rounded-lg shadow-lg z-50 w-full py-1 max-h-60 overflow-y-auto">
           <button
             type="button"
-            className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 transition-colors"
+            className="w-full text-left px-3 py-2 text-sm text-gray-400 dark:text-[var(--color-text-muted)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors"
             onClick={() => { onChange(""); setOpen(false); }}
           >
             {placeholder}
@@ -98,7 +98,7 @@ const Select = ({
             <button
               key={opt.value}
               type="button"
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-[var(--color-text-primary)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors"
               onClick={() => { onChange(opt.value); setOpen(false); }}
             >
               {opt.label}
@@ -129,10 +129,10 @@ const PayrollDetailModal = ({ id, onClose }: { id: string; onClose: () => void }
 
   return (
     <div className="fixed inset-0 z-[1300] flex items-start justify-center bg-black/30 p-6 overflow-y-auto" onClick={onClose}>
-      <div className="mt-10 w-full max-w-5xl rounded-lg bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
-          <h2 className="text-base font-semibold text-gray-800">{t("finance.salaries.payrolls.detail.title")}</h2>
-          <button onClick={onClose} className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-600 hover:bg-gray-50">
+      <div className="mt-10 w-full max-w-5xl rounded-lg bg-white dark:bg-[var(--color-surface)] shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-[var(--color-border)] px-5 py-3">
+          <h2 className="text-base font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("finance.salaries.payrolls.detail.title")}</h2>
+          <button onClick={onClose} className="rounded border border-gray-300 dark:border-[var(--color-border)] px-3 py-1 text-sm text-gray-600 dark:text-[var(--color-text-secondary)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]">
             {t("finance.salaries.payrolls.detail.close")}
           </button>
         </div>
@@ -144,26 +144,26 @@ const PayrollDetailModal = ({ id, onClose }: { id: string; onClose: () => void }
           ) : (
             <>
               <div className="mb-4 flex flex-wrap gap-6 text-sm">
-                <div><span className="text-gray-500">{t("finance.salaries.payrolls.table.teacher")}: </span><span className="font-medium text-gray-800">{data?.teacherName || "—"}</span></div>
-                <div><span className="text-gray-500">{t("finance.salaries.payrolls.table.period")}: </span><span className="font-medium text-gray-800">{formatPeriod(data?.periodYear ?? null, data?.periodMonth ?? null)}</span></div>
-                <div><span className="text-gray-500">{t("finance.salaries.payrolls.table.total")}: </span><span className="font-medium text-gray-800">{formatMoney(data?.totalAmount ?? 0)}</span></div>
-                <div><span className="text-gray-500">{t("finance.salaries.payrolls.table.paid")}: </span><span className="font-medium text-gray-800">{formatMoney(data?.paidAmount ?? 0)}</span></div>
+                <div><span className="text-gray-500 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.payrolls.table.teacher")}: </span><span className="font-medium text-gray-800 dark:text-[var(--color-text-primary)]">{data?.teacherName || "—"}</span></div>
+                <div><span className="text-gray-500 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.payrolls.table.period")}: </span><span className="font-medium text-gray-800 dark:text-[var(--color-text-primary)]">{formatPeriod(data?.periodYear ?? null, data?.periodMonth ?? null)}</span></div>
+                <div><span className="text-gray-500 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.payrolls.table.total")}: </span><span className="font-medium text-gray-800 dark:text-[var(--color-text-primary)]">{formatMoney(data?.totalAmount ?? 0)}</span></div>
+                <div><span className="text-gray-500 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.payrolls.table.paid")}: </span><span className="font-medium text-gray-800 dark:text-[var(--color-text-primary)]">{formatMoney(data?.paidAmount ?? 0)}</span></div>
               </div>
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-[var(--color-border)]">
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50">
+                    <tr className="border-b border-gray-200 dark:border-[var(--color-border)] bg-gray-50 dark:bg-[var(--color-surface-alt)]">
                       {cols.map((c) => (
-                        <th key={c} className="whitespace-nowrap px-4 py-3 text-left font-medium text-gray-500">{c}</th>
+                        <th key={c} className="whitespace-nowrap px-4 py-3 text-left font-medium text-gray-500 dark:text-[var(--color-text-secondary)]">{c}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {(data?.items ?? []).length === 0 ? (
-                      <tr><td colSpan={cols.length} className="py-8 text-center text-gray-400">{t("finance.salaries.payrolls.detail.noItems")}</td></tr>
+                      <tr><td colSpan={cols.length} className="py-8 text-center text-gray-400 dark:text-[var(--color-text-muted)]">{t("finance.salaries.payrolls.detail.noItems")}</td></tr>
                     ) : (
                       data!.items.map((item) => (
-                        <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50" title={item.formula}>
+                        <tr key={item.id} className="border-b border-gray-100 dark:border-[var(--color-border)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]" title={item.formula}>
                           <td className="px-4 py-3">{item.groupName || "—"}</td>
                           <td className="px-4 py-3">{item.studentName || "—"}</td>
                           <td className="px-4 py-3">{item.lessons ?? "—"}</td>
@@ -407,10 +407,10 @@ export const Salaries = () => {
   const statusCls = (status: string) =>
     status === "PAID" ? "bg-green-100 text-green-700"
       : status === "PUBLISHED" ? "bg-blue-100 text-blue-700"
-      : "bg-gray-100 text-gray-600";
+      : "bg-gray-100 dark:bg-[var(--color-surface-hover)] text-gray-600 dark:text-[var(--color-text-secondary)]";
 
   const inputCls =
-    "flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white disabled:bg-gray-50";
+    "flex-1 border border-gray-300 dark:border-[var(--color-border)] rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white dark:bg-[var(--color-surface)] disabled:bg-gray-50";
 
   const settingsCols = [
     t("finance.salaries.table.calcSetting"),
@@ -426,23 +426,23 @@ export const Salaries = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 font-sans">
+    <div className="min-h-screen bg-gray-100 dark:bg-[var(--color-surface-hover)] p-6 font-sans">
       {/* Page title */}
-      <h1 className="text-2xl font-semibold text-gray-800 mb-5">{t("finance.salaries.title")}</h1>
+      <h1 className="text-2xl font-semibold text-gray-800 dark:text-[var(--color-text-primary)] mb-5">{t("finance.salaries.title")}</h1>
 
       {/* Settings card */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm border border-gray-200 dark:border-[var(--color-border)]">
         {/* Card header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-[var(--color-border)]">
           <button
-            className="flex items-center gap-2 text-gray-600 font-medium text-sm hover:text-gray-800 transition-colors"
+            className="flex items-center gap-2 text-gray-600 dark:text-[var(--color-text-secondary)] font-medium text-sm hover:text-gray-800 dark:hover:text-[var(--color-text-primary)] transition-colors"
             onClick={() => setSettingsOpen((o) => !o)}
           >
             <FiSettings size={15} />
             <span>{t("finance.salaries.settingsToggle")}</span>
             {settingsOpen ? <FiChevronUp size={15} /> : <FiChevronDown size={15} />}
           </button>
-          <button className="border border-gray-300 rounded p-1.5 text-gray-500 hover:bg-gray-50 transition-colors">
+          <button className="border border-gray-300 dark:border-[var(--color-border)] rounded p-1.5 text-gray-500 dark:text-[var(--color-text-secondary)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors">
             <FiSettings size={14} />
           </button>
         </div>
@@ -455,14 +455,14 @@ export const Salaries = () => {
                 <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
                   1
                 </div>
-                <p className="text-gray-700 text-base">
+                <p className="text-gray-700 dark:text-[var(--color-text-primary)] text-base">
                   {t("finance.salaries.step1.description")}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-1.5">
-                <label className="text-sm text-gray-600">{t("finance.salaries.table.salaryType")}</label>
-                <label className="text-sm text-gray-600">{t("finance.salaries.calcValueLabel")}</label>
+                <label className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.table.salaryType")}</label>
+                <label className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.calcValueLabel")}</label>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-64 flex-shrink-0">
@@ -491,7 +491,7 @@ export const Salaries = () => {
               </div>
             </div>
 
-            <div className="border-t border-gray-100" />
+            <div className="border-t border-gray-100 dark:border-[var(--color-border)]" />
 
             {/* ---- Step 2 ---- */}
             <div>
@@ -499,14 +499,14 @@ export const Salaries = () => {
                 <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
                   2
                 </div>
-                <p className="text-gray-700 text-base">
+                <p className="text-gray-700 dark:text-[var(--color-text-primary)] text-base">
                   {t("finance.salaries.step2.description")}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
-                  <label className="mb-1.5 block text-sm text-gray-600">{t("finance.salaries.calcSettingLabel")}</label>
+                  <label className="mb-1.5 block text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.calcSettingLabel")}</label>
                   <Select
                     value={scope}
                     onChange={(v) => { setScope(v); setEntityId(""); setStudent(null); }}
@@ -515,7 +515,7 @@ export const Salaries = () => {
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm text-gray-600">
+                  <label className="mb-1.5 block text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">
                     {scope ? t(`finance.salaries.table.${scope}`) : " "}
                   </label>
                   {scope === "student" ? (
@@ -532,8 +532,8 @@ export const Salaries = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-1.5">
-                <label className="text-sm text-gray-600">{t("finance.salaries.table.salaryType")}</label>
-                <label className="text-sm text-gray-600">{t("finance.salaries.calcValueLabel")}</label>
+                <label className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.table.salaryType")}</label>
+                <label className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.calcValueLabel")}</label>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-64 flex-shrink-0">
@@ -563,12 +563,12 @@ export const Salaries = () => {
             </div>
 
             {/* ---- Settings table (GET /salaries/settings) ---- */}
-            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <div className="overflow-x-auto border border-gray-200 dark:border-[var(--color-border)] rounded-lg">
               <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
+                  <tr className="border-b border-gray-200 dark:border-[var(--color-border)] bg-gray-50 dark:bg-[var(--color-surface-alt)]">
                     {settingsCols.map((col) => (
-                      <th key={col} className="text-left px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      <th key={col} className="text-left px-4 py-3 text-gray-500 dark:text-[var(--color-text-secondary)] font-medium whitespace-nowrap">
                         {col}
                       </th>
                     ))}
@@ -581,13 +581,13 @@ export const Salaries = () => {
                     <tr><td colSpan={10} className="text-center py-8 text-red-500">{t("finance.salaries.loadError")}</td></tr>
                   ) : rows.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="text-center py-8 text-gray-400">
+                      <td colSpan={10} className="text-center py-8 text-gray-400 dark:text-[var(--color-text-muted)]">
                         {t("finance.salaries.table.noData")}
                       </td>
                     </tr>
                   ) : (
                     rows.map((row) => (
-                      <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr key={row.id} className="border-b border-gray-100 dark:border-[var(--color-border)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]">
                         <td className="px-4 py-3 whitespace-nowrap">{row.calcSetting || "—"}</td>
                         <td className="px-4 py-3 whitespace-nowrap">{salaryTypeLabel(row.salaryType)}</td>
                         <td className="px-4 py-3">{row.amount === "" || row.amount === null ? "—" : String(row.amount)}</td>
@@ -619,10 +619,10 @@ export const Salaries = () => {
       {/* ---- Calculate bar (POST /salaries/calculate) ---- */}
       <div className="mt-5 flex items-center gap-3">
         <div className="relative">
-          <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+          <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[var(--color-text-muted)]" size={14} />
           <input
             type="month"
-            className="border border-gray-300 rounded px-3 py-2 pl-8 text-sm bg-white focus:outline-none focus:border-blue-400 text-gray-700"
+            className="border border-gray-300 dark:border-[var(--color-border)] rounded px-3 py-2 pl-8 text-sm bg-white dark:bg-[var(--color-surface)] focus:outline-none focus:border-blue-400 text-gray-700 dark:text-[var(--color-text-primary)]"
             value={monthDate}
             onChange={(e) => setMonthDate(e.target.value)}
           />
@@ -638,15 +638,15 @@ export const Salaries = () => {
       </div>
 
       {/* ---- Payrolls card (GET /salaries/payrolls) ---- */}
-      <div className="mt-5 bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-800">{t("finance.salaries.payrolls.title")}</h2>
+      <div className="mt-5 bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm border border-gray-200 dark:border-[var(--color-border)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-gray-100 dark:border-[var(--color-border)]">
+          <h2 className="text-base font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("finance.salaries.payrolls.title")}</h2>
           <div className="flex flex-wrap items-center gap-2">
             <input
               type="month"
               value={payrollPeriod}
               onChange={(e) => { setPayrollPeriod(e.target.value); setPage(1); }}
-              className="border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400 text-gray-700"
+              className="border border-gray-300 dark:border-[var(--color-border)] rounded px-3 py-2 text-sm bg-white dark:bg-[var(--color-surface)] focus:outline-none focus:border-blue-400 text-gray-700 dark:text-[var(--color-text-primary)]"
             />
             <div className="w-40">
               <Select
@@ -660,7 +660,7 @@ export const Salaries = () => {
               onClick={handleExportPayrolls}
               disabled={isExporting}
               title={t("finance.salaries.payrolls.exportExcel")}
-              className="flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-60"
+              className="flex items-center gap-2 rounded border border-gray-300 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-2 text-sm text-gray-600 dark:text-[var(--color-text-secondary)] transition-colors hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] disabled:opacity-60"
             >
               {isExporting ? <CircularProgress size={14} /> : <FiDownload size={15} />}
               {t("finance.salaries.payrolls.exportExcel")}
@@ -671,7 +671,7 @@ export const Salaries = () => {
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
+              <tr className="border-b border-gray-200 dark:border-[var(--color-border)] bg-gray-50 dark:bg-[var(--color-surface-alt)]">
                 {[
                   t("finance.salaries.payrolls.table.teacher"),
                   t("finance.salaries.payrolls.table.period"),
@@ -680,7 +680,7 @@ export const Salaries = () => {
                   t("finance.salaries.payrolls.table.paid"),
                   t("finance.salaries.payrolls.table.actions"),
                 ].map((col) => (
-                  <th key={col} className="text-left px-4 py-3 text-gray-500 font-medium whitespace-nowrap">{col}</th>
+                  <th key={col} className="text-left px-4 py-3 text-gray-500 dark:text-[var(--color-text-secondary)] font-medium whitespace-nowrap">{col}</th>
                 ))}
               </tr>
             </thead>
@@ -690,10 +690,10 @@ export const Salaries = () => {
               ) : payrollsError ? (
                 <tr><td colSpan={6} className="text-center py-10 text-red-500">{t("finance.salaries.payrolls.loadError")}</td></tr>
               ) : payrolls.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-10 text-gray-400">{t("finance.salaries.payrolls.noData")}</td></tr>
+                <tr><td colSpan={6} className="text-center py-10 text-gray-400 dark:text-[var(--color-text-muted)]">{t("finance.salaries.payrolls.noData")}</td></tr>
               ) : (
                 payrolls.map((p) => (
-                  <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr key={p.id} className="border-b border-gray-100 dark:border-[var(--color-border)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]">
                     <td className="px-4 py-3 whitespace-nowrap">{p.teacherName || "—"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{formatPeriod(p.periodYear, p.periodMonth)}</td>
                     <td className="px-4 py-3">
@@ -707,7 +707,7 @@ export const Salaries = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setDetailId(p.id)}
-                          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-50"
+                          className="rounded border border-gray-300 dark:border-[var(--color-border)] px-2 py-1 text-xs text-gray-600 dark:text-[var(--color-text-secondary)] transition-colors hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]"
                         >
                           {t("finance.salaries.payrolls.actions.details")}
                         </button>
@@ -738,19 +738,19 @@ export const Salaries = () => {
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 border-t border-gray-100 py-3">
+          <div className="flex items-center justify-center gap-2 border-t border-gray-100 dark:border-[var(--color-border)] py-3">
             <button
               onClick={() => setPage((n) => Math.max(1, n - 1))}
               disabled={page <= 1}
-              className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-600 disabled:opacity-40"
+              className="rounded border border-gray-300 dark:border-[var(--color-border)] px-3 py-1 text-sm text-gray-600 dark:text-[var(--color-text-secondary)] disabled:opacity-40"
             >
               ‹
             </button>
-            <span className="text-sm text-gray-600">{page} / {totalPages}</span>
+            <span className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{page} / {totalPages}</span>
             <button
               onClick={() => setPage((n) => Math.min(totalPages, n + 1))}
               disabled={page >= totalPages}
-              className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-600 disabled:opacity-40"
+              className="rounded border border-gray-300 dark:border-[var(--color-border)] px-3 py-1 text-sm text-gray-600 dark:text-[var(--color-text-secondary)] disabled:opacity-40"
             >
               ›
             </button>
@@ -764,10 +764,10 @@ export const Salaries = () => {
       {/* ---- Pay modal (POST /salaries/payrolls/{id}/pay) ---- */}
       {payTarget && (
         <div className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/30 p-6" onClick={() => setPayTarget(null)}>
-          <div className="w-full max-w-sm rounded-lg bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-4 text-base font-semibold text-gray-800">{t("finance.salaries.payrolls.pay.title")}</h2>
+          <div className="w-full max-w-sm rounded-lg bg-white dark:bg-[var(--color-surface)] p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-4 text-base font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("finance.salaries.payrolls.pay.title")}</h2>
 
-            <label className="mb-1.5 block text-sm text-gray-600">{t("finance.salaries.payrolls.pay.paymentMethod")}</label>
+            <label className="mb-1.5 block text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.payrolls.pay.paymentMethod")}</label>
             <Select
               value={payMethodId}
               onChange={setPayMethodId}
@@ -775,22 +775,22 @@ export const Salaries = () => {
               placeholder={t("finance.salaries.payrolls.pay.selectMethod")}
             />
 
-            <label className="mb-1.5 mt-4 block text-sm text-gray-600">{t("finance.salaries.payrolls.pay.amount")}</label>
+            <label className="mb-1.5 mt-4 block text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.payrolls.pay.amount")}</label>
             <input
               type="number"
               min={0}
               value={payAmount}
               onChange={(e) => setPayAmount(e.target.value)}
               placeholder={String(payTarget.totalAmount)}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+              className="w-full rounded border border-gray-300 dark:border-[var(--color-border)] px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
             />
-            <p className="mt-1 text-xs text-gray-400">{t("finance.salaries.payrolls.pay.amountHint")}</p>
+            <p className="mt-1 text-xs text-gray-400 dark:text-[var(--color-text-muted)]">{t("finance.salaries.payrolls.pay.amountHint")}</p>
 
             <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={() => setPayTarget(null)}
                 disabled={isPaying}
-                className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                className="rounded border border-gray-300 dark:border-[var(--color-border)] px-4 py-2 text-sm text-gray-600 dark:text-[var(--color-text-secondary)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]"
               >
                 {t("finance.salaries.payrolls.pay.cancel")}
               </button>

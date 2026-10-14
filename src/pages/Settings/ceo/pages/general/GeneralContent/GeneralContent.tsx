@@ -77,7 +77,7 @@ const GeneralContent = () => {
   if (!selectedBranchId) {
     return (
       <Box sx={{ flex: 1, p: 5 }}>
-        <Typography sx={{ fontSize: 14, color: "#6b7280" }}>
+        <Typography sx={{ fontSize: 14, color: "var(--color-text-secondary)" }}>
           {t("settings.ceo.general.generalContent.selectBranchFirst")}
         </Typography>
       </Box>
@@ -94,7 +94,7 @@ const GeneralContent = () => {
 
   return (
     <Box sx={{ flex: 1, p: 5, maxWidth: 900 }}>
-      <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "#111827" }}>
+      <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "var(--color-text-primary)" }}>
         {t("settings.ceo.general.generalContent.title")}
       </Typography>
 
@@ -107,62 +107,62 @@ const GeneralContent = () => {
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px 40px" }}>
         {/* Company Name */}
         <Box>
-          <Typography sx={{ fontSize: 13, color: "#4b5563", mb: 1 }}>
+          <Typography sx={{ fontSize: 13, color: "var(--color-text-secondary)", mb: 1 }}>
             {t("settings.ceo.general.generalContent.companyName")} <span style={{ color: "red" }}>*</span>
           </Typography>
           <TextField fullWidth size="small" value={form.companyName}
-            onChange={(e) => set("companyName", e.target.value)} sx={{ background: "#fff" }} />
+            onChange={(e) => set("companyName", e.target.value)} sx={{ background: "var(--color-surface)" }} />
         </Box>
 
         {/* Company Phone */}
         <Box>
-          <Typography sx={{ fontSize: 13, color: "#4b5563", mb: 1 }}>
+          <Typography sx={{ fontSize: 13, color: "var(--color-text-secondary)", mb: 1 }}>
             {t("settings.ceo.general.generalContent.companyPhone")} <span style={{ color: "red" }}>*</span>
           </Typography>
           <TextField fullWidth size="small" value={form.companyPhone}
-            onChange={(e) => set("companyPhone", e.target.value)} sx={{ background: "#fff" }} />
+            onChange={(e) => set("companyPhone", e.target.value)} sx={{ background: "var(--color-surface)" }} />
         </Box>
 
         {/* Start Time */}
         <Box>
-          <Typography sx={{ fontSize: 13, color: "#4b5563", mb: 1 }}>
+          <Typography sx={{ fontSize: 13, color: "var(--color-text-secondary)", mb: 1 }}>
             {t("settings.ceo.general.generalContent.startTime")} <span style={{ color: "red" }}>*</span>
           </Typography>
           <TextField fullWidth size="small" type="time" value={form.startTime}
             onChange={(e) => set("startTime", e.target.value)}
-            InputProps={{ startAdornment: <MdAccessTime style={{ color: "#9ca3af", marginRight: 8 }} size={18} /> }}
-            sx={{ background: "#fff" }} />
+            InputProps={{ startAdornment: <MdAccessTime style={{ color: "var(--color-text-muted)", marginRight: 8 }} size={18} /> }}
+            sx={{ background: "var(--color-surface)" }} />
         </Box>
 
         {/* End Time */}
         <Box>
-          <Typography sx={{ fontSize: 13, color: "#4b5563", mb: 1 }}>
+          <Typography sx={{ fontSize: 13, color: "var(--color-text-secondary)", mb: 1 }}>
             {t("settings.ceo.general.generalContent.endTime")} <span style={{ color: "red" }}>*</span>
           </Typography>
           <TextField fullWidth size="small" type="time" value={form.endTime}
             onChange={(e) => set("endTime", e.target.value)}
-            InputProps={{ startAdornment: <MdAccessTime style={{ color: "#9ca3af", marginRight: 8 }} size={18} /> }}
-            sx={{ background: "#fff" }} />
+            InputProps={{ startAdornment: <MdAccessTime style={{ color: "var(--color-text-muted)", marginRight: 8 }} size={18} /> }}
+            sx={{ background: "var(--color-surface)" }} />
         </Box>
 
         {/* Toggles */}
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Typography sx={{ fontSize: 13, color: "#374151" }}>{t("settings.ceo.general.generalContent.lessonStartTimeStep")}</Typography>
+          <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)" }}>{t("settings.ceo.general.generalContent.lessonStartTimeStep")}</Typography>
           <Switch checked={form.lessonStartStep} onChange={(e) => set("lessonStartStep", e.target.checked)} size="small" />
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Typography sx={{ fontSize: 13, color: "#374151" }}>{t("settings.ceo.general.generalContent.allStaffCoin")}</Typography>
+          <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)" }}>{t("settings.ceo.general.generalContent.allStaffCoin")}</Typography>
           <Switch checked={allStaffCoin} onChange={(e) => setAllStaffCoin(e.target.checked)} size="small" />
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Typography sx={{ fontSize: 13, color: "#374151" }}>{t("settings.ceo.general.generalContent.branchSpecificPbx")}</Typography>
+          <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)" }}>{t("settings.ceo.general.generalContent.branchSpecificPbx")}</Typography>
           <Switch checked={branchPBX} onChange={(e) => setBranchPBX(e.target.checked)} size="small" />
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Typography sx={{ fontSize: 13, color: "#374151" }}>{t("settings.ceo.general.generalContent.animation")}</Typography>
+          <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)" }}>{t("settings.ceo.general.generalContent.animation")}</Typography>
           <Switch checked={form.animation} onChange={(e) => set("animation", e.target.checked)} size="small"
             sx={{
               "& .MuiSwitch-switchBase.Mui-checked": { color: "#2196f3" },
@@ -175,24 +175,24 @@ const GeneralContent = () => {
             field rather than a file picker; the preview renders whatever URL
             is currently set. */}
         <Box>
-          <Typography sx={{ fontSize: 13, color: "#374151", mb: 1.5 }}>{t("settings.ceo.general.generalContent.logo")}</Typography>
+          <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 1.5 }}>{t("settings.ceo.general.generalContent.logo")}</Typography>
           <Box sx={{
-            border: "1px solid #e5e7eb", borderRadius: "8px",
+            border: "1px solid var(--color-border)", borderRadius: "8px",
             width: 180, height: 130, display: "flex", alignItems: "center", justifyContent: "center",
-            background: "#fafafa", overflow: "hidden", mb: 1.5,
+            background: "var(--color-surface-alt)", overflow: "hidden", mb: 1.5,
           }}>
             {form.logoUrl
               ? <img src={form.logoUrl} alt={t("settings.ceo.general.generalContent.logo")} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-              : <Typography variant="caption" sx={{ color: "#9ca3af" }}>{t("settings.ceo.general.generalContent.noLogo")}</Typography>
+              : <Typography variant="caption" sx={{ color: "var(--color-text-muted)" }}>{t("settings.ceo.general.generalContent.noLogo")}</Typography>
             }
           </Box>
           <TextField fullWidth size="small" placeholder={t("settings.ceo.general.generalContent.logoUrlPlaceholder")}
-            value={form.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} sx={{ background: "#fff" }} />
+            value={form.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} sx={{ background: "var(--color-surface)" }} />
         </Box>
 
         {/* Theme color + Oferta */}
         <Box>
-          <Typography sx={{ fontSize: 13, color: "#374151", mb: 2 }}>{t("settings.ceo.general.generalContent.selectThemeColor")}</Typography>
+          <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 2 }}>{t("settings.ceo.general.generalContent.selectThemeColor")}</Typography>
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
             {themeColors.map((tc) => (
               <Box key={tc.color} onClick={() => set("themeColor", tc.color)} sx={{
@@ -206,9 +206,9 @@ const GeneralContent = () => {
           </Box>
 
           <Box sx={{ mt: 4 }}>
-            <Typography sx={{ fontSize: 13, color: "#374151", mb: 1.5 }}>{t("settings.ceo.general.generalContent.companyOferta")}</Typography>
+            <Typography sx={{ fontSize: 13, color: "var(--color-text-primary)", mb: 1.5 }}>{t("settings.ceo.general.generalContent.companyOferta")}</Typography>
             <TextField fullWidth size="small" placeholder={t("settings.ceo.general.generalContent.offerUrlPlaceholder")}
-              value={form.offerUrl} onChange={(e) => set("offerUrl", e.target.value)} sx={{ background: "#fff" }} />
+              value={form.offerUrl} onChange={(e) => set("offerUrl", e.target.value)} sx={{ background: "var(--color-surface)" }} />
           </Box>
         </Box>
       </Box>

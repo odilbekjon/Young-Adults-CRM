@@ -53,7 +53,7 @@ export const ReminderDrawer = ({
         <DatePickerField value={reminderDate} onChange={setReminderDate} />
         <div>
           <select
-            style={{ ...inputStyle, color: employee ? "#1a1a1a" : "#b0b8c1" }}
+            style={{ ...inputStyle, color: employee ? "var(--color-text-primary)" : "#b0b8c1" }}
             value={employee}
             onChange={(e) => setEmployee(e.target.value)}
           >
@@ -81,7 +81,7 @@ export const ReminderDrawer = ({
           </button>
           <button
             style={{
-              background: "transparent", color: "#374151", border: "1px solid #d1d5db",
+              background: "transparent", color: "var(--color-text-primary)", border: "1px solid var(--color-border)",
               borderRadius: 999, padding: "12px 30px", fontSize: 14,
               fontWeight: 600, cursor: "pointer",
             }}

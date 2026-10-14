@@ -32,7 +32,7 @@ const PAGE_LIMIT = 20;
 // ─── Small UI pieces ──────────────────────────────────────────────────────────
 
 const Label = ({ text }: { text: string }) => (
-  <label className="block text-[10px] text-gray-500 font-medium mb-1">{text}</label>
+  <label className="block text-[10px] text-gray-500 dark:text-[var(--color-text-secondary)] font-medium mb-1">{text}</label>
 );
 
 const Input = ({ value, onChange, placeholder, type = "text" }: {
@@ -43,7 +43,7 @@ const Input = ({ value, onChange, placeholder, type = "text" }: {
     value={value}
     onChange={(e) => onChange(e.target.value)}
     placeholder={placeholder}
-    className="w-full border border-gray-200 rounded-md px-2 py-[7px] text-xs text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-[#003366]"
+    className="w-full border border-gray-200 dark:border-[var(--color-border)] rounded-md px-2 py-[7px] text-xs text-gray-700 dark:text-[var(--color-text-primary)] bg-white dark:bg-[var(--color-surface)] focus:outline-none focus:ring-1 focus:ring-[#003366]"
   />
 );
 
@@ -129,11 +129,11 @@ export const Withdraw = () => {
   const totalWithdrawalsThisYear = (chartMonths ?? []).reduce((a, m) => a + m.totalWithdrawals, 0);
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-50 dark:bg-[var(--color-surface-alt)] min-h-screen">
 
       {/* Title */}
       <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-semibold text-gray-900">{t("finance.withdraw.title")}</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[var(--color-text-primary)]">{t("finance.withdraw.title")}</h1>
         <div className="flex items-center gap-2">
           <MuiTooltip title={t("finance.withdraw.exportExcel")} placement="top" arrow>
             <span>
@@ -156,35 +156,35 @@ export const Withdraw = () => {
 
         {/* Stat card */}
         <div className="col-span-2">
-          <div className="bg-white rounded-xl border border-gray-200 border-l-[5px] border-l-[#003366] px-6 py-5 flex items-center justify-between shadow-sm h-full">
+          <div className="bg-white dark:bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-[var(--color-border)] border-l-[5px] border-l-[#003366] px-6 py-5 flex items-center justify-between shadow-sm h-full">
             <div>
-              <p className="text-sm text-gray-500 font-medium mb-2">{t("finance.withdraw.stats.totalWithdrawals")}</p>
-              <p className="text-2xl font-bold text-gray-900 tracking-tight">
+              <p className="text-sm text-gray-500 dark:text-[var(--color-text-secondary)] font-medium mb-2">{t("finance.withdraw.stats.totalWithdrawals")}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-[var(--color-text-primary)] tracking-tight">
                 {chartLoading ? "…" : fmt(totalWithdrawalsThisYear)}{" "}
-                <span className="text-base font-semibold text-gray-500">UZS</span>
+                <span className="text-base font-semibold text-gray-500 dark:text-[var(--color-text-secondary)]">UZS</span>
               </p>
-              <p className="text-xs text-gray-400 mt-2">📅 {year}</p>
+              <p className="text-xs text-gray-400 dark:text-[var(--color-text-muted)] mt-2">📅 {year}</p>
             </div>
             <BsCash size={40} className="text-[#003366] opacity-80 shrink-0 ml-4" />
           </div>
         </div>
 
         {/* Chart */}
-        <div className="col-span-3 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="col-span-3 bg-white dark:bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-[var(--color-border)] p-4 shadow-sm">
           {chartLoading ? (
             <div className="h-[200px] flex items-center justify-center"><CircularProgress size={22} /></div>
           ) : chartError ? (
-            <div className="h-[200px] flex flex-col items-center justify-center gap-2 text-gray-500">
+            <div className="h-[200px] flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-[var(--color-text-secondary)]">
               <FiAlertCircle size={20} className="text-red-400" />
               <span className="text-sm">{t("finance.allPayments.chart.loadError")}</span>
-              <button onClick={() => refetchChart()} className="px-4 py-1.5 text-xs font-medium border border-gray-200 rounded hover:bg-gray-50">
+              <button onClick={() => refetchChart()} className="px-4 py-1.5 text-xs font-medium border border-gray-200 dark:border-[var(--color-border)] rounded hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]">
                 {t("finance.allPayments.chart.retry")}
               </button>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={chartMonths ?? []} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
                 <XAxis
                   dataKey="month"
                   tick={{ fontSize: 8, fill: "#9ca3af" }}
@@ -201,7 +201,7 @@ export const Withdraw = () => {
                 />
                 <Tooltip
                   formatter={(v) => v !== undefined ? [`${fmt(v as number)} UZS`, t("finance.withdraw.stats.totalWithdrawals")] : null}
-                  contentStyle={{ fontSize: 11, borderRadius: 6, border: "1px solid #e5e9f0" }}
+                  contentStyle={{ fontSize: 11, borderRadius: 6, border: "1px solid var(--color-border)" }}
                 />
                 <Line
                   type="monotone"
@@ -218,7 +218,7 @@ export const Withdraw = () => {
       </div>
 
       {/* Filters — only fields GET /finance/withdrawals actually accepts */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 px-5 py-4">
+      <div className="bg-white dark:bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-[var(--color-border)] shadow-sm mb-4 px-5 py-4">
         <div className="grid grid-cols-4 gap-3 items-end">
           <div>
             <Label text={t("finance.withdraw.filters.dateFrom")} />
@@ -245,18 +245,18 @@ export const Withdraw = () => {
 
       {/* Filtered total (GET /finance/withdrawals/total) */}
       <div className="flex items-center justify-end px-1 mb-2">
-        <span className="text-sm text-gray-600">
+        <span className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">
           {t("finance.withdraw.stats.filteredTotal")}{" "}
-          <strong className="text-gray-800">{isFilteredTotalFetching ? "…" : fmt(filteredTotalData?.total ?? 0)} UZS</strong>
+          <strong className="text-gray-800 dark:text-[var(--color-text-primary)]">{isFilteredTotalFetching ? "…" : fmt(filteredTotalData?.total ?? 0)} UZS</strong>
         </span>
       </div>
 
       {/* Table (real data: GET /finance/withdrawals) */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-[var(--color-border)] overflow-hidden shadow-sm">
         <TableContainer>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ backgroundColor: "#f9fafb" }}>
+              <TableRow sx={{ backgroundColor: "var(--color-surface-alt)" }}>
                 {[
                   t("finance.withdraw.table.date"),
                   t("finance.withdraw.table.name"),
@@ -270,9 +270,9 @@ export const Withdraw = () => {
                     sx={{
                       fontWeight: 700,
                       fontSize: 12,
-                      color: "#374151",
+                      color: "var(--color-text-primary)",
                       whiteSpace: "nowrap",
-                      borderBottom: "2px solid #e5e9f0",
+                      borderBottom: "2px solid var(--color-border)",
                       py: 1.5,
                     }}
                   >
@@ -292,10 +292,10 @@ export const Withdraw = () => {
               ) : withdrawalsError ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                    <div className="flex flex-col items-center gap-2 text-gray-500">
+                    <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-[var(--color-text-secondary)]">
                       <FiAlertCircle size={20} className="text-red-400" />
                       <span className="text-sm">{t("finance.withdraw.table.loadError")}</span>
-                      <button onClick={() => refetchWithdrawals()} className="px-4 py-1.5 text-xs font-medium border border-gray-200 rounded hover:bg-gray-50">
+                      <button onClick={() => refetchWithdrawals()} className="px-4 py-1.5 text-xs font-medium border border-gray-200 dark:border-[var(--color-border)] rounded hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]">
                         {t("finance.withdraw.table.retry")}
                       </button>
                     </div>
@@ -303,7 +303,7 @@ export const Withdraw = () => {
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: "#9ca3af", fontSize: 13 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: "var(--color-text-muted)", fontSize: 13 }}>
                     {t("finance.withdraw.table.empty")}
                   </TableCell>
                 </TableRow>
@@ -314,29 +314,29 @@ export const Withdraw = () => {
                     <TableRow
                       key={w.id}
                       sx={{
-                        backgroundColor: i % 2 === 0 ? "#fff" : "#fafbfc",
+                        backgroundColor: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-alt)",
                         opacity: withdrawalsFetching ? 0.6 : 1,
                       }}
                     >
-                      <TableCell sx={{ fontSize: 12, py: 1.5, whiteSpace: "nowrap", fontWeight: 500, color: "#374151", minWidth: 110 }}>
+                      <TableCell sx={{ fontSize: 12, py: 1.5, whiteSpace: "nowrap", fontWeight: 500, color: "var(--color-text-primary)", minWidth: 110 }}>
                         {rowNum}. {fmtDate(w.date)}
                       </TableCell>
                       <TableCell sx={{ fontSize: 12, py: 1.5, whiteSpace: "nowrap", minWidth: 160 }}>
-                        {w.recipientName || <span className="text-gray-400 italic text-xs">—</span>}
+                        {w.recipientName || <span className="text-gray-400 dark:text-[var(--color-text-muted)] italic text-xs">—</span>}
                       </TableCell>
                       <TableCell sx={{ fontSize: 12, py: 1.5, whiteSpace: "nowrap", minWidth: 130 }}>
-                        <span className="font-bold text-gray-900 text-sm">{fmt(w.amount)}</span>
-                        <span className="text-[11px] text-gray-400 ml-1">UZS</span>
+                        <span className="font-bold text-gray-900 dark:text-[var(--color-text-primary)] text-sm">{fmt(w.amount)}</span>
+                        <span className="text-[11px] text-gray-400 dark:text-[var(--color-text-muted)] ml-1">UZS</span>
                       </TableCell>
                       <TableCell sx={{ fontSize: 12, py: 1.5, minWidth: 200 }}>
-                        {w.reason || <span className="text-gray-400 italic text-xs">—</span>}
+                        {w.reason || <span className="text-gray-400 dark:text-[var(--color-text-muted)] italic text-xs">—</span>}
                       </TableCell>
                       <TableCell sx={{ fontSize: 12, py: 1.5, minWidth: 160 }}>
-                        <span className="text-gray-700 text-xs">{w.createdBy || "—"}</span>
+                        <span className="text-gray-700 dark:text-[var(--color-text-primary)] text-xs">{w.createdBy || "—"}</span>
                         {w.createdAt && (
                           <>
                             <br />
-                            <span className="text-[11px] text-gray-400">{fmtDate(w.createdAt.slice(0, 10))}</span>
+                            <span className="text-[11px] text-gray-400 dark:text-[var(--color-text-muted)]">{fmtDate(w.createdAt.slice(0, 10))}</span>
                           </>
                         )}
                       </TableCell>
@@ -357,13 +357,13 @@ export const Withdraw = () => {
 
         {/* Footer */}
         {!withdrawalsLoading && !withdrawalsError && total > 0 && (
-          <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100">
-            <span className="text-xs text-gray-500">
+          <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100 dark:border-[var(--color-border)]">
+            <span className="text-xs text-gray-500 dark:text-[var(--color-text-secondary)]">
               {t("finance.withdraw.footer.showing")}{" "}
-              <strong className="text-gray-700">
+              <strong className="text-gray-700 dark:text-[var(--color-text-primary)]">
                 {(applied.page - 1) * PAGE_LIMIT + 1}–{Math.min(applied.page * PAGE_LIMIT, total)}
               </strong>{" "}
-              {t("finance.withdraw.footer.of")} <strong className="text-gray-700">{total}</strong> {t("finance.withdraw.footer.withdrawals")}
+              {t("finance.withdraw.footer.of")} <strong className="text-gray-700 dark:text-[var(--color-text-primary)]">{total}</strong> {t("finance.withdraw.footer.withdrawals")}
             </span>
 
             {totalPages > 1 && (
@@ -374,7 +374,7 @@ export const Withdraw = () => {
                 size="small"
                 shape="rounded"
                 sx={{
-                  "& .MuiPaginationItem-root": { fontSize: 12, color: "#374151" },
+                  "& .MuiPaginationItem-root": { fontSize: 12, color: "var(--color-text-primary)" },
                   "& .Mui-selected": {
                     backgroundColor: "#003366 !important",
                     color: "#fff !important",

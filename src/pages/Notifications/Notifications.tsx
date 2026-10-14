@@ -46,7 +46,7 @@ export const Notifications: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 4, minHeight: "100vh", backgroundColor: "#f5f7fb" }}>
+    <Box sx={{ p: 4, minHeight: "100vh", backgroundColor: "var(--color-surface-alt)" }}>
       <Typography variant="h4" fontWeight={700} mb={3}>
         Notifications
       </Typography>
@@ -58,7 +58,7 @@ export const Notifications: React.FC = () => {
               <ListItemButton
                 onClick={() => markAsRead(notification.id)}
                 sx={{
-                  backgroundColor: notification.read ? "#fff" : "#e3f2fd",
+                  backgroundColor: notification.read ? "var(--color-surface)" : "var(--color-primary-surface)",
                   borderRadius: 2,
                 }}
               >

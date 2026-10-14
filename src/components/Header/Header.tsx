@@ -10,7 +10,7 @@ const Header = () => {
     <Box
       sx={{
         width: "100%",
-        bgcolor: "#fff",
+        bgcolor: "var(--color-surface)",
         position: "fixed",
         top: 0,
         left: 0,

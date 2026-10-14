@@ -234,7 +234,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
         <div>
           <label style={labelStyle}>{t("addPayment.student")}</label>
           {isEditing ? (
-            <div style={{ ...inputStyle, display: "flex", alignItems: "center", background: "#f5f5f5", color: "#666" }}>
+            <div style={{ ...inputStyle, display: "flex", alignItems: "center", background: "var(--color-surface-alt)", color: "var(--color-text-secondary)" }}>
               {editPayment?.studentName}
             </div>
           ) : isLocked && lockedStudent ? (
@@ -242,14 +242,14 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
               aria-readonly="true"
               style={{
                 ...inputStyle, display: "flex", alignItems: "center", gap: 8,
-                background: "#f5f5f5", color: "#444", cursor: "not-allowed",
+                background: "var(--color-surface-alt)", color: "var(--color-text-secondary)", cursor: "not-allowed",
               }}
             >
               <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {lockedStudent.name}
-                {lockedStudent.phone && <span style={{ color: "#888" }}> — {lockedStudent.phone}</span>}
+                {lockedStudent.phone && <span style={{ color: "var(--color-text-muted)" }}> — {lockedStudent.phone}</span>}
               </span>
-              <MdLock size={15} color="#999" style={{ flexShrink: 0 }} />
+              <MdLock size={15} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
             </div>
           ) : (
             <StudentSearchField active={open} value={pickedForField} onChange={setPickedStudent} disabled={isSaving} />

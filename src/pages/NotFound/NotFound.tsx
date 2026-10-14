@@ -19,7 +19,7 @@ export const NotFound = () => {
         textAlign: "center",
       }}
     >
-      <Typography sx={{ fontSize: 72, fontWeight: 800, color: "#1e3a5f" }}>404</Typography>
+      <Typography sx={{ fontSize: 72, fontWeight: 800, color: "var(--color-nav-active)" }}>404</Typography>
       <Typography sx={{ fontSize: 16, color: "text.secondary" }}>{t("notFound.message")}</Typography>
       <Button
         variant="contained"

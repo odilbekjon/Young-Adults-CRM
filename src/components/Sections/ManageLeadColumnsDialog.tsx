@@ -110,11 +110,11 @@ export const ManageLeadColumnsDialog = ({ open, onClose }: Props) => {
         ) : isError ? (
           <Typography sx={{ color: "#e53935", fontSize: 13, textAlign: "center", py: 3 }}>{t("leadsPage.columns.loadError")}</Typography>
         ) : columns.length === 0 ? (
-          <Typography sx={{ color: "#9ca3af", fontSize: 13, textAlign: "center", py: 3 }}>{t("leadsPage.columns.emptyState")}</Typography>
+          <Typography sx={{ color: "var(--color-text-muted)", fontSize: 13, textAlign: "center", py: 3 }}>{t("leadsPage.columns.emptyState")}</Typography>
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {columns.map((col) => (
-              <Box key={col.id} sx={{ border: "1px solid #eee", borderRadius: 1.5 }}>
+              <Box key={col.id} sx={{ border: "1px solid var(--color-border-subtle)", borderRadius: 1.5 }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 1 }}>
                   {editingId === col.id ? (
                     <>
@@ -135,14 +135,14 @@ export const ManageLeadColumnsDialog = ({ open, onClose }: Props) => {
                 </Box>
 
                 <Collapse in={detailsId === col.id}>
-                  <Box sx={{ px: 1.5, pb: 1.5, borderTop: "1px solid #f5f5f5", pt: 1 }}>
+                  <Box sx={{ px: 1.5, pb: 1.5, borderTop: "1px solid var(--color-border-subtle)", pt: 1 }}>
                     {detailsLoading ? (
                       <CircularProgress size={16} />
                     ) : (
                       <>
-                        <Typography sx={{ fontSize: 12, color: "#888" }}>ID: {detailsData?.data.id ?? col.id}</Typography>
+                        <Typography sx={{ fontSize: 12, color: "var(--color-text-muted)" }}>ID: {detailsData?.data.id ?? col.id}</Typography>
                         {detailsData?.data.createdAt && (
-                          <Typography sx={{ fontSize: 12, color: "#888" }}>
+                          <Typography sx={{ fontSize: 12, color: "var(--color-text-muted)" }}>
                             {t("leadsPage.columns.createdAt")}: {new Date(detailsData.data.createdAt).toLocaleString()}
                           </Typography>
                         )}
@@ -152,7 +152,7 @@ export const ManageLeadColumnsDialog = ({ open, onClose }: Props) => {
                 </Collapse>
 
                 <Collapse in={confirmDeleteId === col.id}>
-                  <Box sx={{ px: 1.5, pb: 1.5, display: "flex", alignItems: "center", gap: 1, borderTop: "1px solid #f5f5f5", pt: 1 }}>
+                  <Box sx={{ px: 1.5, pb: 1.5, display: "flex", alignItems: "center", gap: 1, borderTop: "1px solid var(--color-border-subtle)", pt: 1 }}>
                     <Typography sx={{ fontSize: 12.5, color: "#e53935", flex: 1 }}>{t("leadsPage.columns.confirmDelete")}</Typography>
                     <Button size="small" onClick={() => setConfirmDeleteId(null)} sx={{ textTransform: "none" }}>{t("leadsPage.columns.cancel")}</Button>
                     <Button size="small" color="error" variant="contained" onClick={() => handleDelete(col.id)} disabled={isDeleting} sx={{ textTransform: "none" }}>

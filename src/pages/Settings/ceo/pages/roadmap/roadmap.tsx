@@ -116,7 +116,7 @@ export const Roadmap = () => {
       sx={{
         display: "grid",
         gridTemplateColumns: "80px 1fr 180px 180px 1fr",
-        bgcolor: "#cdd5e8",
+        bgcolor: "var(--color-surface-alt)",
         borderRadius: "4px 4px 0 0",
         mb: 0,
       }}
@@ -126,11 +126,11 @@ export const Roadmap = () => {
         <Typography fontWeight={600} fontSize={16}>{t("settings.ceo.roadmap.overallScore")}</Typography>
       </Box>
       <Box sx={{ p: 2 }}>
-        <Typography fontSize={13} color="#555">{t("settings.ceo.roadmap.maxScore")}</Typography>
+        <Typography fontSize={13} color="var(--color-text-secondary)">{t("settings.ceo.roadmap.maxScore")}</Typography>
         <Typography fontWeight={600} fontSize={14}>{MAX_SCORE}</Typography>
       </Box>
       <Box sx={{ p: 1.5 }}>
-        <Typography fontSize={13} color="#555" mb={0.5}>{t("settings.ceo.roadmap.yourScore")}</Typography>
+        <Typography fontSize={13} color="var(--color-text-secondary)" mb={0.5}>{t("settings.ceo.roadmap.yourScore")}</Typography>
         <Box sx={{ bgcolor: "#f5c842", borderRadius: 1, py: 0.6, px: 1, textAlign: "center" }}>
           <Typography fontWeight={600} fontSize={14}>{totalScore.toFixed(1)}</Typography>
         </Box>
@@ -140,7 +140,7 @@ export const Roadmap = () => {
   );
 
   return (
-    <Box sx={{ p: 3, bgcolor: "#f5f5f5", minHeight: "100vh" }}>
+    <Box sx={{ p: 3, bgcolor: "var(--color-surface-alt)", minHeight: "100vh" }}>
       <Typography variant="h5" fontWeight={400} mb={3}>{t("settings.ceo.roadmap.title")}</Typography>
 
       <Paper elevation={0} variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
@@ -152,13 +152,13 @@ export const Roadmap = () => {
           sx={{
             display: "grid",
             gridTemplateColumns: "80px 1fr 180px 180px 1fr",
-            borderBottom: "1px solid #e0e0e0",
-            bgcolor: "#fff",
+            borderBottom: "1px solid var(--color-border)",
+            bgcolor: "var(--color-surface)",
           }}
         >
           {columnKeys.map((colKey) => (
             <Box key={colKey} sx={{ px: 2, py: 1.2 }}>
-              <Typography fontSize={13} fontWeight={600} color="#333">{t(`settings.ceo.roadmap.table.${colKey}`)}</Typography>
+              <Typography fontSize={13} fontWeight={600} color="var(--color-text-primary)">{t(`settings.ceo.roadmap.table.${colKey}`)}</Typography>
             </Box>
           ))}
         </Box>
@@ -172,7 +172,7 @@ export const Roadmap = () => {
                 sx={{
                   display: "grid",
                   gridTemplateColumns: "80px 1fr 180px 180px 1fr",
-                  borderBottom: "1px solid #eeeeee",
+                  borderBottom: "1px solid var(--color-border-subtle)",
                   minHeight: 48,
                   alignItems: "center",
                 }}
@@ -185,7 +185,7 @@ export const Roadmap = () => {
                     alignItems: "center",
                     justifyContent: "center",
                     alignSelf: "stretch",
-                    borderRight: "1px solid #e0e0e0",
+                    borderRight: "1px solid var(--color-border)",
                   }}
                 >
                   {qi === Math.floor(section.questions.length / 2) && (
@@ -207,7 +207,7 @@ export const Roadmap = () => {
 
                 {/* Question */}
                 <Box sx={{ px: 2, py: 1 }}>
-                  <Typography fontSize={13} color="#333">{t(`settings.ceo.roadmap.sections.${section.key}.questions.${q.id}`)}</Typography>
+                  <Typography fontSize={13} color="var(--color-text-primary)">{t(`settings.ceo.roadmap.sections.${section.key}.questions.${q.id}`)}</Typography>
                 </Box>
 
                 {/* Ball input */}
@@ -225,7 +225,7 @@ export const Roadmap = () => {
                     sx={{
                       width: 70,
                       "& .MuiOutlinedInput-root": {
-                        "& fieldset": { borderColor: "#ddd" },
+                        "& fieldset": { borderColor: "var(--color-border)" },
                       },
                     }}
                   />
@@ -246,8 +246,8 @@ export const Roadmap = () => {
           sx={{
             display: "grid",
             gridTemplateColumns: "80px 1fr 180px 180px 1fr",
-            bgcolor: "#cdd5e8",
-            borderTop: "1px solid #bbb",
+            bgcolor: "var(--color-surface-alt)",
+            borderTop: "1px solid var(--color-border)",
           }}
         >
           <Box />
@@ -255,11 +255,11 @@ export const Roadmap = () => {
             <Typography fontWeight={600} fontSize={16}>{t("settings.ceo.roadmap.overallScore")}</Typography>
           </Box>
           <Box sx={{ p: 2 }}>
-            <Typography fontSize={13} color="#555">{t("settings.ceo.roadmap.maxScore")}</Typography>
+            <Typography fontSize={13} color="var(--color-text-secondary)">{t("settings.ceo.roadmap.maxScore")}</Typography>
             <Typography fontWeight={600} fontSize={14}>{MAX_SCORE}</Typography>
           </Box>
           <Box sx={{ p: 1.5 }}>
-            <Typography fontSize={13} color="#555" mb={0.5}>{t("settings.ceo.roadmap.yourScore")}</Typography>
+            <Typography fontSize={13} color="var(--color-text-secondary)" mb={0.5}>{t("settings.ceo.roadmap.yourScore")}</Typography>
             <Box sx={{ bgcolor: "#f5c842", borderRadius: 1, py: 0.6, px: 1, textAlign: "center" }}>
               <Typography fontWeight={600} fontSize={14}>{totalScore.toFixed(1)}</Typography>
             </Box>

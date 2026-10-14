@@ -23,21 +23,21 @@ import { StudentTagsSelect } from "../StudentTagsSelect";
 /* ─── shared styles ─── */
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  border: "1px solid #e0e0e0",
+  border: "1px solid var(--color-border)",
   borderRadius: 8,
   padding: "10px 12px",
   fontSize: 13,
-  color: "#1a1a1a",
+  color: "var(--color-text-primary)",
   outline: "none",
   boxSizing: "border-box",
-  background: "#fff",
+  background: "var(--color-surface)",
   fontFamily: "inherit",
 };
 
 const labelStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 500,
-  color: "#1a1a1a",
+  color: "var(--color-text-primary)",
   marginBottom: 6,
   display: "block",
 };
@@ -223,7 +223,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
             <div style={{
               ...inputStyle, width: 72, flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#555", fontWeight: 500,
+              color: "var(--color-text-secondary)", fontWeight: 500,
             }}>+998</div>
             <input
               style={{ ...inputStyle, flex: 1 }}
@@ -257,7 +257,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
                   onClick={() => setGender(g)}
                   style={{
                     width: 18, height: 18, borderRadius: "50%",
-                    border: `2px solid ${gender === g ? "#185FA5" : "#ccc"}`,
+                    border: `2px solid ${gender === g ? "#185FA5" : "var(--color-border)"}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     cursor: "pointer", flexShrink: 0,
                   }}
@@ -282,7 +282,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
 
         {/* Additional contacts */}
         <div>
-          <label style={{ ...labelStyle, color: "#888", fontWeight: 400 }}>{t("addStudent.additionalContacts")}</label>
+          <label style={{ ...labelStyle, color: "var(--color-text-muted)", fontWeight: 400 }}>{t("addStudent.additionalContacts")}</label>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {ADDITIONAL_FIELDS.map((field) => (
               <button
@@ -294,7 +294,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
                   width: 40, height: 40,
                   border: `1.5px solid ${openFields[field.id] ? "#185FA5" : "#c5d8ec"}`,
                   borderRadius: "50%",
-                  background: openFields[field.id] ? "#eaf3fc" : "#fff",
+                  background: openFields[field.id] ? "var(--color-primary-surface)" : "var(--color-surface)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   cursor: "pointer", color: openFields[field.id] ? "#185FA5" : "#4a7aaa",
                   transition: "background 0.15s, border-color 0.15s",
@@ -312,8 +312,8 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
                 <label style={labelStyle}>{t(field.labelKey)}</label>
                 <div style={{
                   display: "flex", alignItems: "center", gap: 8,
-                  border: "1px solid #e0e0e0", borderRadius: 8,
-                  padding: "0 6px 0 12px", background: "#fff",
+                  border: "1px solid var(--color-border)", borderRadius: 8,
+                  padding: "0 6px 0 12px", background: "var(--color-surface)",
                 }}>
                   <span style={{ color: "#4a7aaa", display: "flex", flexShrink: 0 }}>{field.icon}</span>
                   <input
@@ -329,7 +329,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
                     title={t("addStudent.removeField")}
                     style={{
                       width: 22, height: 22, borderRadius: "50%", border: "none",
-                      background: "transparent", color: "#9ca3af", cursor: "pointer",
+                      background: "transparent", color: "var(--color-text-muted)", cursor: "pointer",
                       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                     }}
                   >
@@ -345,7 +345,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
         <div>
           <span
             onClick={() => setShowGroupField((p) => !p)}
-            style={{ fontSize: 13, color: "#555", cursor: "pointer", userSelect: "none" }}
+            style={{ fontSize: 13, color: "var(--color-text-secondary)", cursor: "pointer", userSelect: "none" }}
           >
             {t("addStudent.addToGroup")}
           </span>
@@ -378,7 +378,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
                 </div>
               )}
               {!isGroupsLoading && !isGroupsError && groups.length === 0 && (
-                <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 6 }}>
+                <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 6 }}>
                   {t("addStudent.noGroups")}
                 </div>
               )}
@@ -396,7 +396,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
         <div>
           <span
             onClick={() => setShowPasswordField((p) => !p)}
-            style={{ fontSize: 13, color: "#555", cursor: "pointer", userSelect: "none" }}
+            style={{ fontSize: 13, color: "var(--color-text-secondary)", cursor: "pointer", userSelect: "none" }}
           >
             {t("addStudent.setPassword")}
           </span>

@@ -11,7 +11,7 @@ import {
 export const Expense = () => (
   <div>
     <TableContainer color="primary">
-      <Table sx={{ minWidth: 650, bgcolor: "#fff" }} aria-label="simple table">
+      <Table sx={{ minWidth: 650, bgcolor: "var(--color-surface)" }} aria-label="simple table">
         <TableHead>
           <TableRow>
             <TableCell>Full Name</TableCell>

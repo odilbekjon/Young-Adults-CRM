@@ -55,8 +55,8 @@ export const Grade = ({ students }: Props) => {
                       sx={{
                         px: 1.5, py: 0.5, borderRadius: 2, display: "inline-block",
                         fontSize: 12, fontWeight: 600,
-                        bgcolor: g >= 80 ? "#e8f5e9" : g >= 60 ? "#fff8e1" : g > 0 ? "#ffebee" : "#f5f5f5",
-                        color: g >= 80 ? "#2e7d32" : g >= 60 ? "#f57f17" : g > 0 ? "#c62828" : "#999",
+                        bgcolor: g >= 80 ? "#e8f5e9" : g >= 60 ? "#fff8e1" : g > 0 ? "#ffebee" : "var(--color-surface-alt)",
+                        color: g >= 80 ? "#2e7d32" : g >= 60 ? "#f57f17" : g > 0 ? "#c62828" : "var(--color-text-muted)",
                       }}
                     >
                       {g >= 80

@@ -197,7 +197,7 @@ export const Courses = () => {
     n.toLocaleString("ru-RU").replace(/,/g, " ") + " " + t("settings.office.courses.currency");
 
   return (
-    <Box sx={{ p: 3, bgcolor: "#f5f5f5", minHeight: "100vh" }}>
+    <Box sx={{ p: 3, bgcolor: "var(--color-surface-alt)", minHeight: "100vh" }}>
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -280,7 +280,7 @@ export const Courses = () => {
                     size="small"
                     onClick={(e) => { e.stopPropagation(); openEditDrawer(course); }}
                     aria-label={t("settings.office.courses.edit")}
-                    sx={{ bgcolor: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "#fff" }, width: 28, height: 28 }}
+                    sx={{ bgcolor: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "var(--color-surface)" }, width: 28, height: 28 }}
                   >
                     <MdOutlineEdit size={14} />
                   </IconButton>
@@ -289,7 +289,7 @@ export const Courses = () => {
                     onClick={(e) => { e.stopPropagation(); openArchiveConfirm(course); }}
                     aria-label={t("settings.office.courses.archive")}
                     title={t("settings.office.courses.archive")}
-                    sx={{ bgcolor: "rgba(255,255,255,0.85)", color: "#b98900", "&:hover": { bgcolor: "#fff" }, width: 28, height: 28 }}
+                    sx={{ bgcolor: "rgba(255,255,255,0.85)", color: "#b98900", "&:hover": { bgcolor: "var(--color-surface)" }, width: 28, height: 28 }}
                   >
                     <MdArchive size={14} />
                   </IconButton>
@@ -318,16 +318,16 @@ export const Courses = () => {
                 >
                   {course.name}
                 </Typography>
-                <Typography fontSize={13} color="#888">{fmt(course.price?.d?.[0] ?? 0)}</Typography>
+                <Typography fontSize={13} color="var(--color-text-muted)">{fmt(course.price?.d?.[0] ?? 0)}</Typography>
                 {course.branch?.name && (
-                  <Typography fontSize={12} color="#aaa" mt={0.5}>{course.branch.name}</Typography>
+                  <Typography fontSize={12} color="var(--color-text-muted)" mt={0.5}>{course.branch.name}</Typography>
                 )}
               </Box>
             </Paper>
           ))}
 
           {courses.length === 0 && (
-            <Box sx={{ gridColumn: "1 / -1", textAlign: "center", color: "#9ca3af", fontSize: 13, py: 6 }}>
+            <Box sx={{ gridColumn: "1 / -1", textAlign: "center", color: "var(--color-text-muted)", fontSize: 13, py: 6 }}>
               {t("settings.office.courses.emptyState")}
             </Box>
           )}

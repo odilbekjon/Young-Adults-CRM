@@ -93,10 +93,10 @@ const LandingPage = () => {
             position: "absolute",
             top: -11,
             left: 12,
-            bgcolor: "#fff",
+            bgcolor: "var(--color-surface)",
             px: 0.5,
             fontSize: 13,
-            color: "#555",
+            color: "var(--color-text-secondary)",
           }}
         >
           {t("settings.ceo.general.landingPage.createTitle")}
@@ -114,7 +114,7 @@ const LandingPage = () => {
             onChange={(e) => handleChange("name", e.target.value)}
             error={!!errors.name}
             helperText={errors.name}
-            sx={{ "& .MuiOutlinedInput-root": { bgcolor: "#fff" } }}
+            sx={{ "& .MuiOutlinedInput-root": { bgcolor: "var(--color-surface)" } }}
           />
         </Box>
 
@@ -130,7 +130,7 @@ const LandingPage = () => {
             onChange={(e) => handleChange("slug", e.target.value)}
             error={!!errors.slug}
             helperText={errors.slug}
-            sx={{ "& .MuiOutlinedInput-root": { bgcolor: "#fff" } }}
+            sx={{ "& .MuiOutlinedInput-root": { bgcolor: "var(--color-surface)" } }}
           />
         </Box>
 
@@ -145,10 +145,10 @@ const LandingPage = () => {
             displayEmpty
             value={form.branch}
             onChange={(e) => handleChange("branch", e.target.value)}
-            sx={{ bgcolor: "#fff", fontSize: 14 }}
+            sx={{ bgcolor: "var(--color-surface)", fontSize: 14 }}
           >
             <MenuItem value="">
-              <em style={{ color: "#aaa", fontStyle: "normal" }}></em>
+              <em style={{ color: "var(--color-text-muted)", fontStyle: "normal" }}></em>
             </MenuItem>
             {branches.map((b) => (
               <MenuItem key={b} value={b} sx={{ fontSize: 14 }}>
@@ -169,7 +169,7 @@ const LandingPage = () => {
             displayEmpty
             value={form.section}
             onChange={(e) => handleChange("section", e.target.value)}
-            sx={{ bgcolor: "#f5f6fa", fontSize: 14 }}
+            sx={{ bgcolor: "var(--color-surface-alt)", fontSize: 14 }}
           >
             <MenuItem value=""></MenuItem>
             {sections.map((s) => (
@@ -191,7 +191,7 @@ const LandingPage = () => {
             displayEmpty
             value={form.source}
             onChange={(e) => handleChange("source", e.target.value)}
-            sx={{ bgcolor: "#f5f6fa", fontSize: 14 }}
+            sx={{ bgcolor: "var(--color-surface-alt)", fontSize: 14 }}
           >
             <MenuItem value=""></MenuItem>
             {sources.map((s) => (
@@ -223,7 +223,7 @@ const LandingPage = () => {
       <TableContainer component={Paper} variant="outlined" sx={{ maxWidth: "100%" }}>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ bgcolor: "#fafafa" }}>
+            <TableRow sx={{ bgcolor: "var(--color-surface-alt)" }}>
               <TableCell sx={{ fontWeight: 600, fontSize: 13, width: "35%" }}>
                 {t("settings.ceo.general.landingPage.table.name")}
               </TableCell>
@@ -241,7 +241,7 @@ const LandingPage = () => {
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} align="center" sx={{ py: 4, color: "#999", fontSize: 13 }}>
+                <TableCell colSpan={3} align="center" sx={{ py: 4, color: "var(--color-text-muted)", fontSize: 13 }}>
                   {t("settings.ceo.general.landingPage.table.noData")}
                 </TableCell>
               </TableRow>

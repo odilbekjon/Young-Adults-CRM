@@ -96,15 +96,15 @@ export const LeadsReports = () => {
   const isEmpty = !busy && !isError && pieData.length === 0 && barData.length === 0;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 font-sans">
+    <div className="min-h-screen bg-gray-100 dark:bg-[var(--color-surface-hover)] p-6 font-sans">
       {/* Title */}
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold text-gray-800">{t("reports.leads.title")}</h1>
+        <h1 className="text-2xl font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("reports.leads.title")}</h1>
         <button
           onClick={handleExportExcel}
           disabled={isExporting}
           title={t("reports.common.exportExcel")}
-          className="flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-60"
+          className="flex items-center gap-2 rounded border border-gray-300 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-1.5 text-sm text-gray-600 dark:text-[var(--color-text-secondary)] transition-colors hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] disabled:opacity-60"
         >
           {isExporting ? <CircularProgress size={14} /> : <FiDownload size={15} />}
           {t("reports.common.exportExcel")}
@@ -112,10 +112,10 @@ export const LeadsReports = () => {
       </div>
 
       {/* Summary card */}
-      <div className="bg-white border border-gray-200 rounded-lg px-6 py-4 flex items-center justify-between mb-4 shadow-sm max-w-3xl">
+      <div className="bg-white dark:bg-[var(--color-surface)] border border-gray-200 dark:border-[var(--color-border)] rounded-lg px-6 py-4 flex items-center justify-between mb-4 shadow-sm max-w-3xl">
         <div className="flex items-center gap-2">
           <div className="w-1 h-8 bg-blue-500 rounded-full mr-1" />
-          <span className="text-gray-700 font-medium">
+          <span className="text-gray-700 dark:text-[var(--color-text-primary)] font-medium">
             {t("reports.leads.totalLeads", {
               count: total,
               from: applied.startDate || "—",
@@ -127,7 +127,7 @@ export const LeadsReports = () => {
       </div>
 
       {/* Charts card */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+      <div className="bg-white dark:bg-[var(--color-surface)] border border-gray-200 dark:border-[var(--color-border)] rounded-lg shadow-sm p-5">
         {/* Date + Calculate bar */}
         <div className="flex items-center gap-3 mb-5">
           <DatePickerField value={dateFrom} onChange={setDateFrom} />
@@ -145,7 +145,7 @@ export const LeadsReports = () => {
         ) : isError ? (
           <div className="py-24 text-center text-red-500 text-sm">{t("reports.common.loadError")}</div>
         ) : isEmpty ? (
-          <div className="py-24 text-center text-gray-400 text-sm">{t("reports.common.noData")}</div>
+          <div className="py-24 text-center text-gray-400 dark:text-[var(--color-text-muted)] text-sm">{t("reports.common.noData")}</div>
         ) : (
           /* Charts row */
           <div className="grid grid-cols-2 gap-6">
@@ -183,7 +183,7 @@ export const LeadsReports = () => {
                   data={barData}
                   margin={{ top: 20, right: 20, bottom: 10, left: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-subtle)" />
                   <XAxis
                     dataKey="name"
                     tick={{ fontSize: 12 }}

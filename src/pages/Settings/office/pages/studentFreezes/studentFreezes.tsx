@@ -195,16 +195,16 @@ export const StudentFreezes = () => {
 
   const statusCls = (status: string) =>
     status === "ACTIVE" ? "bg-green-100 text-green-700"
-      : status === "CANCELLED" ? "bg-gray-100 text-gray-500"
+      : status === "CANCELLED" ? "bg-gray-100 dark:bg-[var(--color-surface-hover)] text-gray-500 dark:text-[var(--color-text-secondary)]"
       : "bg-amber-100 text-amber-700";
 
-  const selectSx = { bgcolor: "#fff", fontSize: 13 };
+  const selectSx = { bgcolor: "var(--color-surface)", fontSize: 13 };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 font-sans">
+    <div className="min-h-screen bg-gray-100 dark:bg-[var(--color-surface-hover)] p-6 font-sans">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
-        <Typography variant="h5" className="!font-semibold !text-gray-800">
+        <Typography variant="h5" className="!font-semibold !text-gray-800 dark:text-[var(--color-text-primary)]">
           {t("settings.office.studentFreezes.title")}
         </Typography>
         <Button
@@ -230,7 +230,7 @@ export const StudentFreezes = () => {
           onChange={(e) => { setStudentFilter(e.target.value); setPage(1); }}
           sx={{ ...selectSx, minWidth: 200 }}
         >
-          <MenuItem value=""><em style={{ fontStyle: "normal", color: "#9ca3af" }}>{t("settings.office.studentFreezes.filters.allStudents")}</em></MenuItem>
+          <MenuItem value=""><em style={{ fontStyle: "normal", color: "var(--color-text-muted)" }}>{t("settings.office.studentFreezes.filters.allStudents")}</em></MenuItem>
           {students.map((s) => (
             <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
           ))}
@@ -243,7 +243,7 @@ export const StudentFreezes = () => {
           onChange={(e) => { setGroupFilter(e.target.value); setPage(1); }}
           sx={{ ...selectSx, minWidth: 180 }}
         >
-          <MenuItem value=""><em style={{ fontStyle: "normal", color: "#9ca3af" }}>{t("settings.office.studentFreezes.filters.allGroups")}</em></MenuItem>
+          <MenuItem value=""><em style={{ fontStyle: "normal", color: "var(--color-text-muted)" }}>{t("settings.office.studentFreezes.filters.allGroups")}</em></MenuItem>
           {(groupOptions ?? []).map((g) => (
             <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>
           ))}
@@ -256,7 +256,7 @@ export const StudentFreezes = () => {
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           sx={{ ...selectSx, minWidth: 160 }}
         >
-          <MenuItem value=""><em style={{ fontStyle: "normal", color: "#9ca3af" }}>{t("settings.office.studentFreezes.filters.allStatuses")}</em></MenuItem>
+          <MenuItem value=""><em style={{ fontStyle: "normal", color: "var(--color-text-muted)" }}>{t("settings.office.studentFreezes.filters.allStatuses")}</em></MenuItem>
           {STATUSES.map((s) => (
             <MenuItem key={s} value={s}>{statusLabel(s)}</MenuItem>
           ))}
@@ -264,10 +264,10 @@ export const StudentFreezes = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+      <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-gray-100 dark:border-[var(--color-border)]">
               {[
                 t("settings.office.studentFreezes.table.student"),
                 t("settings.office.studentFreezes.table.group"),
@@ -277,7 +277,7 @@ export const StudentFreezes = () => {
                 t("settings.office.studentFreezes.table.status"),
                 t("settings.office.studentFreezes.table.actions"),
               ].map((col) => (
-                <th key={col} className="text-left px-5 py-4 text-gray-500 font-medium text-sm whitespace-nowrap">
+                <th key={col} className="text-left px-5 py-4 text-gray-500 dark:text-[var(--color-text-secondary)] font-medium text-sm whitespace-nowrap">
                   {col}
                 </th>
               ))}
@@ -289,20 +289,20 @@ export const StudentFreezes = () => {
             ) : isError ? (
               <tr><td colSpan={7} className="text-center py-10 text-red-500">{t("settings.office.studentFreezes.loadError")}</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-10 text-gray-400">{t("settings.office.studentFreezes.noData")}</td></tr>
+              <tr><td colSpan={7} className="text-center py-10 text-gray-400 dark:text-[var(--color-text-muted)]">{t("settings.office.studentFreezes.noData")}</td></tr>
             ) : (
               rows.map((r) => (
-                <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3.5 text-gray-800 font-medium whitespace-nowrap">
+                <tr key={r.id} className="border-b border-gray-50 dark:border-[var(--color-border-subtle)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors">
+                  <td className="px-5 py-3.5 text-gray-800 dark:text-[var(--color-text-primary)] font-medium whitespace-nowrap">
                     {r.studentName || studentName(r.studentId)}
-                    {r.studentPhone && <div className="text-xs text-gray-400">{r.studentPhone}</div>}
+                    {r.studentPhone && <div className="text-xs text-gray-400 dark:text-[var(--color-text-muted)]">{r.studentPhone}</div>}
                   </td>
-                  <td className="px-5 py-3.5 text-gray-600 whitespace-nowrap">
+                  <td className="px-5 py-3.5 text-gray-600 dark:text-[var(--color-text-secondary)] whitespace-nowrap">
                     {r.groupName || (r.groupId ? groupName(r.groupId) : "—")}
                   </td>
-                  <td className="px-5 py-3.5 text-gray-600 whitespace-nowrap">{r.startDate || "—"}</td>
-                  <td className="px-5 py-3.5 text-gray-600 whitespace-nowrap">{r.endDate || "—"}</td>
-                  <td className="px-5 py-3.5 text-gray-600 max-w-[220px] truncate" title={r.reason}>{r.reason || "—"}</td>
+                  <td className="px-5 py-3.5 text-gray-600 dark:text-[var(--color-text-secondary)] whitespace-nowrap">{r.startDate || "—"}</td>
+                  <td className="px-5 py-3.5 text-gray-600 dark:text-[var(--color-text-secondary)] whitespace-nowrap">{r.endDate || "—"}</td>
+                  <td className="px-5 py-3.5 text-gray-600 dark:text-[var(--color-text-secondary)] max-w-[220px] truncate" title={r.reason}>{r.reason || "—"}</td>
                   <td className="px-5 py-3.5">
                     <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${statusCls(r.status)}`}>
                       {statusLabel(r.status)}
@@ -310,7 +310,7 @@ export const StudentFreezes = () => {
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-1">
-                      <IconButton size="small" sx={{ color: "#6b7280" }} onClick={() => openEdit(r)} aria-label={t("settings.office.studentFreezes.edit")}>
+                      <IconButton size="small" sx={{ color: "var(--color-text-secondary)" }} onClick={() => openEdit(r)} aria-label={t("settings.office.studentFreezes.edit")}>
                         <MdEdit size={16} />
                       </IconButton>
                       <IconButton size="small" sx={{ color: "#ef5350" }} onClick={() => { setDeleteError(null); setDeleteTarget(r); }} aria-label={t("settings.office.studentFreezes.delete")}>
@@ -325,7 +325,7 @@ export const StudentFreezes = () => {
         </table>
 
         {totalPages > 1 && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 2, borderTop: "1px solid #f3f4f6" }}>
+          <Box sx={{ display: "flex", justifyContent: "center", py: 2, borderTop: "1px solid var(--color-border-subtle)" }}>
             <Pagination count={totalPages} page={page} onChange={(_, v) => setPage(v)} size="small" />
           </Box>
         )}
@@ -334,16 +334,16 @@ export const StudentFreezes = () => {
       {/* Create modal */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} PaperProps={{ sx: { borderRadius: "12px", minWidth: 420 } }}>
         <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1 }}>
-          <Typography sx={{ fontWeight: 600, fontSize: "1rem", color: "#1f2937" }}>
+          <Typography sx={{ fontWeight: 600, fontSize: "1rem", color: "var(--color-text-primary)" }}>
             {t("settings.office.studentFreezes.createTitle")}
           </Typography>
-          <IconButton onClick={() => setCreateOpen(false)} size="small" sx={{ color: "#9ca3af" }}>
+          <IconButton onClick={() => setCreateOpen(false)} size="small" sx={{ color: "var(--color-text-muted)" }}>
             <MdClose size={18} />
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ pt: 1, pb: 2, display: "flex", flexDirection: "column", gap: 2 }}>
           <Box>
-            <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
+            <Typography sx={{ mb: 0.8, fontSize: 13, color: "var(--color-text-primary)", fontWeight: 500 }}>
               {t("settings.office.studentFreezes.form.student")} <span style={{ color: "red" }}>*</span>
             </Typography>
             <StudentSearchField
@@ -357,7 +357,7 @@ export const StudentFreezes = () => {
           </Box>
 
           <Box>
-            <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
+            <Typography sx={{ mb: 0.8, fontSize: 13, color: "var(--color-text-primary)", fontWeight: 500 }}>
               {t("settings.office.studentFreezes.form.group")}
             </Typography>
             <Select
@@ -365,7 +365,7 @@ export const StudentFreezes = () => {
               value={createForm.groupId}
               onChange={(e) => setCreateForm((p) => ({ ...p, groupId: e.target.value }))}
             >
-              <MenuItem value=""><em style={{ fontStyle: "normal", color: "#9ca3af" }}>{t("settings.office.studentFreezes.form.selectGroup")}</em></MenuItem>
+              <MenuItem value=""><em style={{ fontStyle: "normal", color: "var(--color-text-muted)" }}>{t("settings.office.studentFreezes.form.selectGroup")}</em></MenuItem>
               {(groupOptions ?? []).map((g) => (
                 <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>
               ))}
@@ -374,13 +374,13 @@ export const StudentFreezes = () => {
 
           <Box sx={{ display: "flex", gap: 2 }}>
             <Box sx={{ flex: 1 }}>
-              <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
+              <Typography sx={{ mb: 0.8, fontSize: 13, color: "var(--color-text-primary)", fontWeight: 500 }}>
                 {t("settings.office.studentFreezes.form.startDate")} <span style={{ color: "red" }}>*</span>
               </Typography>
               <DatePickerField value={createForm.startDate} onChange={(iso) => setCreateForm((p) => ({ ...p, startDate: iso }))} />
             </Box>
             <Box sx={{ flex: 1 }}>
-              <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
+              <Typography sx={{ mb: 0.8, fontSize: 13, color: "var(--color-text-primary)", fontWeight: 500 }}>
                 {t("settings.office.studentFreezes.form.endDate")}
               </Typography>
               <DatePickerField value={createForm.endDate} onChange={(iso) => setCreateForm((p) => ({ ...p, endDate: iso }))} />
@@ -388,7 +388,7 @@ export const StudentFreezes = () => {
           </Box>
 
           <Box>
-            <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
+            <Typography sx={{ mb: 0.8, fontSize: 13, color: "var(--color-text-primary)", fontWeight: 500 }}>
               {t("settings.office.studentFreezes.form.reason")}
             </Typography>
             <TextField fullWidth size="small" multiline minRows={2} value={createForm.reason}
@@ -416,24 +416,24 @@ export const StudentFreezes = () => {
       {/* Edit modal */}
       <Dialog open={!!editTarget} onClose={() => setEditTarget(null)} PaperProps={{ sx: { borderRadius: "12px", minWidth: 420 } }}>
         <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1 }}>
-          <Typography sx={{ fontWeight: 600, fontSize: "1rem", color: "#1f2937" }}>
+          <Typography sx={{ fontWeight: 600, fontSize: "1rem", color: "var(--color-text-primary)" }}>
             {t("settings.office.studentFreezes.editTitle")}
           </Typography>
-          <IconButton onClick={() => setEditTarget(null)} size="small" sx={{ color: "#9ca3af" }}>
+          <IconButton onClick={() => setEditTarget(null)} size="small" sx={{ color: "var(--color-text-muted)" }}>
             <MdClose size={18} />
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ pt: 1, pb: 2, display: "flex", flexDirection: "column", gap: 2 }}>
           <Box sx={{ display: "flex", gap: 2 }}>
             <Box sx={{ flex: 1 }}>
-              <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
+              <Typography sx={{ mb: 0.8, fontSize: 13, color: "var(--color-text-primary)", fontWeight: 500 }}>
                 {t("settings.office.studentFreezes.form.startDate")}
               </Typography>
               <DatePickerField value={editForm.startDate} disabled={isLoadingForEdit}
                 onChange={(iso) => setEditForm((p) => ({ ...p, startDate: iso }))} />
             </Box>
             <Box sx={{ flex: 1 }}>
-              <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
+              <Typography sx={{ mb: 0.8, fontSize: 13, color: "var(--color-text-primary)", fontWeight: 500 }}>
                 {t("settings.office.studentFreezes.form.endDate")}
               </Typography>
               <DatePickerField value={editForm.endDate} disabled={isLoadingForEdit}
@@ -442,7 +442,7 @@ export const StudentFreezes = () => {
           </Box>
 
           <Box>
-            <Typography sx={{ mb: 0.8, fontSize: 13, color: "#374151", fontWeight: 500 }}>
+            <Typography sx={{ mb: 0.8, fontSize: 13, color: "var(--color-text-primary)", fontWeight: 500 }}>
               {t("settings.office.studentFreezes.form.reason")}
             </Typography>
             <TextField fullWidth size="small" multiline minRows={2} value={editForm.reason} disabled={isLoadingForEdit}
@@ -478,7 +478,7 @@ export const StudentFreezes = () => {
           {deleteError && <Typography sx={{ fontSize: 13, color: "error.main", mt: 1.5 }}>{deleteError}</Typography>}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => { setDeleteTarget(null); setDeleteError(null); }} disabled={isDeleting} sx={{ color: "#667085" }}>
+          <Button onClick={() => { setDeleteTarget(null); setDeleteError(null); }} disabled={isDeleting} sx={{ color: "var(--color-text-secondary)" }}>
             {t("settings.office.studentFreezes.deleteConfirm.cancel")}
           </Button>
           <Button

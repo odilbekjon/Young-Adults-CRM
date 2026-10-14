@@ -1426,7 +1426,7 @@ export const Students = () => {
 
                     {col("photo") && (
                       <TableCell>
-                        <Avatar sx={{ width: 34, height: 34, fontSize: 13, fontWeight: 700, bgcolor: "#d1d9e0", color: "var(--color-text-secondary)" }}>
+                        <Avatar sx={{ width: 34, height: 34, fontSize: 13, fontWeight: 700, bgcolor: "var(--color-surface-hover)", color: "var(--color-text-secondary)" }}>
                           <FiUser size={16} />
                         </Avatar>
                       </TableCell>

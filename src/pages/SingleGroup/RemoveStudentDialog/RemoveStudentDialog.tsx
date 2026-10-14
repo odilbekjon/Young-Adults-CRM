@@ -47,7 +47,7 @@ interface RemoveStudentDialogProps {
 }
 
 const BLUE = "#2f80ed";
-const FIELD_BORDER = "1px solid #d7dce3";
+const FIELD_BORDER = "1px solid var(--color-border)";
 
 const fieldStyle: React.CSSProperties = {
   width: "100%",
@@ -57,8 +57,8 @@ const fieldStyle: React.CSSProperties = {
   padding: "12px 14px",
   fontSize: 14,
   fontFamily: "inherit",
-  color: "#1a1a1a",
-  background: "#fff",
+  color: "var(--color-text-primary)",
+  background: "var(--color-surface)",
   outline: "none",
 };
 
@@ -98,7 +98,7 @@ export const RemoveStudentDialog = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ position: "relative", background: "#fff", borderRadius: 14, width: 520, maxWidth: "95vw", maxHeight: "95vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}
+        style={{ position: "relative", background: "var(--color-surface)", borderRadius: 14, width: 520, maxWidth: "95vw", maxHeight: "95vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}
       >
         <MdClose
           size={22}
@@ -107,7 +107,7 @@ export const RemoveStudentDialog = ({
         />
 
         <div style={{ padding: "34px 36px 30px" }}>
-          <div style={{ textAlign: "center", fontSize: 20, fontWeight: 500, color: "#2e2e2e", marginBottom: 20 }}>
+          <div style={{ textAlign: "center", fontSize: 20, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 20 }}>
             {t("singleGroup.removeStudentDialog.title")}
           </div>
 
@@ -130,9 +130,9 @@ export const RemoveStudentDialog = ({
                     onChange={(e) => onDeleteModeChange?.(e.target.checked)}
                     sx={{
                       "& .MuiSwitch-track": { backgroundColor: "#cfd6de", opacity: 1 },
-                      "& .MuiSwitch-thumb": { backgroundColor: "#fff" },
+                      "& .MuiSwitch-thumb": { backgroundColor: "var(--color-surface)" },
                       "& .Mui-checked + .MuiSwitch-track": { backgroundColor: "#d93f4f", opacity: 1 },
-                      "& .Mui-checked .MuiSwitch-thumb": { backgroundColor: "#fff" },
+                      "& .Mui-checked .MuiSwitch-thumb": { backgroundColor: "var(--color-surface)" },
                     }}
                   />
                 </span>
@@ -160,7 +160,7 @@ export const RemoveStudentDialog = ({
                 backgroundImage: chevron,
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "right 14px center",
-                color: reasonId ? "#1a1a1a" : "#9aa3af",
+                color: reasonId ? "var(--color-text-primary)" : "var(--color-text-muted)",
                 cursor: reasonsLoading ? "wait" : "pointer",
               }}
               value={reasonId}
@@ -172,7 +172,7 @@ export const RemoveStudentDialog = ({
                 <option value="" disabled>{t("singleGroup.removeStudentDialog.reasonsEmpty")}</option>
               )}
               {reasons.map((r) => (
-                <option key={r.id} value={r.id} style={{ color: "#1a1a1a" }}>{r.name}</option>
+                <option key={r.id} value={r.id} style={{ color: "var(--color-text-primary)" }}>{r.name}</option>
               ))}
             </select>
             {reasonsError && (
@@ -184,7 +184,7 @@ export const RemoveStudentDialog = ({
 
           <div style={{ marginBottom: 20 }}>
             <textarea
-              style={{ ...fieldStyle, minHeight: 96, resize: "vertical", color: "#3f3f3f" }}
+              style={{ ...fieldStyle, minHeight: 96, resize: "vertical", color: "var(--color-text-primary)" }}
               value={comment}
               onChange={(e) => onCommentChange(e.target.value)}
               placeholder={t("singleGroup.removeStudentDialog.commentPlaceholder")}
@@ -199,10 +199,10 @@ export const RemoveStudentDialog = ({
                     checked={recalculate}
                     onChange={(e) => onRecalculateChange(e.target.checked)}
                     size="small"
-                    sx={{ color: "#9aa3af", "&.Mui-checked": { color: BLUE } }}
+                    sx={{ color: "var(--color-text-muted)", "&.Mui-checked": { color: BLUE } }}
                   />
                 }
-                label={<span style={{ fontSize: 14, color: "#3f3f3f" }}>{t("singleGroup.removeStudentDialog.recalculateBalance")}</span>}
+                label={<span style={{ fontSize: 14, color: "var(--color-text-primary)" }}>{t("singleGroup.removeStudentDialog.recalculateBalance")}</span>}
                 sx={{ ml: "-11px", mr: 0, mt: 0, mb: 0.5 }}
               />
 
@@ -216,14 +216,14 @@ export const RemoveStudentDialog = ({
                   <FormControlLabel
                     value="current"
                     disabled={archiving}
-                    control={<Radio size="small" sx={{ color: "#9aa3af", "&.Mui-checked": { color: BLUE } }} />}
-                    label={<span style={{ fontSize: 14, color: "#3f3f3f" }}>{t("singleGroup.removeStudentDialog.currentGroup")}</span>}
+                    control={<Radio size="small" sx={{ color: "var(--color-text-muted)", "&.Mui-checked": { color: BLUE } }} />}
+                    label={<span style={{ fontSize: 14, color: "var(--color-text-primary)" }}>{t("singleGroup.removeStudentDialog.currentGroup")}</span>}
                   />
                   <FormControlLabel
                     value="all"
                     disabled={archiving}
-                    control={<Radio size="small" sx={{ color: "#9aa3af", "&.Mui-checked": { color: BLUE } }} />}
-                    label={<span style={{ fontSize: 14, color: "#3f3f3f" }}>{t("singleGroup.removeStudentDialog.allGroups")}</span>}
+                    control={<Radio size="small" sx={{ color: "var(--color-text-muted)", "&.Mui-checked": { color: BLUE } }} />}
+                    label={<span style={{ fontSize: 14, color: "var(--color-text-primary)" }}>{t("singleGroup.removeStudentDialog.allGroups")}</span>}
                   />
                 </RadioGroup>
               </FormControl>
@@ -245,7 +245,7 @@ export const RemoveStudentDialog = ({
               {loading ? "…" : t("singleGroup.removeStudentDialog.yes")}
             </button>
             <button
-              style={{ background: "transparent", border: "none", color: "#8a8a8a", fontSize: 15, padding: "0 8px", cursor: loading ? "default" : "pointer" }}
+              style={{ background: "transparent", border: "none", color: "var(--color-text-muted)", fontSize: 15, padding: "0 8px", cursor: loading ? "default" : "pointer" }}
               onClick={onClose}
               disabled={loading}
             >

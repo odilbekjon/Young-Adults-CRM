@@ -73,12 +73,12 @@ const HistoryEntryRow = ({
         alignItems: "flex-start",
         gap: 3,
         py: 3.5,
-        borderBottom: "1px solid #e8e8e8",
+        borderBottom: "1px solid var(--color-border)",
         "&:last-of-type": { borderBottom: "none" },
       }}
     >
       <Stack spacing={1} sx={{ minWidth: 0, flex: 1 }}>
-        <Typography sx={{ fontSize: 20, lineHeight: 1.25, color: "#1f1f1f" }}>{title}</Typography>
+        <Typography sx={{ fontSize: 20, lineHeight: 1.25, color: "var(--color-text-primary)" }}>{title}</Typography>
 
         {hasStudent && (
           <Stack direction="row" alignItems="center" spacing={0.75} flexWrap="wrap" sx={{ fontSize: 14 }}>
@@ -93,7 +93,7 @@ const HistoryEntryRow = ({
                   {entry.studentName}
                 </Box>
               ))}
-            {entry.studentName && entry.studentPhone && <Box component="span" sx={{ color: "#555" }}>•</Box>}
+            {entry.studentName && entry.studentPhone && <Box component="span" sx={{ color: "var(--color-text-secondary)" }}>•</Box>}
             {entry.studentPhone && (
               <Box component="span" sx={{ color: LINK_COLOR }}>
                 {entry.studentPhone}
@@ -103,7 +103,7 @@ const HistoryEntryRow = ({
         )}
 
         {targetGroupName && (
-          <Typography sx={{ fontSize: 14, color: "#1f1f1f" }}>
+          <Typography sx={{ fontSize: 14, color: "var(--color-text-primary)" }}>
             {t("singleGroup.tabs.history.groupName")}:{" "}
             {targetGroupId ? (
               <Box component={RouterLink} to={`/groups/${targetGroupId}`} sx={linkSx}>
@@ -118,7 +118,7 @@ const HistoryEntryRow = ({
         )}
 
         {groupCode && (
-          <Typography sx={{ fontSize: 14, color: "#1f1f1f" }}>
+          <Typography sx={{ fontSize: 14, color: "var(--color-text-primary)" }}>
             {t("singleGroup.tabs.history.group")}:{" "}
             <Box component={RouterLink} to={`/groups/${targetGroupId}`} sx={linkSx}>
               #{groupCode}
@@ -127,11 +127,11 @@ const HistoryEntryRow = ({
         )}
 
         {entry.detail && (
-          <Typography sx={{ fontSize: 14, color: "#1f1f1f" }}>{entry.detail}</Typography>
+          <Typography sx={{ fontSize: 14, color: "var(--color-text-primary)" }}>{entry.detail}</Typography>
         )}
 
         {tr && (tr.from || tr.to) && (
-          <Typography sx={{ fontSize: 14, color: "#1f1f1f" }}>
+          <Typography sx={{ fontSize: 14, color: "var(--color-text-primary)" }}>
             {tr.from && tr.to ? (
               <>
                 {statusLabel(tr.from)} {"=>"} {statusLabel(tr.to)}
@@ -148,7 +148,7 @@ const HistoryEntryRow = ({
         )}
 
         {entry.activatedFrom && (
-          <Typography sx={{ fontSize: 14, color: "#1f1f1f" }}>
+          <Typography sx={{ fontSize: 14, color: "var(--color-text-primary)" }}>
             {t("singleGroup.tabs.history.activatedFrom")}:{" "}
             <Box component="span" sx={{ color: MUTED }}>
               {entry.activatedFrom}
@@ -157,7 +157,7 @@ const HistoryEntryRow = ({
         )}
 
         {entry.changes.map((c, i) => (
-          <Typography key={`${c.key}-${i}`} sx={{ fontSize: 14, color: "#1f1f1f" }}>
+          <Typography key={`${c.key}-${i}`} sx={{ fontSize: 14, color: "var(--color-text-primary)" }}>
             {c.label ? `${changeLabel(c.key, c.label)}: ` : ""}
             <Box component="span" sx={{ color: MUTED }}>
               {c.from ? `${c.from} => ${c.value}` : c.value}
@@ -193,11 +193,11 @@ export const History = ({ groupId, groupName }: Props) => {
           {t("singleGroup.tabs.history.loadError")}
         </Typography>
       ) : !entries || entries.length === 0 ? (
-        <Typography sx={{ color: "#9ca3af", fontSize: 13, textAlign: "center", py: 4 }}>
+        <Typography sx={{ color: "var(--color-text-muted)", fontSize: 13, textAlign: "center", py: 4 }}>
           {t("singleGroup.tabs.history.emptyState")}
         </Typography>
       ) : (
-        <Box sx={{ bgcolor: "#fff" }}>
+        <Box sx={{ bgcolor: "var(--color-surface)" }}>
           {entries.map((entry) => (
             <HistoryEntryRow key={entry.id} entry={entry} groupId={groupId} groupName={groupName} />
           ))}

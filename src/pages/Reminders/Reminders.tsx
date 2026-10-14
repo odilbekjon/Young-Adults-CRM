@@ -83,9 +83,9 @@ function formatDate(datetimeStr: string): string {
 
 // ─── Filter select style ──────────────────────────────────────────────────────
 const filterSelectSx = {
-  bgcolor: "#fff",
-  "& .MuiOutlinedInput-notchedOutline": { borderColor: "#dde1e9" },
-  "& .MuiSelect-select": { py: "7px", px: "12px", fontSize: 13.5, color: "#555" },
+  bgcolor: "var(--color-surface)",
+  "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--color-border)" },
+  "& .MuiSelect-select": { py: "7px", px: "12px", fontSize: 13.5, color: "var(--color-text-secondary)" },
   borderRadius: "6px",
   minWidth: 150,
 };
@@ -116,20 +116,20 @@ function DateFilterButton({
           display: "flex",
           alignItems: "center",
           gap: 0.8,
-          bgcolor: "#fff",
-          border: "1px solid #dde1e9",
+          bgcolor: "var(--color-surface)",
+          border: "1px solid var(--color-border)",
           borderRadius: "6px",
           px: 1.5,
           py: "7px",
           fontSize: 13.5,
-          color: displayValue ? "#222" : "#555",
+          color: displayValue ? "var(--color-text-primary)" : "var(--color-text-secondary)",
           cursor: "pointer",
           minWidth: 160,
           userSelect: "none",
           "&:hover": { borderColor: "#bbb" },
         }}
       >
-        <MdCalendarToday size={15} color="#888" />
+        <MdCalendarToday size={15} color="var(--color-text-muted)" />
         {displayValue ?? label}
         {displayValue && (
           <Box
@@ -141,8 +141,8 @@ function DateFilterButton({
             sx={{
               ml: "auto",
               display: "flex",
-              color: "#aaa",
-              "&:hover": { color: "#555" },
+              color: "var(--color-text-muted)",
+              "&:hover": { color: "var(--color-text-secondary)" },
             }}
           >
             <MdClose size={14} />
@@ -200,7 +200,7 @@ const NoMore = () => (
     justifyContent="center"
     gap={0.8}
     py={2}
-    sx={{ color: "#aaa", fontSize: 13 }}
+    sx={{ color: "var(--color-text-muted)", fontSize: 13 }}
   >
     <MdCheck color="#4caf50" size={14} />
     No more
@@ -230,7 +230,7 @@ function Column({
         borderBottom="1.5px solid #e0e3ea"
       >
         <CountBox count={items.length} color={color} />
-        <Typography fontWeight={600} fontSize={16} color="#333">
+        <Typography fontWeight={600} fontSize={16} color="var(--color-text-primary)">
           {label}
         </Typography>
       </Box>
@@ -238,7 +238,7 @@ function Column({
         <Box
           key={r.id}
           sx={{
-            bgcolor: r.isDone ? "#f5f5f5" : "#fff",
+            bgcolor: r.isDone ? "var(--color-surface-alt)" : "var(--color-surface)",
             borderRadius: "8px",
             p: 2,
             mb: 1.5,
@@ -253,7 +253,7 @@ function Column({
               mb={0.5}
               sx={{
                 textDecoration: r.isDone ? "line-through" : "none",
-                color: r.isDone ? "#aaa" : "#222",
+                color: r.isDone ? "var(--color-text-muted)" : "var(--color-text-primary)",
               }}
             >
               {r.title}
@@ -273,7 +273,7 @@ function Column({
             display="flex"
             alignItems="center"
             gap={0.6}
-            sx={{ color: "#999", fontSize: 12 }}
+            sx={{ color: "var(--color-text-muted)", fontSize: 12 }}
           >
             <MdAccessTime size={13} />
             {r.date}
@@ -285,8 +285,8 @@ function Column({
           )}
           {r.assigneeId !== "" && (
             <Box display="flex" alignItems="center" gap={0.5} mt={0.8}>
-              <MdPerson size={13} color="#aaa" />
-              <Typography fontSize={12} color="#888">
+              <MdPerson size={13} color="var(--color-text-muted)" />
+              <Typography fontSize={12} color="var(--color-text-muted)">
                 {TEACHERS.find((t) => t.id === r.assigneeId)?.name}
               </Typography>
             </Box>
@@ -299,7 +299,7 @@ function Column({
                 mt: 0.8,
                 fontSize: 11,
                 height: 20,
-                bgcolor: "#e3f2fd",
+                bgcolor: "var(--color-primary-surface)",
                 color: "#1976d2",
               }}
             />
@@ -399,9 +399,9 @@ export const Reminders = () => {
   };
 
   return (
-    <Box p={4} bgcolor="#f0f2f5" minHeight="100vh">
+    <Box p={4} bgcolor="var(--color-surface-alt)" minHeight="100vh">
       {/* HEADER */}
-      <Typography variant="h5" fontWeight={700} color="#1a1a2e" mb={2.5}>
+      <Typography variant="h5" fontWeight={700} color="var(--color-text-primary)" mb={2.5}>
         Reminders
       </Typography>
 
@@ -414,7 +414,7 @@ export const Reminders = () => {
           onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
           sx={filterSelectSx}
         >
-          <MenuItem value="" disabled sx={{ fontSize: 13.5, color: "#555" }}>
+          <MenuItem value="" disabled sx={{ fontSize: 13.5, color: "var(--color-text-secondary)" }}>
             Select status
           </MenuItem>
           <MenuItem value="active" sx={{ fontSize: 13.5 }}>
@@ -432,7 +432,7 @@ export const Reminders = () => {
           onChange={(e) => setFilterAssignee(e.target.value as number | "")}
           sx={filterSelectSx}
         >
-          <MenuItem value="" disabled sx={{ fontSize: 13.5, color: "#555" }}>
+          <MenuItem value="" disabled sx={{ fontSize: 13.5, color: "var(--color-text-secondary)" }}>
             Select assignee
           </MenuItem>
           {TEACHERS.map((t) => (
@@ -449,7 +449,7 @@ export const Reminders = () => {
           onChange={(e) => setFilterTags(e.target.value)}
           sx={filterSelectSx}
         >
-          <MenuItem value="" disabled sx={{ fontSize: 13.5, color: "#555" }}>
+          <MenuItem value="" disabled sx={{ fontSize: 13.5, color: "var(--color-text-secondary)" }}>
             Select tags
           </MenuItem>
           {allTags.map((tag) => (
@@ -502,8 +502,8 @@ export const Reminders = () => {
               deleteIcon={<MdClose />}
               size="small"
               sx={{
-                bgcolor: "#fff",
-                border: "1px solid #dde1e9",
+                bgcolor: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
                 borderRadius: "6px",
                 fontSize: 12.5,
                 "& .MuiChip-deleteIcon": { fontSize: 15 },
@@ -536,7 +536,7 @@ export const Reminders = () => {
       <Box display="flex" gap={0}>
         <Column label="Overdue" color="#f44336" items={overdue} onDone={handleDone} />
         <Column label="Today" color="#2196f3" items={today} onDone={handleDone} />
-        <Column label="Future" color="#9e9e9e" items={future} onDone={handleDone} />
+        <Column label="Future" color="var(--color-text-muted)" items={future} onDone={handleDone} />
       </Box>
 
       {/* CREATE MODAL */}
@@ -547,18 +547,18 @@ export const Reminders = () => {
           sx: { borderRadius: "10px", width: 460, maxWidth: "95vw", p: "4px" },
         }}
       >
-        <DialogTitle sx={{ fontSize: 19, fontWeight: 600, color: "#1a1a2e", pb: 1 }}>
+        <DialogTitle sx={{ fontSize: 19, fontWeight: 600, color: "var(--color-text-primary)", pb: 1 }}>
           Create reminder
           <IconButton
             onClick={() => setOpen(false)}
-            sx={{ position: "absolute", right: 12, top: 12, color: "#aaa" }}
+            sx={{ position: "absolute", right: 12, top: 12, color: "var(--color-text-muted)" }}
           >
             <MdClose />
           </IconButton>
         </DialogTitle>
 
         <DialogContent sx={{ pt: "8px !important" }}>
-          <InputLabel sx={{ fontSize: 13.5, fontWeight: 600, color: "#333", mb: 0.6 }}>
+          <InputLabel sx={{ fontSize: 13.5, fontWeight: 600, color: "var(--color-text-primary)", mb: 0.6 }}>
             <span style={{ color: "#f44336" }}>*</span>Title
           </InputLabel>
           <TextField
@@ -570,7 +570,7 @@ export const Reminders = () => {
             sx={{ mb: 2 }}
           />
 
-          <InputLabel sx={{ fontSize: 13.5, fontWeight: 600, color: "#333", mb: 0.6 }}>
+          <InputLabel sx={{ fontSize: 13.5, fontWeight: 600, color: "var(--color-text-primary)", mb: 0.6 }}>
             Description
           </InputLabel>
           <TextField
@@ -588,7 +588,7 @@ export const Reminders = () => {
             {form.description.length}/255
           </Typography>
 
-          <InputLabel sx={{ fontSize: 13.5, fontWeight: 600, color: "#333", mb: 0.6 }}>
+          <InputLabel sx={{ fontSize: 13.5, fontWeight: 600, color: "var(--color-text-primary)", mb: 0.6 }}>
             Tags
           </InputLabel>
           <FormControl fullWidth size="small" sx={{ mb: 2 }}>
@@ -605,18 +605,18 @@ export const Reminders = () => {
             </Select>
           </FormControl>
 
-          <Typography fontSize={13.5} fontWeight={600} color="#333" mb={1}>
+          <Typography fontSize={13.5} fontWeight={600} color="var(--color-text-primary)" mb={1}>
             Details
           </Typography>
 
           <Box display="flex" alignItems="center" gap={1.2} mb={1.2}>
-            <MdPerson size={18} color="#aaa" />
+            <MdPerson size={18} color="var(--color-text-muted)" />
             <FormControl fullWidth size="small">
               <Select
                 displayEmpty
                 value={form.priority}
                 onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                sx={{ bgcolor: "#f8f9fb" }}
+                sx={{ bgcolor: "var(--color-surface-alt)" }}
               >
                 <MenuItem value="">Not selected</MenuItem>
                 <MenuItem value="high">High</MenuItem>
@@ -627,19 +627,19 @@ export const Reminders = () => {
           </Box>
 
           <Box display="flex" alignItems="center" gap={1.2} mb={1.2}>
-            <MdAccessTime size={18} color="#aaa" />
+            <MdAccessTime size={18} color="var(--color-text-muted)" />
             <TextField
               fullWidth
               type="datetime-local"
               value={form.datetime}
               onChange={(e) => setForm({ ...form, datetime: e.target.value })}
               size="small"
-              sx={{ bgcolor: "#f8f9fb", borderRadius: 1 }}
+              sx={{ bgcolor: "var(--color-surface-alt)", borderRadius: 1 }}
             />
           </Box>
 
           <Box display="flex" alignItems="center" gap={1.2}>
-            <MdGroup size={18} color="#aaa" />
+            <MdGroup size={18} color="var(--color-text-muted)" />
             <FormControl fullWidth size="small">
               <Select
                 displayEmpty
@@ -647,7 +647,7 @@ export const Reminders = () => {
                 onChange={(e) =>
                   setForm({ ...form, assigneeId: e.target.value as number | "" })
                 }
-                sx={{ bgcolor: "#f8f9fb" }}
+                sx={{ bgcolor: "var(--color-surface-alt)" }}
               >
                 <MenuItem value="">Select assignee</MenuItem>
                 {TEACHERS.map((t) => (
@@ -664,12 +664,12 @@ export const Reminders = () => {
           <Button
             onClick={() => setForm(emptyForm)}
             sx={{
-              border: "1.5px solid #dde1e9",
-              color: "#555",
+              border: "1.5px solid var(--color-border)",
+              color: "var(--color-text-secondary)",
               borderRadius: "6px",
               textTransform: "none",
               px: 2.5,
-              "&:hover": { bgcolor: "#f5f5f5" },
+              "&:hover": { bgcolor: "var(--color-surface-alt)" },
             }}
           >
             Reset

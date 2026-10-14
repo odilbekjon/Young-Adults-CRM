@@ -10,7 +10,7 @@ export const OnlineLessons = () => {
         <Typography variant="h6" fontWeight={600}>{t("singleGroup.tabs.onlineLessons.title")}</Typography>
         <Button startIcon={<GoPlus />} variant="contained" size="small">{t("singleGroup.tabs.onlineLessons.addLesson")}</Button>
       </Stack>
-      <Paper sx={{ p: 4, textAlign: "center", borderRadius: 2, color: "#999" }}>
+      <Paper sx={{ p: 4, textAlign: "center", borderRadius: 2, color: "var(--color-text-muted)" }}>
         {t("singleGroup.tabs.onlineLessons.noLessonsYet")}
       </Paper>
     </Box>

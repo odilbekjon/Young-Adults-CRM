@@ -3,21 +3,21 @@ import React from "react";
 
 export const inputStyle: React.CSSProperties = {
   width: "100%",
-  border: "1px solid #e0e0e0",
+  border: "1px solid var(--color-border)",
   borderRadius: 8,
   padding: "10px 12px",
   fontSize: 13,
-  color: "#1a1a1a",
+  color: "var(--color-text-primary)",
   outline: "none",
   boxSizing: "border-box",
-  background: "#fff",
+  background: "var(--color-surface)",
   fontFamily: "inherit",
 };
 
 export const labelStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 500,
-  color: "#1a1a1a",
+  color: "var(--color-text-primary)",
   marginBottom: 6,
   display: "block",
 };
@@ -34,9 +34,9 @@ export const submitBtn: React.CSSProperties = {
 };
 
 export const cancelBtn: React.CSSProperties = {
-  background: "#fff",
-  color: "#666",
-  border: "1px solid #e0e0e0",
+  background: "var(--color-surface)",
+  color: "var(--color-text-secondary)",
+  border: "1px solid var(--color-border)",
   borderRadius: 10,
   padding: "11px 24px",
   fontSize: 14,

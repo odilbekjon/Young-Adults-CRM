@@ -74,14 +74,14 @@ const tone = (kind: Kind) => {
       return {
         fg: "var(--color-text-secondary, #6b7a8d)",
         bg: "var(--color-surface-alt, #f5f6f8)",
-        border: "var(--color-border, #e0e5ec)",
+        border: "var(--color-border)",
         solid: "var(--color-text-muted, #9ca3af)",
       };
     default:
       return {
         fg: "var(--color-text-muted, #9ca3af)",
         bg: "var(--color-surface, #fff)",
-        border: "var(--color-border, #e0e5ec)",
+        border: "var(--color-border)",
         solid: "var(--color-border, #e0e5ec)",
       };
   }
@@ -440,7 +440,7 @@ export const AttendanceTab = ({ studentId, memberships, membershipsLoading, grou
                       p: "6px 8px",
                       minWidth: 0,
                       background: first ? c.bg : "var(--color-surface, #fff)",
-                      border: `1px solid ${isToday ? "var(--color-primary, #185fa5)" : first ? c.border : "var(--color-border-subtle, #f0f0f0)"}`,
+                      border: `1px solid ${isToday ? "var(--color-primary, #185fa5)" : first ? c.border : "var(--color-border-subtle)"}`,
                       boxShadow: isToday ? "0 0 0 1px var(--color-primary, #185fa5)" : undefined,
                     }}
                   >
@@ -503,7 +503,7 @@ export const AttendanceTab = ({ studentId, memberships, membershipsLoading, grou
                       fontWeight: 600,
                       color: "var(--color-text-secondary, #6b7a8d)",
                       background: "var(--color-surface-alt, #f5f6f8)",
-                      borderBottom: "1px solid var(--color-border, #e0e5ec)",
+                      borderBottom: "1px solid var(--color-border)",
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -535,7 +535,7 @@ export const AttendanceTab = ({ studentId, memberships, membershipsLoading, grou
 const cellStyle: CSSProperties = {
   padding: "10px 12px",
   color: "var(--color-text-primary, #1a2332)",
-  borderBottom: "1px solid var(--color-border-subtle, #f0f0f0)",
+  borderBottom: "1px solid var(--color-border-subtle)",
 };
 
 export default AttendanceTab;

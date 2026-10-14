@@ -66,7 +66,7 @@ const GroupCard = ({ option, selected, onSelect, disabled }: {
         display: "flex", alignItems: "flex-start", gap: 10, width: "100%", textAlign: "left",
         padding: "10px 12px", borderRadius: 10, fontFamily: "inherit",
         cursor: disabled ? "default" : "pointer",
-        border: `1px solid ${selected ? "var(--color-primary, #185fa5)" : "var(--color-border, #e0e0e0)"}`,
+        border: `1px solid ${selected ? "var(--color-primary, #185fa5)" : "var(--color-border)"}`,
         background: selected ? "var(--color-primary-surface, #f0f7ff)" : "var(--color-surface, #fff)",
       }}
     >

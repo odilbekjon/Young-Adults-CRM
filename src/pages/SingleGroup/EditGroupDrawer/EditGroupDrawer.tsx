@@ -34,7 +34,7 @@ const chevronStyle: CSSProperties = {
   top: "50%",
   transform: "translateY(-50%)",
   pointerEvents: "none",
-  color: "#9ca3af",
+  color: "var(--color-text-muted)",
 };
 
 const SelectField = ({
@@ -242,7 +242,7 @@ export const EditGroupDrawer = ({
               }}
               renderValue={(selected) =>
                 selected.length === 0 ? (
-                  <span style={{ color: "#9ca3af" }}>{t("singleGroup.editGroupDrawer.selectTeacher")}</span>
+                  <span style={{ color: "var(--color-text-muted)" }}>{t("singleGroup.editGroupDrawer.selectTeacher")}</span>
                 ) : (
                   <Stack direction="row" flexWrap="wrap" gap={0.5}>
                     {selected.map((id) => (
@@ -259,8 +259,8 @@ export const EditGroupDrawer = ({
               sx={{
                 fontSize: 13,
                 borderRadius: "8px",
-                bgcolor: "#fff",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e0e0e0" },
+                bgcolor: "var(--color-surface)",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--color-border)" },
                 "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#a0aec0" },
                 "& .MuiSelect-select": { py: "7px" },
               }}

@@ -68,19 +68,19 @@ const SelectBox = ({
   return (
     <div className="relative" ref={ref}>
       <button type="button" disabled={disabled} onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-2 text-sm bg-white text-left hover:border-gray-400 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed">
-        <span className={selectedLabel ? "text-gray-800" : "text-gray-400"}>{selectedLabel || placeholder || t("reports.attendance.filters.select")}</span>
-        <FiChevronDown size={14} className="text-gray-400 flex-shrink-0" />
+        className="w-full flex items-center justify-between border border-gray-300 dark:border-[var(--color-border)] rounded px-3 py-2 text-sm bg-white dark:bg-[var(--color-surface)] text-left hover:border-gray-400 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed">
+        <span className={selectedLabel ? "text-gray-800 dark:text-[var(--color-text-primary)]" : "text-gray-400 dark:text-[var(--color-text-muted)]"}>{selectedLabel || placeholder || t("reports.attendance.filters.select")}</span>
+        <FiChevronDown size={14} className="text-gray-400 dark:text-[var(--color-text-muted)] flex-shrink-0" />
       </button>
       {open && !disabled && (
-        <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-full py-1 max-h-64 overflow-y-auto">
-          <button className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:bg-gray-50"
+        <div className="absolute left-0 top-full mt-1 bg-white dark:bg-[var(--color-surface)] border border-gray-200 dark:border-[var(--color-border)] rounded-lg shadow-lg z-50 w-full py-1 max-h-64 overflow-y-auto">
+          <button className="w-full text-left px-3 py-2 text-sm text-gray-400 dark:text-[var(--color-text-muted)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]"
             onClick={() => { onChange(""); setOpen(false); }}>
             {placeholder || t("reports.attendance.filters.select")}
           </button>
           {options.map(opt => (
             <button key={opt.value} type="button"
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-[var(--color-text-primary)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]"
               onClick={() => { onChange(opt.value); setOpen(false); }}>
               {opt.label}
             </button>
@@ -124,39 +124,39 @@ const SummaryTable = ({ students }: { students: AttendanceReportRow[] }) => {
   const frozen = countStatus("FROZEN");
 
   return (
-    <div className="grid grid-cols-2 gap-0 border border-gray-200 rounded-lg overflow-hidden bg-white mb-5 shadow-sm">
+    <div className="grid grid-cols-2 gap-0 border border-gray-200 dark:border-[var(--color-border)] rounded-lg overflow-hidden bg-white dark:bg-[var(--color-surface)] mb-5 shadow-sm">
       {/* Left */}
-      <div className="border-r border-gray-200 divide-y divide-gray-100">
+      <div className="border-r border-gray-200 dark:border-[var(--color-border)] divide-y divide-gray-100 dark:divide-[var(--color-border)]">
         {[
           { id: "visits", label: t("reports.attendance.summary.visits"), val: visited },
           { id: "absent", label: t("reports.attendance.summary.absent"), val: absent },
           { id: "notSet", label: t("reports.attendance.summary.notSet"), val: notSet },
         ].map(r => (
           <div key={r.id} className="flex items-center justify-between px-4 py-2.5">
-            <span className="text-sm text-gray-600">{r.label}</span>
-            <span className="text-sm text-gray-700 font-medium">{r.val}</span>
+            <span className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{r.label}</span>
+            <span className="text-sm text-gray-700 dark:text-[var(--color-text-primary)] font-medium">{r.val}</span>
           </div>
         ))}
         <div className="flex items-center justify-between px-4 py-2.5 bg-blue-50">
-          <span className="text-sm text-gray-700 font-medium">{t("reports.attendance.summary.all")}</span>
-          <span className="text-sm text-gray-700 font-medium">{all}</span>
+          <span className="text-sm text-gray-700 dark:text-[var(--color-text-primary)] font-medium">{t("reports.attendance.summary.all")}</span>
+          <span className="text-sm text-gray-700 dark:text-[var(--color-text-primary)] font-medium">{all}</span>
         </div>
       </div>
       {/* Right */}
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-gray-100 dark:divide-[var(--color-border)]">
         {[
           { id: "active", label: t("reports.attendance.summary.statusActive"), val: active },
           { id: "demo", label: t("reports.attendance.summary.statusDemo"), val: demo },
           { id: "frozen", label: t("reports.attendance.summary.statusFrozen"), val: frozen },
         ].map(r => (
           <div key={r.id} className="flex items-center justify-between px-4 py-2.5">
-            <span className="text-sm text-gray-600">{r.label}</span>
-            <span className="text-sm text-gray-700 font-medium">{r.val}</span>
+            <span className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{r.label}</span>
+            <span className="text-sm text-gray-700 dark:text-[var(--color-text-primary)] font-medium">{r.val}</span>
           </div>
         ))}
         <div className="flex items-center justify-between px-4 py-2.5">
-          <span className="text-sm text-gray-600">{t("reports.attendance.summary.all")}</span>
-          <span className="text-sm text-gray-700 font-medium">{all}</span>
+          <span className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{t("reports.attendance.summary.all")}</span>
+          <span className="text-sm text-gray-700 dark:text-[var(--color-text-primary)] font-medium">{all}</span>
         </div>
       </div>
     </div>
@@ -241,20 +241,20 @@ export const AttendanceReports = () => {
     [students, sortDir]
   );
 
-  const thCls = "px-5 py-3 text-left text-gray-500 font-medium text-sm cursor-pointer select-none hover:text-gray-700 transition-colors";
+  const thCls = "px-5 py-3 text-left text-gray-500 dark:text-[var(--color-text-secondary)] font-medium text-sm cursor-pointer select-none hover:text-gray-700 dark:hover:text-[var(--color-text-primary)] transition-colors";
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans">
+    <div className="min-h-screen bg-gray-100 dark:bg-[var(--color-surface-hover)] font-sans">
       <div className="flex">
         {/* ===== Main content ===== */}
         <div className="flex-1 p-6 pr-4">
           <div className="flex items-center justify-between mb-5">
-            <h1 className="text-2xl font-semibold text-gray-800">{t("reports.attendance.title")}</h1>
+            <h1 className="text-2xl font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("reports.attendance.title")}</h1>
             <button
               onClick={handleExportExcel}
               disabled={isExporting}
               title={t("reports.common.exportExcel")}
-              className="flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-60"
+              className="flex items-center gap-2 rounded border border-gray-300 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-1.5 text-sm text-gray-600 dark:text-[var(--color-text-secondary)] transition-colors hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] disabled:opacity-60"
             >
               {isExporting ? <CircularProgress size={14} /> : <FiDownload size={15} />}
               {t("reports.common.exportExcel")}
@@ -265,10 +265,10 @@ export const AttendanceReports = () => {
           <SummaryTable students={students} />
 
           {/* Table */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-x-auto">
+          <div className="bg-white dark:bg-[var(--color-surface)] border border-gray-200 dark:border-[var(--color-border)] rounded-lg shadow-sm overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200">
+                <tr className="border-b border-gray-200 dark:border-[var(--color-border)]">
                   <th className={thCls} onClick={() => handleSort("name")}>
                     {t("reports.attendance.table.name")} <SortIcon col="name" sortKey={sortKey} sortDir={sortDir} />
                   </th>
@@ -289,16 +289,16 @@ export const AttendanceReports = () => {
                 ) : isError ? (
                   <tr><td colSpan={4} className="text-center py-10 text-red-500">{t("reports.common.loadError")}</td></tr>
                 ) : sorted.length === 0 ? (
-                  <tr><td colSpan={4} className="text-center py-10 text-gray-400">{t("reports.attendance.table.noData")}</td></tr>
+                  <tr><td colSpan={4} className="text-center py-10 text-gray-400 dark:text-[var(--color-text-muted)]">{t("reports.attendance.table.noData")}</td></tr>
                 ) : (
                   sorted.map(s => (
-                    <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-3.5 text-gray-800">{s.studentName}</td>
-                      <td className="px-5 py-3.5 text-gray-700">
+                    <tr key={s.id} className="border-b border-gray-100 dark:border-[var(--color-border)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] transition-colors">
+                      <td className="px-5 py-3.5 text-gray-800 dark:text-[var(--color-text-primary)]">{s.studentName}</td>
+                      <td className="px-5 py-3.5 text-gray-700 dark:text-[var(--color-text-primary)]">
                         <span className="font-semibold">{s.groupName}:</span>{" "}
-                        <span className="text-gray-600">{s.status}</span>
+                        <span className="text-gray-600 dark:text-[var(--color-text-secondary)]">{s.status}</span>
                       </td>
-                      <td className="px-5 py-3.5 text-gray-700">{s.groupName}</td>
+                      <td className="px-5 py-3.5 text-gray-700 dark:text-[var(--color-text-primary)]">{s.groupName}</td>
                       <td className="px-5 py-3.5">
                         <AttDot val={toAttended(s.attendance)} raw={s.attendance} />
                       </td>
@@ -311,27 +311,27 @@ export const AttendanceReports = () => {
         </div>
 
         {/* ===== Right sidebar filter ===== */}
-        <div className="w-72 flex-shrink-0 bg-white border-l border-gray-200 p-5 min-h-screen">
-          <h2 className="text-base font-semibold text-gray-700 mb-5">{t("reports.attendance.filters.title")}</h2>
+        <div className="w-72 flex-shrink-0 bg-white dark:bg-[var(--color-surface)] border-l border-gray-200 dark:border-[var(--color-border)] p-5 min-h-screen">
+          <h2 className="text-base font-semibold text-gray-700 dark:text-[var(--color-text-primary)] mb-5">{t("reports.attendance.filters.title")}</h2>
 
           <div className="flex flex-col gap-4">
             <div>
-              <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.dateFrom")}</label>
+              <label className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)] mb-1.5 block">{t("reports.attendance.filters.dateFrom")}</label>
               <DatePickerField value={dateFrom} onChange={setDateFrom} />
             </div>
 
             <div>
-              <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.dateTo")}</label>
+              <label className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)] mb-1.5 block">{t("reports.attendance.filters.dateTo")}</label>
               <DatePickerField value={dateTo} onChange={setDateTo} />
             </div>
 
             <div>
-              <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.branches")}</label>
+              <label className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)] mb-1.5 block">{t("reports.attendance.filters.branches")}</label>
               <SelectBox value={branch} onChange={setBranch} options={branchOptions} placeholder={t("reports.attendance.filters.selectBranch")} />
             </div>
 
             <div>
-              <label className="text-sm text-gray-600 mb-1.5 block">{t("reports.attendance.filters.group")}</label>
+              <label className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)] mb-1.5 block">{t("reports.attendance.filters.group")}</label>
               <SelectBox value={group} onChange={setGroup} options={groupOptions} placeholder={t("reports.attendance.filters.select")} />
             </div>
 
@@ -341,7 +341,7 @@ export const AttendanceReports = () => {
                 {t("reports.attendance.filters.filterBtn")}
               </button>
               <button onClick={handleReset}
-                className="flex-1 border border-gray-300 text-gray-600 hover:bg-gray-50 rounded px-4 py-2 text-sm font-medium transition-colors">
+                className="flex-1 border border-gray-300 dark:border-[var(--color-border)] text-gray-600 dark:text-[var(--color-text-secondary)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] rounded px-4 py-2 text-sm font-medium transition-colors">
                 {t("reports.attendance.filters.reset")}
               </button>
             </div>

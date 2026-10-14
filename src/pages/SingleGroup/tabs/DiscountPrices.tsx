@@ -226,8 +226,8 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
           gap: 2,
           p: 2,
           mb: 3,
-          bgcolor: "#fff",
-          border: "1px solid #e0e0e0",
+          bgcolor: "var(--color-surface)",
+          border: "1px solid var(--color-border)",
           borderLeft: "4px solid #1976d2",
           borderRadius: 1,
         }}
@@ -244,10 +244,10 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
         </Alert>
       )}
 
-      <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 2, border: "1px solid #e0e0e0" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 2, border: "1px solid var(--color-border)" }}>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ bgcolor: "#fafafa" }}>
+            <TableRow sx={{ bgcolor: "var(--color-surface-alt)" }}>
               <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{t("singleGroup.tabs.discountPrices.name")}</TableCell>
               <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{t("singleGroup.tabs.discountPrices.phone")}</TableCell>
               <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{t("singleGroup.tabs.discountPrices.individualDiscount")}</TableCell>
@@ -296,9 +296,9 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
                                 px: 1,
                                 py: 0.25,
                                 color: "text.primary",
-                                bgcolor: "#eeeeee",
+                                bgcolor: "var(--color-surface-alt)",
                                 boxShadow: "none",
-                                "&:hover": { bgcolor: "#e0e0e0", boxShadow: "none" },
+                                "&:hover": { bgcolor: "var(--color-surface-hover)", boxShadow: "none" },
                               }}
                             >
                               {saved.value}{saved.type === "PERCENTAGE" ? "%" : ""}

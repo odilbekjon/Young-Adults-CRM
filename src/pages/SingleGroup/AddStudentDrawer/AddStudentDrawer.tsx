@@ -54,7 +54,7 @@ const fieldStyle: React.CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
   height: 40,
-  border: "1px solid var(--color-border, #e0e0e0)",
+  border: "1px solid var(--color-border)",
   borderRadius: 8,
   padding: "0 12px",
   fontSize: 13.5,
@@ -79,7 +79,7 @@ const submitBtn: React.CSSProperties = {
 const ghostBtn: React.CSSProperties = {
   background: "transparent",
   color: "var(--color-text-secondary, #666)",
-  border: "1px solid var(--color-border, #e0e0e0)",
+  border: "1px solid var(--color-border)",
   borderRadius: 999,
   padding: "11px 24px",
   fontSize: 14,
@@ -207,7 +207,7 @@ export const AddStudentDrawer = ({
       {/* header */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "20px 28px", borderBottom: "1px solid var(--color-border-subtle, #f0f0f0)",
+        padding: "20px 28px", borderBottom: "1px solid var(--color-border-subtle)",
       }}>
         <span style={{ fontSize: 19, fontWeight: 700, color: "var(--color-text-primary, #1a1a1a)" }}>
           {t("singleGroup.addStudentDrawer.title")}
@@ -253,7 +253,7 @@ export const AddStudentDrawer = ({
                 disabled={isSubmitting}
                 onClick={() => { setSelected(null); setTimeout(() => searchRef.current?.focus(), 0); }}
                 style={{
-                  border: "1px solid var(--color-border, #e0e0e0)", background: "var(--color-surface, #fff)",
+                  border: "1px solid var(--color-border)", background: "var(--color-surface, #fff)",
                   color: "var(--color-primary, #185fa5)", borderRadius: 999, padding: "5px 14px",
                   fontSize: 12.5, fontWeight: 600, cursor: "pointer",
                 }}
@@ -290,7 +290,7 @@ export const AddStudentDrawer = ({
 
               <div style={{
                 marginTop: 8, maxHeight: 200, overflowY: "auto",
-                border: "1px solid var(--color-border, #e0e0e0)", borderRadius: 10,
+                border: "1px solid var(--color-border)", borderRadius: 10,
                 background: "var(--color-surface, #fff)",
               }}>
                 {searchFailed ? (
@@ -318,7 +318,7 @@ export const AddStudentDrawer = ({
                           padding: "9px 14px", border: "none", background: "transparent",
                           textAlign: "left", cursor: disabled ? "not-allowed" : "pointer",
                           opacity: disabled ? 0.55 : 1, fontFamily: "inherit",
-                          borderBottom: "1px solid var(--color-border-subtle, #f0f0f0)",
+                          borderBottom: "1px solid var(--color-border-subtle)",
                         }}
                       >
                         <Avatar name={s.name} />

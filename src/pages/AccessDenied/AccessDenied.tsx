@@ -29,7 +29,7 @@ export const AccessDenied = ({ variant = "denied", onRetry }: AccessDeniedProps 
         textAlign: "center",
       }}
     >
-      <Typography sx={{ fontSize: 72, fontWeight: 800, color: "#1e3a5f" }}>403</Typography>
+      <Typography sx={{ fontSize: 72, fontWeight: 800, color: "var(--color-nav-active)" }}>403</Typography>
       <Typography sx={{ fontSize: 16, color: "text.secondary" }}>
         {variant === "error" ? t("accessDenied.loadError") : t("accessDenied.message")}
       </Typography>
@@ -37,7 +37,7 @@ export const AccessDenied = ({ variant = "denied", onRetry }: AccessDeniedProps 
         <Button
           variant="outlined"
           onClick={onRetry}
-          sx={{ borderRadius: "24px", px: 4, py: 1, textTransform: "none", color: "#1e3a5f", borderColor: "#1e3a5f" }}
+          sx={{ borderRadius: "24px", px: 4, py: 1, textTransform: "none", color: "var(--color-nav-active)", borderColor: "var(--color-nav-active)" }}
         >
           {t("accessDenied.retry")}
         </Button>

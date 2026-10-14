@@ -66,16 +66,16 @@ export const TeacherAttendanceReport = () => {
   const workingDays = days.filter((d) => !d.isWeekend).length;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-[var(--color-surface-alt)] p-6 md:p-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-semibold text-slate-900">Teacher attendance reports</h1>
-        <p className="mt-2 text-[15px] text-slate-600">
+        <h1 className="text-3xl font-semibold text-slate-900 dark:text-[var(--color-text-primary)]">Teacher attendance reports</h1>
+        <p className="mt-2 text-[15px] text-slate-600 dark:text-[var(--color-text-secondary)]">
           Review attendance and daily activity with clearer, larger controls and tables.
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap border-b border-slate-200">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] shadow-sm">
+        <div className="flex flex-wrap border-b border-slate-200 dark:border-[var(--color-border)]">
           {TABS.map((tab) => (
             <button
               key={tab.key}
@@ -83,7 +83,7 @@ export const TeacherAttendanceReport = () => {
               className={`px-6 py-3.5 text-[15px] font-medium transition-colors border-b-2 -mb-px ${
                 activeTab === tab.key
                   ? "text-blue-600 border-blue-600"
-                  : "text-slate-500 border-transparent hover:text-slate-700"
+                  : "text-slate-500 dark:text-[var(--color-text-secondary)] border-transparent hover:text-slate-700 dark:hover:text-[var(--color-text-primary)]"
               }`}
             >
               {tab.label}
@@ -94,9 +94,9 @@ export const TeacherAttendanceReport = () => {
         <div className="p-5 md:p-6">
           {activeTab === "attendance" && (
             <>
-              <div className="mb-5 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-700 shadow-sm">
+              <div className="mb-5 flex items-center gap-3 rounded-xl border border-slate-200 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-4 py-3 text-[15px] text-slate-700 dark:text-[var(--color-text-primary)] shadow-sm">
                 <svg
-                  className="h-5 w-5 shrink-0 text-slate-400"
+                  className="h-5 w-5 shrink-0 text-slate-400 dark:text-[var(--color-text-muted)]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -108,33 +108,33 @@ export const TeacherAttendanceReport = () => {
                   type="month"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="flex-1 bg-transparent text-[15px] text-slate-700 outline-none cursor-pointer"
+                  className="flex-1 bg-transparent text-[15px] text-slate-700 dark:text-[var(--color-text-primary)] outline-none cursor-pointer"
                 />
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[var(--color-border)]">
                 <table className="min-w-[960px] border-collapse text-sm" style={{ minWidth: 960 }}>
                   <thead>
                     <tr>
-                      <th className="sticky left-0 z-10 min-w-[160px] border-r border-b border-slate-200 bg-slate-50 px-3 py-3 text-left font-semibold text-slate-700">
+                      <th className="sticky left-0 z-10 min-w-[160px] border-r border-b border-slate-200 dark:border-[var(--color-border)] bg-slate-50 dark:bg-[var(--color-surface-alt)] px-3 py-3 text-left font-semibold text-slate-700 dark:text-[var(--color-text-primary)]">
                         Teachers
                       </th>
 
                       {days.map((day) => (
                         <th
                           key={day.date}
-                          className={`border-r border-b border-slate-200 px-3 py-3 text-center font-semibold whitespace-nowrap ${
+                          className={`border-r border-b border-slate-200 dark:border-[var(--color-border)] px-3 py-3 text-center font-semibold whitespace-nowrap ${
                             day.isToday
                               ? "bg-amber-50 text-amber-700"
                               : day.isWeekend
-                              ? "bg-slate-50 text-slate-400"
-                              : "bg-slate-50 text-slate-600"
+                              ? "bg-slate-50 dark:bg-[var(--color-surface-alt)] text-slate-400 dark:text-[var(--color-text-muted)]"
+                              : "bg-slate-50 dark:bg-[var(--color-surface-alt)] text-slate-600 dark:text-[var(--color-text-secondary)]"
                           }`}
                         >
                           <span className="block text-[13px] font-semibold">{day.date}-{day.month}</span>
                           <span
                             className={`mt-1 block text-[12px] font-normal ${
-                              day.isToday ? "text-amber-600" : "text-slate-400"
+                              day.isToday ? "text-amber-600" : "text-slate-400 dark:text-[var(--color-text-muted)]"
                             }`}
                           >
                             {day.dayName}
@@ -142,13 +142,13 @@ export const TeacherAttendanceReport = () => {
                         </th>
                       ))}
 
-                      <th className="min-w-[96px] border-r border-b border-slate-200 bg-slate-50 px-3 py-3 text-center font-semibold text-slate-700 whitespace-nowrap">
+                      <th className="min-w-[96px] border-r border-b border-slate-200 dark:border-[var(--color-border)] bg-slate-50 dark:bg-[var(--color-surface-alt)] px-3 py-3 text-center font-semibold text-slate-700 dark:text-[var(--color-text-primary)] whitespace-nowrap">
                         Full work day
                       </th>
-                      <th className="min-w-[72px] border-r border-b border-slate-200 bg-slate-50 px-3 py-3 text-center font-semibold text-slate-700">
+                      <th className="min-w-[72px] border-r border-b border-slate-200 dark:border-[var(--color-border)] bg-slate-50 dark:bg-[var(--color-surface-alt)] px-3 py-3 text-center font-semibold text-slate-700 dark:text-[var(--color-text-primary)]">
                         Came
                       </th>
-                      <th className="min-w-[72px] border-b border-slate-200 bg-slate-50 px-3 py-3 text-center font-semibold text-slate-700">
+                      <th className="min-w-[72px] border-b border-slate-200 dark:border-[var(--color-border)] bg-slate-50 dark:bg-[var(--color-surface-alt)] px-3 py-3 text-center font-semibold text-slate-700 dark:text-[var(--color-text-primary)]">
                         Extra
                       </th>
                     </tr>
@@ -156,7 +156,7 @@ export const TeacherAttendanceReport = () => {
                   <tbody>
                     {teachers.length === 0 ? (
                       <tr>
-                        <td colSpan={days.length + 4} className="py-14 text-center text-slate-500 text-[15px]">
+                        <td colSpan={days.length + 4} className="py-14 text-center text-slate-500 dark:text-[var(--color-text-secondary)] text-[15px]">
                           No Data
                         </td>
                       </tr>
@@ -166,8 +166,8 @@ export const TeacherAttendanceReport = () => {
                         const extra = Math.max(0, came - workingDays);
 
                         return (
-                          <tr key={teacher.id} className="hover:bg-slate-50">
-                            <td className="sticky left-0 z-10 border-r border-t border-slate-200 bg-white px-3 py-3 font-semibold text-slate-800">
+                          <tr key={teacher.id} className="hover:bg-slate-50 dark:hover:bg-[var(--color-surface-hover)]">
+                            <td className="sticky left-0 z-10 border-r border-t border-slate-200 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-3 font-semibold text-slate-800 dark:text-[var(--color-text-primary)]">
                               {teacher.name}
                             </td>
                             {days.map((day) => {
@@ -175,8 +175,8 @@ export const TeacherAttendanceReport = () => {
                               return (
                                 <td
                                   key={day.date}
-                                  className={`border-r border-t border-slate-200 px-3 py-3 text-center ${
-                                    day.isWeekend ? "bg-slate-50" : ""
+                                  className={`border-r border-t border-slate-200 dark:border-[var(--color-border)] px-3 py-3 text-center ${
+                                    day.isWeekend ? "bg-slate-50 dark:bg-[var(--color-surface-alt)]" : ""
                                   } ${day.isToday ? "bg-amber-50/40" : ""}`}
                                 >
                                   {status === "present" && (
@@ -192,13 +192,13 @@ export const TeacherAttendanceReport = () => {
                                 </td>
                               );
                             })}
-                            <td className="border-r border-t border-slate-200 px-3 py-3 text-center text-slate-700">
+                            <td className="border-r border-t border-slate-200 dark:border-[var(--color-border)] px-3 py-3 text-center text-slate-700 dark:text-[var(--color-text-primary)]">
                               {workingDays}
                             </td>
-                            <td className="border-r border-t border-slate-200 px-3 py-3 text-center text-slate-700">
+                            <td className="border-r border-t border-slate-200 dark:border-[var(--color-border)] px-3 py-3 text-center text-slate-700 dark:text-[var(--color-text-primary)]">
                               {came}
                             </td>
-                            <td className="border-t border-slate-200 px-3 py-3 text-center text-slate-700">
+                            <td className="border-t border-slate-200 dark:border-[var(--color-border)] px-3 py-3 text-center text-slate-700 dark:text-[var(--color-text-primary)]">
                               {extra}
                             </td>
                           </tr>
@@ -212,13 +212,13 @@ export const TeacherAttendanceReport = () => {
           )}
 
           {activeTab === "schedule" && (
-            <div className="py-16 text-center text-slate-500 text-[15px]">
+            <div className="py-16 text-center text-slate-500 dark:text-[var(--color-text-secondary)] text-[15px]">
               Teacher work schedule coming soon
             </div>
           )}
 
           {activeTab === "salary" && (
-            <div className="py-16 text-center text-slate-500 text-[15px]">
+            <div className="py-16 text-center text-slate-500 dark:text-[var(--color-text-secondary)] text-[15px]">
               Salary calculation coming soon
             </div>
           )}

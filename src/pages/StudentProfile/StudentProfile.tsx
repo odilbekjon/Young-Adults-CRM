@@ -131,13 +131,13 @@ const EditStudentDrawer = ({
           justifyContent: "space-between",
           alignItems: "center",
           padding: "20px 24px",
-          borderBottom: "1px solid #f3f4f6",
+          borderBottom: "1px solid var(--color-border-subtle)",
         }}
       >
-        <span style={{ fontSize: 18, fontWeight: 600, color: "#111827" }}>
+        <span style={{ fontSize: 18, fontWeight: 600, color: "var(--color-text-primary)" }}>
           Edit Student
         </span>
-        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}>
+        <IconButton size="small" onClick={onClose} sx={{ color: "var(--color-text-muted)" }}>
           <FiX size={20} />
         </IconButton>
       </div>
@@ -159,7 +159,7 @@ const EditStudentDrawer = ({
             style={{
               fontSize: 13,
               fontWeight: 500,
-              color: "#374151",
+              color: "var(--color-text-primary)",
               display: "block",
               marginBottom: 6,
             }}
@@ -177,9 +177,9 @@ const EditStudentDrawer = ({
                   <span
                     style={{
                       fontSize: 13,
-                      color: "#374151",
+                      color: "var(--color-text-primary)",
                       fontWeight: 500,
-                      borderRight: "1px solid #e5e7eb",
+                      borderRight: "1px solid var(--color-border)",
                       paddingRight: 10,
                       marginRight: 4,
                     }}
@@ -199,7 +199,7 @@ const EditStudentDrawer = ({
             style={{
               fontSize: 13,
               fontWeight: 500,
-              color: "#374151",
+              color: "var(--color-text-primary)",
               display: "block",
               marginBottom: 6,
             }}
@@ -221,7 +221,7 @@ const EditStudentDrawer = ({
             style={{
               fontSize: 13,
               fontWeight: 500,
-              color: "#374151",
+              color: "var(--color-text-primary)",
               display: "block",
               marginBottom: 6,
             }}
@@ -237,7 +237,7 @@ const EditStudentDrawer = ({
             style={{
               fontSize: 13,
               fontWeight: 500,
-              color: "#374151",
+              color: "var(--color-text-primary)",
               display: "block",
               marginBottom: 6,
             }}
@@ -250,20 +250,20 @@ const EditStudentDrawer = ({
               control={
                 <Radio
                   size="small"
-                  sx={{ color: "#d1d5db", "&.Mui-checked": { color: "#1e40af" } }}
+                  sx={{ color: "#d1d5db", "&.Mui-checked": { color: "var(--color-primary)" } }}
                 />
               }
-              label={<span style={{ fontSize: 14, color: "#374151" }}>Male</span>}
+              label={<span style={{ fontSize: 14, color: "var(--color-text-primary)" }}>Male</span>}
             />
             <FormControlLabel
               value="female"
               control={
                 <Radio
                   size="small"
-                  sx={{ color: "#d1d5db", "&.Mui-checked": { color: "#1e40af" } }}
+                  sx={{ color: "#d1d5db", "&.Mui-checked": { color: "var(--color-primary)" } }}
                 />
               }
-              label={<span style={{ fontSize: 14, color: "#374151" }}>Female</span>}
+              label={<span style={{ fontSize: 14, color: "var(--color-text-primary)" }}>Female</span>}
             />
           </RadioGroup>
         </div>
@@ -274,7 +274,7 @@ const EditStudentDrawer = ({
             style={{
               fontSize: 13,
               fontWeight: 500,
-              color: "#374151",
+              color: "var(--color-text-primary)",
               display: "block",
               marginBottom: 6,
             }}
@@ -284,7 +284,7 @@ const EditStudentDrawer = ({
           <div
             style={{
               display: "flex",
-              border: "1px solid #e5e7eb",
+              border: "1px solid var(--color-border)",
               borderRadius: 8,
               overflow: "hidden",
             }}
@@ -294,7 +294,7 @@ const EditStudentDrawer = ({
                 flex: 1,
                 padding: "8px 12px",
                 fontSize: 13,
-                color: "#9ca3af",
+                color: "var(--color-text-muted)",
                 display: "flex",
                 alignItems: "center",
               }}
@@ -304,11 +304,11 @@ const EditStudentDrawer = ({
             <button
               style={{
                 padding: "8px 16px",
-                background: "#f9fafb",
+                background: "var(--color-surface-alt)",
                 border: "none",
-                borderLeft: "1px solid #e5e7eb",
+                borderLeft: "1px solid var(--color-border)",
                 fontSize: 13,
-                color: "#374151",
+                color: "var(--color-text-primary)",
                 cursor: "pointer",
                 fontWeight: 500,
               }}
@@ -324,7 +324,7 @@ const EditStudentDrawer = ({
             style={{
               fontSize: 13,
               fontWeight: 500,
-              color: "#374151",
+              color: "var(--color-text-primary)",
               display: "block",
               marginBottom: 8,
             }}
@@ -339,10 +339,10 @@ const EditStudentDrawer = ({
                   sx={{
                     width: 36,
                     height: 36,
-                    border: "1.5px solid #d1d5db",
-                    color: "#6b7280",
+                    border: "1.5px solid var(--color-border)",
+                    color: "var(--color-text-secondary)",
                     borderRadius: "50%",
-                    "&:hover": { borderColor: "#1e40af", color: "#1e40af" },
+                    "&:hover": { borderColor: "var(--color-primary)", color: "var(--color-primary)" },
                   }}
                 >
                   {item.icon}
@@ -358,7 +358,7 @@ const EditStudentDrawer = ({
             style={{
               fontSize: 13,
               fontWeight: 500,
-              color: "#374151",
+              color: "var(--color-text-primary)",
               display: "block",
               marginBottom: 6,
             }}
@@ -375,7 +375,7 @@ const EditStudentDrawer = ({
               background: "none",
               border: "none",
               fontSize: 13,
-              color: "#6b7280",
+              color: "var(--color-text-secondary)",
               cursor: "pointer",
               textDecoration: "underline",
             }}
@@ -386,7 +386,7 @@ const EditStudentDrawer = ({
       </div>
 
       {/* Footer */}
-      <div style={{ padding: "16px 24px", borderTop: "1px solid #f3f4f6" }}>
+      <div style={{ padding: "16px 24px", borderTop: "1px solid var(--color-border-subtle)" }}>
         {error && (
           <div style={{ fontSize: 13, color: "#ef4444", marginBottom: 10 }}>{error}</div>
         )}
@@ -475,20 +475,20 @@ const SendSmsDrawer = ({
           justifyContent: "space-between",
           alignItems: "center",
           padding: "20px 24px",
-          borderBottom: "1px solid #f3f4f6",
+          borderBottom: "1px solid var(--color-border-subtle)",
         }}
       >
-        <span style={{ fontSize: 18, fontWeight: 600, color: "#111827" }}>
+        <span style={{ fontSize: 18, fontWeight: 600, color: "var(--color-text-primary)" }}>
           Send SMS to student
         </span>
-        <IconButton size="small" onClick={handleClose} sx={{ color: "#9ca3af" }}>
+        <IconButton size="small" onClick={handleClose} sx={{ color: "var(--color-text-muted)" }}>
           <FiX size={20} />
         </IconButton>
       </div>
 
       {/* Body */}
       <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 16 }}>
-        <div style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>
+        <div style={{ fontSize: 14, color: "var(--color-text-primary)", fontWeight: 500 }}>
           Sender: <strong>3700</strong>
         </div>
 
@@ -514,7 +514,7 @@ const SendSmsDrawer = ({
             display: "flex",
             justifyContent: "space-between",
             fontSize: 12,
-            color: "#9ca3af",
+            color: "var(--color-text-muted)",
           }}
         >
           <span>
@@ -588,9 +588,9 @@ const AddToGroupModal = ({
 
   return (
     <Dialog open={open} onClose={handleClose} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
-      <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid #e5e7eb" }}>
+      <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid var(--color-border)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 16, fontWeight: 600, color: "#2e2e2e" }}>
+          <span style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-primary)" }}>
             Add student to group
           </span>
           <IconButton size="small" onClick={handleClose} disabled={isSubmitting}>
@@ -605,11 +605,11 @@ const AddToGroupModal = ({
           disabled={isSubmitting}
           style={{
             width: "100%",
-            border: "1px solid #e5e7eb",
+            border: "1px solid var(--color-border)",
             borderRadius: 8,
             height: 46,
             padding: "0 12px",
-            color: groupId ? "#1f2937" : "#a8b0bb",
+            color: groupId ? "var(--color-text-primary)" : "#a8b0bb",
             fontSize: 14,
             marginBottom: 18,
           }}
@@ -622,7 +622,7 @@ const AddToGroupModal = ({
           ))}
         </select>
         <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: "#4b5563", marginBottom: 6 }}>Joined on</div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-secondary)", marginBottom: 6 }}>Joined on</div>
           <DatePickerField value={joinedAt} onChange={setJoinedAt} disabled={isSubmitting} />
         </div>
         <Button
@@ -681,9 +681,9 @@ const MoveToBranchModal = ({
 
   return (
     <Dialog open={open} onClose={handleClose} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
-      <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid #e5e7eb" }}>
+      <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid var(--color-border)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 16, fontWeight: 600, color: "#2e2e2e" }}>
+          <span style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-primary)" }}>
             Move to another branch
           </span>
           <IconButton size="small" onClick={handleClose} disabled={isSubmitting}>
@@ -698,11 +698,11 @@ const MoveToBranchModal = ({
           disabled={isSubmitting}
           style={{
             width: "100%",
-            border: "1px solid #e5e7eb",
+            border: "1px solid var(--color-border)",
             borderRadius: 8,
             height: 46,
             padding: "0 12px",
-            color: branch ? "#1f2937" : "#a8b0bb",
+            color: branch ? "var(--color-text-primary)" : "#a8b0bb",
             fontSize: 14,
             marginBottom: 12,
           }}
@@ -771,9 +771,9 @@ const SideCard = ({
 }) => (
   <div
     style={{
-      background: "white",
+      background: "var(--color-surface)",
       borderRadius: 16,
-      border: "1px solid #eaecf0",
+      border: "1px solid var(--color-border)",
       padding: 20,
       width: "100%",
     }}
@@ -819,14 +819,14 @@ const SideCard = ({
         marginBottom: 16,
       }}
     >
-      <Avatar src={student.photo || undefined} sx={{ width: 72, height: 72, bgcolor: "#e5e7eb", color: "#9ca3af" }}>
+      <Avatar src={student.photo || undefined} sx={{ width: 72, height: 72, bgcolor: "var(--color-surface-hover)", color: "var(--color-text-muted)" }}>
         <FiUser size={32} />
       </Avatar>
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 17, fontWeight: 600, color: "#111827" }}>
+        <div style={{ fontSize: 17, fontWeight: 600, color: "var(--color-text-primary)" }}>
           {student.name}
         </div>
-        <div style={{ fontSize: 12, color: "#9ca3af" }} title={student.uid}>
+        <div style={{ fontSize: 12, color: "var(--color-text-muted)" }} title={student.uid}>
           (id: {student.uid.length > 8 ? `${student.uid.slice(0, 8)}…` : student.uid})
         </div>
       </div>
@@ -835,79 +835,79 @@ const SideCard = ({
     {/* Balance */}
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <BalanceBadge amount={student.balance ?? 0} />
-      <span style={{ fontSize: 13, color: "#6b7280" }}>balance</span>
+      <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>balance</span>
     </div>
 
-    <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "14px 0" }} />
+    <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "14px 0" }} />
 
     {/* Personal info — only fields the backend actually returned are shown */}
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div>
-        <div style={{ fontSize: 12, color: "#9ca3af" }}>Phone:</div>
+        <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Phone:</div>
         <div style={{ fontSize: 13, fontWeight: 600, color: "#5c7fa3" }}>{student.phone || "—"}</div>
       </div>
       {student.parentPhone && (
         <div>
-          <div style={{ fontSize: 12, color: "#9ca3af" }}>Additional phone:</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{student.parentPhone}</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Additional phone:</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>{student.parentPhone}</div>
         </div>
       )}
       {student.birthdate && (
-        <div style={{ fontSize: 13, color: "#6b7280" }}>
-          Birthday: <strong style={{ color: "#111827" }}>{formatDate(student.birthdate)}</strong>
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          Birthday: <strong style={{ color: "var(--color-text-primary)" }}>{formatDate(student.birthdate)}</strong>
         </div>
       )}
       {student.gender && (
-        <div style={{ fontSize: 13, color: "#6b7280" }}>
-          Gender: <strong style={{ color: "#111827" }}>{student.gender === "MALE" ? "Male" : "Female"}</strong>
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          Gender: <strong style={{ color: "var(--color-text-primary)" }}>{student.gender === "MALE" ? "Male" : "Female"}</strong>
         </div>
       )}
       {student.address && (
-        <div style={{ fontSize: 13, color: "#6b7280" }}>
-          Address: <strong style={{ color: "#111827" }}>{student.address}</strong>
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          Address: <strong style={{ color: "var(--color-text-primary)" }}>{student.address}</strong>
         </div>
       )}
     </div>
 
-    <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "14px 0" }} />
+    <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "14px 0" }} />
 
     {/* Info rows */}
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {student.createdAt && formatLongDate(student.createdAt) && (
         <div
-          style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
+          style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-secondary)" }}
         >
           <FiCalendar size={14} />
           <span>
             Added at:{" "}
-            <strong style={{ color: "#111827" }}>{formatLongDate(student.createdAt)}</strong>
+            <strong style={{ color: "var(--color-text-primary)" }}>{formatLongDate(student.createdAt)}</strong>
           </span>
         </div>
       )}
       {student.startDate && (
         <div
-          style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
+          style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-secondary)" }}
         >
           <FiCalendar size={14} />
           <span>
             Group start:{" "}
-            <strong style={{ color: "#111827" }}>{formatDate(student.startDate)}</strong>
+            <strong style={{ color: "var(--color-text-primary)" }}>{formatDate(student.startDate)}</strong>
           </span>
         </div>
       )}
       <div
-        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
+        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-secondary)" }}
       >
         <FiGitBranch size={14} />
         <span>Branch:</span>
         <Chip
           label={student.branch || "—"}
           size="small"
-          sx={{ fontSize: 11, height: 20, bgcolor: "#f3f4f6" }}
+          sx={{ fontSize: 11, height: 20, bgcolor: "var(--color-surface-alt)" }}
         />
       </div>
       <div
-        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280" }}
+        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-secondary)" }}
       >
         <FiUser size={14} />
         <span>
@@ -919,7 +919,7 @@ const SideCard = ({
       </div>
     </div>
 
-    <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "14px 0" }} />
+    <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "14px 0" }} />
 
     {/* Action buttons */}
     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
@@ -938,7 +938,7 @@ const SideCard = ({
             borderColor: "#93c5fd",
             color: "#2563eb",
             borderRadius: 999,
-            "&:hover": { borderColor: "#60a5fa", bgcolor: "#eff6ff" },
+            "&:hover": { borderColor: "#60a5fa", bgcolor: "var(--color-primary-surface)" },
           }}
         >
           Add to group
@@ -948,7 +948,7 @@ const SideCard = ({
           onClick={onOpenAddToGroupMenu}
           sx={{
             border: "1px solid #93c5fd", color: "#2563eb", borderRadius: 999, width: 28, height: 28, flexShrink: 0,
-            "&:hover": { borderColor: "#60a5fa", bgcolor: "#eff6ff" },
+            "&:hover": { borderColor: "#60a5fa", bgcolor: "var(--color-primary-surface)" },
           }}
         >
           <FiChevronDown size={13} />
@@ -970,7 +970,7 @@ const SideCard = ({
               borderColor: "#86efac",
               color: "#16a34a",
               borderRadius: 999,
-              "&:hover": { borderColor: "#4ade80", bgcolor: "#f0fdf4" },
+              "&:hover": { borderColor: "#4ade80", bgcolor: "var(--color-success-surface)" },
             }}
           >
             Add payment
@@ -980,7 +980,7 @@ const SideCard = ({
             onClick={onOpenAddPaymentMenu}
             sx={{
               border: "1px solid #86efac", color: "#16a34a", borderRadius: 999, width: 28, height: 28, flexShrink: 0,
-              "&:hover": { borderColor: "#4ade80", bgcolor: "#f0fdf4" },
+              "&:hover": { borderColor: "#4ade80", bgcolor: "var(--color-success-surface)" },
             }}
           >
             <FiChevronDown size={13} />
@@ -990,10 +990,10 @@ const SideCard = ({
     </div>
 
     {/* Note */}
-    <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 14 }}>
+    <div style={{ borderTop: "1px solid var(--color-border-subtle)", paddingTop: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 13, color: "#6b7280" }}>Note</span>
-        <IconButton size="small" sx={{ color: "#9ca3af" }}>
+        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>Note</span>
+        <IconButton size="small" sx={{ color: "var(--color-text-muted)" }}>
           <FiFlag size={14} />
         </IconButton>
       </div>
@@ -1020,11 +1020,11 @@ const SideCard = ({
 // payments table's group tag), heading = the course name, status is shown
 // as colored text next to the date range rather than as the chip.
 const GROUP_STATUS_TEXT: Record<string, { color: string; fallback: string }> = {
-  ACTIVE:    { color: "#1d4ed8", fallback: "Active (Learns)" },
-  PROBATION: { color: "#92400e", fallback: "Trial" },
-  FROZEN:    { color: "#1d4ed8", fallback: "Frozen (paused)" },
-  INACTIVE:  { color: "#6b7280", fallback: "Inactive" },
-  DELETED:   { color: "#6b7280", fallback: "Removed" },
+  ACTIVE:    { color: "var(--color-primary)", fallback: "Active (Learns)" },
+  PROBATION: { color: "var(--color-warning)", fallback: "Trial" },
+  FROZEN:    { color: "var(--color-primary)", fallback: "Frozen (paused)" },
+  INACTIVE:  { color: "var(--color-text-secondary)", fallback: "Inactive" },
+  DELETED:   { color: "var(--color-text-secondary)", fallback: "Removed" },
 };
 
 const formatMembershipDate = (iso: string | null) => (iso ? formatDate(iso.slice(0, 10)) : "—");
@@ -1068,9 +1068,9 @@ const useGroupAttendanceSummary = (groupId: string | undefined, studentId: strin
 };
 
 const AttendanceLegendRow = ({ color, label, value }: { color: string; label: string; value: number }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#6b7280" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--color-text-secondary)" }}>
     <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-    {label}: <strong style={{ color: "#111827" }}>{value}</strong>
+    {label}: <strong style={{ color: "var(--color-text-primary)" }}>{value}</strong>
   </div>
 );
 
@@ -1081,23 +1081,23 @@ const AttendanceSummary = ({ groupId, studentId }: { groupId: string | undefined
   const presentDeg = (present / total) * 360;
   const absentDeg = (absent / total) * 360;
   const pct = Math.round((present / total) * 100);
-  const gradient = `conic-gradient(#22c55e 0deg ${presentDeg}deg, #ef4444 ${presentDeg}deg ${presentDeg + absentDeg}deg, #d1d5db ${presentDeg + absentDeg}deg 360deg)`;
+  const gradient = `conic-gradient(#22c55e 0deg ${presentDeg}deg, #ef4444 ${presentDeg}deg ${presentDeg + absentDeg}deg, var(--color-border) ${presentDeg + absentDeg}deg 360deg)`;
 
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <div style={{ width: 60, height: 60, borderRadius: "50%", background: gradient, flexShrink: 0 }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <div style={{ fontSize: 12, color: "#6b7280" }}>
-            Total lessons: <strong style={{ color: "#111827" }}>{total}</strong>
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+            Total lessons: <strong style={{ color: "var(--color-text-primary)" }}>{total}</strong>
           </div>
           <AttendanceLegendRow color="#22c55e" label="Was" value={present} />
           <AttendanceLegendRow color="#ef4444" label="Not" value={absent} />
-          <AttendanceLegendRow color="#d1d5db" label="Not attended" value={other} />
+          <AttendanceLegendRow color="var(--color-border)" label="Not attended" value={other} />
         </div>
       </div>
-      <div style={{ fontSize: 13, color: "#6b7280", marginTop: 8 }}>
-        Attendance: <strong style={{ color: "#111827" }}>{pct}%</strong>
+      <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 8 }}>
+        Attendance: <strong style={{ color: "var(--color-text-primary)" }}>{pct}%</strong>
       </div>
     </div>
   );
@@ -1129,7 +1129,7 @@ const GroupCard = ({
   onArchive?: () => void;
 }) => {
   const { t } = useTranslation();
-  const statusMeta = GROUP_STATUS_TEXT[membership.status] ?? { color: "#6b7280", fallback: membership.status };
+  const statusMeta = GROUP_STATUS_TEXT[membership.status] ?? { color: "var(--color-text-secondary)", fallback: membership.status };
   const statusLabel =
     membership.status === "ACTIVE" ? t("singleGroup.studentHoverCard.activeLearns", { defaultValue: statusMeta.fallback }) :
     membership.status === "FROZEN" ? t("singleGroup.studentHoverCard.frozenPaused", { defaultValue: statusMeta.fallback }) :
@@ -1151,49 +1151,49 @@ const GroupCard = ({
     <div
       onClick={onOpenGroup}
       style={{
-        background: "white",
-        border: "1px solid #eaecf0",
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
         borderRadius: 12,
         padding: 16,
         marginBottom: 12,
         cursor: onOpenGroup ? "pointer" : "default",
       }}
       onMouseEnter={(e) => { if (onOpenGroup) e.currentTarget.style.borderColor = "#93c5fd"; }}
-      onMouseLeave={(e) => { if (onOpenGroup) e.currentTarget.style.borderColor = "#eaecf0"; }}
+      onMouseLeave={(e) => { if (onOpenGroup) e.currentTarget.style.borderColor = "var(--color-border)"; }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
         <Chip
           label={membership.name}
           size="small"
-          sx={{ fontSize: 11, height: 22, bgcolor: "#eff6ff", color: "#1d4ed8", fontWeight: 600 }}
+          sx={{ fontSize: 11, height: 22, bgcolor: "var(--color-primary-surface)", color: "var(--color-primary)", fontWeight: 600 }}
         />
-        <div style={{ fontSize: 12, color: "#6b7280", textAlign: "right" }}>
+        <div style={{ fontSize: 12, color: "var(--color-text-secondary)", textAlign: "right" }}>
           <div>{formatMembershipDate(membership.trainingStart)} — {formatMembershipDate(membership.trainingEnd)}</div>
           {schedule && <div style={{ marginTop: 2 }}>{schedule}{group?.room?.name ? ` • ${group.room.name}` : ""}</div>}
           <div style={{ marginTop: 2, fontWeight: 600, color: statusMeta.color }}>{statusLabel}</div>
         </div>
       </div>
 
-      <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>{membership.courseName ?? "—"}</div>
-      <div style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>{teacherNames}</div>
-      {branchName && <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{branchName}</div>}
+      <div style={{ fontSize: 16, fontWeight: 700, color: "var(--color-text-primary)" }}>{membership.courseName ?? "—"}</div>
+      <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 2 }}>{teacherNames}</div>
+      {branchName && <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 2 }}>{branchName}</div>}
 
-      <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "12px 0" }} />
+      <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "12px 0" }} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <div style={{ fontSize: 12, color: "#6b7280" }}>
-          {t("singleGroup.studentHoverCard.addedAt")}: <strong style={{ color: "#111827" }}>{formatMembershipDate(membership.joinedAt)}</strong>
+        <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+          {t("singleGroup.studentHoverCard.addedAt")}: <strong style={{ color: "var(--color-text-primary)" }}>{formatMembershipDate(membership.joinedAt)}</strong>
         </div>
-        <div style={{ fontSize: 12, color: "#6b7280" }}>
-          {t("singleGroup.studentHoverCard.activatedAt")}: <strong style={{ color: "#111827" }}>{formatMembershipDate(membership.paymentStartDate)}</strong>
+        <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+          {t("singleGroup.studentHoverCard.activatedAt")}: <strong style={{ color: "var(--color-text-primary)" }}>{formatMembershipDate(membership.paymentStartDate)}</strong>
         </div>
-        <div style={{ fontSize: 12, color: "#6b7280" }}>
-          Price for student: <strong style={{ color: "#111827" }}>{moneyOrDash(priceValue)}</strong>
-          {priceNote && <span style={{ color: "#9ca3af" }}> {priceNote}</span>}
+        <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+          Price for student: <strong style={{ color: "var(--color-text-primary)" }}>{moneyOrDash(priceValue)}</strong>
+          {priceNote && <span style={{ color: "var(--color-text-muted)" }}> {priceNote}</span>}
         </div>
       </div>
 
-      <hr style={{ border: "none", borderTop: "1px solid #f3f4f6", margin: "12px 0" }} />
+      <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "12px 0" }} />
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div style={{ flex: 1, minWidth: 200 }}>
@@ -1251,23 +1251,23 @@ const SimpleHistoryList = ({
   emptyLabel: string;
 }) => {
   if (isLoading) {
-    return <div style={{ padding: 32, textAlign: "center", color: "#9ca3af", fontSize: 14 }}>Loading...</div>;
+    return <div style={{ padding: 32, textAlign: "center", color: "var(--color-text-muted)", fontSize: 14 }}>Loading...</div>;
   }
   if (isError) {
     return <div style={{ padding: 32, textAlign: "center", color: "#ef4444", fontSize: 14 }}>Failed to load</div>;
   }
   if (items.length === 0) {
-    return <div style={{ padding: 32, textAlign: "center", color: "#9ca3af", fontSize: 14 }}>{emptyLabel}</div>;
+    return <div style={{ padding: 32, textAlign: "center", color: "var(--color-text-muted)", fontSize: 14 }}>{emptyLabel}</div>;
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {items.map((item) => (
         <div
           key={item.id}
-          style={{ background: "white", border: "1px solid #eaecf0", borderRadius: 10, padding: "12px 16px" }}
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 10, padding: "12px 16px" }}
         >
-          <div style={{ fontSize: 13, color: "#111827" }}>{item.primary || "—"}</div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 12, color: "#9ca3af" }}>
+          <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{item.primary || "—"}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 12, color: "var(--color-text-muted)" }}>
             <span>{item.secondary || "—"}</span>
             <span>{item.date ? formatDate(item.date.slice(0, 10)) : ""}</span>
           </div>
@@ -1382,7 +1382,7 @@ export const StudentProfile = () => {
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#f0f2f5", padding: 24, color: "#6b7280" }}>
+      <div style={{ minHeight: "100vh", background: "var(--color-surface-alt)", padding: 24, color: "var(--color-text-secondary)" }}>
         Loading...
       </div>
     );
@@ -1390,7 +1390,7 @@ export const StudentProfile = () => {
 
   if (!student) {
     return (
-      <div style={{ minHeight: "100vh", background: "#f0f2f5", padding: 24 }}>
+      <div style={{ minHeight: "100vh", background: "var(--color-surface-alt)", padding: 24 }}>
         <Button
           startIcon={<IoArrowBack />}
           onClick={() => navigate(-1)}
@@ -1400,7 +1400,7 @@ export const StudentProfile = () => {
             color: "#5c7fa3",
             fontWeight: 600,
             fontSize: 14,
-            "&:hover": { background: "#eef4f9" },
+            "&:hover": { background: "var(--color-primary-surface)" },
           }}
         >
           Back to Students
@@ -1410,10 +1410,10 @@ export const StudentProfile = () => {
             maxWidth: 1200,
             marginTop: 24,
             padding: 24,
-            background: "white",
+            background: "var(--color-surface)",
             borderRadius: 16,
-            border: "1px solid #eaecf0",
-            color: "#6b7280",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-text-secondary)",
           }}
         >
           Student not found. (id: {id})
@@ -1557,7 +1557,7 @@ export const StudentProfile = () => {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f0f2f5", padding: 24 }}>
+    <div style={{ minHeight: "100vh", background: "var(--color-surface-alt)", padding: 24 }}>
       {/* Back button */}
       <Button
         startIcon={<IoArrowBack />}
@@ -1568,7 +1568,7 @@ export const StudentProfile = () => {
           color: "#5c7fa3",
           fontWeight: 600,
           fontSize: 14,
-          "&:hover": { background: "#eef4f9" },
+          "&:hover": { background: "var(--color-primary-surface)" },
         }}
       >
         Back to Students
@@ -1594,9 +1594,9 @@ export const StudentProfile = () => {
         <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
           <div
             style={{
-              background: "white",
+              background: "var(--color-surface)",
               borderRadius: 16,
-              border: "1px solid #eaecf0",
+              border: "1px solid var(--color-border)",
               overflow: "hidden",
             }}
           >
@@ -1606,16 +1606,16 @@ export const StudentProfile = () => {
               onChange={(_, v) => setActiveTab(v)}
               sx={{
                 px: 2,
-                borderBottom: "1px solid #f3f4f6",
+                borderBottom: "1px solid var(--color-border-subtle)",
                 "& .MuiTab-root": {
                   textTransform: "none",
                   fontSize: 14,
                   fontWeight: 500,
-                  color: "#6b7280",
+                  color: "var(--color-text-secondary)",
                   minHeight: 48,
                 },
-                "& .Mui-selected": { color: "#111827", fontWeight: 600 },
-                "& .MuiTabs-indicator": { bgcolor: "#111827", height: 2 },
+                "& .Mui-selected": { color: "var(--color-text-primary)", fontWeight: 600 },
+                "& .MuiTabs-indicator": { bgcolor: "var(--color-text-primary)", height: 2 },
               }}
             >
               {TABS.map((t) => (
@@ -1648,7 +1648,7 @@ export const StudentProfile = () => {
                       );
                     })
                   ) : (
-                    <div style={{ fontSize: 13, color: "#9ca3af", padding: "8px 0 16px" }}>
+                    <div style={{ fontSize: 13, color: "var(--color-text-muted)", padding: "8px 0 16px" }}>
                       No groups yet
                     </div>
                   )}
@@ -1691,7 +1691,7 @@ export const StudentProfile = () => {
                   style={{
                     padding: "48px",
                     textAlign: "center",
-                    color: "#9ca3af",
+                    color: "var(--color-text-muted)",
                     fontSize: 14,
                   }}
                 >
@@ -1816,13 +1816,13 @@ export const StudentProfile = () => {
       >
         <DialogTitle sx={{ fontWeight: 700 }}>Remove from group</DialogTitle>
         <DialogContent>
-          <div style={{ fontSize: 14, color: "#6b7280" }}>
+          <div style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>
             Remove {student.name} from {archiveGroupTarget?.name}? This only ends this one
             membership — the student account itself stays active.
           </div>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setArchiveGroupTarget(null)} disabled={isArchivingGroup} sx={{ color: "#6b7280" }}>
+          <Button onClick={() => setArchiveGroupTarget(null)} disabled={isArchivingGroup} sx={{ color: "var(--color-text-secondary)" }}>
             Cancel
           </Button>
           <Button

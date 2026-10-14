@@ -490,7 +490,7 @@ export const Staff = () => {
           displayEmpty
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as "" | UserStatus)}
-          sx={{ minWidth: 160, bgcolor: "#fff", fontSize: 14 }}
+          sx={{ minWidth: 160, bgcolor: "var(--color-surface)", fontSize: 14 }}
         >
           <MenuItem value="">{t("settings.ceo.staff.filters.allStatuses")}</MenuItem>
           <MenuItem value="ACTIVE">{t("settings.ceo.staff.filters.active")}</MenuItem>

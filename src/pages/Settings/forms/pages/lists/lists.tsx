@@ -37,7 +37,7 @@ import type { RootState } from "../../../../../app/store";
 
 const headCellSx = {
   fontWeight: 700,
-  color: "#1a1a2e",
+  color: "var(--color-text-primary)",
   fontFamily: "'DM Sans', sans-serif",
   fontSize: "0.875rem",
   border: "none",
@@ -106,16 +106,16 @@ export const Lists = () => {
       : t("settings.forms.createForm.tabs.leadForm");
 
   return (
-    <Box sx={{ backgroundColor: "#f0f2f5", p: 3, fontFamily: "'DM Sans', sans-serif" }}>
+    <Box sx={{ backgroundColor: "var(--color-surface-alt)", p: 3, fontFamily: "'DM Sans', sans-serif" }}>
       <Paper
         elevation={0}
-        sx={{ width: "100%", maxWidth: 1000, borderRadius: 4, p: 4, backgroundColor: "#ffffff", boxShadow: "0 2px 24px rgba(0,0,0,0.07)" }}
+        sx={{ width: "100%", maxWidth: 1000, borderRadius: 4, p: 4, backgroundColor: "var(--color-surface)", boxShadow: "0 2px 24px rgba(0,0,0,0.07)" }}
       >
         {/* Header */}
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3, gap: 2 }}>
           <Typography
             variant="h5"
-            sx={{ fontWeight: 600, color: "#1a1a2e", letterSpacing: "-0.3px", fontFamily: "'DM Sans', sans-serif" }}
+            sx={{ fontWeight: 600, color: "var(--color-text-primary)", letterSpacing: "-0.3px", fontFamily: "'DM Sans', sans-serif" }}
           >
             {t("settings.forms.lists.title")}
           </Typography>
@@ -155,7 +155,7 @@ export const Lists = () => {
           </Box>
         </Box>
 
-        <Box sx={{ borderBottom: "1px solid #e8eaed", mb: 1 }} />
+        <Box sx={{ borderBottom: "1px solid var(--color-border)", mb: 1 }} />
 
         {isLoading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress /></Box>
@@ -164,7 +164,7 @@ export const Lists = () => {
             {t("settings.forms.lists.loadError")}
           </Typography>
         ) : forms.length === 0 ? (
-          <Typography sx={{ color: "#9ca3af", fontSize: 14, textAlign: "center", py: 4 }}>
+          <Typography sx={{ color: "var(--color-text-muted)", fontSize: 14, textAlign: "center", py: 4 }}>
             {t("settings.forms.lists.emptyState")}
           </Typography>
         ) : (
@@ -188,22 +188,22 @@ export const Lists = () => {
                     <TableRow
                       key={form.id}
                       sx={{
-                        backgroundColor: index % 2 === 0 ? "#ffffff" : "#f7f8fa",
+                        backgroundColor: index % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-alt)",
                         "&:last-child td": { border: "none" },
                         "& td": { border: "none", py: 1.4 },
                       }}
                     >
-                      <TableCell sx={{ color: "#1a1a2e", fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem" }}>
+                      <TableCell sx={{ color: "var(--color-text-primary)", fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem" }}>
                         {form.title}
                         {form.description && (
-                          <Typography sx={{ fontSize: 12, color: "#9ca3af", mt: 0.3 }} noWrap>{form.description}</Typography>
+                          <Typography sx={{ fontSize: 12, color: "var(--color-text-muted)", mt: 0.3 }} noWrap>{form.description}</Typography>
                         )}
                       </TableCell>
                       <TableCell>
                         <Chip
                           size="small"
                           label={typeLabel(form.type)}
-                          sx={{ bgcolor: form.type === "INTERNAL_SURVEY" ? "#eef2f7" : "#e3f2fd", color: "#1a4d6e", fontWeight: 500 }}
+                          sx={{ bgcolor: form.type === "INTERNAL_SURVEY" ? "var(--color-surface-alt)" : "var(--color-primary-surface)", color: "var(--color-primary)", fontWeight: 500 }}
                         />
                       </TableCell>
                       <TableCell align="right" sx={{ fontSize: "0.9rem" }}>{form.viewsCount}</TableCell>
@@ -218,7 +218,7 @@ export const Lists = () => {
                             <IconButton
                               onClick={() => navigate(`/settings/forms/edit/${form.id}`)}
                               size="small"
-                              sx={{ color: "#64b5f6", "&:hover": { backgroundColor: "#e3f2fd" } }}
+                              sx={{ color: "#64b5f6", "&:hover": { backgroundColor: "var(--color-primary-surface)" } }}
                             >
                               <FiEdit2 size={17} />
                             </IconButton>

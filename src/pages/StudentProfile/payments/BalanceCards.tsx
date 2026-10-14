@@ -33,8 +33,8 @@ export const OutstandingBalanceCard = ({
       <div style={{ ...sectionTitleStyle, margin: "0 0 12px" }}>{t("studentPayments.balanceTitle", "Balance")}</div>
       <div
         style={{
-          background: isDebt ? "#fef2f2" : "#f0fdf4",
-          border: `1px solid ${isDebt ? "#fecaca" : "#bbf7d0"}`,
+          background: isDebt ? "rgba(229,57,53,0.08)" : "var(--color-success-surface)",
+          border: `1px solid ${isDebt ? "rgba(229,57,53,0.3)" : "var(--color-success-border)"}`,
           borderRadius: 12,
           padding: 16,
           display: "flex",
@@ -56,11 +56,11 @@ export const OutstandingBalanceCard = ({
             {formatUzs(Math.abs(balance))}
           </div>
           {hasBreakdown && (
-            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 6 }}>
               {t("studentPayments.totalDue", "Total due")}:{" "}
-              <strong style={{ color: "#111827" }}>{formatUzs(summary!.totalCharged)}</strong>
+              <strong style={{ color: "var(--color-text-primary)" }}>{formatUzs(summary!.totalCharged)}</strong>
               {"   ·   "}{t("studentPayments.alreadyPaid", "Already paid")}:{" "}
-              <strong style={{ color: "#111827" }}>{formatUzs(summary!.totalPaid)}</strong>
+              <strong style={{ color: "var(--color-text-primary)" }}>{formatUzs(summary!.totalPaid)}</strong>
             </div>
           )}
         </div>

@@ -116,7 +116,7 @@ const Toggle = ({
     } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
   >
     <span
-      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
+      className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-[var(--color-surface)] shadow transition-transform duration-200 ${
         enabled ? "translate-x-6" : "translate-x-1"
       }`}
     />
@@ -287,21 +287,21 @@ export const SettingsSms = () => {
   const selectedLabel = selected ? (selectedMeta ? t(selectedMeta.label) : humanizeType(selected.type)) : "";
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-surface-alt)] p-6">
       {/* Page title */}
       <div className="flex items-center gap-2 mb-6">
-        <MdSms className="text-2xl text-gray-700" />
-        <h1 className="text-2xl font-semibold text-gray-800">{t("settings.sms.title")}</h1>
+        <MdSms className="text-2xl text-gray-700 dark:text-[var(--color-text-primary)]" />
+        <h1 className="text-2xl font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("settings.sms.title")}</h1>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-gray-200 dark:border-[var(--color-border)] mb-6">
         <button
           onClick={() => setActiveTab("auto-sms")}
           className={`px-5 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "auto-sms"
               ? "border-blue-500 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
+              : "border-transparent text-gray-500 dark:text-[var(--color-text-secondary)] hover:text-gray-700 dark:hover:text-[var(--color-text-primary)]"
           }`}
         >
           {t("settings.sms.tabs.autoSms")}
@@ -311,7 +311,7 @@ export const SettingsSms = () => {
           className={`px-5 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "templates"
               ? "border-blue-500 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
+              : "border-transparent text-gray-500 dark:text-[var(--color-text-secondary)] hover:text-gray-700 dark:hover:text-[var(--color-text-primary)]"
           }`}
         >
           {t("settings.sms.tabs.templates")}
@@ -321,7 +321,7 @@ export const SettingsSms = () => {
           className={`px-5 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "config"
               ? "border-blue-500 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
+              : "border-transparent text-gray-500 dark:text-[var(--color-text-secondary)] hover:text-gray-700 dark:hover:text-[var(--color-text-primary)]"
           }`}
         >
           {t("settings.sms.tabs.config")}
@@ -336,12 +336,12 @@ export const SettingsSms = () => {
           )}
           <div className="grid grid-cols-12 gap-6">
             <div className="col-span-4 flex flex-col gap-2">
-              <h2 className="text-base font-semibold text-gray-700 mb-2">{t("settings.sms.smsTypeHeading")}</h2>
+              <h2 className="text-base font-semibold text-gray-700 dark:text-[var(--color-text-primary)] mb-2">{t("settings.sms.smsTypeHeading")}</h2>
               {autoSettingsLoading ? (
-                <p className="text-sm text-gray-400 px-1">…</p>
+                <p className="text-sm text-gray-400 dark:text-[var(--color-text-muted)] px-1">…</p>
               ) : (autoSettings ?? []).length === 0 ? (
                 !autoSettingsError && (
-                  <p className="text-sm text-gray-400 px-1">{t("settings.sms.table.empty")}</p>
+                  <p className="text-sm text-gray-400 dark:text-[var(--color-text-muted)] px-1">{t("settings.sms.table.empty")}</p>
                 )
               ) : (
                 (autoSettings ?? []).map((sms) => {
@@ -352,11 +352,11 @@ export const SettingsSms = () => {
                       onClick={() => setSelectedType(sms.type)}
                       className={`flex items-center justify-between px-4 py-3 rounded-lg border cursor-pointer transition-all ${
                         selectedType === sms.type
-                          ? "border-blue-500 bg-white shadow-sm"
-                          : "border-gray-200 bg-white hover:border-blue-300"
+                          ? "border-blue-500 bg-white dark:bg-[var(--color-surface)] shadow-sm"
+                          : "border-gray-200 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] hover:border-blue-300"
                       }`}
                     >
-                      <span className="text-sm text-gray-700">{meta ? t(meta.label) : humanizeType(sms.type)}</span>
+                      <span className="text-sm text-gray-700 dark:text-[var(--color-text-primary)]">{meta ? t(meta.label) : humanizeType(sms.type)}</span>
                       <div onClick={(e) => e.stopPropagation()}>
                         <Toggle
                           enabled={sms.isActive}
@@ -373,26 +373,26 @@ export const SettingsSms = () => {
             {selected && (
               <>
                 <div className="col-span-5 flex flex-col gap-4">
-                  <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
-                    <h2 className="text-base font-semibold text-gray-700 mb-3">
+                  <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg border border-gray-200 dark:border-[var(--color-border)] p-5 shadow-sm">
+                    <h2 className="text-base font-semibold text-gray-700 dark:text-[var(--color-text-primary)] mb-3">
                       {t("settings.sms.smsTextHeading", { label: selectedLabel })}
                     </h2>
                     <textarea
                       value={draftTemplate}
                       onChange={(e) => setDraftTemplate(e.target.value)}
                       rows={6}
-                      className="w-full text-sm text-gray-700 border border-gray-200 rounded-md p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                      className="w-full text-sm text-gray-700 dark:text-[var(--color-text-primary)] border border-gray-200 dark:border-[var(--color-border)] rounded-md p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     />
                   </div>
 
-                  <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
-                    <h2 className="text-base font-semibold text-gray-700 mb-3">
+                  <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg border border-gray-200 dark:border-[var(--color-border)] p-5 shadow-sm">
+                    <h2 className="text-base font-semibold text-gray-700 dark:text-[var(--color-text-primary)] mb-3">
                       {t("settings.sms.exampleHeading")}
                     </h2>
-                    <div className="bg-gray-100 rounded-md p-4 text-sm text-gray-600 min-h-[100px]">
+                    <div className="bg-gray-100 dark:bg-[var(--color-surface-hover)] rounded-md p-4 text-sm text-gray-600 dark:text-[var(--color-text-secondary)] min-h-[100px]">
                       {exampleText}
                     </div>
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-gray-400 dark:text-[var(--color-text-muted)] mt-2">
                       {t("settings.sms.symbolsCount", { count: symbolCount, sms: smsCount })}
                     </p>
                   </div>
@@ -410,10 +410,10 @@ export const SettingsSms = () => {
                 </div>
 
                 <div className="col-span-3">
-                  <h2 className="text-base font-semibold text-gray-700 mb-3">{t("settings.sms.descriptionHeading")}</h2>
-                  <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
-                    {selectedMeta && <p className="text-sm text-gray-600 mb-4">{t(selectedMeta.description)}</p>}
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">{t("settings.sms.availableVariables")}</h3>
+                  <h2 className="text-base font-semibold text-gray-700 dark:text-[var(--color-text-primary)] mb-3">{t("settings.sms.descriptionHeading")}</h2>
+                  <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg border border-gray-200 dark:border-[var(--color-border)] p-5 shadow-sm">
+                    {selectedMeta && <p className="text-sm text-gray-600 dark:text-[var(--color-text-secondary)] mb-4">{t(selectedMeta.description)}</p>}
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-[var(--color-text-primary)] mb-2">{t("settings.sms.availableVariables")}</h3>
                     <p className="text-xs text-red-500 mb-3">
                       {t("settings.sms.variablesWarningPrefix")}{" "}
                       <span className="font-bold">{t("settings.sms.tabs.autoSms")}</span>
@@ -421,8 +421,8 @@ export const SettingsSms = () => {
                     </p>
                     <ul className="space-y-1">
                       {VARIABLES.map((v) => (
-                        <li key={v.key} className="text-xs text-gray-600">
-                          <span className="font-medium text-gray-800">{v.key}</span> - {t(v.desc)}
+                        <li key={v.key} className="text-xs text-gray-600 dark:text-[var(--color-text-secondary)]">
+                          <span className="font-medium text-gray-800 dark:text-[var(--color-text-primary)]">{v.key}</span> - {t(v.desc)}
                         </li>
                       ))}
                     </ul>
@@ -436,9 +436,9 @@ export const SettingsSms = () => {
 
       {/* PROVIDER CONFIG TAB (GET/PUT /sms/config) */}
       {activeTab === "config" && (
-        <div className="max-w-xl bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <h2 className="text-base font-semibold text-gray-700 mb-1">{t("settings.sms.config.title")}</h2>
-          <p className="text-sm text-gray-500 mb-5">{t("settings.sms.config.description")}</p>
+        <div className="max-w-xl bg-white dark:bg-[var(--color-surface)] rounded-lg border border-gray-200 dark:border-[var(--color-border)] shadow-sm p-6">
+          <h2 className="text-base font-semibold text-gray-700 dark:text-[var(--color-text-primary)] mb-1">{t("settings.sms.config.title")}</h2>
+          <p className="text-sm text-gray-500 dark:text-[var(--color-text-secondary)] mb-5">{t("settings.sms.config.description")}</p>
           {smsConfigError && (
             <p className="text-xs text-amber-600 mb-4">
               {t("settings.sms.config.notConfigured")}
@@ -447,31 +447,31 @@ export const SettingsSms = () => {
           )}
           <div className="flex flex-col gap-4">
             <div>
-              <label className="block text-sm text-gray-700 mb-1.5">{t("settings.sms.config.email")}</label>
+              <label className="block text-sm text-gray-700 dark:text-[var(--color-text-primary)] mb-1.5">{t("settings.sms.config.email")}</label>
               <input
                 type="text"
                 value={configForm.email}
                 onChange={(e) => setConfigForm((p) => ({ ...p, email: e.target.value }))}
-                className="w-full text-sm text-gray-700 border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                className="w-full text-sm text-gray-700 dark:text-[var(--color-text-primary)] border border-gray-300 dark:border-[var(--color-border)] rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-700 mb-1.5">{t("settings.sms.config.password")}</label>
+              <label className="block text-sm text-gray-700 dark:text-[var(--color-text-primary)] mb-1.5">{t("settings.sms.config.password")}</label>
               <input
                 type="password"
                 autoComplete="new-password"
                 value={configForm.password}
                 onChange={(e) => setConfigForm((p) => ({ ...p, password: e.target.value }))}
-                className="w-full text-sm text-gray-700 border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                className="w-full text-sm text-gray-700 dark:text-[var(--color-text-primary)] border border-gray-300 dark:border-[var(--color-border)] rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-700 mb-1.5">{t("settings.sms.config.alias")}</label>
+              <label className="block text-sm text-gray-700 dark:text-[var(--color-text-primary)] mb-1.5">{t("settings.sms.config.alias")}</label>
               <input
                 type="text"
                 value={configForm.alias}
                 onChange={(e) => setConfigForm((p) => ({ ...p, alias: e.target.value }))}
-                className="w-full text-sm text-gray-700 border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                className="w-full text-sm text-gray-700 dark:text-[var(--color-text-primary)] border border-gray-300 dark:border-[var(--color-border)] rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
               />
             </div>
             <button
@@ -504,14 +504,14 @@ export const SettingsSms = () => {
           )}
 
           {/* Table */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg border border-gray-200 dark:border-[var(--color-border)] shadow-sm overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left text-sm font-medium text-gray-600 px-5 py-3">
+                <tr className="border-b border-gray-200 dark:border-[var(--color-border)]">
+                  <th className="text-left text-sm font-medium text-gray-600 dark:text-[var(--color-text-secondary)] px-5 py-3">
                     {t("settings.sms.table.templatesHeader")}
                   </th>
-                  <th className="text-left text-sm font-medium text-gray-600 px-5 py-3 w-32">
+                  <th className="text-left text-sm font-medium text-gray-600 dark:text-[var(--color-text-secondary)] px-5 py-3 w-32">
                     {t("settings.sms.table.actions")}
                   </th>
                 </tr>
@@ -519,22 +519,22 @@ export const SettingsSms = () => {
               <tbody>
                 {templatesLoading ? (
                   <tr>
-                    <td colSpan={2} className="px-5 py-10 text-center text-sm text-gray-400">
+                    <td colSpan={2} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-[var(--color-text-muted)]">
                       …
                     </td>
                   </tr>
                 ) : templates.length === 0 ? (
                   <tr>
-                    <td colSpan={2} className="px-5 py-10 text-center text-sm text-gray-400">
+                    <td colSpan={2} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-[var(--color-text-muted)]">
                       {t("settings.sms.table.empty")}
                     </td>
                   </tr>
                 ) : (
                   templates.map((template) => (
-                    <tr key={template.id} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="px-5 py-3 text-sm text-gray-700">
-                        <div className="font-medium text-gray-800">{template.title}</div>
-                        <div className="text-gray-500">{template.content}</div>
+                    <tr key={template.id} className="border-t border-gray-100 dark:border-[var(--color-border)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]">
+                      <td className="px-5 py-3 text-sm text-gray-700 dark:text-[var(--color-text-primary)]">
+                        <div className="font-medium text-gray-800 dark:text-[var(--color-text-primary)]">{template.title}</div>
+                        <div className="text-gray-500 dark:text-[var(--color-text-secondary)]">{template.content}</div>
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
@@ -574,7 +574,7 @@ export const SettingsSms = () => {
 
           {/* Drawer panel */}
           <div
-            className="relative w-96 bg-white h-full shadow-2xl flex flex-col z-50"
+            className="relative w-96 bg-white dark:bg-[var(--color-surface)] h-full shadow-2xl flex flex-col z-50"
             style={{ animation: "slideInRight 0.25s ease-out" }}
           >
             <style>{`
@@ -585,13 +585,13 @@ export const SettingsSms = () => {
             `}</style>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-800">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-[var(--color-border)]">
+              <h2 className="text-base font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">
                 {editingTemplate ? t("settings.sms.drawer.editTitle") : t("settings.sms.drawer.title")}
               </h2>
               <button
                 onClick={() => setDrawerOpen(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-gray-100"
+                className="text-gray-400 dark:text-[var(--color-text-muted)] hover:text-gray-600 dark:hover:text-[var(--color-text-secondary)] transition-colors p-1 rounded hover:bg-gray-100 dark:hover:bg-[var(--color-surface-hover)]"
               >
                 <MdClose size={20} />
               </button>
@@ -600,24 +600,24 @@ export const SettingsSms = () => {
             {/* Body */}
             <div className="flex-1 px-6 py-6 flex flex-col gap-4">
               <div>
-                <label className="block text-sm text-gray-700 mb-2">{t("settings.sms.drawer.titleLabel")}</label>
+                <label className="block text-sm text-gray-700 dark:text-[var(--color-text-primary)] mb-2">{t("settings.sms.drawer.titleLabel")}</label>
                 <input
                   type="text"
                   value={templateTitle}
                   onChange={(e) => setTemplateTitle(e.target.value)}
                   placeholder={t("settings.sms.drawer.titlePlaceholder")}
-                  className="w-full text-sm text-gray-700 border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                  className="w-full text-sm text-gray-700 dark:text-[var(--color-text-primary)] border border-gray-300 dark:border-[var(--color-border)] rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-700 mb-2">{t("settings.sms.drawer.label")}</label>
+                <label className="block text-sm text-gray-700 dark:text-[var(--color-text-primary)] mb-2">{t("settings.sms.drawer.label")}</label>
                 <textarea
                   value={templateContent}
                   onChange={(e) => setTemplateContent(e.target.value)}
                   rows={6}
-                  className="w-full text-sm text-gray-700 border border-gray-300 rounded-md p-3 resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                  className="w-full text-sm text-gray-700 dark:text-[var(--color-text-primary)] border border-gray-300 dark:border-[var(--color-border)] rounded-md p-3 resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                 />
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 dark:text-[var(--color-text-muted)] mt-1">
                   {t("settings.sms.symbolsCount", { count: newSymbolCount, sms: newSmsCount })}
                 </p>
               </div>
@@ -638,13 +638,13 @@ export const SettingsSms = () => {
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setDeleteTarget(null)} />
-          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-sm mx-4 p-6">
-            <h2 className="text-base font-semibold text-gray-800 mb-2">{t("settings.sms.confirmDelete.title")}</h2>
-            <p className="text-sm text-gray-500 mb-6">{t("settings.sms.confirmDelete.message")}</p>
+          <div className="relative bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-2xl w-full max-w-sm mx-4 p-6">
+            <h2 className="text-base font-semibold text-gray-800 dark:text-[var(--color-text-primary)] mb-2">{t("settings.sms.confirmDelete.title")}</h2>
+            <p className="text-sm text-gray-500 dark:text-[var(--color-text-secondary)] mb-6">{t("settings.sms.confirmDelete.message")}</p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="text-sm font-medium text-gray-600 hover:text-gray-800 px-4 py-2 rounded-md transition-colors"
+                className="text-sm font-medium text-gray-600 dark:text-[var(--color-text-secondary)] hover:text-gray-800 dark:hover:text-[var(--color-text-primary)] px-4 py-2 rounded-md transition-colors"
               >
                 {t("settings.sms.confirmDelete.cancel")}
               </button>

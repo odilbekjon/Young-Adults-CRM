@@ -43,17 +43,17 @@ const SelectBox = ({ value, onChange, options, placeholder }: {
   return (
     <div className="relative" ref={ref}>
       <button type="button" onClick={() => setOpen(o => !o)}
-        className="flex items-center justify-between gap-2 border border-gray-300 rounded px-3 py-1.5 text-sm bg-white text-left hover:border-gray-400 transition-colors min-w-[130px]">
-        <span className={selectedLabel ? "text-gray-700" : "text-gray-400"}>{selectedLabel || placeholder}</span>
-        <FiChevronDown size={13} className="text-gray-400 flex-shrink-0" />
+        className="flex items-center justify-between gap-2 border border-gray-300 dark:border-[var(--color-border)] rounded px-3 py-1.5 text-sm bg-white dark:bg-[var(--color-surface)] text-left hover:border-gray-400 transition-colors min-w-[130px]">
+        <span className={selectedLabel ? "text-gray-700 dark:text-[var(--color-text-primary)]" : "text-gray-400 dark:text-[var(--color-text-muted)]"}>{selectedLabel || placeholder}</span>
+        <FiChevronDown size={13} className="text-gray-400 dark:text-[var(--color-text-muted)] flex-shrink-0" />
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-full py-1 max-h-64 overflow-y-auto">
-          <button className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:bg-gray-50"
+        <div className="absolute left-0 top-full mt-1 bg-white dark:bg-[var(--color-surface)] border border-gray-200 dark:border-[var(--color-border)] rounded-lg shadow-lg z-50 min-w-full py-1 max-h-64 overflow-y-auto">
+          <button className="w-full text-left px-3 py-2 text-sm text-gray-400 dark:text-[var(--color-text-muted)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]"
             onClick={() => { onChange(""); setOpen(false); }}>{placeholder}</button>
           {options.map(opt => (
             <button key={opt.value} type="button"
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-[var(--color-text-primary)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] whitespace-nowrap"
               onClick={() => { onChange(opt.value); setOpen(false); }}>{opt.label}</button>
           ))}
         </div>
@@ -78,8 +78,8 @@ const AngledTick = (props: { x?: number; y?: number; payload?: { value?: string 
 
 // ---------- Chart wrapper ----------
 const ChartCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-    <h2 className="text-sm font-semibold text-gray-700 mb-3">{title}</h2>
+  <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg border border-gray-200 dark:border-[var(--color-border)] shadow-sm p-4">
+    <h2 className="text-sm font-semibold text-gray-700 dark:text-[var(--color-text-primary)] mb-3">{title}</h2>
     {children}
   </div>
 );
@@ -167,18 +167,18 @@ export const StudentsLeftGroup = () => {
     byTeacher.length === 0 && byCourse.length === 0 && byMonth.length === 0 && byReason.length === 0;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 font-sans">
+    <div className="min-h-screen bg-gray-100 dark:bg-[var(--color-surface-hover)] p-6 font-sans">
       {/* Title */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-gray-800">{t("reports.studentsLeft.title")}</h1>
-          <span className="text-sm text-gray-500">{t("reports.studentsLeft.quantity", { count: total })}</span>
+          <h1 className="text-2xl font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("reports.studentsLeft.title")}</h1>
+          <span className="text-sm text-gray-500 dark:text-[var(--color-text-secondary)]">{t("reports.studentsLeft.quantity", { count: total })}</span>
         </div>
         <button
           onClick={handleExportExcel}
           disabled={isExporting}
           title={t("reports.common.exportExcel")}
-          className="flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-60"
+          className="flex items-center gap-2 rounded border border-gray-300 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] px-3 py-1.5 text-sm text-gray-600 dark:text-[var(--color-text-secondary)] transition-colors hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] disabled:opacity-60"
         >
           {isExporting ? <CircularProgress size={14} /> : <FiDownload size={15} />}
           {t("reports.common.exportExcel")}
@@ -198,7 +198,7 @@ export const StudentsLeftGroup = () => {
           {t("reports.studentsLeft.filters.filterBtn")}
         </button>
         <button onClick={handleReset}
-          className="border border-gray-300 bg-white hover:bg-gray-50 rounded p-1.5 text-gray-500 transition-colors">
+          className="border border-gray-300 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] rounded p-1.5 text-gray-500 dark:text-[var(--color-text-secondary)] transition-colors">
           <FiRefreshCw size={15} />
         </button>
       </div>
@@ -208,7 +208,7 @@ export const StudentsLeftGroup = () => {
       ) : isError ? (
         <div className="py-24 text-center text-red-500 text-sm">{t("reports.common.loadError")}</div>
       ) : isEmpty ? (
-        <div className="py-24 text-center text-gray-400 text-sm">{t("reports.common.noData")}</div>
+        <div className="py-24 text-center text-gray-400 dark:text-[var(--color-text-muted)] text-sm">{t("reports.common.noData")}</div>
       ) : (
         /* Charts grid */
         <div className="grid grid-cols-2 gap-4">
@@ -216,7 +216,7 @@ export const StudentsLeftGroup = () => {
           <ChartCard title={t("reports.studentsLeft.charts.byTeacher")}>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={byTeacher} margin={{ top: 20, right: 10, bottom: 90, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-subtle)" />
                 <XAxis dataKey="name" tick={<AngledTick />} interval={0} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip />
@@ -231,7 +231,7 @@ export const StudentsLeftGroup = () => {
           <ChartCard title={t("reports.studentsLeft.charts.byCourse")}>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={byCourse} margin={{ top: 20, right: 10, bottom: 90, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-subtle)" />
                 <XAxis dataKey="name" tick={<AngledTick />} interval={0} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip />
@@ -246,7 +246,7 @@ export const StudentsLeftGroup = () => {
           <ChartCard title={t("reports.studentsLeft.charts.byMonth")}>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={byMonth} margin={{ top: 20, right: 10, bottom: 30, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-subtle)" />
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip />
@@ -261,7 +261,7 @@ export const StudentsLeftGroup = () => {
           <ChartCard title={t("reports.studentsLeft.charts.byReason")}>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={byReason} margin={{ top: 20, right: 10, bottom: 30, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-subtle)" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip />

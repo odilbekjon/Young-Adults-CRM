@@ -31,7 +31,7 @@ export const TagsSelect = ({
       }}
       renderValue={(selected) =>
         selected.length === 0 ? (
-          <span style={{ color: "#9ca3af" }}>{placeholder}</span>
+          <span style={{ color: "var(--color-text-muted)" }}>{placeholder}</span>
         ) : (
           <Stack direction="row" flexWrap="wrap" gap={0.5}>
             {selected.map((id) => (
@@ -44,8 +44,8 @@ export const TagsSelect = ({
       sx={{
         fontSize: 13,
         borderRadius: "8px",
-        bgcolor: "#fff",
-        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e0e0e0" },
+        bgcolor: "var(--color-surface)",
+        "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--color-border)" },
         "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#a0aec0" },
         "& .MuiSelect-select": { py: "7px" },
       }}

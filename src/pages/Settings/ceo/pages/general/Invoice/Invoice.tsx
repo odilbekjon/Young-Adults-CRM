@@ -121,13 +121,13 @@ const Invoice = () => {
                   <Box
                     sx={{
                       flex: 1,
-                      border: "1px solid #ccc",
+                      border: "1px solid var(--color-border)",
                       borderRadius: "4px 0 0 4px",
                       px: 1.5,
                       py: 0.6,
                       fontSize: 13,
-                      color: fileName ? "#333" : "#999",
-                      bgcolor: "#fff",
+                      color: fileName ? "var(--color-text-primary)" : "var(--color-text-muted)",
+                      bgcolor: "var(--color-surface)",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -196,8 +196,8 @@ const Invoice = () => {
               onClick={handleCancel}
               sx={{
                 textTransform: "none",
-                color: "#555",
-                borderColor: "#ccc",
+                color: "var(--color-text-secondary)",
+                borderColor: "var(--color-border)",
                 px: 3,
                 fontWeight: 500,
               }}
@@ -213,21 +213,21 @@ const Invoice = () => {
             sx={{
               borderRadius: 3,
               overflow: "hidden",
-              border: "1px solid #e0e0e0",
+              border: "1px solid var(--color-border)",
               position: "relative",
               "&::before": {
                 content: '""',
                 display: "block",
                 height: 8,
                 background:
-                  "repeating-linear-gradient(90deg, #e0e0e0 0px, #e0e0e0 8px, transparent 8px, transparent 16px)",
+                  "repeating-linear-gradient(90deg, var(--color-border) 0px, var(--color-border) 8px, transparent 8px, transparent 16px)",
               },
               "&::after": {
                 content: '""',
                 display: "block",
                 height: 8,
                 background:
-                  "repeating-linear-gradient(90deg, #e0e0e0 0px, #e0e0e0 8px, transparent 8px, transparent 16px)",
+                  "repeating-linear-gradient(90deg, var(--color-border) 0px, var(--color-border) 8px, transparent 8px, transparent 16px)",
               },
             }}
           >
@@ -252,10 +252,10 @@ const Invoice = () => {
                   sx={{
                     width: "100%",
                     height: 30,
-                    border: "1px solid #ddd",
+                    border: "1px solid var(--color-border)",
                     borderRadius: 1,
                     mb: 1.5,
-                    bgcolor: "#fafafa",
+                    bgcolor: "var(--color-surface-alt)",
                   }}
                 />
               )}
@@ -339,7 +339,7 @@ const PreviewRow = ({
       sx={{
         fontSize: small ? 9 : 10,
         fontWeight: 600,
-        color: "#333",
+        color: "var(--color-text-primary)",
         whiteSpace: "nowrap",
       }}
     >
@@ -348,7 +348,7 @@ const PreviewRow = ({
     <Typography
       sx={{
         fontSize: small ? 9 : 10,
-        color: "#555",
+        color: "var(--color-text-secondary)",
       }}
     >
       {value}

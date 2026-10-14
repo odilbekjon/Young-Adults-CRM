@@ -88,12 +88,12 @@ const defaultBlock = (t: TFn): Block => ({
 
 // ─── Shared field card ────────────────────────────────────────────────────────
 const FixedFieldCard = ({ index, label }: { index: number; label: string }) => (
-  <Paper variant="outlined" sx={{ borderRadius: 2, mb: 1.5, overflow: "hidden", border: "1px solid #e0e0e0" }}>
-    <Box sx={{ px: 2, py: 1, backgroundColor: "#fff", borderBottom: "1px solid #f0f0f0" }}>
-      <Typography sx={{ fontWeight: 600, color: "#555", fontSize: "0.85rem" }}>{index}</Typography>
+  <Paper variant="outlined" sx={{ borderRadius: 2, mb: 1.5, overflow: "hidden", border: "1px solid var(--color-border)" }}>
+    <Box sx={{ px: 2, py: 1, backgroundColor: "var(--color-surface)", borderBottom: "1px solid var(--color-border-subtle)" }}>
+      <Typography sx={{ fontWeight: 600, color: "var(--color-text-secondary)", fontSize: "0.85rem" }}>{index}</Typography>
     </Box>
     <Box sx={{ px: 2.5, py: 1.8 }}>
-      <Typography sx={{ fontWeight: 600, fontSize: "0.95rem", color: "#1a1a2e" }}>
+      <Typography sx={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--color-text-primary)" }}>
         <span style={{ color: "red", marginRight: 6 }}>*</span>{label}
       </Typography>
     </Box>
@@ -153,23 +153,23 @@ function FormEditor({
   const fixedCount = isLead ? fixedLabels.length : 0;
 
   const selectSx = {
-    backgroundColor: "#fff",
+    backgroundColor: "var(--color-surface)",
     borderRadius: 1.5,
     fontSize: "0.9rem",
-    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e0e0e0" },
+    "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--color-border)" },
   };
-  const inputSx = { mb: 1.5, backgroundColor: "#fff", borderRadius: 1.5, "& .MuiOutlinedInput-root": { borderRadius: 1.5 } };
+  const inputSx = { mb: 1.5, backgroundColor: "var(--color-surface)", borderRadius: 1.5, "& .MuiOutlinedInput-root": { borderRadius: 1.5 } };
 
   const Preview = () => (
-    <Paper elevation={0} sx={{ p: 4, borderRadius: 3, backgroundColor: "#fff", border: "1px solid #eee" }}>
-      <Typography variant="h6" sx={{ mb: description ? 1 : 3, color: title ? "#1a1a2e" : "#aaa", fontWeight: 600, fontSize: "1.1rem" }}>
+    <Paper elevation={0} sx={{ p: 4, borderRadius: 3, backgroundColor: "var(--color-surface)", border: "1px solid var(--color-border-subtle)" }}>
+      <Typography variant="h6" sx={{ mb: description ? 1 : 3, color: title ? "var(--color-text-primary)" : "var(--color-text-muted)", fontWeight: 600, fontSize: "1.1rem" }}>
         {title || t("settings.forms.createForm.placeholders.formName")}
       </Typography>
-      {description && <Typography sx={{ mb: 3, fontSize: "0.85rem", color: "#666" }}>{description}</Typography>}
+      {description && <Typography sx={{ mb: 3, fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>{description}</Typography>}
 
       {isLead && fixedLabels.map((label, i) => (
         <Box key={label} sx={{ mb: 2.5 }}>
-          <Typography sx={{ mb: 0.8, fontSize: "0.85rem", color: "#333" }}>
+          <Typography sx={{ mb: 0.8, fontSize: "0.85rem", color: "var(--color-text-primary)" }}>
             {label}<span style={{ color: "red", marginLeft: 4 }}>*</span>
           </Typography>
           <TextField fullWidth size="small" variant="outlined" disabled defaultValue={i === 1 ? "+998" : ""} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1 } }} />
@@ -178,7 +178,7 @@ function FormEditor({
 
       {blocks.map((block) => (
         <Box key={block.id} sx={{ mb: 2.5 }}>
-          <Typography sx={{ mb: 1, fontSize: "0.85rem", color: "#333" }}>
+          <Typography sx={{ mb: 1, fontSize: "0.85rem", color: "var(--color-text-primary)" }}>
             {block.question}{block.isRequired && <span style={{ color: "red", marginLeft: 4 }}>*</span>}
           </Typography>
           {block.type === "One of the list" && (
@@ -187,8 +187,8 @@ function FormEditor({
                 <FormControlLabel
                   key={a.id}
                   value={a.label}
-                  control={<Radio size="small" sx={{ color: "#ccc", p: 0.5 }} />}
-                  label={<Typography sx={{ fontSize: "0.85rem", color: "#555" }}>{a.label}</Typography>}
+                  control={<Radio size="small" sx={{ color: "var(--color-text-muted)", p: 0.5 }} />}
+                  label={<Typography sx={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>{a.label}</Typography>}
                 />
               ))}
             </Box>
@@ -224,7 +224,7 @@ function FormEditor({
         <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
           <Select
             value={branch} onChange={(e) => setBranch(e.target.value)} displayEmpty disabled={isEdit}
-            renderValue={(v) => v ? (branches.find((b) => b.id === v)?.name ?? v) : <span style={{ color: "#aaa" }}>{t("settings.forms.createForm.placeholders.selectBranch")}</span>}
+            renderValue={(v) => v ? (branches.find((b) => b.id === v)?.name ?? v) : <span style={{ color: "var(--color-text-muted)" }}>{t("settings.forms.createForm.placeholders.selectBranch")}</span>}
             sx={selectSx}
           >
             {branches.map((b) => <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>)}
@@ -235,7 +235,7 @@ function FormEditor({
           <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
             <Select
               value={sourceId} onChange={(e) => setSourceId(e.target.value)} displayEmpty
-              renderValue={(v) => v ? (sources.find((s) => s.id === v)?.name ?? v) : <span style={{ color: "#aaa" }}>{t("settings.forms.createForm.placeholders.leadsSources")}</span>}
+              renderValue={(v) => v ? (sources.find((s) => s.id === v)?.name ?? v) : <span style={{ color: "var(--color-text-muted)" }}>{t("settings.forms.createForm.placeholders.leadsSources")}</span>}
               sx={selectSx}
             >
               <MenuItem value=""><em>—</em></MenuItem>
@@ -253,16 +253,16 @@ function FormEditor({
         {isLead && fixedLabels.map((label, i) => <FixedFieldCard key={label} index={i + 1} label={label} />)}
 
         {blocks.map((block, idx) => (
-          <Paper key={block.id} variant="outlined" sx={{ borderRadius: 2, mb: 1.5, overflow: "hidden", border: "1px solid #e0e0e0" }}>
-            <Box sx={{ display: "flex", alignItems: "center", px: 2, py: 1, gap: 2, backgroundColor: "#fff", borderBottom: "1px solid #f0f0f0" }}>
-              <Typography sx={{ fontWeight: 600, color: "#555", minWidth: 20, fontSize: "0.85rem" }}>
+          <Paper key={block.id} variant="outlined" sx={{ borderRadius: 2, mb: 1.5, overflow: "hidden", border: "1px solid var(--color-border)" }}>
+            <Box sx={{ display: "flex", alignItems: "center", px: 2, py: 1, gap: 2, backgroundColor: "var(--color-surface)", borderBottom: "1px solid var(--color-border-subtle)" }}>
+              <Typography sx={{ fontWeight: 600, color: "var(--color-text-secondary)", minWidth: 20, fontSize: "0.85rem" }}>
                 {fixedCount + idx + 1}
               </Typography>
               <FormControl size="small" sx={{ minWidth: 140 }}>
                 <Select
                   value={block.type}
                   onChange={(e) => updateBlock(block.id, { type: e.target.value as BlockType })}
-                  sx={{ fontSize: "0.85rem", "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e0e0e0" } }}
+                  sx={{ fontSize: "0.85rem", "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--color-border)" } }}
                 >
                   {BLOCK_TYPES.map((bt) => <MenuItem key={bt} value={bt} sx={{ fontSize: "0.85rem" }}>{t(BLOCK_TYPE_LABEL_KEYS[bt])}</MenuItem>)}
                 </Select>
@@ -270,16 +270,16 @@ function FormEditor({
               <FormControlLabel
                 sx={{ m: 0 }}
                 control={<input type="checkbox" checked={block.isRequired} onChange={(e) => updateBlock(block.id, { isRequired: e.target.checked })} />}
-                label={<Typography sx={{ fontSize: "0.8rem", color: "#666", ml: 0.5 }}>{t("settings.forms.createForm.required", { defaultValue: "Required" })}</Typography>}
+                label={<Typography sx={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", ml: 0.5 }}>{t("settings.forms.createForm.required", { defaultValue: "Required" })}</Typography>}
               />
               <Box sx={{ flex: 1 }} />
-              <IconButton size="small" onClick={() => onMoveBlock(idx, -1)} disabled={idx === 0} sx={{ color: "#aaa" }}>
+              <IconButton size="small" onClick={() => onMoveBlock(idx, -1)} disabled={idx === 0} sx={{ color: "var(--color-text-muted)" }}>
                 <FiChevronUp size={15} />
               </IconButton>
-              <IconButton size="small" onClick={() => onMoveBlock(idx, 1)} disabled={idx === blocks.length - 1} sx={{ color: "#aaa" }}>
+              <IconButton size="small" onClick={() => onMoveBlock(idx, 1)} disabled={idx === blocks.length - 1} sx={{ color: "var(--color-text-muted)" }}>
                 <FiChevronDown size={15} />
               </IconButton>
-              <IconButton size="small" onClick={() => removeBlock(block.id)} sx={{ color: "#aaa" }}>
+              <IconButton size="small" onClick={() => removeBlock(block.id)} sx={{ color: "var(--color-text-muted)" }}>
                 <MdClose size={15} />
               </IconButton>
             </Box>
@@ -301,7 +301,7 @@ function FormEditor({
                 <Box>
                   {block.answers.map((answer) => (
                     <Box key={answer.id} sx={{ display: "flex", alignItems: "center", mb: 0.8 }}>
-                      <Radio size="small" disabled sx={{ color: "#ccc", p: 0.5 }} />
+                      <Radio size="small" disabled sx={{ color: "var(--color-text-muted)", p: 0.5 }} />
                       <TextField
                         size="small" value={answer.label}
                         onChange={(e) => updateAnswer(block.id, answer.id, e.target.value)}
@@ -310,7 +310,7 @@ function FormEditor({
                         sx={{ ml: 0.5, flex: 1 }}
                       />
                       {block.answers.length > 1 && (
-                        <IconButton size="small" onClick={() => removeAnswer(block.id, answer.id)} sx={{ color: "#ccc" }}>
+                        <IconButton size="small" onClick={() => removeAnswer(block.id, answer.id)} sx={{ color: "var(--color-text-muted)" }}>
                           <MdClose size={13} />
                         </IconButton>
                       )}
@@ -526,7 +526,7 @@ export const CreateForm = () => {
     fontSize: "0.9rem",
     fontWeight: 500,
     fontFamily: "'DM Sans', sans-serif",
-    border: "1px solid #d0d5dd",
+    border: "1px solid var(--color-border)",
     userSelect: "none" as const,
     transition: "all 0.15s",
   };
@@ -534,20 +534,20 @@ export const CreateForm = () => {
   const isLoadingExisting = isEdit && (formLoading || fieldsLoading || tab === -1);
 
   return (
-    <Box sx={{ minHeight: "100vh", backgroundColor: "#f0f2f5", p: 3, fontFamily: "'DM Sans', sans-serif" }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "var(--color-surface-alt)", p: 3, fontFamily: "'DM Sans', sans-serif" }}>
       {/* Header row */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 3, mb: 3 }}>
-        <Box sx={{ display: "flex", flex: 1, border: "1px solid #d0d5dd", borderRadius: "6px", overflow: "hidden" }}>
+        <Box sx={{ display: "flex", flex: 1, border: "1px solid var(--color-border)", borderRadius: "6px", overflow: "hidden" }}>
           <Box
             onClick={() => { if (!isEdit) setTab(0); }}
             sx={{
               ...tabSx,
-              borderRight: "1px solid #d0d5dd",
+              borderRight: "1px solid var(--color-border)",
               borderRadius: "5px 0 0 5px",
-              backgroundColor: tab === 0 ? "#fff" : "#fafafa",
-              color: tab === 0 ? TEAL_DARK : "#666",
+              backgroundColor: tab === 0 ? "var(--color-surface)" : "var(--color-surface-alt)",
+              color: tab === 0 ? "var(--color-primary)" : "var(--color-text-secondary)",
               fontWeight: tab === 0 ? 700 : 500,
-              borderColor: tab === 0 ? TEAL_DARK : "transparent",
+              borderColor: tab === 0 ? "var(--color-primary)" : "transparent",
               borderWidth: tab === 0 ? 2 : 1,
             }}
           >
@@ -558,10 +558,10 @@ export const CreateForm = () => {
             sx={{
               ...tabSx,
               borderRadius: "0 5px 5px 0",
-              backgroundColor: tab === 1 ? "#fff" : "#fafafa",
-              color: tab === 1 ? TEAL_DARK : "#666",
+              backgroundColor: tab === 1 ? "var(--color-surface)" : "var(--color-surface-alt)",
+              color: tab === 1 ? "var(--color-primary)" : "var(--color-text-secondary)",
               fontWeight: tab === 1 ? 700 : 500,
-              borderColor: tab === 1 ? TEAL_DARK : "transparent",
+              borderColor: tab === 1 ? "var(--color-primary)" : "transparent",
               borderWidth: tab === 1 ? 2 : 1,
             }}
           >

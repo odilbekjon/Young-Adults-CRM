@@ -116,7 +116,7 @@ export const TeacherGroupDetail = () => {
   const teacherName = user?.name || "—";
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f7f8fa" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "var(--color-surface-alt)" }}>
       {/* PAGE TITLE */}
       <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" rowGap={0.5} px={3} pt={3} pb={2}>
         <Typography variant="h5" fontWeight={700}>{group.name}</Typography>
@@ -145,9 +145,9 @@ export const TeacherGroupDetail = () => {
           <Typography fontSize={14}><b>{t("singleGroup.leftPanel.rooms")}:</b> {info.roomName || "—"}</Typography>
           <Typography fontSize={14}><b>{t("singleGroup.leftPanel.roomCapacity")}:</b> {info.roomCapacity ?? "—"}</Typography>
 
-          <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 2, bgcolor: "#f5f7fb", border: "1px solid #eef0f4" }}>
+          <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 2, bgcolor: "var(--color-surface-alt)", border: "1px solid var(--color-border)" }}>
             <Stack direction="row" alignItems="center" spacing={0.8} mb={1}>
-              <MdCalendarToday size={14} color="#6b7280" />
+              <MdCalendarToday size={14} color="var(--color-text-secondary)" />
               <Typography fontSize={11.5} fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.4 }}>
                 {t("singleGroup.leftPanel.trainingDates")}
               </Typography>
@@ -156,12 +156,12 @@ export const TeacherGroupDetail = () => {
               <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" rowGap={1}>
                 <Box>
                   <Typography fontSize={10.5} color="text.secondary">{t("singleGroup.leftPanel.trainingStart")}</Typography>
-                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">{formatTrainingDate(info.trainingStart)}</Typography>
+                  <Typography fontSize={13.5} fontWeight={600} color="var(--color-text-primary)">{formatTrainingDate(info.trainingStart)}</Typography>
                 </Box>
                 <Typography fontSize={14} color="#c1c7d0">→</Typography>
                 <Box>
                   <Typography fontSize={10.5} color="text.secondary">{t("singleGroup.leftPanel.trainingEnd")}</Typography>
-                  <Typography fontSize={13.5} fontWeight={600} color="#1a1a1a">{formatTrainingDate(info.trainingEnd)}</Typography>
+                  <Typography fontSize={13.5} fontWeight={600} color="var(--color-text-primary)">{formatTrainingDate(info.trainingEnd)}</Typography>
                 </Box>
               </Stack>
             ) : (
@@ -210,7 +210,7 @@ export const TeacherGroupDetail = () => {
                             py: isFrozen ? 0.35 : 0,
                             borderRadius: isFrozen ? "6px" : 0,
                             backgroundColor: isFrozen ? "#bfe3fa" : "transparent",
-                            color: isArchived ? "dimgray" : "#1a1a1a",
+                            color: isArchived ? "dimgray" : "var(--color-text-primary)",
                             textDecoration: isArchived ? "line-through" : "none",
                           }}
                         >
@@ -240,7 +240,7 @@ export const TeacherGroupDetail = () => {
               variant="scrollable"
               scrollButtons="auto"
               sx={{
-                borderBottom: "1px solid #eee",
+                borderBottom: "1px solid var(--color-border-subtle)",
                 "& .MuiTab-root": { fontSize: 13, textTransform: "none", minWidth: "auto", px: 2 },
               }}
             >

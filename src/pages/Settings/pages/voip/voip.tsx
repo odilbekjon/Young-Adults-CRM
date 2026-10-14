@@ -14,24 +14,24 @@ export const Voip = () => {
             <form className="flex  gap-3">
                 <div className="mb-4">
                     <div className="w-[700px] mt-3">
-                        <label htmlFor="onlinepbx-domain" className="block text-sm  text-gray-700">
+                        <label htmlFor="onlinepbx-domain" className="block text-sm  text-gray-700 dark:text-[var(--color-text-primary)]">
                         {t("settings.voip.domainLabel")}
                         </label>
                         <input
                             type="text"
                             id="onlinepbx-domain"
-                            className="mt-1 p-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                            className="mt-1 p-1 block w-full border border-gray-300 dark:border-[var(--color-border)] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                             placeholder={t("settings.voip.domainPlaceholder") as string}
                         />
                     </div>
                     <div className="mt-3">
-                        <label htmlFor="onlinepbx-api-key" className="block text-sm  text-gray-700 uppercase">
+                        <label htmlFor="onlinepbx-api-key" className="block text-sm  text-gray-700 dark:text-[var(--color-text-primary)] uppercase">
                            {t("settings.voip.apiKeyLabel")}
                         </label>
                         <input
                             type="text"
                             id="onlinepbx-api-key"
-                            className="mt-1 p-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                            className="mt-1 p-1 block w-full border border-gray-300 dark:border-[var(--color-border)] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                             placeholder={t("settings.voip.apiKeyPlaceholder") as string}
                         />
                     </div>

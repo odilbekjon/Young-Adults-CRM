@@ -19,10 +19,10 @@ const SignIn = () => {
 
   return (
     <Box sx={{ flex: 1, p: 5, maxWidth: 900 }}>
-      <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "#111827" }}>{t("settings.ceo.general.signIn.title")}</Typography>
+      <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "var(--color-text-primary)" }}>{t("settings.ceo.general.signIn.title")}</Typography>
 
       {/* Company form background */}
-      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>
+      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "var(--color-text-primary)" }}>
         {t("settings.ceo.general.signIn.companyFormBackground")}
       </Typography>
       <Box sx={{ display: "flex", gap: 2, mb: 0.5 }}>
@@ -40,27 +40,27 @@ const SignIn = () => {
           }
         </Box>
       </Box>
-      <Typography sx={{ fontSize: 12, color: "#9ca3af", mb: 4 }}>{t("settings.ceo.general.signIn.recommendedImageSize")}</Typography>
+      <Typography sx={{ fontSize: 12, color: "var(--color-text-muted)", mb: 4 }}>{t("settings.ceo.general.signIn.recommendedImageSize")}</Typography>
 
       {/* Text form */}
-      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>{t("settings.ceo.general.signIn.textForm")}</Typography>
+      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "var(--color-text-primary)" }}>{t("settings.ceo.general.signIn.textForm")}</Typography>
       <Box sx={{ display: "flex", gap: 2, mb: 4 }}>
         <Box sx={{ flex: 1 }}>
           <RichTextEditor value={textContent} onChange={setTextContent} />
         </Box>
-        <Box sx={{ width: 260, flexShrink: 0, borderLeft: "1px solid #e5e7eb", pl: 3, pt: 1 }}>
+        <Box sx={{ width: 260, flexShrink: 0, borderLeft: "1px solid var(--color-border)", pl: 3, pt: 1 }}>
           {plainPreview.split("\n").map((line, i) => (
-            <Typography key={i} sx={{ fontSize: 14, color: "#374151", lineHeight: 1.8 }}>{line}</Typography>
+            <Typography key={i} sx={{ fontSize: 14, color: "var(--color-text-primary)", lineHeight: 1.8 }}>{line}</Typography>
           ))}
         </Box>
       </Box>
 
       {/* Custom CSS */}
-      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "#111827" }}>{t("settings.ceo.general.signIn.customCss")}</Typography>
+      <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "var(--color-text-primary)" }}>{t("settings.ceo.general.signIn.customCss")}</Typography>
       <TextField
         fullWidth multiline minRows={5} placeholder={t("settings.ceo.general.signIn.customCssPlaceholder")}
         value={customCss} onChange={(e) => setCustomCss(e.target.value)}
-        sx={{ mb: 4, background: "#fff", "& .MuiOutlinedInput-root": { fontSize: 13, fontFamily: "monospace" } }}
+        sx={{ mb: 4, background: "var(--color-surface)", "& .MuiOutlinedInput-root": { fontSize: 13, fontFamily: "monospace" } }}
       />
 
       <Button variant="contained" sx={{

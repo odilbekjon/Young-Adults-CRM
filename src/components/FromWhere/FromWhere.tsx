@@ -251,7 +251,7 @@ const CalendarGrid = ({
                   isStart || isEnd
                     ? "#1976d2"
                     : inRng
-                    ? "#e3f2fd"
+                    ? "var(--color-primary-surface)"
                     : "transparent",
                 position: "relative",
                 "&::before":
@@ -260,7 +260,7 @@ const CalendarGrid = ({
                         content: '""',
                         position: "absolute",
                         inset: 0,
-                        backgroundColor: "#e3f2fd",
+                        backgroundColor: "var(--color-primary-surface)",
                         zIndex: 0,
                       }
                     : {},
@@ -485,7 +485,7 @@ export const FromWhere = ({ onOpenColumnSettings, onOpenSourceSettings }: FromWh
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <FiSearch size={13} color="#aaa" />
+                <FiSearch size={13} color="var(--color-text-muted)" />
               </InputAdornment>
             ),
             sx: { fontSize: 13, height: 32 },

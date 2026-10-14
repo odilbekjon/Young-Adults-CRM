@@ -13,21 +13,21 @@ import { MdKeyboardArrowDown } from "react-icons/md";
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  border: "1px solid #e0e0e0",
+  border: "1px solid var(--color-border)",
   borderRadius: 8,
   padding: "10px 12px",
   fontSize: 13,
-  color: "#1a1a1a",
+  color: "var(--color-text-primary)",
   outline: "none",
   boxSizing: "border-box",
-  background: "#fff",
+  background: "var(--color-surface)",
   fontFamily: "inherit",
 };
 
 const labelStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 500,
-  color: "#1a1a1a",
+  color: "var(--color-text-primary)",
   marginBottom: 6,
   display: "block",
 };
@@ -116,7 +116,7 @@ export const AddWithdrawal = ({ open, onClose }: { open: boolean; onClose: () =>
               disabled={isBranchesLoading}
               style={{
                 ...inputStyle, appearance: "none",
-                color: selectedBranchId ? "#1a1a1a" : "#aaa", paddingRight: 36,
+                color: selectedBranchId ? "var(--color-text-primary)" : "var(--color-text-muted)", paddingRight: 36,
               }}
             >
               <option value="">
@@ -128,7 +128,7 @@ export const AddWithdrawal = ({ open, onClose }: { open: boolean; onClose: () =>
             </select>
             <MdKeyboardArrowDown size={18} style={{
               position: "absolute", right: 12, top: "50%",
-              transform: "translateY(-50%)", color: "#aaa", pointerEvents: "none",
+              transform: "translateY(-50%)", color: "var(--color-text-muted)", pointerEvents: "none",
             }} />
           </div>
           {isBranchesError && (

@@ -149,7 +149,7 @@ export const SendSmsModal = ({
             sx={{ fontSize: 14 }}
           >
             <MenuItem value="">
-              <em style={{ fontStyle: "normal", color: "#9ca3af" }}>Choose a template</em>
+              <em style={{ fontStyle: "normal", color: "var(--color-text-muted)" }}>Choose a template</em>
             </MenuItem>
             {(templates ?? []).map((tpl) => (
               <MenuItem key={tpl.id} value={tpl.id}>

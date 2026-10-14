@@ -9,7 +9,7 @@ export const Exams = () => {
         <Typography variant="h6" fontWeight={600}>{t("singleGroup.tabs.exams.title")}</Typography>
         <Button startIcon={<GoPlus />} variant="contained" size="small">{t("singleGroup.tabs.exams.addExam")}</Button>
       </Stack>
-      <Paper sx={{ p: 4, textAlign: "center", borderRadius: 2, color: "#999" }}>
+      <Paper sx={{ p: 4, textAlign: "center", borderRadius: 2, color: "var(--color-text-muted)" }}>
         {t("singleGroup.tabs.exams.noExamsYet")}
       </Paper>
     </Box>

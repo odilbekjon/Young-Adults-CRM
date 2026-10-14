@@ -89,7 +89,7 @@ export const SingleCourse = () => {
   const color = colorForId(course.id);
 
   return (
-    <Box sx={{ p: 3, bgcolor: "#f5f5f5", minHeight: "100vh" }}>
+    <Box sx={{ p: 3, bgcolor: "var(--color-surface-alt)", minHeight: "100vh" }}>
       {/* Back + Title */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
         <IconButton size="small" onClick={() => navigate("/settings/office/courses")}>
@@ -203,7 +203,7 @@ export const SingleCourse = () => {
               <InfoRow label="Status" value={course.status} />
               {course.description && (
                 <Box sx={{ mb: 1.5 }}>
-                  <Typography fontSize={12} color="#aaa" mb={0.2}>
+                  <Typography fontSize={12} color="var(--color-text-muted)" mb={0.2}>
                     {t("settings.office.courses.form.description")}
                   </Typography>
                   <Typography fontSize={13.5} sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
@@ -217,14 +217,14 @@ export const SingleCourse = () => {
 
         {/* Right: Tabs + Groups */}
         <Box sx={{ flex: 1 }}>
-          <Box sx={{ borderBottom: "1px solid #e0e0e0", mb: 2 }}>
+          <Box sx={{ borderBottom: "1px solid var(--color-border)", mb: 2 }}>
             <Tabs
               value={tab}
               onChange={(_, v) => setTab(v)}
               sx={{
-                "& .MuiTab-root": { textTransform: "none", fontSize: 14, fontWeight: 400, color: "#555", minWidth: "auto", mr: 3, px: 0 },
-                "& .Mui-selected": { color: "#1a3f6f", fontWeight: 600 },
-                "& .MuiTabs-indicator": { bgcolor: "#1a3f6f" },
+                "& .MuiTab-root": { textTransform: "none", fontSize: 14, fontWeight: 400, color: "var(--color-text-secondary)", minWidth: "auto", mr: 3, px: 0 },
+                "& .Mui-selected": { color: "var(--color-nav-active)", fontWeight: 600 },
+                "& .MuiTabs-indicator": { bgcolor: "var(--color-nav-active)" },
               }}
             >
               <Tab label="Groups" />
@@ -235,16 +235,16 @@ export const SingleCourse = () => {
           </Box>
 
           {tab === 0 && (
-            <Typography fontSize={13} color="#999">No groups yet.</Typography>
+            <Typography fontSize={13} color="var(--color-text-muted)">No groups yet.</Typography>
           )}
           {tab === 1 && (
-            <Typography fontSize={13} color="#999">No subcourses available.</Typography>
+            <Typography fontSize={13} color="var(--color-text-muted)">No subcourses available.</Typography>
           )}
           {tab === 2 && (
-            <Typography fontSize={13} color="#999">No online lessons and materials available.</Typography>
+            <Typography fontSize={13} color="var(--color-text-muted)">No online lessons and materials available.</Typography>
           )}
           {tab === 3 && (
-            <Typography fontSize={13} color="#999">No materials available.</Typography>
+            <Typography fontSize={13} color="var(--color-text-muted)">No materials available.</Typography>
           )}
         </Box>
       </Box>
@@ -292,7 +292,7 @@ export const SingleCourse = () => {
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <Box sx={{ mb: 1.5 }}>
-    <Typography fontSize={12} color="#aaa" mb={0.2}>{label}</Typography>
+    <Typography fontSize={12} color="var(--color-text-muted)" mb={0.2}>{label}</Typography>
     <Typography fontSize={14} fontWeight={500}>{value}</Typography>
   </Box>
 );

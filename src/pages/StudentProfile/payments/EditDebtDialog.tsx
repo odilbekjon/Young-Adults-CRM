@@ -87,7 +87,7 @@ export const EditDebtDialog = ({
         {error && <div style={{ fontSize: 13, color: "var(--color-danger, #ef4444)" }}>{error}</div>}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={isLoading} sx={{ color: "#6b7280", textTransform: "none" }}>
+        <Button onClick={onClose} disabled={isLoading} sx={{ color: "var(--color-text-secondary)", textTransform: "none" }}>
           {t("studentPayments.cancel", "Cancel")}
         </Button>
         <Button variant="contained" onClick={submit} disabled={isLoading} sx={{ borderRadius: 2, textTransform: "none", bgcolor: "#26a9b8", "&:hover": { bgcolor: "#1f8c99" } }}>

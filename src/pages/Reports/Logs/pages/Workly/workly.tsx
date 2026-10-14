@@ -39,11 +39,11 @@ export const Workly = () => {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f5f5f5", p: 3 }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "var(--color-surface-alt)", p: 3 }}>
       {/* Page Title */}
       <Typography
         variant="h5"
-        sx={{ fontWeight: 500, mb: 3, color: "#212121" }}
+        sx={{ fontWeight: 500, mb: 3, color: "var(--color-text-primary)" }}
       >
         {t("reports.logs.workly.title")}
       </Typography>
@@ -51,13 +51,13 @@ export const Workly = () => {
       <Paper
         elevation={0}
         sx={{
-          border: "1px solid #e0e0e0",
+          border: "1px solid var(--color-border)",
           borderRadius: 1,
           overflow: "hidden",
         }}
       >
         {/* Header */}
-        <Box sx={{ p: 3, borderBottom: "1px solid #e0e0e0" }}>
+        <Box sx={{ p: 3, borderBottom: "1px solid var(--color-border)" }}>
           <Typography variant="h6" sx={{ fontWeight: 500, mb: 1 }}>
             {t("reports.logs.workly.connection.heading")}
           </Typography>
@@ -71,7 +71,7 @@ export const Workly = () => {
           <Box
             sx={{
               width: 200,
-              borderRight: "1px solid #e0e0e0",
+              borderRight: "1px solid var(--color-border)",
               flexShrink: 0,
             }}
           >
@@ -92,7 +92,7 @@ export const Workly = () => {
                         },
                       },
                       "&:hover": {
-                        bgcolor: "#f5f5f5",
+                        bgcolor: "var(--color-surface-alt)",
                       },
                     }}
                   >
@@ -100,7 +100,7 @@ export const Workly = () => {
                       primary={t(`reports.logs.workly.nav.${itemId}`)}
                       primaryTypographyProps={{
                         fontSize: "0.875rem",
-                        color: activeNav === itemId ? "#1976d2" : "#555",
+                        color: activeNav === itemId ? "#1976d2" : "var(--color-text-secondary)",
                       }}
                     />
                   </ListItemButton>
@@ -124,7 +124,7 @@ export const Workly = () => {
             >
               <Typography
                 variant="caption"
-                sx={{ color: "#888", display: "block", mb: 1.5 }}
+                sx={{ color: "var(--color-text-muted)", display: "block", mb: 1.5 }}
               >
                 {t("reports.logs.workly.caption")}
               </Typography>

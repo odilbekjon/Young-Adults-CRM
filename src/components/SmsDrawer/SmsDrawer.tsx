@@ -36,7 +36,7 @@ export const SmsDrawer = ({
   return (
     <RightDrawer open={open} onClose={handleClose} title="Send SMS to group" width={480}>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div style={{ fontSize: 15, fontWeight: 500, color: "#1a1a1a" }}>
+        <div style={{ fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>
           Sender: <span style={{ color: "#185FA5" }}>3700</span>
         </div>
         <div>
@@ -47,7 +47,7 @@ export const SmsDrawer = ({
             style={{ ...inputStyle, minHeight: 140, resize: "vertical" }}
             disabled={isLoading}
           />
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 12, color: "#888" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 12, color: "var(--color-text-muted)" }}>
             <span>{message.length} symbols ( ~ {smsCount} SMS )</span>
             <span>{studentIds.length} selected stud.</span>
           </div>

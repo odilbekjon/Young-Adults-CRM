@@ -200,15 +200,15 @@ export const Branches = () => {
   const isSaving = isCreating || isUpdating;
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm m-5">
+    <div className="rounded-2xl border border-gray-100 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] p-6 shadow-sm m-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold text-gray-900">{t("settings.ceo.branches.title")}</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-[var(--color-text-primary)]">{t("settings.ceo.branches.title")}</h1>
           <button
             type="button"
             onClick={() => refetch()}
-            className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+            className="text-gray-400 dark:text-[var(--color-text-muted)] hover:text-gray-600 dark:hover:text-[var(--color-text-secondary)] transition-colors disabled:opacity-50"
             aria-label={t("settings.ceo.branches.refresh")}
             disabled={isFetching}
           >
@@ -222,7 +222,7 @@ export const Branches = () => {
           sx={{
             textTransform: "none",
             backgroundColor: "#FBBF24",
-            color: "#1F2937",
+            color: "var(--color-text-primary)",
             borderRadius: "10px",
             paddingX: "18px",
             paddingY: "10px",
@@ -243,8 +243,8 @@ export const Branches = () => {
           onClick={() => setTab("faol")}
           className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
             tab === "faol"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-white dark:bg-[var(--color-surface)] text-gray-900 dark:text-[var(--color-text-primary)] shadow-sm"
+              : "text-gray-500 dark:text-[var(--color-text-secondary)] hover:text-gray-700 dark:hover:text-[var(--color-text-primary)]"
           }`}
         >
           {t("settings.ceo.branches.tabs.active")}
@@ -254,8 +254,8 @@ export const Branches = () => {
           onClick={() => setTab("arxiv")}
           className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
             tab === "arxiv"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-white dark:bg-[var(--color-surface)] text-gray-900 dark:text-[var(--color-text-primary)] shadow-sm"
+              : "text-gray-500 dark:text-[var(--color-text-secondary)] hover:text-gray-700 dark:hover:text-[var(--color-text-primary)]"
           }`}
         >
           {t("settings.ceo.branches.tabs.archived")}
@@ -285,10 +285,10 @@ export const Branches = () => {
               className="rounded-xl border border-amber-100 bg-amber-50/60 p-4"
             >
               <div className="flex items-center justify-between">
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-gray-900 dark:text-[var(--color-text-primary)]">
                   {branch.name}
                 </span>
-                <div className="flex items-center gap-3 text-gray-400">
+                <div className="flex items-center gap-3 text-gray-400 dark:text-[var(--color-text-muted)]">
                   {tab === "faol" ? (
                     <button
                       type="button"
@@ -324,7 +324,7 @@ export const Branches = () => {
                   <button
                     type="button"
                     onClick={() => openEditModal(branch)}
-                    className="hover:text-gray-700 transition-colors"
+                    className="hover:text-gray-700 dark:hover:text-[var(--color-text-primary)] transition-colors"
                     aria-label={t("settings.ceo.branches.edit")}
                   >
                     <FiEdit2 size={16} />
@@ -332,9 +332,9 @@ export const Branches = () => {
                 </div>
               </div>
 
-              <div className="mt-3 rounded-lg bg-white p-3">
+              <div className="mt-3 rounded-lg bg-white dark:bg-[var(--color-surface)] p-3">
                 <div className="flex items-center gap-2 text-sm">
-                  <FiMapPin size={14} className="text-gray-400" />
+                  <FiMapPin size={14} className="text-gray-400 dark:text-[var(--color-text-muted)]" />
                   <span className="text-amber-600">{branch.address}</span>
                 </div>
               </div>
@@ -342,7 +342,7 @@ export const Branches = () => {
           ))}
 
           {visibleBranches.length === 0 && (
-            <div className="col-span-full py-10 text-center text-sm text-gray-400">
+            <div className="col-span-full py-10 text-center text-sm text-gray-400 dark:text-[var(--color-text-muted)]">
               {tab === "faol" ? t("settings.ceo.branches.emptyActive") : t("settings.ceo.branches.emptyArchived")}
             </div>
           )}
@@ -364,13 +364,13 @@ export const Branches = () => {
         }}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-[var(--color-text-primary)]">
             {editingId ? t("settings.ceo.branches.form.editTitle") : t("settings.ceo.branches.addBranch")}
           </h2>
           <button
             type="button"
             onClick={closeModal}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 dark:text-[var(--color-text-muted)] hover:text-gray-600 dark:hover:text-[var(--color-text-secondary)]"
             aria-label={t("settings.ceo.branches.close")}
           >
             <FiX size={18} />
@@ -379,7 +379,7 @@ export const Branches = () => {
 
         <div className="mt-5 flex flex-col gap-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-800">
+            <label className="mb-1.5 block text-sm font-medium text-gray-800 dark:text-[var(--color-text-primary)]">
               {t("settings.ceo.branches.form.name")} <span className="text-red-500">*</span>
             </label>
             <TextField
@@ -400,7 +400,7 @@ export const Branches = () => {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-800">
+            <label className="mb-1.5 block text-sm font-medium text-gray-800 dark:text-[var(--color-text-primary)]">
               {t("settings.ceo.branches.form.address")} <span className="text-red-500">*</span>
             </label>
             <TextField
@@ -425,7 +425,7 @@ export const Branches = () => {
           )}
         </div>
 
-        <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-5">
+        <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 dark:border-[var(--color-border)] pt-5">
           <Button
             onClick={closeModal}
             variant="outlined"
@@ -433,10 +433,10 @@ export const Branches = () => {
             sx={{
               textTransform: "none",
               borderRadius: "10px",
-              borderColor: "#E5E7EB",
-              color: "#374151",
+              borderColor: "var(--color-border)",
+              color: "var(--color-text-primary)",
               paddingX: "18px",
-              "&:hover": { borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" },
+              "&:hover": { borderColor: "var(--color-border)", backgroundColor: "var(--color-surface-alt)" },
             }}
           >
             {t("settings.ceo.branches.form.cancel")}
@@ -449,7 +449,7 @@ export const Branches = () => {
             sx={{
               textTransform: "none",
               backgroundColor: "#FBBF24",
-              color: "#1F2937",
+              color: "var(--color-text-primary)",
               borderRadius: "10px",
               paddingX: "18px",
               fontWeight: 600,
@@ -487,10 +487,10 @@ export const Branches = () => {
             sx={{
               textTransform: "none",
               borderRadius: "10px",
-              borderColor: "#E5E7EB",
-              color: "#374151",
+              borderColor: "var(--color-border)",
+              color: "var(--color-text-primary)",
               paddingX: "18px",
-              "&:hover": { borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" },
+              "&:hover": { borderColor: "var(--color-border)", backgroundColor: "var(--color-surface-alt)" },
             }}
           >
             {t("settings.ceo.branches.form.cancel")}
@@ -539,10 +539,10 @@ export const Branches = () => {
             sx={{
               textTransform: "none",
               borderRadius: "10px",
-              borderColor: "#E5E7EB",
-              color: "#374151",
+              borderColor: "var(--color-border)",
+              color: "var(--color-text-primary)",
               paddingX: "18px",
-              "&:hover": { borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" },
+              "&:hover": { borderColor: "var(--color-border)", backgroundColor: "var(--color-surface-alt)" },
             }}
           >
             {t("settings.ceo.branches.form.cancel")}
@@ -592,10 +592,10 @@ export const Branches = () => {
             sx={{
               textTransform: "none",
               borderRadius: "10px",
-              borderColor: "#E5E7EB",
-              color: "#374151",
+              borderColor: "var(--color-border)",
+              color: "var(--color-text-primary)",
               paddingX: "18px",
-              "&:hover": { borderColor: "#D1D5DB", backgroundColor: "#F9FAFB" },
+              "&:hover": { borderColor: "var(--color-border)", backgroundColor: "var(--color-surface-alt)" },
             }}
           >
             {t("settings.ceo.branches.form.cancel")}

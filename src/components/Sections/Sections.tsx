@@ -245,7 +245,7 @@ export const Sections = () => {
       >
         {(columns ?? []).length === 0 ? (
           <Box sx={{ p: 4, width: "100%", textAlign: "center" }}>
-            <Typography sx={{ color: "#9ca3af", fontSize: 14 }}>{t("leadsPage.board.emptyState")}</Typography>
+            <Typography sx={{ color: "var(--color-text-muted)", fontSize: 14 }}>{t("leadsPage.board.emptyState")}</Typography>
           </Box>
         ) : (
           (columns ?? []).map((column, i) => {

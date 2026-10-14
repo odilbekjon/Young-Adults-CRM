@@ -47,16 +47,16 @@ export const ActivateModal = ({
       PaperProps={{ sx: { borderRadius: 3, width: 400, maxWidth: "95vw" } }}
     >
       <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pb: 1, pt: 2.5, px: 2.5 }}>
-        <Typography fontWeight={600} fontSize={16} color="#1a1a1a">
+        <Typography fontWeight={600} fontSize={16} color="var(--color-text-primary)">
           {t("singleGroup.activateModal.title")}
         </Typography>
-        <IconButton size="small" onClick={onClose} sx={{ color: "#9ca3af" }}>
+        <IconButton size="small" onClick={onClose} sx={{ color: "var(--color-text-muted)" }}>
           <MdClose size={18} />
         </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ px: 2.5, pt: 1, pb: 2 }}>
-        <Typography fontSize={13} color="#6b7280" mb={1.5}>
+        <Typography fontSize={13} color="var(--color-text-secondary)" mb={1.5}>
           {t("singleGroup.activateModal.description")}
         </Typography>
         <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} />

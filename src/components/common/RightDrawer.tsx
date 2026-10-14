@@ -17,7 +17,7 @@ export const RightDrawer = ({
     <div
       style={{
         position: "fixed", top: 0, right: 0,
-        width, height: "100vh", background: "#fff",
+        width, height: "100vh", background: "var(--color-surface)",
         zIndex: 1300, boxShadow: "-4px 0 24px rgba(0,0,0,0.12)",
         transform: open ? "translateX(0)" : "translateX(100%)",
         transition: "transform 0.28s cubic-bezier(.4,0,.2,1)",
@@ -26,10 +26,10 @@ export const RightDrawer = ({
     >
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "20px 24px", borderBottom: "1px solid #f0f0f0", flexShrink: 0,
+        padding: "20px 24px", borderBottom: "1px solid var(--color-border-subtle)", flexShrink: 0,
       }}>
-        <span style={{ fontSize: 17, fontWeight: 600, color: "#1a1a1a" }}>{title}</span>
-        <div onClick={onClose} style={{ cursor: "pointer", color: "#aaa", display: "flex" }}>
+        <span style={{ fontSize: 17, fontWeight: 600, color: "var(--color-text-primary)" }}>{title}</span>
+        <div onClick={onClose} style={{ cursor: "pointer", color: "var(--color-text-muted)", display: "flex" }}>
           <MdClose size={20} />
         </div>
       </div>

@@ -17,7 +17,7 @@ const Toggle = ({
     }`}
   >
     <span
-      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
+      className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-[var(--color-surface)] shadow transition-transform duration-200 ${
         checked ? "translate-x-6" : "translate-x-1"
       }`}
     />
@@ -48,10 +48,10 @@ export const Grade = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <h1 className="text-2xl font-semibold text-gray-800 mb-4">{t("settings.grade.title")}</h1>
+    <div className="min-h-screen bg-gray-100 dark:bg-[var(--color-surface-hover)] p-6">
+      <h1 className="text-2xl font-semibold text-gray-800 dark:text-[var(--color-text-primary)] mb-4">{t("settings.grade.title")}</h1>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 max-w-4xl">
+      <div className="bg-white dark:bg-[var(--color-surface)] rounded-xl shadow-sm p-6 max-w-4xl">
         {/* Attention Banner */}
         <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
           <BsCheckCircleFill className="text-green-500 mt-0.5 shrink-0" size={20} />
@@ -65,7 +65,7 @@ export const Grade = () => {
 
         {/* Maximum Score */}
         <div className="mb-6">
-          <p className="text-sm text-gray-700 mb-2">{t("settings.grade.maxScoreLabel")}</p>
+          <p className="text-sm text-gray-700 dark:text-[var(--color-text-primary)] mb-2">{t("settings.grade.maxScoreLabel")}</p>
           <div className="flex items-center gap-2">
             {/* Preset Buttons */}
             <button
@@ -73,7 +73,7 @@ export const Grade = () => {
               className={`w-12 h-10 rounded-md text-sm font-medium transition-colors ${
                 maxScore === 5
                   ? "bg-blue-500 text-white"
-                  : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                  : "bg-white dark:bg-[var(--color-surface)] border border-gray-300 dark:border-[var(--color-border)] text-gray-700 dark:text-[var(--color-text-primary)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]"
               }`}
             >
               5
@@ -83,17 +83,17 @@ export const Grade = () => {
               className={`w-12 h-10 rounded-md text-sm font-medium transition-colors ${
                 maxScore === 10
                   ? "bg-blue-500 text-white"
-                  : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                  : "bg-white dark:bg-[var(--color-surface)] border border-gray-300 dark:border-[var(--color-border)] text-gray-700 dark:text-[var(--color-text-primary)] hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]"
               }`}
             >
               10
             </button>
 
             {/* Custom Score Stepper */}
-            <div className="flex items-center border border-gray-300 rounded-md overflow-hidden ml-1">
+            <div className="flex items-center border border-gray-300 dark:border-[var(--color-border)] rounded-md overflow-hidden ml-1">
               <button
                 onClick={handleDecrement}
-                className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors border-r border-gray-300"
+                className="w-10 h-10 flex items-center justify-center text-gray-500 dark:text-[var(--color-text-secondary)] hover:bg-gray-100 dark:hover:bg-[var(--color-surface-hover)] transition-colors border-r border-gray-300 dark:border-[var(--color-border)]"
               >
                 <FiMinus size={16} />
               </button>
@@ -101,11 +101,11 @@ export const Grade = () => {
                 type="number"
                 value={customScore}
                 onChange={handleCustomInput}
-                className="w-14 h-10 text-center text-sm text-gray-700 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-14 h-10 text-center text-sm text-gray-700 dark:text-[var(--color-text-primary)] focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <button
                 onClick={handleIncrement}
-                className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors border-l border-gray-300"
+                className="w-10 h-10 flex items-center justify-center text-gray-500 dark:text-[var(--color-text-secondary)] hover:bg-gray-100 dark:hover:bg-[var(--color-surface-hover)] transition-colors border-l border-gray-300 dark:border-[var(--color-border)]"
               >
                 <FiPlus size={16} />
               </button>
@@ -116,7 +116,7 @@ export const Grade = () => {
         {/* Toggle Settings */}
         <div className="space-y-5 mb-8">
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-gray-700 dark:text-[var(--color-text-primary)]">
               {t("settings.grade.allowPastDates")}
             </span>
             <Toggle
@@ -126,7 +126,7 @@ export const Grade = () => {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-gray-700 dark:text-[var(--color-text-primary)]">
               {t("settings.grade.allowNonTeaching")}
             </span>
             <Toggle
@@ -136,7 +136,7 @@ export const Grade = () => {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-gray-700 dark:text-[var(--color-text-primary)]">
               {t("settings.grade.showCenterRating")}
             </span>
             <Toggle
@@ -146,7 +146,7 @@ export const Grade = () => {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-gray-700 dark:text-[var(--color-text-primary)]">
               {t("settings.grade.showBranchRating")}
             </span>
             <Toggle

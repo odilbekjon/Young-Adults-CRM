@@ -32,21 +32,21 @@ export const General = () => {
   };
 
   return (
-    <Box sx={{ padding: 2, minHeight: "100vh", background: "#f9fafb", display: "flex" }}>
+    <Box sx={{ padding: 2, minHeight: "100vh", background: "var(--color-surface-alt)", display: "flex" }}>
       {/* Sidebar */}
       <Paper elevation={0} sx={{
         width: 200, minHeight: "100vh", borderRadius: 0,
-        background: "#fff", borderRight: "1px solid #e5e7eb",
+        background: "var(--color-surface)", borderRight: "1px solid var(--color-border)",
         display: "flex", flexDirection: "column", pt: 2, flexShrink: 0,
       }}>
         {SIDEBAR_ITEMS.map((item) => (
           <Box key={item.key} onClick={() => setActivePage(item.key)} sx={{
             px: 2.5, py: 1.3, fontSize: 13, cursor: "pointer",
             fontWeight: activePage === item.key ? 500 : 400,
-            color: activePage === item.key ? "#2563eb" : "#6b7280",
-            background: activePage === item.key ? "#eff6ff" : "transparent",
+            color: activePage === item.key ? "#2563eb" : "var(--color-text-secondary)",
+            background: activePage === item.key ? "var(--color-primary-surface)" : "transparent",
             borderRight: activePage === item.key ? "2px solid #2563eb" : "2px solid transparent",
-            "&:hover": { background: "#f9fafb" },
+            "&:hover": { background: "var(--color-surface-alt)" },
             transition: "all 0.15s",
           }}>
             {item.label}
@@ -55,7 +55,7 @@ export const General = () => {
       </Paper>
 
       {/* Active page */}
-     <div className="flex-1 bg-gray-50">
+     <div className="flex-1 bg-gray-50 dark:bg-[var(--color-surface-alt)]">
        {renderPage()}
      </div>
     </Box>

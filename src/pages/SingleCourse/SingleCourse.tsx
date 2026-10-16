@@ -21,8 +21,11 @@ import {
   useAllCoursesQuery,
   useToggleCourseStatusMutation,
 } from "../../app/api/coursesApi/coursesApi";
+import { useGroupsByCourseQuery } from "../../app/api/groupsApi/groupsApi";
+import type { CourseGroup } from "../../app/api/groupsApi/types";
 import { useToast } from "../../Context/ToastContext";
 import { CARD_COLORS } from "../../constants/CardColors";
+import { classifyDayList, classifyDays, formatTrainingDate } from "../../utils";
 
 const fmt = (n: number) =>
   n.toLocaleString("ru-RU").replace(/,/g, " ") + " UZS";
@@ -30,6 +33,62 @@ const fmt = (n: number) =>
 const colorForId = (id: string) => {
   const hash = [...id].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   return CARD_COLORS[hash % CARD_COLORS.length];
+};
+
+// "Odd days"/"Even days" label for a group's schedule — falls back to the
+// concrete day list when the backend sends no daysType.
+const DAYS_KEY: Record<string, string> = {
+  "Odd days": "groups.options.days.odd",
+  "Even days": "groups.options.days.even",
+  "Weekend days": "groups.options.days.weekend",
+  "Every day": "groups.options.days.every",
+  "Other": "groups.options.days.other",
+};
+
+const GroupCard = ({ group, onClick }: { group: CourseGroup; onClick: () => void }) => {
+  const { t } = useTranslation();
+  const bucket = group.daysType ? classifyDays(group.daysType, group.days) : classifyDayList(group.days);
+  const daysLabel = DAYS_KEY[bucket] ? t(DAYS_KEY[bucket]) : "";
+  const range = `${formatTrainingDate(group.trainingStart)} — ${formatTrainingDate(group.trainingEnd)}`;
+  return (
+    <Paper
+      elevation={0}
+      onClick={onClick}
+      sx={{
+        p: 2.5,
+        borderRadius: 1,
+        cursor: "pointer",
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr) auto",
+        alignItems: "center",
+        columnGap: 2,
+        transition: "box-shadow 0.15s",
+        "&:hover": { boxShadow: 3 },
+      }}
+    >
+      <Box sx={{ minWidth: 0 }}>
+        <Box
+          component="span"
+          sx={{
+            display: "inline-block", maxWidth: "100%", px: 1, py: 0.25, mb: 0.5, borderRadius: 0.5,
+            bgcolor: "var(--color-surface-hover)", fontSize: 12, fontWeight: 600,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}
+          title={group.name}
+        >
+          {group.name}
+        </Box>
+        <Typography fontSize={14} sx={{ wordBreak: "break-word" }}>
+          {group.teacherNames.join(", ") || "—"}
+        </Typography>
+      </Box>
+      <Typography fontSize={13} color="var(--color-text-muted)">{range}</Typography>
+      <Box sx={{ textAlign: "right", color: "var(--color-text-muted)", fontSize: 13 }}>
+        <div>{daysLabel}</div>
+        <div>{group.time ?? ""}</div>
+      </Box>
+    </Paper>
+  );
 };
 
 export const SingleCourse = () => {
@@ -45,6 +104,11 @@ export const SingleCourse = () => {
   const [toggleCourseStatus, { isLoading: isToggling }] = useToggleCourseStatusMutation();
 
   const course = data?.data.find((c) => c.id === id);
+  const {
+    data: groups = [],
+    isLoading: groupsLoading,
+    isError: groupsError,
+  } = useGroupsByCourseQuery(id ?? "", { skip: !id });
 
   // Archive (PATCH toggle-status -> INACTIVE), not a permanent delete — this
   // page has no confirmation-free destructive action; permanent delete lives
@@ -235,7 +299,19 @@ export const SingleCourse = () => {
           </Box>
 
           {tab === 0 && (
-            <Typography fontSize={13} color="var(--color-text-muted)">No groups yet.</Typography>
+            groupsLoading ? (
+              <CircularProgress size={22} />
+            ) : groupsError ? (
+              <Typography fontSize={13} color="error">Failed to load groups.</Typography>
+            ) : groups.length === 0 ? (
+              <Typography fontSize={13} color="var(--color-text-muted)">No groups yet.</Typography>
+            ) : (
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(420px, 1fr))", gap: 2 }}>
+                {groups.map((g) => (
+                  <GroupCard key={g.id} group={g} onClick={() => navigate(`/groups/${g.id}`)} />
+                ))}
+              </Box>
+            )
           )}
           {tab === 1 && (
             <Typography fontSize={13} color="var(--color-text-muted)">No subcourses available.</Typography>

@@ -36,6 +36,8 @@ import {
     StudentGroupActionResponse,
     UpdateStudentGroupRequest,
     UpdateStudentGroupStatusRequest,
+    CourseGroup,
+    GroupDay,
 } from "./types";
 
 // Swagger (POST /api/v1/groups) declares the request body as multipart/
@@ -290,6 +292,33 @@ const normalizeComments = (raw: unknown): GroupComment[] => {
     }));
 };
 
+// GET /groups/by-course — row shape confirmed from Swagger (id, name, status,
+// courseId, roomId, days[], time, trainingStart/End, ...). Teachers aren't
+// visible in the documented sample, so they're read from whichever of
+// teachers[]/teacher/teacherName/teacherNames is present.
+const normalizeCourseGroup = (r: Record<string, unknown>, i: number): CourseGroup => {
+    const names: string[] = [];
+    const pushName = (v: unknown) => {
+        const n = asString(v);
+        if (n) names.push(n);
+    };
+    if (Array.isArray(r.teachers)) r.teachers.forEach(pushName);
+    if (Array.isArray(r.teacherNames)) r.teacherNames.forEach(pushName);
+    if (!names.length) pushName(r.teacher ?? r.teacherName);
+    return {
+        id: String(r.id ?? r._id ?? i),
+        name: String(r.name ?? ""),
+        status: String(r.status ?? ""),
+        courseId: String(r.courseId ?? ""),
+        daysType: String(r.daysType ?? "").toUpperCase(),
+        days: (Array.isArray(r.days) ? r.days : []) as GroupDay[],
+        time: (r.time as string | null | undefined) ?? null,
+        trainingStart: (r.trainingStart as string | null | undefined) ?? null,
+        trainingEnd: (r.trainingEnd as string | null | undefined) ?? null,
+        teacherNames: names,
+    };
+};
+
 const asStatus = (v: unknown): string => String(v ?? "").toUpperCase();
 
 // GET /student-groups' envelope isn't documented beyond "200" (same
@@ -454,6 +483,17 @@ export const groupsApi = baseApi.injectEndpoints({
                 ...response,
                 data: normalizeList<groupsResponse["data"][number]>(response.data),
             }),
+            providesTags: ["group"],
+        }),
+        // GET /groups/by-course?courseId=... — every group of one course
+        // (x-branch-id is added centrally by baseApi).
+        groupsByCourse: builder.query<CourseGroup[], string>({
+            query: (courseId) => ({
+                url: `${PATHS.GROUPS}/by-course?courseId=${encodeURIComponent(courseId)}`,
+                method: "GET",
+            }),
+            transformResponse: (response: { data: unknown }) =>
+                normalizeList<Record<string, unknown>>(response?.data).map(normalizeCourseGroup),
             providesTags: ["group"],
         }),
         groupById: builder.query<GroupDetailResponse, string>({
@@ -746,6 +786,7 @@ export const groupsApi = baseApi.injectEndpoints({
 
 export const {
     useAllGroupsQuery,
+    useGroupsByCourseQuery,
     useGroupByIdQuery,
     useLazyGroupForEditQuery,
     useGroupsSelectQuery,

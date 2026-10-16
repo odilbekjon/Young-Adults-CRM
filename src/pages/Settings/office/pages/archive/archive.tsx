@@ -39,6 +39,24 @@ const PAGE_SIZE = 10;
 // fall back to its documented default of limit=10 and silently truncate.
 const REASONS_LIMIT = 200;
 
+// "16.10.2026 - 10:40" — read straight from the ISO string's own wall-clock
+// digits (same approach as utils/formatTrainingDate) so the viewer's timezone
+// can't shift the day or hour.
+const ISO_DATE_TIME = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/;
+const formatArchivedAt = (value?: string | null): string => {
+  const m = value ? ISO_DATE_TIME.exec(value) : null;
+  if (!m) return value ?? "";
+  const [, y, mo, d, h, mi] = m;
+  return h ? `${d}.${mo}.${y} - ${h}:${mi}` : `${d}.${mo}.${y}`;
+};
+
+const ROLE_LABEL_KEY: Record<string, string> = {
+  STUDENT: "settings.office.archive.filters.student",
+  TEACHER: "settings.office.archive.filters.teacher",
+  ADMIN: "settings.office.archive.filters.admin",
+  SUPERADMIN: "settings.office.archive.filters.superadmin",
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const Archive = () => {
   const { t } = useTranslation();
@@ -103,6 +121,9 @@ export const Archive = () => {
   // Active-only shortlist for the archive "filter by reason" dropdown. The
   // reasons themselves are managed on /settings/reasons_archiving.
   const { data: reasonOptions } = useReasonsSelectQuery({ page: 1, limit: REASONS_LIMIT });
+  // Some rows reference the reason by id only — resolve its name from the
+  // same list the filter dropdown uses.
+  const reasonNameById = new Map((reasonOptions ?? []).map((r) => [r.id, r.name]));
 
   // ── Restore / permanent delete for archived records ─────────────────────────
   // An archive row can be a student, a teacher, or staff (ADMIN/SUPERADMIN) —
@@ -452,12 +473,16 @@ export const Archive = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600 dark:text-[var(--color-text-secondary)]">{r.phone}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-[var(--color-text-secondary)]">{r.role}</td>
-                  <td className="px-4 py-3 text-gray-500 dark:text-[var(--color-text-secondary)] text-sm">{r.reason?.name}</td>
-                  <td className="px-4 py-3 text-gray-500 dark:text-[var(--color-text-secondary)] text-sm max-w-[180px]">{r.comment}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-gray-600 dark:text-[var(--color-text-secondary)]">
+                    {ROLE_LABEL_KEY[(r.role ?? "").toUpperCase()] ? t(ROLE_LABEL_KEY[(r.role ?? "").toUpperCase()]) : r.role}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-[var(--color-text-secondary)] text-sm">
+                    {r.reason?.name || (r.reasonId ? reasonNameById.get(r.reasonId) : "") || ""}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-[var(--color-text-secondary)] text-sm max-w-[240px] break-words">{r.comment}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="text-gray-600 dark:text-[var(--color-text-secondary)] text-sm">{r.archivedBy?.name}</div>
-                    <div className="text-gray-400 dark:text-[var(--color-text-muted)] text-xs">{r.archivedAt}</div>
+                    <div className="text-gray-400 dark:text-[var(--color-text-muted)] text-xs">{formatArchivedAt(r.archivedAt)}</div>
                   </td>
                   <td className="px-4 py-3">
                     <IconButton

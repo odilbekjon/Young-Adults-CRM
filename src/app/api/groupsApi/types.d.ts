@@ -426,3 +426,22 @@ export interface GroupsExcelQueryArgs {
   // Same tag filter GET /groups accepts, so the file matches the Tags filter.
   tagId?: string;
 }
+
+// GET /groups/by-course?courseId=... — Swagger: "Frontend query orqali
+// courseId yuboradi va ushbu kursga tegishli barcha guruhlar ro'yxatini
+// to'liq ma'lumotlari bilan qaytaradi." Only the fields the SingleCourse
+// groups tab renders; teacher info is collected from whichever of
+// teachers[]/teacher/teacherName the response carries (see
+// normalizeCourseGroup in groupsApi).
+export interface CourseGroup {
+  id: string;
+  name: string;
+  status: string;
+  courseId: string;
+  daysType: string;
+  days: GroupDay[];
+  time: string | null;
+  trainingStart: string | null;
+  trainingEnd: string | null;
+  teacherNames: string[];
+}

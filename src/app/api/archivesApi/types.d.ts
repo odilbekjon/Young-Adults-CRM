@@ -20,9 +20,10 @@ export interface ArchivesRequest {
 
 // Swagger only documented the Parameters for this endpoint — the Responses
 // section wasn't expanded, so the exact response field names aren't
-// confirmed. Modeled defensively (optional/nullable, same approach as
-// StudentExtraFields in studentsApi/types.d.ts) from what the Archive page UI
-// needs; verify against a real response and adjust once the schema is known.
+// confirmed. This is the normalized shape the Archive page consumes:
+// archivesApi's normalizeArchiveRecord maps whichever field names the backend
+// really sends (reason/reasonName, comment/note, archivedBy/processedBy, ...)
+// onto it.
 export interface ArchiveBranchRef {
   id: string;
   name: string;
@@ -46,6 +47,7 @@ export interface ArchiveRecord {
   balance?: number | null;
   branch?: ArchiveBranchRef | null;
   reason?: ArchiveReasonRef | null;
+  reasonId?: string | null;
   comment?: string | null;
   archivedBy?: ArchivedByRef | null;
   archivedAt?: string | null;

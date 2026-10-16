@@ -199,7 +199,7 @@ export const Courses = () => {
   return (
     <Box sx={{ p: 3, bgcolor: "var(--color-surface-alt)", minHeight: "100vh" }}>
       {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1, mb: 1 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Typography variant="h5" fontWeight={400}>
             {t("settings.office.courses.title")}
@@ -250,7 +250,7 @@ export const Courses = () => {
 
       {/* Course grid */}
       {!isLoading && !isError && (
-        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)", xl: "repeat(4, 1fr)" }, gap: 2 }}>
           {courses.map((course, i) => (
             <Paper
               key={course.id}
@@ -339,7 +339,7 @@ export const Courses = () => {
         anchor="right"
         open={drawerOpen}
         onClose={closeDrawer}
-        PaperProps={{ sx: { width: 400, p: 0 } }}
+        PaperProps={{ sx: { width: 400, maxWidth: "100vw", p: 0 } }}
       >
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 3, py: 2.5 }}>
           <Typography fontWeight={600} fontSize={17}>

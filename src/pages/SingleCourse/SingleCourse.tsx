@@ -59,7 +59,7 @@ const GroupCard = ({ group, onClick }: { group: CourseGroup; onClick: () => void
         borderRadius: 1,
         cursor: "pointer",
         display: "grid",
-        gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr) auto",
+        gridTemplateColumns: { xs: "minmax(0, 1fr) auto", sm: "minmax(0, 1.4fr) minmax(0, 1fr) auto" },
         alignItems: "center",
         columnGap: 2,
         transition: "box-shadow 0.15s",
@@ -82,8 +82,9 @@ const GroupCard = ({ group, onClick }: { group: CourseGroup; onClick: () => void
           {group.teacherNames.join(", ") || "—"}
         </Typography>
       </Box>
-      <Typography fontSize={13} color="var(--color-text-muted)">{range}</Typography>
+      <Typography fontSize={13} color="var(--color-text-muted)" sx={{ display: { xs: "none", sm: "block" } }}>{range}</Typography>
       <Box sx={{ textAlign: "right", color: "var(--color-text-muted)", fontSize: 13 }}>
+        <Box sx={{ display: { xs: "block", sm: "none" } }}>{range}</Box>
         <div>{daysLabel}</div>
         <div>{group.time ?? ""}</div>
       </Box>
@@ -164,9 +165,9 @@ export const SingleCourse = () => {
         </Typography>
       </Box>
 
-      <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, gap: 3, alignItems: { xs: "stretch", md: "flex-start" } }}>
         {/* Left: Course card info */}
-        <Box sx={{ width: 280, flexShrink: 0 }}>
+        <Box sx={{ width: { xs: "100%", md: 280 }, flexShrink: 0 }}>
           <Paper elevation={1} sx={{ borderRadius: 2, overflow: "hidden" }}>
             {/* Banner */}
             <Box
@@ -280,7 +281,7 @@ export const SingleCourse = () => {
         </Box>
 
         {/* Right: Tabs + Groups */}
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <Box sx={{ borderBottom: "1px solid var(--color-border)", mb: 2 }}>
             <Tabs
               value={tab}
@@ -306,7 +307,7 @@ export const SingleCourse = () => {
             ) : groups.length === 0 ? (
               <Typography fontSize={13} color="var(--color-text-muted)">No groups yet.</Typography>
             ) : (
-              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(420px, 1fr))", gap: 2 }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 420px), 1fr))", gap: 2 }}>
                 {groups.map((g) => (
                   <GroupCard key={g.id} group={g} onClick={() => navigate(`/groups/${g.id}`)} />
                 ))}

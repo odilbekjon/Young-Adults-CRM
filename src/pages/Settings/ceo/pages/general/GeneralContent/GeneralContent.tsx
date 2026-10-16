@@ -104,7 +104,7 @@ const GeneralContent = () => {
         </Typography>
       )}
 
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px 40px" }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: "24px 40px" }}>
         {/* Company Name */}
         <Box>
           <Typography sx={{ fontSize: 13, color: "var(--color-text-secondary)", mb: 1 }}>

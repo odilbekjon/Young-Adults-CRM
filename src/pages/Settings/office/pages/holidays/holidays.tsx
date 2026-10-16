@@ -193,7 +193,7 @@ export const Holidays = () => {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-gray-100 dark:border-[var(--color-border)]">
                 {[

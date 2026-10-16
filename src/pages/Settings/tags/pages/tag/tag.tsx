@@ -299,7 +299,7 @@ export const Tag = () => {
 
       {/* Drawer Modal */}
       <Drawer anchor="right" open={open} onClose={closeDrawer}>
-        <Box sx={{ width: 400, height: "100%", backgroundColor: "var(--color-surface)" }}>
+        <Box sx={{ width: 400, maxWidth: "100vw", height: "100%", backgroundColor: "var(--color-surface)" }}>
           {/* Top */}
           <Box
             sx={{

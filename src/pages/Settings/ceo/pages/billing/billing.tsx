@@ -117,9 +117,9 @@ export const Billing = () => {
       </Paper>
 
       {/* Main content row */}
-      <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: 2, alignItems: { xs: "stretch", lg: "flex-start" } }}>
         {/* Left: Payment form + History */}
-        <Box sx={{ width: 580, flexShrink: 0 }}>
+        <Box sx={{ width: { xs: "100%", lg: 580 }, flexShrink: 0 }}>
           {/* Payment form */}
           <Paper elevation={0} variant="outlined" sx={{ p: 3, borderRadius: 2, mb: 2 }}>
             <Typography fontWeight={500} fontSize={16} mb={2.5}>
@@ -193,10 +193,10 @@ export const Billing = () => {
         </Box>
 
         {/* Right: Pricing plans */}
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1, minWidth: 0, width: { xs: "100%", lg: "auto" } }}>
           <Paper
             variant="outlined"
-            sx={{ borderRadius: 2, p: 2, bgcolor: "var(--color-surface)" }}
+            sx={{ borderRadius: 2, p: 2, bgcolor: "var(--color-surface)", overflowX: "auto", "& > div": { minWidth: 520 } }}
           >
             {/* Plan headers */}
             <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, mb: 1 }}>

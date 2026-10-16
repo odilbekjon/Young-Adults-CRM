@@ -309,7 +309,7 @@ export const Teachers = () => {
 
       {/* Search */}
       <Stack direction="row" sx={{ pb: 2 }}>
-        <Paper sx={{ p: "2px 4px", display: "flex", alignItems: "center", width: 320, boxShadow: "none", border: "1px solid var(--color-border)" }}>
+        <Paper sx={{ p: "2px 4px", display: "flex", alignItems: "center", width: { xs: "100%", sm: 320 }, boxShadow: "none", border: "1px solid var(--color-border)" }}>
           <InputBase value={searchValue} onChange={(e) => setSearchValue(e.target.value)} sx={{ ml: 1, flex: 1 }} placeholder={t("teachers.search.placeholder")} />
           <IconButton sx={{ p: "8px" }}><IoSearchOutline size={18} /></IconButton>
         </Paper>
@@ -321,7 +321,7 @@ export const Teachers = () => {
       ) : (
         <TableContainer sx={{ borderRadius: "10px", border: "1px solid var(--color-border)" }}>
           <Table sx={{ bgcolor: "var(--color-surface)" }}>
-            <TableBody sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", padding: "12px" }}>
+            <TableBody sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: "12px", padding: "12px" }}>
               {filteredTeachers.map((teacher) => (
                 <TableRow key={teacher.id} onClick={() => navigate(`/teachers/${teacher.id}`)}
                   sx={{ display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -394,7 +394,7 @@ export const Teachers = () => {
           DRAWER
       ══════════════════════════════════════════════════════ */}
       <Drawer anchor="right" open={open} onClose={() => setOpen(false)}
-        PaperProps={{ sx: { width: 460, display: "flex", flexDirection: "column", bgcolor: "var(--color-surface)" } }}>
+        PaperProps={{ sx: { width: 460, maxWidth: "100vw", display: "flex", flexDirection: "column", bgcolor: "var(--color-surface)" } }}>
 
         {/* header */}
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between",

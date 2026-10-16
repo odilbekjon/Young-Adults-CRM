@@ -32,6 +32,7 @@ const modalStyle = {
   left: "50%",
   transform: "translate(-50%, -50%)",
   width: 440,
+  maxWidth: "calc(100vw - 24px)",
   bgcolor: "background.paper",
   borderRadius: 2,
   boxShadow: 24,
@@ -202,6 +203,7 @@ const AdminProfilePage = () => {
       <Box
         sx={{
           width: 480,
+          maxWidth: "100%",
           bgcolor: "var(--color-surface)",
           borderRadius: 2,
           boxShadow: "0 1px 4px rgba(0,0,0,0.08)",

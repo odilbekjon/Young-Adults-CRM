@@ -208,7 +208,7 @@ function FormEditor({
   );
 
   return (
-    <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
+    <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: 3, alignItems: { xs: "stretch", lg: "flex-start" } }}>
       {/* ── Left editor ── */}
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <TextField
@@ -337,7 +337,7 @@ function FormEditor({
       </Box>
 
       {/* ── Right preview ── */}
-      <Box sx={{ width: 560, flexShrink: 0 }}>
+      <Box sx={{ width: { xs: "100%", lg: 560 }, flexShrink: 0 }}>
         <Preview />
       </Box>
     </Box>

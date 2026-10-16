@@ -261,7 +261,7 @@ export const Debtors = () => {
 
       {/* Table */}
       <div className="bg-white dark:bg-[var(--color-surface)] border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-x-auto">
-        <table className="min-w-full text-sm">
+        <table className="min-w-[760px] w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[var(--color-surface-alt)]">
               <th className="px-4 py-3 w-8">

@@ -479,7 +479,7 @@ export const Staff = () => {
 
       {/* Filters */}
       <Stack direction="row" spacing={1.5} sx={{ pb: 2 }} flexWrap="wrap">
-        <Paper sx={{ p: "2px 4px", display: "flex", alignItems: "center", width: 280, boxShadow: "none", border: "1px solid var(--color-border)" }}>
+        <Paper sx={{ p: "2px 4px", display: "flex", alignItems: "center", width: { xs: "100%", sm: 280 }, boxShadow: "none", border: "1px solid var(--color-border)" }}>
           <InputBase
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}

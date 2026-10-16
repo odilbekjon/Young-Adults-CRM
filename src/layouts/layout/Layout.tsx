@@ -2,7 +2,7 @@ import { Box, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { Header } from "../Header/Header";
 import { SidebarProvider, useSidebar } from "../../Context/SidebarContext";
-import { Sidebar, SIDEBAR_WIDTH, SUBMENU_WIDTH, HEADER_HEIGHT } from "../Sidebar/Sidebar";
+import { Sidebar, SUBMENU_WIDTH, HEADER_HEIGHT, useSidebarWidth } from "../Sidebar/Sidebar";
 import { ReactNode } from "react";
 import { useBranchDetailRedirect } from "../../hooks/useBranchDetailRedirect";
 
@@ -44,7 +44,8 @@ const LayoutInner = ({ children }: Props) => {
   const { openSubmenu } = useSidebar();
   useBranchDetailRedirect();
 
-  const contentLeft = SIDEBAR_WIDTH + (openSubmenu ? SUBMENU_WIDTH : 0);
+  const { width: railWidth } = useSidebarWidth();
+  const contentLeft = railWidth + (openSubmenu ? SUBMENU_WIDTH : 0);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -58,7 +59,9 @@ const LayoutInner = ({ children }: Props) => {
             flex: 1,
             minWidth: 0,
             overflowY: "auto",
-            overflowX: "hidden",
+            // Wide tables/boards scroll sideways on small screens instead of
+            // being clipped; desktop keeps the old clipped behaviour.
+            overflowX: { xs: "auto", lg: "hidden" },
             transition: "margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
             backgroundColor: "var(--color-bg-page)",
             display: "flex",

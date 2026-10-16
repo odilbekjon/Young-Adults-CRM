@@ -25,7 +25,18 @@ import type { PermissionLabel } from "../../app/api/authApi/types";
 export const SIDEBAR_WIDTH = 140;
 export const SUBMENU_WIDTH = 200;
 export const HEADER_HEIGHT = 64;
-export const MOBILE_DRAWER_WIDTH = 280;
+// Icon-only rail used below the `lg` breakpoint (phones, tablets): labels are
+// dropped (they stay in a tooltip) so the rail never eats the narrow screen.
+export const COMPACT_SIDEBAR_WIDTH = 64;
+
+// Rail width for the current viewport — full labelled rail from `lg` up,
+// icon-only rail below it. Shared by the Sidebar, Header logo column and
+// Layout content offset so the three never disagree.
+export const useSidebarWidth = () => {
+  const theme = useTheme();
+  const isWide = useMediaQuery(theme.breakpoints.up("lg"));
+  return { compact: !isWide, width: isWide ? SIDEBAR_WIDTH : COMPACT_SIDEBAR_WIDTH };
+};
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 
@@ -325,9 +336,10 @@ const SubMenuGroup = ({ item }: { item: SubMenuItem }) => {
 interface SubMenuPanelProps {
   parentPath: string;
   items: SubMenuItem[];
+  left: number;
 }
 
-const SubMenuPanel = ({ items }: SubMenuPanelProps) => {
+const SubMenuPanel = ({ items, left }: SubMenuPanelProps) => {
   const { setOpenSubmenu } = useSidebar();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -350,7 +362,7 @@ const SubMenuPanel = ({ items }: SubMenuPanelProps) => {
       sx={{
         position: "fixed",
         top: HEADER_HEIGHT,
-        left: SIDEBAR_WIDTH,
+        left,
         width: SUBMENU_WIDTH,
         height: `calc(100vh - ${HEADER_HEIGHT}px)`,
         backgroundColor: "var(--color-surface)",
@@ -395,6 +407,8 @@ interface NavItemProps {
   submenuOpen: boolean;
   // boshqa biror submenu ochiqmi?
   anySubmenuOpen: boolean;
+  // Icon only (label lives in the tooltip).
+  compact?: boolean;
   onClick: () => void;
 }
 
@@ -408,6 +422,7 @@ const NavItem = ({
   hasSubmenu,
   submenuOpen,
   anySubmenuOpen,
+  compact = false,
   onClick,
 }: NavItemProps) => {
   const { t } = useTranslation();
@@ -425,7 +440,7 @@ const NavItem = ({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        py: 1.2,
+        py: compact ? 1.75 : 1.2,
         px: 0.5,
         cursor: "pointer",
         borderLeft: isHighlighted ? "3px solid var(--color-nav-active)" : "3px solid transparent",
@@ -445,12 +460,18 @@ const NavItem = ({
           color: isHighlighted ? "var(--color-nav-active)" : "var(--color-text-secondary)",
           display: "flex",
           alignItems: "center",
-          mb: 0.4,
+          mb: compact ? 0 : 0.4,
           transition: "color 0.15s",
+          ...(compact ? { "& svg": { width: 24, height: 24 } } : {}),
         }}
       >
-        {icon}
+        {/* A teacher's group rows all share one icon, so in the icon-only rail
+            they show the group name's initials instead (full name in the tooltip). */}
+        {compact && literalLabel
+          ? <span style={{ fontSize: 13, fontWeight: 700, minWidth: 24, textAlign: "center" }}>{literalLabel.trim().slice(0, 2).toUpperCase()}</span>
+          : icon}
       </Box>
+      {!compact && (
       <span
         className="nav-label"
         style={{
@@ -467,6 +488,7 @@ const NavItem = ({
       >
         {label}
       </span>
+      )}
     </Box>
   );
 
@@ -558,75 +580,6 @@ const MobileSubMenuItem = ({ item, depth = 0 }: { item: SubMenuItem; depth?: num
   );
 };
 
-const MobileNavItem = ({ item }: { item: NavEntry }) => {
-  const { t } = useTranslation();
-  const { pathname } = useLocation();
-  const { setMobileOpen } = useSidebar();
-  const visibleSubmenus = useVisibleSubmenus();
-  const hasSubmenu = !!visibleSubmenus[item.path]?.length;
-  const isActive = hasSubmenu
-    ? pathname === item.path || pathname.startsWith(item.path + "/")
-    : pathname === item.path;
-  const [open, setOpen] = useState(isActive && hasSubmenu);
-
-  const row = (
-    <Box
-      onClick={hasSubmenu ? () => setOpen((p) => !p) : () => setMobileOpen(false)}
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 1.5,
-        px: 2,
-        py: 1.5,
-        cursor: "pointer",
-        color: isActive ? "var(--color-nav-active)" : "var(--color-text-primary)",
-        backgroundColor: isActive && !hasSubmenu ? "var(--color-primary-surface)" : "transparent",
-        fontWeight: isActive ? 600 : 500,
-        "&:hover": { backgroundColor: "var(--color-primary-surface)" },
-      }}
-    >
-      <Box sx={{ display: "flex", alignItems: "center", "& svg": { fontSize: 20 } }}>
-        {item.icon}
-      </Box>
-      <Box
-        sx={{
-          fontSize: 14, flex: 1,
-          ...(item.truncate ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 } : {}),
-        }}
-      >
-        {item.label ?? t(item.labelKey ?? "")}
-      </Box>
-      {hasSubmenu && (open ? <FiChevronDown size={16} /> : <FiChevronRight size={16} />)}
-    </Box>
-  );
-
-  return (
-    <Box>
-      {hasSubmenu ? row : (
-        <Link to={item.path} style={{ textDecoration: "none", color: "inherit" }}>
-          {row}
-        </Link>
-      )}
-      {hasSubmenu && (
-        <Collapse in={open}>
-          <Box sx={{ backgroundColor: "var(--color-surface-alt)" }}>
-            {visibleSubmenus[item.path].map((sub) =>
-              sub.dividerBefore ? (
-                <Box key={sub.path}>
-                  <Box sx={{ height: "0.5px", bgcolor: "var(--color-border)", mx: 2, my: 0.5 }} />
-                  <MobileSubMenuItem item={sub} depth={1} />
-                </Box>
-              ) : (
-                <MobileSubMenuItem key={sub.path} item={sub} depth={1} />
-              )
-            )}
-          </Box>
-        </Collapse>
-      )}
-    </Box>
-  );
-};
-
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 // TEACHER gets a completely different rail: one entry per group they teach
@@ -671,7 +624,11 @@ export const Sidebar = () => {
   const { items: teacherNavItems, isLoading: teacherNavLoading } = useTeacherNavItems(isTeacher);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+  const { compact, width: railWidth } = useSidebarWidth();
   const visibleSubmenus = useVisibleSubmenus();
+  // Phone/portrait-tablet drawer: icon rail, and the tapped item's submenu
+  // opens as a text panel beside it (the drawer widens only on demand).
+  const [drawerSubmenu, setDrawerSubmenu] = useState<string | null>(null);
 
   const navItems = useMemo(() => {
     if (isTeacher) return teacherNavItems;
@@ -699,7 +656,7 @@ export const Sidebar = () => {
         id="main-sidebar"
         sx={{
           display: { xs: "none", md: "flex" },
-          width: SIDEBAR_WIDTH,
+          width: railWidth,
           height: `calc(100vh - ${HEADER_HEIGHT}px)`,
           position: "fixed",
           top: HEADER_HEIGHT,
@@ -731,6 +688,7 @@ export const Sidebar = () => {
                 hasSubmenu={hasSubmenu}
                 submenuOpen={submenuOpen}
                 anySubmenuOpen={!!openSubmenu}
+                compact={compact}
                 onClick={() => handleNavClick(item.path)}
               />
             );
@@ -740,29 +698,70 @@ export const Sidebar = () => {
       </Box>
 
       {isDesktop && openSubmenu && !!visibleSubmenus[openSubmenu]?.length && (
-        <SubMenuPanel parentPath={openSubmenu} items={visibleSubmenus[openSubmenu]} />
+        <SubMenuPanel parentPath={openSubmenu} items={visibleSubmenus[openSubmenu]} left={railWidth} />
       )}
 
-      {/* Mobile / tablet drawer */}
+      {/* Mobile / tablet drawer — icon-only rail, submenu as a side panel */}
       <Drawer
         anchor="left"
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
         ModalProps={{ keepMounted: true }}
+        SlideProps={{ onExited: () => setDrawerSubmenu(null) }}
         sx={{
           display: { xs: "block", md: "none" },
           "& .MuiDrawer-paper": {
-            width: MOBILE_DRAWER_WIDTH,
+            width: COMPACT_SIDEBAR_WIDTH + (drawerSubmenu ? SUBMENU_WIDTH : 0),
+            maxWidth: "100vw",
             boxSizing: "border-box",
+            flexDirection: "row",
+            overflowX: "hidden",
+            transition: "width 0.2s ease",
           },
         }}
       >
-        <Box sx={{ pt: 1, pb: 4, overflowY: "auto" }}>
-          {navItems.map((item) => (
-            <MobileNavItem key={item.path} item={item} />
-          ))}
+        <Box sx={{ width: COMPACT_SIDEBAR_WIDTH, flexShrink: 0, pt: 1, pb: 4, overflowY: "auto", scrollbarWidth: "none", "&::-webkit-scrollbar": { display: "none" } }}>
+          {navItems.map((item) => {
+            const hasSubmenu = !!visibleSubmenus[item.path]?.length;
+            const isActive = hasSubmenu
+              ? pathname === item.path || pathname.startsWith(item.path + "/")
+              : pathname === item.path;
+            return (
+              <NavItem
+                key={item.path}
+                {...item}
+                active={isActive}
+                hasSubmenu={hasSubmenu}
+                submenuOpen={drawerSubmenu === item.path}
+                anySubmenuOpen={!!drawerSubmenu}
+                compact
+                onClick={() => {
+                  if (hasSubmenu) {
+                    setDrawerSubmenu((prev) => (prev === item.path ? null : item.path));
+                  } else {
+                    setDrawerSubmenu(null);
+                    setMobileOpen(false);
+                  }
+                }}
+              />
+            );
+          })}
           {teacherNavLoading && <TeacherNavSkeleton />}
         </Box>
+        {drawerSubmenu && !!visibleSubmenus[drawerSubmenu]?.length && (
+          <Box sx={{ width: SUBMENU_WIDTH, flexShrink: 0, pt: 1, overflowY: "auto", borderLeft: "1px solid var(--color-border)", backgroundColor: "var(--color-surface-alt)" }}>
+            {visibleSubmenus[drawerSubmenu].map((sub) =>
+              sub.dividerBefore ? (
+                <Box key={sub.path}>
+                  <Box sx={{ height: "0.5px", bgcolor: "var(--color-border)", mx: 2, my: 0.5 }} />
+                  <MobileSubMenuItem item={sub} />
+                </Box>
+              ) : (
+                <MobileSubMenuItem key={sub.path} item={sub} />
+              )
+            )}
+          </Box>
+        )}
       </Drawer>
     </>
   );

@@ -527,7 +527,7 @@ export const StudentLeft = () => {
 
           {/* Table */}
           <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-sm overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-[var(--color-border)]">
                   <th className="px-3 py-3 w-8 text-left">

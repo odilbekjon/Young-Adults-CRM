@@ -157,3 +157,48 @@ html.dark .recharts-default-tooltip {
 html.dark .recharts-cartesian-axis-tick-value {
   fill: var(--color-text-secondary);
 }
+
+/*
+ * Responsive safety net — many dialogs/drawers/modals set a fixed pixel
+ * width. Never let them be wider than the viewport (phones/tablets).
+ */
+.MuiDialog-paper {
+  max-width: calc(100vw - 24px) !important;
+  margin: 12px !important;
+}
+
+.MuiDrawer-paper {
+  max-width: 100vw;
+}
+
+.MuiPopover-paper,
+.MuiMenu-paper {
+  max-width: calc(100vw - 16px);
+}
+
+@media (max-width: 899.95px) {
+  /* Touch-friendly: stop iOS zooming into inputs, keep media inside its box. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  img,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+}
+
+/* Teacher profile: 3 columns on wide screens, one column below lg. */
+.teacher-profile-grid {
+  display: grid;
+  grid-template-columns: 400px minmax(0, 1fr) 300px;
+}
+
+@media (max-width: 1199.95px) {
+  .teacher-profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

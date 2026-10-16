@@ -257,7 +257,7 @@ export const ConversionReports = () => {
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)] shadow-sm">
-            <table className="min-w-full text-[15px]">
+            <div style={{ overflowX: "auto" }}><table className="min-w-[760px] w-full text-[15px]">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-[var(--color-border)] bg-slate-50 dark:bg-[var(--color-surface-alt)]">
                   <th className="px-5 py-3 text-left font-semibold text-slate-700 dark:text-[var(--color-text-primary)]">{t("reports.conversion.table.fullName")}</th>
@@ -296,7 +296,7 @@ export const ConversionReports = () => {
                   ))
                 )}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
 

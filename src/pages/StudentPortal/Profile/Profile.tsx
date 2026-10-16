@@ -26,7 +26,7 @@ export const StudentPortalProfile = () => {
         <Typography color="var(--color-danger)" fontSize={14}>{t("studentPortal.profile.loadError")}</Typography>
       ) : (
         <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "flex-start" }}>
-          <Paper elevation={0} sx={{ width: 320, p: 3, borderRadius: "12px", border: "1px solid var(--color-border)", bgcolor: "var(--color-surface)" }}>
+          <Paper elevation={0} sx={{ width: { xs: "100%", sm: 320 }, p: 3, borderRadius: "12px", border: "1px solid var(--color-border)", bgcolor: "var(--color-surface)" }}>
             <Stack alignItems="center" gap={1} mb={2.5}>
               <Avatar src={data.photo ?? undefined} sx={{ width: 72, height: 72, fontSize: 24, bgcolor: "var(--color-primary)" }}>
                 {data.name?.slice(0, 1).toUpperCase()}
@@ -40,7 +40,7 @@ export const StudentPortalProfile = () => {
             </Stack>
           </Paper>
 
-          <Paper elevation={0} sx={{ flex: 1, minWidth: 280, p: 3, borderRadius: "12px", border: "1px solid var(--color-border)", bgcolor: "var(--color-surface)" }}>
+          <Paper elevation={0} sx={{ flex: 1, minWidth: { xs: 0, sm: 280 }, p: 3, borderRadius: "12px", border: "1px solid var(--color-border)", bgcolor: "var(--color-surface)" }}>
             <Typography fontSize={14} fontWeight={700} color="var(--color-text-primary)" mb={1.5}>
               {t("studentPortal.profile.comments")}
             </Typography>

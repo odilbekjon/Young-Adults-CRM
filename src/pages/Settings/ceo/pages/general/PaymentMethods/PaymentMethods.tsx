@@ -97,14 +97,14 @@ const PaymentMethods = () => {
       </Typography>
 
       {/* ── Row 1: 3 service ID cards ── */}
-      <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, gap: 2, mb: 3 }}>
         <ServiceColumn title={t("settings.ceo.general.paymentMethods.paymeMerchantId")} />
         <ServiceColumn title={t("settings.ceo.general.paymentMethods.uzumServiceId")} />
         <ServiceColumn title={t("settings.ceo.general.paymentMethods.clickServiceId")} />
       </Box>
 
       {/* ── Row 2: Payme + Midtrans ── */}
-      <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, gap: 2, alignItems: { xs: "stretch", md: "flex-start" } }}>
         {/* Payme section */}
         <FieldCard title={t("settings.ceo.general.paymentMethods.payme")}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 0.5, flex: 1 }}>
@@ -180,7 +180,7 @@ const PaymentMethods = () => {
         </FieldCard>
 
         {/* Midtrans section */}
-        <Box sx={{ width: 360, flexShrink: 0 }}>
+        <Box sx={{ width: { xs: "100%", md: 360 }, flexShrink: 0 }}>
           <FieldCard title={t("settings.ceo.general.paymentMethods.midtrans")}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 0.5 }}>
               <Box>

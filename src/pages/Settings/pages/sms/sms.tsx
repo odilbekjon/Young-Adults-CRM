@@ -505,7 +505,7 @@ export const SettingsSms = () => {
 
           {/* Table */}
           <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg border border-gray-200 dark:border-[var(--color-border)] shadow-sm overflow-hidden">
-            <table className="w-full">
+            <div style={{ overflowX: "auto" }}><table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-[var(--color-border)]">
                   <th className="text-left text-sm font-medium text-gray-600 dark:text-[var(--color-text-secondary)] px-5 py-3">
@@ -558,7 +558,7 @@ export const SettingsSms = () => {
                   ))
                 )}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       )}

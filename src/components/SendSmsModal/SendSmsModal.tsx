@@ -102,6 +102,7 @@ export const SendSmsModal = ({
       PaperProps={{
         sx: {
           width: 400,
+          maxWidth: "calc(100vw - 24px)",
           p: 0,
           display: "flex",
           flexDirection: "column",

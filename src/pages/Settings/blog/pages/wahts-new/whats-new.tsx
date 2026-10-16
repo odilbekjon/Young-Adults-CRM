@@ -97,11 +97,11 @@ export const WhatsNew = () => {
       <Divider sx={{ mb: 2.5, borderColor: "#dde1e7" }} />
 
       {/* ── Two-panel layout ── */}
-      <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, gap: 2, alignItems: { xs: "stretch", md: "flex-start" } }}>
         {/* ── Left: Blog list ── */}
         <Box
           sx={{
-            width: 280,
+            width: { xs: "100%", md: 280 },
             flexShrink: 0,
             backgroundColor: "var(--color-surface)",
             borderRadius: 3,

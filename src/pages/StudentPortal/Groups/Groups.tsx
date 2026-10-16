@@ -26,7 +26,7 @@ export const StudentPortalGroups = () => {
             <Paper
               key={g.id}
               elevation={0}
-              sx={{ width: 280, p: 2.5, borderRadius: "12px", border: "1px solid var(--color-border)", bgcolor: "var(--color-surface)" }}
+              sx={{ width: { xs: "100%", sm: 280 }, p: 2.5, borderRadius: "12px", border: "1px solid var(--color-border)", bgcolor: "var(--color-surface)" }}
             >
               <Stack direction="row" alignItems="center" gap={1} mb={1}>
                 <TbUsers size={18} color="var(--color-primary)" />

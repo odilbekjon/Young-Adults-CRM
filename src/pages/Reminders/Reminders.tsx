@@ -152,7 +152,7 @@ function DateFilterButton({
       <PortalPopover open={open} onClose={() => setOpen(false)} anchorRef={wrapRef}>
         <Box
           sx={{
-            width: 300, bgcolor: "var(--color-surface)", border: "1px solid var(--color-border)",
+            width: 300, maxWidth: "calc(100vw - 24px)", bgcolor: "var(--color-surface)", border: "1px solid var(--color-border)",
             borderRadius: "12px", boxShadow: "0 12px 32px var(--color-shadow)",
             p: 2,
           }}

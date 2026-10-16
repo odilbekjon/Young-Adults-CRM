@@ -373,7 +373,7 @@ const DateFilter = ({ label, value, onChange, onClear }: DateFilterProps) => {
       <PortalPopover open={open} onClose={() => setOpen(false)} anchorRef={wrapRef}>
         <div
           style={{
-            width: 300, boxSizing: "border-box", background: "var(--color-surface)", border: "1px solid var(--color-border)",
+            width: 300, maxWidth: "calc(100vw - 24px)", boxSizing: "border-box", background: "var(--color-surface)", border: "1px solid var(--color-border)",
             borderRadius: 12, boxShadow: "0 12px 32px var(--color-shadow)",
             padding: 16,
           }}
@@ -879,7 +879,7 @@ export const Groups = () => {
               variant="outlined"
               sx={{
                 position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 20,
-                borderRadius: 2, borderColor: "var(--color-border)", p: 2, width: 300,
+                borderRadius: 2, borderColor: "var(--color-border)", p: 2, width: 300, maxWidth: "calc(100vw - 32px)",
                 boxShadow: "0 12px 32px rgba(0,0,0,0.14)",
               }}
             >
@@ -1143,7 +1143,7 @@ export const Groups = () => {
         anchor="right"
         open={open}
         onClose={() => setOpen(false)}
-        PaperProps={{ sx: { width: 420, bgcolor: "var(--color-surface-alt)" } }}
+        PaperProps={{ sx: { width: 420, maxWidth: "100vw", bgcolor: "var(--color-surface-alt)" } }}
       >
         {/* Header */}
         <Stack

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Box, Avatar, Typography, Menu, MenuItem, CircularProgress } from "@mui/material";
+import { Box, Avatar, Typography, Menu, MenuItem, CircularProgress, useMediaQuery } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useBranch, type BranchId } from "../../Context/BranchContext";
@@ -10,7 +10,7 @@ import { useSidebar } from "../../Context/SidebarContext";
 import { useThemeMode } from "../../Context/ThemeContext";
 import { useAuth } from "../../hooks/useAuth";
 
-import { SIDEBAR_WIDTH, HEADER_HEIGHT } from "../Sidebar/Sidebar";
+import { HEADER_HEIGHT, useSidebarWidth } from "../Sidebar/Sidebar";
 import { AddStudent } from "../../components/AddStudent/AddStudent";
 import { AddPayment } from "../../components/AddPayment/AddPayment";
 import { logout } from "../../app/store/authSlice";
@@ -129,6 +129,10 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
+  // On phones/tablets the button sits mid-header, so a left-anchored popup
+  // would run off the right edge — anchor it to the button's right edge.
+  const smallScreen = useMediaQuery("(max-width:899.95px)");
+
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button
@@ -142,7 +146,9 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
         onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "var(--color-surface-hover)")}
         onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "none")}
       >
-        {current?.label ?? "Branch"}
+        <span style={{ maxWidth: smallScreen ? 96 : undefined, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {current?.label ?? "Branch"}
+        </span>
         <MdKeyboardArrowDown
           size={16} color="var(--color-text-secondary)"
           style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}
@@ -150,10 +156,10 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
       </button>
       {open && (
         <div style={{
-          position: "absolute", top: "calc(100% + 8px)", left: 0,
+          position: "absolute", top: "calc(100% + 8px)", ...(smallScreen ? { right: 0 } : { left: 0 }),
           background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 10,
           boxShadow: "0 8px 24px var(--color-shadow)", zIndex: 500,
-          minWidth: 200, animation: "dropDown 0.15s ease", overflow: "hidden",
+          minWidth: 200, maxWidth: "calc(100vw - 16px)", animation: "dropDown 0.15s ease", overflow: "hidden",
         }}>
           <style>{`@keyframes dropDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
           {branchesLoading ? (
@@ -434,7 +440,7 @@ const NotificationBtn = () => {
           position: "absolute", top: "calc(100% + 8px)", right: 0,
           background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 10,
           boxShadow: "0 8px 24px var(--color-shadow)", zIndex: 500,
-          width: 280, animation: "dropDown 0.15s ease", overflow: "hidden",
+          width: 280, maxWidth: "calc(100vw - 16px)", animation: "dropDown 0.15s ease", overflow: "hidden",
         }}>
           <div style={{ padding: "12px 14px 8px", fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", borderBottom: "1px solid var(--color-border-subtle)" }}>
             {t("header.notifications")}
@@ -485,7 +491,7 @@ const HistoryBtn = () => {
           position: "absolute", top: "calc(100% + 8px)", right: 0,
           background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 10,
           boxShadow: "0 8px 24px var(--color-shadow)", zIndex: 500,
-          width: 240, animation: "dropDown 0.15s ease", overflow: "hidden",
+          width: 240, maxWidth: "calc(100vw - 16px)", animation: "dropDown 0.15s ease", overflow: "hidden",
         }}>
           <div style={{ padding: "12px 14px 8px", fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", borderBottom: "1px solid var(--color-border-subtle)" }}>
             {t("header.recentPages")}
@@ -574,6 +580,7 @@ const QuickAddBtn = ({ onAddStudent, onAddPayment }: {
    Main Header
 ══════════════════════════════════════════ */
 export const Header = () => {
+  const { compact, width: railWidth } = useSidebarWidth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
@@ -636,33 +643,33 @@ export const Header = () => {
 
         {/* Logo — desktop rail column */}
         <Box sx={{
-          width: SIDEBAR_WIDTH, flexShrink: 0,
+          width: railWidth, flexShrink: 0,
           display: { xs: "none", md: "flex" }, alignItems: "center", justifyContent: "center",
           height: "100%", borderRight: "1px solid var(--color-border)", px: 1.5,
         }}>
           <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
             <img
               src={logo} alt="logo"
-              style={{ width: SIDEBAR_WIDTH - 24, height: "auto", maxHeight: 36, objectFit: "contain", display: "block" }}
+              style={{ width: railWidth - (compact ? 16 : 24), height: "auto", maxHeight: 36, objectFit: "contain", display: "block" }}
             />
           </Link>
         </Box>
 
         {/* Logo — mobile, visually centered */}
         <Box sx={{
-          display: { xs: "flex", md: "none" }, flex: 1,
-          alignItems: "center", justifyContent: "center", height: "100%",
+          display: { xs: "flex", md: "none" }, flex: 1, minWidth: 0,
+          alignItems: "center", justifyContent: "center", height: "100%", overflow: "hidden",
         }}>
           <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
             <img
               src={logo} alt="logo"
-              style={{ width: 96, height: "auto", maxHeight: 32, objectFit: "contain", display: "block" }}
+              style={{ width: 96, maxWidth: "100%", height: "auto", maxHeight: 32, objectFit: "contain", display: "block" }}
             />
           </Link>
         </Box>
 
         {/* Main area — desktop */}
-        <Box sx={{ flex: 1, display: { xs: "none", md: "flex" }, alignItems: "center", gap: 2, px: 3, height: "100%" }}>
+        <Box sx={{ flex: 1, minWidth: 0, display: { xs: "none", md: "flex" }, alignItems: "center", gap: { md: 1.5, lg: 2 }, px: { md: 2, lg: 3 }, height: "100%" }}>
           {!isTeacher && <BranchDropdown branch={branch} setBranch={setBranch} />}
 
           {!isTeacher && (
@@ -678,10 +685,12 @@ export const Header = () => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <LangToggle />
             <ThemeToggle />
-            <IconBtn onClick={toggleFullscreen} title={isFullscreen ? t("header.exitFullscreen") : t("header.fullscreen")}>
-              {isFullscreen ? <MdFullscreenExit size={18} /> : <MdFullscreen size={18} />}
-            </IconBtn>
-            <IconBtn title={t("header.help")}><MdHelpOutline size={18} /></IconBtn>
+            <Box sx={{ display: { xs: "none", lg: "flex" }, alignItems: "center", gap: 1 }}>
+              <IconBtn onClick={toggleFullscreen} title={isFullscreen ? t("header.exitFullscreen") : t("header.fullscreen")}>
+                {isFullscreen ? <MdFullscreenExit size={18} /> : <MdFullscreen size={18} />}
+              </IconBtn>
+              <IconBtn title={t("header.help")}><MdHelpOutline size={18} /></IconBtn>
+            </Box>
             <HistoryBtn />
             <NotificationBtn />
           </Box>
@@ -698,7 +707,7 @@ export const Header = () => {
             onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "var(--color-surface-hover)")}
             onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "none")}
           >
-            <Typography sx={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>
+            <Typography sx={{ display: { xs: "none", lg: "block" }, fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>
               {displayName}
             </Typography>
             <Avatar
@@ -711,7 +720,7 @@ export const Header = () => {
         </Box>
 
         {/* Main area — mobile compact controls */}
-        <Box sx={{ display: { xs: "flex", md: "none" }, alignItems: "center", gap: 0.5, pr: 1, height: "100%" }}>
+        <Box sx={{ display: { xs: "flex", md: "none" }, alignItems: "center", gap: 0.5, pr: 1, height: "100%", flexShrink: 0 }}>
           {!isTeacher && <BranchDropdown branch={branch} setBranch={setBranch} />}
           <LangToggle />
           <ThemeToggle />

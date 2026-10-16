@@ -123,7 +123,7 @@ const EditDrawer = ({
   return (
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.18)", zIndex: 1200, opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none", transition: "opacity 0.25s" }} />
-      <div style={{ position: "fixed", top: 0, right: 0, width: 440, height: "100vh", background: "var(--color-surface)", zIndex: 1300, boxShadow: "-4px 0 24px rgba(0,0,0,0.12)", transform: open ? "translateX(0)" : "translateX(100%)", transition: "transform 0.28s cubic-bezier(.4,0,.2,1)", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+      <div style={{ position: "fixed", top: 0, right: 0, width: 440, maxWidth: "100vw", height: "100vh", background: "var(--color-surface)", zIndex: 1300, boxShadow: "-4px 0 24px rgba(0,0,0,0.12)", transform: open ? "translateX(0)" : "translateX(100%)", transition: "transform 0.28s cubic-bezier(.4,0,.2,1)", display: "flex", flexDirection: "column", overflowY: "auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 16px", borderBottom: "1px solid var(--color-border-subtle)" }}>
           <span style={{ fontSize: 17, fontWeight: 600, color: "var(--color-text-primary)" }}>Edit Teacher</span>
           <div onClick={onClose} style={{ cursor: "pointer", color: "var(--color-text-muted)", fontSize: 20 }}><MdClose /></div>
@@ -605,7 +605,7 @@ const SalaryTab = ({ teacherId }: { teacherId: string }) => {
       </div>
 
       <div style={{ border: "1px solid var(--color-border)", borderRadius: 12, overflow: "hidden", background: "var(--color-surface)" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ overflowX: "auto" }}><table style={{ width: "100%", minWidth: 640, borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "var(--color-surface)" }}>
               {[
@@ -652,7 +652,7 @@ const SalaryTab = ({ teacherId }: { teacherId: string }) => {
               ))
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   );
@@ -776,7 +776,7 @@ export const TeacherProfile = () => {
       </div>
 
       {activeTab === "profile" && (
-        <div style={{ display: "grid", gridTemplateColumns: "400px 1fr 300px", gap: 20, alignItems: "start" }}>
+        <div className="teacher-profile-grid" style={{ gap: 20, alignItems: "start" }}>
 
           {/* Left */}
           <div style={{ border: "1px solid var(--color-border)", borderRadius: 12, padding: "20px 16px", background: "var(--color-surface)", position: "relative" }}>

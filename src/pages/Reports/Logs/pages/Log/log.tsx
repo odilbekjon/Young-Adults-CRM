@@ -47,7 +47,7 @@ export const Log = () => {
   };
 
   return (
-    <Box sx={{ m:5, display: "flex", minHeight: "100vh", bgcolor: "var(--color-surface-alt)" }}>
+    <Box sx={{ m: { xs: 1.5, md: 5 }, display: "flex", flexDirection: { xs: "column", md: "row" }, minHeight: "100vh", bgcolor: "var(--color-surface-alt)" }}>
       {/* Left: Logs list */}
       <Box sx={{ flex: 1, p: 3, borderRight: "1px solid var(--color-border)", bgcolor: "var(--color-surface)" }}>
         {/* Header */}
@@ -132,7 +132,7 @@ export const Log = () => {
       </Box>
 
       {/* Right: Status filter */}
-      <Box sx={{ width: 280, p: 3, bgcolor: "var(--color-surface)", borderLeft: "1px solid var(--color-border)" }}>
+      <Box sx={{ width: { xs: "100%", md: 280 }, p: 3, bgcolor: "var(--color-surface)", borderLeft: { md: "1px solid var(--color-border)" }, borderTop: { xs: "1px solid var(--color-border)", md: "none" } }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 2, color: "var(--color-text-primary)" }}>
           {t("reports.logs.log.statusFilter")}
         </Typography>

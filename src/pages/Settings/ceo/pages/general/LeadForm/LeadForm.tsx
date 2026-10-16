@@ -29,6 +29,7 @@ const LeadForm = () => {
         <Box
           sx={{
             width: 260,
+            maxWidth: "100%",
             height: 160,
             borderRadius: "6px",
             overflow: "hidden",

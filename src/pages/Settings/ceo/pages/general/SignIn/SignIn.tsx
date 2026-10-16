@@ -18,17 +18,17 @@ const SignIn = () => {
     .trim();
 
   return (
-    <Box sx={{ flex: 1, p: 5, maxWidth: 900 }}>
+    <Box sx={{ flex: 1, p: { xs: 2, md: 5 }, maxWidth: 900 }}>
       <Typography variant="h5" sx={{ fontWeight: 600, mb: 4, color: "var(--color-text-primary)" }}>{t("settings.ceo.general.signIn.title")}</Typography>
 
       {/* Company form background */}
       <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "var(--color-text-primary)" }}>
         {t("settings.ceo.general.signIn.companyFormBackground")}
       </Typography>
-      <Box sx={{ display: "flex", gap: 2, mb: 0.5 }}>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 0.5 }}>
         <DropZone preview={bgPreview} onFile={(f) => setBgPreview(URL.createObjectURL(f))} />
         <Box sx={{
-          width: 260, height: 160, borderRadius: "6px", overflow: "hidden",
+          width: 260, maxWidth: "100%", height: 160, borderRadius: "6px", overflow: "hidden",
           flexShrink: 0, background: "#1e2a3b",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
@@ -44,11 +44,11 @@ const SignIn = () => {
 
       {/* Text form */}
       <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1.5, color: "var(--color-text-primary)" }}>{t("settings.ceo.general.signIn.textForm")}</Typography>
-      <Box sx={{ display: "flex", gap: 2, mb: 4 }}>
-        <Box sx={{ flex: 1 }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, gap: 2, mb: 4 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <RichTextEditor value={textContent} onChange={setTextContent} />
         </Box>
-        <Box sx={{ width: 260, flexShrink: 0, borderLeft: "1px solid var(--color-border)", pl: 3, pt: 1 }}>
+        <Box sx={{ width: { xs: "100%", md: 260 }, flexShrink: 0, borderLeft: { md: "1px solid var(--color-border)" }, pl: { md: 3 }, pt: 1 }}>
           {plainPreview.split("\n").map((line, i) => (
             <Typography key={i} sx={{ fontSize: 14, color: "var(--color-text-primary)", lineHeight: 1.8 }}>{line}</Typography>
           ))}

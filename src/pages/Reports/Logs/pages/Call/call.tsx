@@ -68,7 +68,7 @@ export const Call = () => {
 
       {/* Table */}
       <Paper elevation={0} sx={{ border: "1px solid var(--color-border)", borderRadius: 1, overflow: "hidden" }}>
-        <Table>
+        <div style={{ overflowX: "auto" }}><Table sx={{ minWidth: 640 }}>
           <TableHead>
             <TableRow>
               {columnKeys.map((colKey) => (
@@ -97,7 +97,7 @@ export const Call = () => {
               </TableCell>
             </TableRow>
           </TableBody>
-        </Table>
+        </Table></div>
       </Paper>
     </Box>
   );

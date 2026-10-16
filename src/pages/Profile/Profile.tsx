@@ -64,7 +64,10 @@ const AdminProfilePage = () => {
         phone: staffUserData.phone,
         photo: staffUserData.photo,
         jobTitle: staffUserData.jobTitle,
-        roleTags: [staffUserData.role, staffUserData.rolePermission?.name].filter((v): v is string => Boolean(v)),
+        roleTags: [
+          staffUserData.role,
+          ...(staffUserData.rolePermissions.length ? staffUserData.rolePermissions : [staffUserData.rolePermission]).map((rp) => rp?.name),
+        ].filter((v): v is string => Boolean(v)),
         status: staffUserData.status,
         branches: staffUserData.branches,
       };

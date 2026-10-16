@@ -329,7 +329,10 @@ export const Staff = () => {
       jobTitle: form.jobTitle.trim() || undefined,
       role: form.role.trim() || undefined,
       rolePermissionId: primaryRolePermissionId,
-      branchIds: form.branchIds.length ? form.branchIds : undefined,
+      // A new staff member goes to whichever branch is selected in the
+      // header (the picker below is hidden then); with "All branches" the
+      // picker decides.
+      branchIds: !isEdit && selectedBranchId ? [selectedBranchId] : form.branchIds.length ? form.branchIds : undefined,
       birthdate: form.dateOfBirth || undefined,
       gender: form.gender || undefined,
       photo: form.photo ?? undefined,
@@ -527,13 +530,13 @@ export const Staff = () => {
                     </Stack>
                   </TableCell>
                   <TableCell sx={{ verticalAlign: "top", pt: 2 }}>
-                    <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                    <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, max-content)", gap: 0.5 }}>
                       {member.roleTags.length > 0
                         ? member.roleTags.map((tag) => (
                             <Chip key={tag} label={tag} size="small" sx={{ height: 20, fontSize: 11, bgcolor: "var(--color-surface-alt)", color: "var(--color-text-secondary)" }} />
                           ))
                         : <Typography fontSize={13} color="var(--color-text-secondary)">—</Typography>}
-                    </Stack>
+                    </Box>
                   </TableCell>
                   <TableCell sx={{ fontSize: 13, color: "var(--color-text-secondary)", verticalAlign: "top", pt: 2 }}>
                     {member.jobTitle}
@@ -728,6 +731,7 @@ export const Staff = () => {
               )}
             </Box>
 
+            {(isEdit || !selectedBranchId) && (
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.branches")}</Typography>
               <Select
@@ -749,6 +753,7 @@ export const Staff = () => {
                 ))}
               </Select>
             </Box>
+            )}
 
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.dateOfBirth")}</Typography>

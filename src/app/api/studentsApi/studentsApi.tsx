@@ -465,10 +465,9 @@ export const studentsApi = baseApi.injectEndpoints({
                 url: `${PATHS.STUDENTS}/${id}`,
                 method: "DELETE",
             }),
-            // Also refreshes the Archive page (GET /archives) and the group
-            // rosters — this is the call every "delete student" action ends
-            // with (see useArchiveStudent), not just the Archive page's own.
-            invalidatesTags: ["student", "archive", "studentGroup", "group"],
+            // Also drops the student out of the Archive page (GET /archives)
+            // whenever a permanent delete is issued directly from there.
+            invalidatesTags: ["student", "archive"],
         }),
         toggleStudentStatus: builder.mutation<ToggleStudentStatusResponse, string>({
             query: (id) => ({

@@ -238,6 +238,7 @@ export interface UpdateStudentStatusRequest {
   id: string;
   status: StudentStatusValue;
   reason?: string;
+  reasonId?: string;
   paymentEndDate?: string;
 }
 

@@ -1452,9 +1452,9 @@ export const StudentProfile = () => {
     }
   };
 
-  // Deletes the student through the shared flow (see useArchiveStudent):
-  // ends every live group membership with the picked reason/comment, then
-  // DELETE /students/{id}.
+  // Archives the student through the shared flow (see useArchiveStudent):
+  // ends every live group membership, then POST /students/{id}/status
+  // INACTIVE with the picked reasonId/comment.
   const handleArchive = async () => {
     setIsArchivingStudent(true);
     try {

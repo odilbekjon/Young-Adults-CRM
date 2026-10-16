@@ -2,7 +2,7 @@ import {
   useLazyStudentGroupsQuery,
   useUpdateStudentGroupStatusMutation,
 } from "../app/api/groupsApi/groupsApi";
-import { useDeleteStudentMutation } from "../app/api/studentsApi";
+import { useUpdateStudentStatusMutation } from "../app/api/studentsApi";
 import type { StudentGroupRecord } from "../app/api/groupsApi/types";
 
 export interface ArchiveStudentArgs {
@@ -13,20 +13,21 @@ export interface ArchiveStudentArgs {
 
 const LIVE_STATUSES = ["PROBATION", "ACTIVE", "FROZEN"] as const;
 
-// The one "delete student" flow shared by Students, StudentProfile and
-// SingleGroup:
+// The one "delete student" (= archive) flow shared by Students, StudentProfile
+// and SingleGroup:
 //
 //  1. PATCH /student-groups/{id}/status INACTIVE with reasonId + reason (the
-//     comment) + isAllGroup ends every live group membership and records the
-//     reason and comment. Any live membership left over is ended one by one.
-//  2. DELETE /students/{id} (Swagger: "Talabani tizimdan xavfsiz tarzda
-//     butunlay o'chiradi. Agar talabaning faol guruhlari mavjud bo'lsa
-//     xatolik qaytaradi") — which is why step 1 must clear the memberships
-//     first.
+//     comment) + isAllGroup ends every live group membership; any live
+//     membership left over is ended one by one.
+//  2. POST /students/{id}/status INACTIVE with the same reasonId + reason
+//     (Swagger: records the reason to the student's history) archives the
+//     account. A real DELETE /students/{id} is NOT used: it sets status
+//     DELETED and hides the student entirely, instead of moving them to the
+//     Archive page.
 export const useArchiveStudent = () => {
   const [fetchMemberships] = useLazyStudentGroupsQuery();
   const [updateStudentGroupStatus] = useUpdateStudentGroupStatusMutation();
-  const [deleteStudent] = useDeleteStudentMutation();
+  const [updateStudentStatus] = useUpdateStudentStatusMutation();
 
   const loadLive = async (studentId: string): Promise<StudentGroupRecord[]> => {
     const lists = await Promise.all(
@@ -59,7 +60,7 @@ export const useArchiveStudent = () => {
       }
     }
 
-    await deleteStudent(studentId).unwrap();
+    await updateStudentStatus({ id: studentId, status: "INACTIVE", reasonId: reasonId || undefined, reason: note }).unwrap();
   };
 
   return { archiveStudent };

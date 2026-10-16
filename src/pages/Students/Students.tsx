@@ -937,9 +937,9 @@ export const Students = () => {
     setArchiveComment("");
   };
 
-  // Deletes a student through the shared flow (see useArchiveStudent): ends
-  // every live group membership with the picked reason/comment, then
-  // DELETE /students/{id}.
+  // Archives a student through the shared flow (see useArchiveStudent): ends
+  // every live group membership, then POST /students/{id}/status INACTIVE
+  // with the picked reasonId/comment.
   const archiveStudent = async (studentId: string, reasonId?: string, comment?: string) => {
     await archiveStudentFlow({ studentId, reasonId, comment });
   };

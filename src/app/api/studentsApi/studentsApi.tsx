@@ -484,7 +484,7 @@ export const studentsApi = baseApi.injectEndpoints({
             query: ({ id, newBranchId, reason, paymentEndDate }) => ({
                 url: `${PATHS.STUDENTS}/${id}/transfer-branch`,
                 method: "POST",
-                body: { newBranchId, ...(reason ? { reason } : {}), paymentEndDate },
+                body: { newBranchId, ...(reason ? { reason } : {}), ...(paymentEndDate ? { paymentEndDate } : {}) },
             }),
             // A failed transfer is always logged with the HTTP status and the
             // backend's body, so "branch transfer doesn't work" can be answered

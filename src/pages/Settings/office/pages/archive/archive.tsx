@@ -26,7 +26,6 @@ import { useReasonsSelectQuery } from "../../../../../app/api/reasonsApi";
 import {
   useLazyStudentGroupsQuery,
   useUpdateStudentGroupMutation,
-  useUpdateStudentGroupStatusMutation,
 } from "../../../../../app/api/groupsApi/groupsApi";
 import { useToggleStudentStatusMutation, useDeleteStudentMutation } from "../../../../../app/api/studentsApi";
 import { useToggleTeacherStatusMutation, useDeleteTeacherMutation } from "../../../../../app/api/teachersApi";
@@ -161,7 +160,6 @@ export const Archive = () => {
   const [deleteStaffUser, { isLoading: isDeletingStaffUser }] = useDeleteStaffUserMutation();
 
   const [fetchMemberships] = useLazyStudentGroupsQuery();
-  const [updateStudentGroupStatus] = useUpdateStudentGroupStatusMutation();
   const [updateStudentGroup] = useUpdateStudentGroupMutation();
 
   const isRestoring = isRestoringStudent || isRestoringTeacher || isRestoringStaff || isBulkProcessing;
@@ -198,9 +196,10 @@ export const Archive = () => {
       const exited = dayNumber(m.exitedAt ?? m.updatedAt);
       return exited !== null && Math.abs(exited - archivedDay) <= 1 && (!m.studentId || m.studentId === r.id);
     });
+    // One PATCH /student-groups/{id} sets status and paymentStartDate
+    // together, so payment accounting never starts from "now" first.
     for (const m of ended) {
-      await updateStudentGroupStatus({ id: m.id, status: "ACTIVE" }).unwrap();
-      await updateStudentGroup({ id: m.id, paymentStartDate: since }).unwrap();
+      await updateStudentGroup({ id: m.id, status: "ACTIVE", paymentStartDate: since }).unwrap();
     }
   };
 

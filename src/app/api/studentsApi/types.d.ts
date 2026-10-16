@@ -184,7 +184,8 @@ export interface TransferStudentBranchRequest {
   id: string;
   newBranchId: string;
   reason?: string;
-  paymentEndDate: string;
+  // Optional — the backend defaults to today when omitted.
+  paymentEndDate?: string;
 }
 
 export interface TransferStudentBranchResponse {

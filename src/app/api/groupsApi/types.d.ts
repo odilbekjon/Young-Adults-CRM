@@ -380,6 +380,9 @@ export interface StudentGroupActionResponse {
 // custom price), distinct from PATCH /student-groups/{id}/status below.
 export interface UpdateStudentGroupRequest {
   id: string;
+  // Swagger body also takes `status` (PROBATION/ACTIVE/FROZEN/INACTIVE/
+  // DELETED), so status and dates can be changed in one call.
+  status?: StudentGroupStatus;
   joinedAt?: string;
   paymentStartDate?: string;
   exitedAt?: string;

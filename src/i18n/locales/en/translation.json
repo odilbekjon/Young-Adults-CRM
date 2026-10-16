@@ -1741,7 +1741,8 @@
       "cancel": "Cancel",
       "toast": {
         "success": "Student moved to the new group",
-        "error": "Failed to move student. Please try again."
+        "error": "Failed to move student. Please try again.",
+        "freezeError": "Student moved, but couldn't be frozen in the new group — freeze them manually"
       }
     },
     "reminderDrawer": {
@@ -1786,6 +1787,7 @@
     "studentActionsMenu": {
       "moveToBranchModal": {
         "title": "Move student to branch",
+        "paymentEndDate": "Payment end date in the old branch",
         "selectBranch": "Select branch",
         "submit": "Move to branch",
         "moving": "Moving...",
@@ -2462,6 +2464,8 @@
           }
         },
         "restoreConfirm": {
+          "sinceLabel": "Active from (payment is calculated from this date)",
+          "groupsError": "Restored, but their groups couldn't be reactivated",
           "title": "Restore from archive",
           "message": "Restore \"{{name}}\" and move them back to the active list?",
           "error": "Failed to restore. Please try again.",

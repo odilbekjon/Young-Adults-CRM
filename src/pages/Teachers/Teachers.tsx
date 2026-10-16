@@ -52,6 +52,7 @@ import {
   useUpdateTeacherMutation,
   useToggleTeacherStatusMutation,
   useLazyTeachersExcelQuery,
+  useLazyTeacherForEditQuery,
 } from "../../app/api/teachersApi";
 import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
 import { useAllGroupsQuery } from "../../app/api/groupsApi";
@@ -88,6 +89,7 @@ export const Teachers = () => {
   const { data: allGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
   const [createTeacher, { isLoading: isCreating }] = useCreateTeacherMutation();
   const [updateTeacher, { isLoading: isUpdating }] = useUpdateTeacherMutation();
+  const [fetchTeacherForEdit] = useLazyTeacherForEditQuery();
   const [toggleTeacherStatus] = useToggleTeacherStatusMutation();
   const [fetchTeachersExcel, { isFetching: isExportingExcel }] = useLazyTeachersExcelQuery();
 
@@ -110,6 +112,9 @@ export const Teachers = () => {
   const [anchorEl, setAnchorEl]                   = useState<null | HTMLElement>(null);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const [form, setForm]                           = useState(EMPTY_FORM);
+  // Branches the teacher belongs to, from GET /teachers/{id}/for-edit —
+  // sent back unchanged on PATCH (TeacherProfile's working edit does the same).
+  const [editBranchIds, setEditBranchIds]         = useState<string[]>([]);
   const [smsOpen, setSmsOpen]                     = useState(false);
   const [showPassword, setShowPassword]           = useState(false);
   const [photoPreview, setPhotoPreview]           = useState<string | null>(null);
@@ -138,24 +143,35 @@ export const Teachers = () => {
     setOpen(true);
   };
 
-  const openEditDrawer = () => {
-    const teacher = teachers.find((tch) => tch.id === selectedTeacherId);
-    if (teacher) {
-      setIsEdit(true);
-      setForm({
-        name: teacher.name,
-        phone: teacher.phone ?? "",
-        password: "",
-        dob: teacher.birthdate ?? "",
-        gender: teacher.gender ?? "",
-        photo: null,
-      });
-      setPhotoPreview(null);
-      setShowPassword(false);
-      setOpen(true);
-      setErrors({});
-    }
+  // The list row (GET /teachers) doesn't reliably carry gender/birthdate/
+  // branch ids (same as the staff list), so the form is prefilled from
+  // GET /teachers/{id}/for-edit, falling back to the list row if that fails.
+  const openEditDrawer = async () => {
+    const id = selectedTeacherId;
     handleCloseMenu();
+    const listRow = teachers.find((tch) => tch.id === id);
+    if (!id || !listRow) return;
+    let teacher: Teacher = listRow;
+    try {
+      teacher = (await fetchTeacherForEdit(id).unwrap()).data ?? listRow;
+    } catch {
+      /* use the list row */
+    }
+    const rawBranchIds = (teacher as Teacher & { branchIds?: string[] }).branchIds;
+    setIsEdit(true);
+    setEditBranchIds(rawBranchIds ?? teacher.branches?.map((b) => b.id) ?? listRow.branches?.map((b) => b.id) ?? []);
+    setForm({
+      name: teacher.name,
+      phone: teacher.phone ?? "",
+      password: "",
+      dob: teacher.birthdate?.slice(0, 10) ?? "",
+      gender: teacher.gender ?? "",
+      photo: null,
+    });
+    setPhotoPreview(null);
+    setShowPassword(false);
+    setErrors({});
+    setOpen(true);
   };
 
   /* ── form ── */
@@ -198,7 +214,7 @@ export const Teachers = () => {
     };
     try {
       if (isEdit && selectedTeacherId) {
-        await updateTeacher({ id: selectedTeacherId, ...payload }).unwrap();
+        await updateTeacher({ id: selectedTeacherId, ...payload, branchIds: editBranchIds.length ? editBranchIds : undefined }).unwrap();
         toast.success(t("teachers.toast.updated"));
       } else {
         // Without branchIds, the backend enrolled the new teacher in every

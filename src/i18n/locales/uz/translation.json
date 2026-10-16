@@ -1741,7 +1741,8 @@
       "cancel": "Bekor qilish",
       "toast": {
         "success": "O'quvchi yangi guruhga ko'chirildi",
-        "error": "O'quvchini ko'chirib bo'lmadi. Qaytadan urinib ko'ring."
+        "error": "O'quvchini ko'chirib bo'lmadi. Qaytadan urinib ko'ring.",
+        "freezeError": "O'quvchi ko'chirildi, lekin yangi guruhda muzlatib bo'lmadi — qo'lda muzlating"
       }
     },
     "reminderDrawer": {
@@ -1786,6 +1787,7 @@
     "studentActionsMenu": {
       "moveToBranchModal": {
         "title": "O'quvchini filialga ko'chirish",
+        "paymentEndDate": "Eski filialdagi to'lov tugash sanasi",
         "selectBranch": "Filialni tanlang",
         "submit": "Filialga ko'chirish",
         "moving": "Ko'chirilmoqda...",
@@ -2462,6 +2464,8 @@
           }
         },
         "restoreConfirm": {
+          "sinceLabel": "Faol bo'lish sanasi (to'lov shu sanadan hisoblanadi)",
+          "groupsError": "Tiklandi, lekin guruhlarini qayta faollashtirib bo'lmadi",
           "title": "Arxivdan tiklash",
           "message": "\"{{name}}\"ni tiklab, faol ro'yxatga qaytarishni xohlaysizmi?",
           "error": "Tiklab bo'lmadi. Qaytadan urinib ko'ring.",

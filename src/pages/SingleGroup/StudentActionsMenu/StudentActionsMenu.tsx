@@ -16,6 +16,14 @@ import { HiBuildingLibrary } from "react-icons/hi2";
 import { FiX } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../hooks/useAuth";
+import { DatePickerField } from "../DatePickerField";
+
+// Local calendar date (toISOString() is UTC, still "yesterday" just after
+// midnight in UTC+5).
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 export interface BranchOption {
   id: string;
@@ -40,7 +48,7 @@ interface StudentActionsMenuProps {
   onReminders: () => void;
   branches: BranchOption[];
   isMovingBranch?: boolean;
-  onMoveToBranch: (branchId: string, reason?: string) => Promise<boolean> | boolean;
+  onMoveToBranch: (branchId: string, reason: string | undefined, paymentEndDate: string) => Promise<boolean> | boolean;
 }
 
 const itemSx = {
@@ -68,27 +76,30 @@ const MoveToBranchModal = ({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (branchId: string, reason?: string) => Promise<boolean> | boolean;
+  onSubmit: (branchId: string, reason: string | undefined, paymentEndDate: string) => Promise<boolean> | boolean;
   branches: BranchOption[];
   isSubmitting?: boolean;
 }) => {
   const { t } = useTranslation();
   const [branch, setBranch] = useState("");
   const [reason, setReason] = useState("");
+  const [paymentEndDate, setPaymentEndDate] = useState(todayISO());
 
   const handleClose = () => {
     if (isSubmitting) return;
     setBranch("");
     setReason("");
+    setPaymentEndDate(todayISO());
     onClose();
   };
 
   const handleSubmit = async () => {
-    if (!branch || isSubmitting) return;
-    const success = await onSubmit(branch, reason.trim() || undefined);
+    if (!branch || !paymentEndDate || isSubmitting) return;
+    const success = await onSubmit(branch, reason.trim() || undefined, paymentEndDate);
     if (success) {
       setBranch("");
       setReason("");
+      setPaymentEndDate(todayISO());
       onClose();
     }
   };
@@ -145,13 +156,22 @@ const MoveToBranchModal = ({
             padding: "0 12px",
             color: "var(--color-text-primary)",
             fontSize: 14,
-            marginBottom: 18,
+            marginBottom: 12,
           }}
         />
+        {/* paymentEndDate (Swagger body field): last day of payment accounting
+            in the old branch — the backend closes the old groups and settles
+            the balance up to it. */}
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 6 }}>
+          {t("singleGroup.studentActionsMenu.moveToBranchModal.paymentEndDate")}
+        </div>
+        <div style={{ marginBottom: 18 }}>
+          <DatePickerField value={paymentEndDate} onChange={setPaymentEndDate} disabled={isSubmitting} />
+        </div>
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={!branch || isSubmitting}
+          disabled={!branch || !paymentEndDate || isSubmitting}
           sx={{
             textTransform: "none",
             borderRadius: 999,

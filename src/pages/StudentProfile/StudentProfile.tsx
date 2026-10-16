@@ -18,11 +18,11 @@ import { useTranslation } from "react-i18next";
 import { FlatStudent, mapApiStudentToFlat, formatDate, formatLongDate } from "../../constants/FlatStudents";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { useArchiveStudent } from "../../hooks/useArchiveStudent";
 import {
   useStudentByIdQuery,
   useStudentGroupMembershipsQuery,
   useUpdateStudentMutation,
-  useUpdateStudentStatusMutation,
   useTransferStudentBranchMutation,
   useStudentCommentsQuery,
   useStudentHistoryQuery,
@@ -656,16 +656,17 @@ const MoveToBranchModal = ({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (branchId: string, reason?: string) => Promise<boolean>;
+  onSubmit: (branchId: string, reason: string | undefined, paymentEndDate: string) => Promise<boolean>;
   branches: { id: string; name: string }[];
   currentBranchIds: string[];
   isSubmitting?: boolean;
 }) => {
   const [branch, setBranch] = useState("");
   const [reason, setReason] = useState("");
+  const [paymentEndDate, setPaymentEndDate] = useState(todayLocalISO());
 
   useEffect(() => {
-    if (!open) { setBranch(""); setReason(""); }
+    if (!open) { setBranch(""); setReason(""); setPaymentEndDate(todayLocalISO()); }
   }, [open]);
 
   const handleClose = () => {
@@ -674,9 +675,9 @@ const MoveToBranchModal = ({
   };
 
   const handleSubmit = async () => {
-    if (!branch || isSubmitting) return;
-    const success = await onSubmit(branch, reason.trim() || undefined);
-    if (success) { setBranch(""); setReason(""); }
+    if (!branch || !paymentEndDate || isSubmitting) return;
+    const success = await onSubmit(branch, reason.trim() || undefined, paymentEndDate);
+    if (success) { setBranch(""); setReason(""); setPaymentEndDate(todayLocalISO()); }
   };
 
   return (
@@ -724,12 +725,20 @@ const MoveToBranchModal = ({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           disabled={isSubmitting}
-          sx={{ mb: 2.25, "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 } }}
+          sx={{ mb: 1.5, "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14 } }}
         />
+        {/* paymentEndDate (Swagger body field): last day of payment accounting
+            in the old branch. */}
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 6 }}>
+          Payment end date in the old branch
+        </div>
+        <div style={{ marginBottom: 18 }}>
+          <DatePickerField value={paymentEndDate} onChange={setPaymentEndDate} disabled={isSubmitting} />
+        </div>
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={!branch || isSubmitting}
+          disabled={!branch || !paymentEndDate || isSubmitting}
           sx={{
             textTransform: "none",
             borderRadius: 999,
@@ -1307,7 +1316,8 @@ export const StudentProfile = () => {
   }, [studentGroupRecords]);
 
   const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
-  const [updateStudentStatus, { isLoading: isArchivingStudent }] = useUpdateStudentStatusMutation();
+  const { archiveStudent: archiveStudentFlow } = useArchiveStudent();
+  const [isArchivingStudent, setIsArchivingStudent] = useState(false);
   const { data: archiveReasonOptions } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 });
   const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
@@ -1442,16 +1452,13 @@ export const StudentProfile = () => {
     }
   };
 
-  // Archives the student (POST /students/{id}/status -> INACTIVE, with the
-  // picked reason recorded — same call Students.tsx/SingleGroup.tsx's own
-  // archive dialogs use, so the reason/comment show up on the Archive page).
-  // A real DELETE /students/{id} isn't exposed here — permanent delete is
-  // only reachable from the Archive page itself.
+  // Deletes the student through the shared flow (see useArchiveStudent):
+  // ends every live group membership with the picked reason/comment, then
+  // DELETE /students/{id}.
   const handleArchive = async () => {
-    const reasonName = archiveReasonOptions?.find((r) => r.id === archiveReasonId)?.name;
-    const combinedReason = [reasonName, archiveComment.trim()].filter(Boolean).join(" — ") || undefined;
+    setIsArchivingStudent(true);
     try {
-      await updateStudentStatus({ id: student.uid, status: "INACTIVE", reason: combinedReason }).unwrap();
+      await archiveStudentFlow({ studentId: student.uid, reasonId: archiveReasonId || undefined, comment: archiveComment });
       toast.success("Student moved to archive");
       setArchiveOpen(false);
       setArchiveReasonId("");
@@ -1461,6 +1468,8 @@ export const StudentProfile = () => {
       const detail = extractApiError(err);
       const message = detail ? `Failed to archive the student: ${detail}` : "Failed to archive the student";
       toast.error(message);
+    } finally {
+      setIsArchivingStudent(false);
     }
   };
 
@@ -1480,9 +1489,9 @@ export const StudentProfile = () => {
     }
   };
 
-  const handleMoveToBranch = async (branchId: string, reason?: string): Promise<boolean> => {
+  const handleMoveToBranch = async (branchId: string, reason: string | undefined, paymentEndDate: string): Promise<boolean> => {
     try {
-      await transferStudentBranch({ id: student.uid, newBranchId: branchId, reason }).unwrap();
+      await transferStudentBranch({ id: student.uid, newBranchId: branchId, reason, paymentEndDate }).unwrap();
       toast.success("Student moved to the new branch");
       return true;
     } catch (err) {
@@ -1753,8 +1762,8 @@ export const StudentProfile = () => {
       <MoveToBranchModal
         open={moveBranchOpen}
         onClose={() => setMoveBranchOpen(false)}
-        onSubmit={async (branchId, reason) => {
-          const ok = await handleMoveToBranch(branchId, reason);
+        onSubmit={async (branchId, reason, paymentEndDate) => {
+          const ok = await handleMoveToBranch(branchId, reason, paymentEndDate);
           if (ok) setMoveBranchOpen(false);
           return ok;
         }}

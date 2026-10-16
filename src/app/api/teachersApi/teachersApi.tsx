@@ -63,7 +63,12 @@ const appendTeacherFormData = (formData: FormData, data: Partial<CreateTeacherRe
     const { branchIds, photo, ...rest } = data;
     (Object.keys(rest) as (keyof typeof rest)[]).forEach((key) => {
         const value = rest[key];
-        if (value !== undefined && value !== null) formData.append(key, String(value));
+        if (value === undefined || value === null || value === "") return;
+        // GET returns birthdate as a full ISO datetime ("2000-05-17T00:00:00
+        // .000Z") and the date picker only re-emits it when changed, so an
+        // untouched value used to be echoed back in that shape on edit —
+        // the backend expects plain YYYY-MM-DD.
+        formData.append(key, key === "birthdate" ? String(value).slice(0, 10) : String(value));
     });
     if (photo) formData.append("photo", photo);
     branchIds?.forEach((id) => formData.append("branchIds", id));
@@ -166,6 +171,22 @@ export const teachersApi = baseApi.injectEndpoints({
                     body: formData,
                 };
             },
+            // A failed edit is always logged with the HTTP status and the
+            // backend's body (no token), so the real validation message is
+            // visible in the console, not just the generic toast.
+            onQueryStarted: async ({ id, photo, ...fields }, { queryFulfilled }) => {
+                try {
+                    await queryFulfilled;
+                } catch (e) {
+                    const rejection = e as { error?: { status?: unknown; data?: unknown } };
+                    console.error("[updateTeacher] FAILED", {
+                        url: `${PATHS.TEACHERS}/${id}`,
+                        fields: { ...fields, password: fields.password ? "***" : undefined, photo: photo ? photo.name : undefined },
+                        status: rejection.error?.status,
+                        response: rejection.error?.data ?? rejection.error,
+                    });
+                }
+            },
             invalidatesTags: ["teacher"],
         }),
         toggleTeacherStatus: builder.mutation<ToggleTeacherStatusResponse, string>({
@@ -194,6 +215,7 @@ export const {
     useTeachersSelectQuery,
     useTeacherByIdQuery,
     useTeacherForEditQuery,
+    useLazyTeacherForEditQuery,
     useLazyTeachersExcelQuery,
     useTeacherHistoryQuery,
     useCreateTeacherMutation,

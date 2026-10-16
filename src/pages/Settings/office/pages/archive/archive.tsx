@@ -23,6 +23,11 @@ import { useAllArchivesQuery } from "../../../../../app/api/archivesApi/archives
 import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
 import type { ArchiveRecord, ArchiveRole } from "../../../../../app/api/archivesApi/types";
 import { useReasonsSelectQuery } from "../../../../../app/api/reasonsApi";
+import {
+  useLazyStudentGroupsQuery,
+  useUpdateStudentGroupMutation,
+  useUpdateStudentGroupStatusMutation,
+} from "../../../../../app/api/groupsApi/groupsApi";
 import { useToggleStudentStatusMutation, useDeleteStudentMutation } from "../../../../../app/api/studentsApi";
 import { useToggleTeacherStatusMutation, useDeleteTeacherMutation } from "../../../../../app/api/teachersApi";
 import { useToggleStaffUserStatusMutation, useDeleteStaffUserMutation } from "../../../../../app/api/usersApi";
@@ -57,6 +62,19 @@ const ROLE_LABEL_KEY: Record<string, string> = {
   SUPERADMIN: "settings.office.archive.filters.superadmin",
 };
 
+// Local calendar date — toISOString() is UTC, still "yesterday" just after
+// midnight in UTC+5.
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const dayNumber = (iso?: string | null): number | null => {
+  const m = iso ? /^(\d{4})-(\d{2})-(\d{2})/.exec(iso) : null;
+  return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) / DAY_MS : null;
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const Archive = () => {
   const { t } = useTranslation();
@@ -86,6 +104,10 @@ export const Archive = () => {
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [bulkRestoreConfirmOpen, setBulkRestoreConfirmOpen] = useState(false);
   const [bulkPermDeleteConfirmOpen, setBulkPermDeleteConfirmOpen] = useState(false);
+  // "Active from" date asked when restoring students: payment accounting for
+  // their reactivated group memberships starts on it (the backend derives the
+  // balance/debt from each membership's paymentStartDate).
+  const [restoreSince, setRestoreSince] = useState(todayISO());
 
   // ── Server-side query ───────────────────────────────────────────────────────
   // Debounced the same way as Header's student search bar (350ms) so we don't
@@ -138,6 +160,10 @@ export const Archive = () => {
   const [toggleStaffUserStatus, { isLoading: isRestoringStaff }] = useToggleStaffUserStatusMutation();
   const [deleteStaffUser, { isLoading: isDeletingStaffUser }] = useDeleteStaffUserMutation();
 
+  const [fetchMemberships] = useLazyStudentGroupsQuery();
+  const [updateStudentGroupStatus] = useUpdateStudentGroupStatusMutation();
+  const [updateStudentGroup] = useUpdateStudentGroupMutation();
+
   const isRestoring = isRestoringStudent || isRestoringTeacher || isRestoringStaff || isBulkProcessing;
   const isPermDeleting = isDeletingStudent || isDeletingTeacher || isDeletingStaffUser || isBulkProcessing;
 
@@ -155,6 +181,44 @@ export const Archive = () => {
     }
   };
 
+  const isStudentRecord = (r?: ArchiveRecord | null) => (r?.role ?? "").toUpperCase() === "STUDENT";
+
+  // Restoring a student: (1) flip the account back to ACTIVE, then (2) bring
+  // back the group memberships that the archive ended (INACTIVE rows whose
+  // exit date is the archive day, +-1 day for timezone slack — older INACTIVE
+  // rows are unrelated history and stay as they are), each one set ACTIVE with
+  // paymentStartDate = the chosen date so the system recalculates the balance
+  // and payments from then. Step 2 failing must not read as "restore failed"
+  // since the student IS restored — it's reported separately.
+  const reactivateMemberships = async (r: ArchiveRecord, since: string) => {
+    const archivedDay = dayNumber(r.archivedAt);
+    if (archivedDay === null) return;
+    const { rows } = await fetchMemberships({ studentId: r.id, status: "INACTIVE", limit: 200 }).unwrap();
+    const ended = rows.filter((m) => {
+      const exited = dayNumber(m.exitedAt ?? m.updatedAt);
+      return exited !== null && Math.abs(exited - archivedDay) <= 1 && (!m.studentId || m.studentId === r.id);
+    });
+    for (const m of ended) {
+      await updateStudentGroupStatus({ id: m.id, status: "ACTIVE" }).unwrap();
+      await updateStudentGroup({ id: m.id, paymentStartDate: since }).unwrap();
+    }
+  };
+
+  const restoreRecord = async (r: ArchiveRecord, since: string) => {
+    const actions = roleActionsFor(r.role);
+    if (!actions) return;
+    await actions.restore(r.id).unwrap();
+    if (isStudentRecord(r)) {
+      try {
+        await reactivateMemberships(r, since);
+      } catch (err) {
+        const detail = extractApiError(err);
+        const generic = t("settings.office.archive.restoreConfirm.groupsError");
+        toast.error(detail ? `${generic}: ${detail}` : generic);
+      }
+    }
+  };
+
   const handleRestore = async () => {
     if (!restoreTarget) return;
     const actions = roleActionsFor(restoreTarget.role);
@@ -164,7 +228,7 @@ export const Archive = () => {
     }
     setRestoreError(null);
     try {
-      await actions.restore(restoreTarget.id).unwrap();
+      await restoreRecord(restoreTarget, restoreSince);
       toast.success(t("settings.office.archive.toast.restored"));
       setRestoreTarget(null);
     } catch (err) {
@@ -204,12 +268,7 @@ export const Archive = () => {
     setIsBulkProcessing(true);
     try {
       const targets = pageData.filter((r) => selected.includes(r.id));
-      await Promise.all(
-        targets.map((r) => {
-          const actions = roleActionsFor(r.role);
-          return actions ? actions.restore(r.id).unwrap() : Promise.resolve();
-        })
-      );
+      await Promise.all(targets.map((r) => restoreRecord(r, restoreSince)));
       toast.success(t("settings.office.archive.toast.restored"));
       setSelected([]);
       setBulkRestoreConfirmOpen(false);
@@ -381,7 +440,7 @@ export const Archive = () => {
           </button>
           <button
             type="button"
-            onClick={() => { setBulkActionError(null); setBulkRestoreConfirmOpen(true); }}
+            onClick={() => { setBulkActionError(null); setRestoreSince(todayISO()); setBulkRestoreConfirmOpen(true); }}
             disabled={selected.length === 0 || isRestoring}
             className="flex items-center gap-1 text-green-600 hover:text-green-700 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -488,7 +547,7 @@ export const Archive = () => {
                     <IconButton
                       size="small"
                       sx={{ color: "#4ade80" }}
-                      onClick={() => { setRestoreError(null); setRestoreTarget(r); }}
+                      onClick={() => { setRestoreError(null); setRestoreSince(todayISO()); setRestoreTarget(r); }}
                       aria-label={t("settings.office.archive.actions.reestablish")}
                     >
                       <MdRefresh size={18} />
@@ -544,6 +603,14 @@ export const Archive = () => {
           <DialogContentText>
             {t("settings.office.archive.restoreConfirm.message", { name: restoreTarget?.name ?? "" })}
           </DialogContentText>
+          {isStudentRecord(restoreTarget) && (
+            <div className="mt-4">
+              <Typography sx={{ fontSize: "0.8125rem", mb: 0.75, color: "var(--color-text-secondary)" }}>
+                {t("settings.office.archive.restoreConfirm.sinceLabel")}
+              </Typography>
+              <DatePickerField value={restoreSince} onChange={setRestoreSince} disabled={isRestoring} />
+            </div>
+          )}
           {restoreError && (
             <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
               {restoreError}
@@ -563,7 +630,7 @@ export const Archive = () => {
             onClick={handleRestore}
             variant="contained"
             color="success"
-            disabled={isRestoring}
+            disabled={isRestoring || (isStudentRecord(restoreTarget) && !restoreSince)}
             startIcon={isRestoring ? <CircularProgress size={16} color="inherit" /> : undefined}
             sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
           >
@@ -626,6 +693,14 @@ export const Archive = () => {
           <DialogContentText>
             {t("settings.office.archive.bulkRestoreConfirm.message", { count: selected.length })}
           </DialogContentText>
+          {pageData.some((r) => selected.includes(r.id) && isStudentRecord(r)) && (
+            <div className="mt-4">
+              <Typography sx={{ fontSize: "0.8125rem", mb: 0.75, color: "var(--color-text-secondary)" }}>
+                {t("settings.office.archive.restoreConfirm.sinceLabel")}
+              </Typography>
+              <DatePickerField value={restoreSince} onChange={setRestoreSince} disabled={isRestoring} />
+            </div>
+          )}
           {bulkActionError && (
             <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
               {bulkActionError}

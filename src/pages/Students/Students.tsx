@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useAuth } from "../../hooks/useAuth";
+import { useArchiveStudent } from "../../hooks/useArchiveStudent";
 import {
   Avatar,
   Box,
@@ -53,7 +54,6 @@ import { AddPayment } from "../../components/AddPayment";
 import {
   useAllStudentsQuery,
   useUpdateStudentMutation,
-  useUpdateStudentStatusMutation,
   useLazyStudentsExcelQuery,
 } from "../../app/api/studentsApi";
 import {
@@ -62,7 +62,6 @@ import {
   useStudentGroupsQuery,
   useLazyStudentGroupsQuery,
   useFreezeStudentGroupMutation,
-  useUpdateStudentGroupStatusMutation,
 } from "../../app/api/groupsApi";
 import type { StudentGroupRecord } from "../../app/api/groupsApi/types";
 import { useCoursesSelectQuery } from "../../app/api/coursesApi";
@@ -553,8 +552,7 @@ export const Students = () => {
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { branchLabel } = useBranch();
   const [updateStudent,{ isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
-  const [updateStudentStatus] = useUpdateStudentStatusMutation();
-  const [updateStudentGroupStatus] = useUpdateStudentGroupStatusMutation();
+  const { archiveStudent: archiveStudentFlow } = useArchiveStudent();
   const [fetchMemberships] = useLazyStudentGroupsQuery();
   const [freezeStudentGroup] = useFreezeStudentGroupMutation();
   const [isArchiving, setIsArchiving] = useState(false);
@@ -939,44 +937,11 @@ export const Students = () => {
     setArchiveComment("");
   };
 
-  // Ends every LIVE (PROBATION / ACTIVE / FROZEN) group membership of a
-  // student. Archiving the account alone (POST /students/{id}/status) leaves
-  // the /student-groups rows alive, so the archived student kept showing up in
-  // their groups — same two-step order SingleGroup's "Delete student" toggle
-  // uses: (1) PATCH /student-groups/{membershipId}/status INACTIVE with
-  // isAllGroup=true (one call that ends every membership of the student;
-  // `isAllGroup` is only ever sent when true), then (2) the caller archives the
-  // account. Whatever the all-groups call did not cover is ended one by one.
-  const endLiveMemberships = async (studentId: string, reasonId?: string, reason?: string) => {
-    const loadLive = async (): Promise<StudentGroupRecord[]> => {
-      const lists = await Promise.all(
-        (["PROBATION", "ACTIVE", "FROZEN"] as const).map((status) =>
-          fetchMemberships({ studentId, status, limit: 200 }).unwrap(),
-        ),
-      );
-      return lists
-        .flatMap((r) => r.rows)
-        .filter((m) => m.status !== "INACTIVE" && m.status !== "DELETED" && (!m.studentId || m.studentId === studentId));
-    };
-    const first = (await loadLive())[0];
-    if (!first) return;
-    await updateStudentGroupStatus({ id: first.id, status: "INACTIVE", reasonId, reason, isAllGroup: true }).unwrap();
-    for (const m of await loadLive()) {
-      await updateStudentGroupStatus({ id: m.id, status: "INACTIVE", reasonId, reason }).unwrap();
-    }
-  };
-
-  // Archives a student: end all group memberships first, then POST
-  // /students/{id}/status -> INACTIVE (the reason is recorded to the student's
-  // history — the source of the Archive page's reason/comment columns; the
-  // reason's name and the comment are combined because that field is free
-  // text). A real permanent DELETE /students/{id} is only reachable from the
-  // Archive page and is never called from here.
+  // Deletes a student through the shared flow (see useArchiveStudent): ends
+  // every live group membership with the picked reason/comment, then
+  // DELETE /students/{id}.
   const archiveStudent = async (studentId: string, reasonId?: string, comment?: string) => {
-    const reasonName = reasonId ? reasonOptions?.find((r) => r.id === reasonId)?.name : undefined;
-    const combinedReason = [reasonName, comment?.trim()].filter(Boolean).join(" — ") || undefined;
-    await endLiveMemberships(studentId, reasonId || undefined, comment?.trim() || undefined);
-    await updateStudentStatus({ id: studentId, status: "INACTIVE", reason: combinedReason }).unwrap();
+    await archiveStudentFlow({ studentId, reasonId, comment });
   };
 
   const handleArchiveConfirm = async () => {

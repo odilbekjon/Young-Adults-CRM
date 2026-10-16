@@ -40,7 +40,7 @@ import {
   useAllStudentsQuery,
   useTransferStudentBranchMutation,
   useLazyStudentByIdQuery,
-  useUpdateStudentStatusMutation,
+  useDeleteStudentMutation,
 } from "../../app/api/studentsApi";
 import type { StudentDetail } from "../../app/api/studentsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
@@ -230,7 +230,7 @@ export const SingleGroup = () => {
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
   const [graduateTrialStudentGroup] = useGraduateTrialStudentGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
-  const [updateStudentStatus, { isLoading: isArchivingStudent }] = useUpdateStudentStatusMutation();
+  const [deleteStudent, { isLoading: isArchivingStudent }] = useDeleteStudentMutation();
   const [fetchStudentDetail] = useLazyStudentByIdQuery();
   const [fetchGroupExcel, { isFetching: isExportingExcel }] = useLazyGroupExcelQuery();
 
@@ -824,18 +824,9 @@ export const SingleGroup = () => {
       toast.error(t("singleGroup.removeStudentDialog.toast.error"));
       return;
     }
-    // reasonId (reasonsApi's real Reason selection) has no matching text
-    // field of its own on the account-level status endpoint below — its
-    // `reason` is a free-text string, so the selected reason's name is
-    // combined with the comment textarea into one string for it, while the
-    // student-group status call still gets reasonId/reason separately as
-    // documented.
-    const reasonName = reasonOptions?.find((r) => r.id === removeReasonId)?.name;
-    const combinedReason = [reasonName, removeComment.trim()].filter(Boolean).join(" — ") || undefined;
-    // "Delete student" = archive the whole account, i.e. the same outcome as
-    // removing from ALL groups (and never a permanent DELETE), so it takes
-    // the "all" path below regardless of what the scope radios (locked to
-    // "all" in this mode) last held.
+    // "Delete student" removes the student from EVERY group and then deletes
+    // the account, so it takes the "all" scope below regardless of what the
+    // scope radios (locked to "all" in this mode) last held.
     const effectiveScope = removeDeleteMode ? "all" : removeScope;
     try {
       // Step 1 — PATCH /student-groups/{id}/status: ends this membership (or,
@@ -854,18 +845,12 @@ export const SingleGroup = () => {
         isAllGroup: effectiveScope === "all" ? true : undefined,
       }).unwrap();
 
-      // Step 2 — only archive the student's whole account (POST
-      // /students/{id}/status, which also records the reason to their
-      // history — the source of the Archive page's reason/comment columns)
-      // when they were removed from EVERY group (removeScope === "all") —
-      // removing them from just the current group must leave their
-      // account-wide status, and their other group memberships, untouched.
-      // A permanent delete is only reachable from the Archive page itself.
-      // POST /students/{id}/status is used instead of the blind PATCH
-      // /students/{id}/toggle-status, which takes no body (so it can't carry
-      // the reason) and would flip an already-archived student back to ACTIVE.
-      if (effectiveScope === "all") {
-        await updateStudentStatus({ id: studentId, status: "INACTIVE", reason: combinedReason }).unwrap();
+      // Step 2 — "Delete student" only: DELETE /students/{id} (Swagger:
+      // rejected while any active group membership remains, which step 1 has
+      // just cleared). A plain remove-from-group (even from all groups)
+      // leaves the account itself untouched.
+      if (removeDeleteMode) {
+        await deleteStudent(studentId).unwrap();
       }
 
       toast.success(t(removeDeleteMode
@@ -950,6 +935,22 @@ export const SingleGroup = () => {
     try {
       await transferStudent({ id, studentId: selectedStudent.realId, newGroupId, reason }).unwrap();
       toast.success(t("singleGroup.moveStudentDialog.toast.success"));
+      // Business rule (same as a freshly added member): a transferred student
+      // must NOT land ACTIVE in the new group — the backend creates the new
+      // membership active, so it is frozen right away and staff activate it
+      // later ("Activate" asks since when, which is when billing starts).
+      // Best effort: the transfer itself already succeeded.
+      try {
+        const found = await fetchNewMembership({ groupId: newGroupId, studentId: selectedStudent.realId, limit: 20 }).unwrap();
+        const live = found.rows.find((m) => m.status !== "INACTIVE" && m.status !== "DELETED");
+        if (live && live.status !== "FROZEN") {
+          await freezeStudentGroup({ id: live.id, startDate: todayLocalISO(), reason }).unwrap();
+        }
+      } catch (err) {
+        const detail = describeApiError(err);
+        const generic = t("singleGroup.moveStudentDialog.toast.freezeError");
+        toast.error(detail ? `${generic}: ${detail}` : generic);
+      }
       // Drop them from this (source) group's roster right away instead of
       // waiting on the "group"/"studentGroup" tag refetch — transfer moves
       // them to a different group entirely, so there's nothing left here to
@@ -965,11 +966,11 @@ export const SingleGroup = () => {
     }
   };
 
-  const handleMoveToBranch = async (branchId: string, reason?: string): Promise<boolean> => {
+  const handleMoveToBranch = async (branchId: string, reason: string | undefined, paymentEndDate: string): Promise<boolean> => {
     if (!selectedStudent) return false;
     try {
       // POST /students/{id}/transfer-branch — Swagger body {newBranchId,
-      // reason}. Like the sibling group-transfer endpoint (which 400s
+      // reason, paymentEndDate}. Like the sibling group-transfer endpoint (which 400s
       // without one), `reason` is always sent: the typed one, or a
       // localized default when the field is left empty.
       const movedRealId = selectedStudent.realId;
@@ -977,6 +978,7 @@ export const SingleGroup = () => {
         id: movedRealId,
         newBranchId: branchId,
         reason: reason?.trim() || t("singleGroup.studentActionsMenu.moveToBranchModal.defaultReason"),
+        paymentEndDate,
       }).unwrap();
       toast.success(t("singleGroup.studentActionsMenu.moveToBranchModal.toast.success"));
       // The backend ends the student's memberships in the old branch (see

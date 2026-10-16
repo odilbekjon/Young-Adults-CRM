@@ -174,7 +174,9 @@ export interface ToggleStudentStatusResponse {
 }
 
 // POST /students/{id}/transfer-branch — Swagger: application/json body
-// {newBranchId, reason}. Unlike sending branchIds through updateStudent
+// {newBranchId, reason, paymentEndDate} (the request body is marked
+// required; paymentEndDate = the last day of the student's payment accounting
+// in the old branch, YYYY-MM-DD). Unlike sending branchIds through updateStudent
 // (which overwrites the branch list), this dedicated endpoint properly
 // transfers the student: it ends their group memberships in the old branch
 // and moves them to the new one while keeping their balance intact.
@@ -182,6 +184,7 @@ export interface TransferStudentBranchRequest {
   id: string;
   newBranchId: string;
   reason?: string;
+  paymentEndDate: string;
 }
 
 export interface TransferStudentBranchResponse {

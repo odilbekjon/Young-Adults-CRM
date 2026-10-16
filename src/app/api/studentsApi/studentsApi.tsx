@@ -465,9 +465,10 @@ export const studentsApi = baseApi.injectEndpoints({
                 url: `${PATHS.STUDENTS}/${id}`,
                 method: "DELETE",
             }),
-            // Also drops the student out of the Archive page (GET /archives)
-            // whenever a permanent delete is issued directly from there.
-            invalidatesTags: ["student", "archive"],
+            // Also refreshes the Archive page (GET /archives) and the group
+            // rosters — this is the call every "delete student" action ends
+            // with (see useArchiveStudent), not just the Archive page's own.
+            invalidatesTags: ["student", "archive", "studentGroup", "group"],
         }),
         toggleStudentStatus: builder.mutation<ToggleStudentStatusResponse, string>({
             query: (id) => ({
@@ -481,11 +482,27 @@ export const studentsApi = baseApi.injectEndpoints({
             invalidatesTags: ["student", "archive", "studentGroup", "group"],
         }),
         transferStudentBranch: builder.mutation<TransferStudentBranchResponse, TransferStudentBranchRequest>({
-            query: ({ id, newBranchId, reason }) => ({
+            query: ({ id, newBranchId, reason, paymentEndDate }) => ({
                 url: `${PATHS.STUDENTS}/${id}/transfer-branch`,
                 method: "POST",
-                body: reason ? { newBranchId, reason } : { newBranchId },
+                body: { newBranchId, ...(reason ? { reason } : {}), paymentEndDate },
             }),
+            // A failed transfer is always logged with the HTTP status and the
+            // backend's body, so "branch transfer doesn't work" can be answered
+            // from the console without guessing.
+            onQueryStarted: async ({ id, newBranchId, reason, paymentEndDate }, { queryFulfilled }) => {
+                try {
+                    await queryFulfilled;
+                } catch (e) {
+                    const rejection = e as { error?: { status?: unknown; data?: unknown } };
+                    console.error("[transferStudentBranch] FAILED", {
+                        url: `${PATHS.STUDENTS}/${id}/transfer-branch`,
+                        body: { newBranchId, reason, paymentEndDate },
+                        status: rejection.error?.status,
+                        response: rejection.error?.data ?? rejection.error,
+                    });
+                }
+            },
             // Per this endpoint's own doc comment above (TransferStudentBranchRequest
             // in types.d.ts), the backend ends the student's group memberships in
             // the old branch as part of this call — invalidating only "student"

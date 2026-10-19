@@ -140,6 +140,18 @@
     "issuedAt": "Berilgan sana"
   },
   "studentPayments": {
+    "actions": {
+      "returnMoney": "Pulni qaytarish",
+      "writeOff": "Hisobdan chiqarish",
+      "returnDone": "Pul qaytarildi",
+      "returnError": "Pulni qaytarib bo'lmadi",
+      "writeOffDone": "Summa hisobdan chiqarildi",
+      "writeOffError": "Summani hisobdan chiqarib bo'lmadi",
+      "group": "Guruh",
+      "allGroups": "Barcha guruhlar (umumiy balans)",
+      "returnHint": "O'quvchiga qaytarilgan naqd pul. Kassadan chiqim sifatida yoziladi.",
+      "writeOffHint": "O'quvchi qarzining bir qismini bekor qiladi. Pul harakati yo'q — balans shunchaki oshadi."
+    },
     "balanceTitle": "Balans",
     "outstanding": "Qarzdorlik",
     "credit": "Ortiqcha balans",

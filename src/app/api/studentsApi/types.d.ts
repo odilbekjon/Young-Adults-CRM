@@ -427,3 +427,24 @@ export interface StudentAttendanceReport {
   total: number;
   byGroup: StudentAttendanceReportGroup[];
 }
+
+// POST /students/{id}/write-off — PROPOSED contract, not yet confirmed
+// against the live backend (no student-level write-off route is documented
+// in Swagger; the backend developer needs to add it). "Write-off" cancels
+// part of the student's debt WITHOUT any cash movement: the balance goes up
+// by `amount`, `reason` is mandatory and is recorded in the audit log.
+// application/json body. `groupId` ties the write-off to one of the
+// student's groups (omitted = the student's overall balance).
+export interface WriteOffStudentRequest {
+  id: string;
+  amount: number;
+  reason: string;
+  groupId?: string;
+  date?: string;
+}
+
+export interface WriteOffStudentResponse {
+  success: boolean;
+  message?: string;
+  data?: unknown;
+}

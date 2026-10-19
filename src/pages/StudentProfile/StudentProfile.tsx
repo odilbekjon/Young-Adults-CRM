@@ -45,6 +45,8 @@ import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { RemoveStudentDialog } from "../SingleGroup/RemoveStudentDialog";
 import { extractApiError } from "../../utils/extractApiError";
 import { AddPayment } from "../../components/AddPayment";
+import { TbArrowBackUp, TbCalculator } from "react-icons/tb";
+import { StudentBalanceActionDrawer, type BalanceAction } from "./payments/StudentBalanceActionDrawer";
 import { StudentTagsSelect } from "../../components/StudentTagsSelect";
 import { StudentPaymentsSection } from "./payments/StudentPaymentsSection";
 import { FreezeModal } from "../SingleGroup/FreezeModal";
@@ -1291,6 +1293,7 @@ export const StudentProfile = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
+  const { t } = useTranslation();
 
   // ✅ uid (string) — real API id orqali topiladi, navigate('/students/:id') bilan mos
   const { data, isLoading } = useStudentByIdQuery(id ?? "", { skip: !id });
@@ -1373,6 +1376,7 @@ export const StudentProfile = () => {
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
   const [groupMenuAnchor, setGroupMenuAnchor] = useState<null | HTMLElement>(null);
   const [paymentMenuAnchor, setPaymentMenuAnchor] = useState<null | HTMLElement>(null);
+  const [balanceAction, setBalanceAction] = useState<BalanceAction | null>(null);
   const [freezeTarget, setFreezeTarget] = useState<StudentGroupMembership | null>(null);
   const [activateTarget, setActivateTarget] = useState<StudentGroupMembership | null>(null);
   const [archiveGroupTarget, setArchiveGroupTarget] = useState<StudentGroupMembership | null>(null);
@@ -1798,10 +1802,48 @@ export const StudentProfile = () => {
         anchorEl={paymentMenuAnchor}
         open={Boolean(paymentMenuAnchor)}
         onClose={() => setPaymentMenuAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{
+          paper: {
+            elevation: 0,
+            sx: {
+              mt: 1, minWidth: 220, borderRadius: "2px", py: 1,
+              bgcolor: "var(--color-surface)", border: "1px solid var(--color-border)",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+            },
+          },
+        }}
+        MenuListProps={{ disablePadding: true }}
       >
-        <MenuItem onClick={() => setPaymentMenuAnchor(null)}>Return money</MenuItem>
-        <MenuItem onClick={() => setPaymentMenuAnchor(null)}>Write off</MenuItem>
+        {([
+          { action: "return", icon: <TbArrowBackUp size={22} />, label: t("studentPayments.actions.returnMoney", "Return money") },
+          { action: "writeoff", icon: <TbCalculator size={22} />, label: t("studentPayments.actions.writeOff", "Write-off") },
+        ] as const).map((item) => (
+          <MenuItem
+            key={item.action}
+            onClick={() => {
+              setPaymentMenuAnchor(null);
+              setBalanceAction(item.action);
+            }}
+            sx={{
+              gap: 2, px: 3, py: 1.75, fontSize: 16, color: "#e5484d",
+              "&:hover": { bgcolor: "rgba(229,72,77,0.08)" },
+            }}
+          >
+            {item.icon}
+            {item.label}
+          </MenuItem>
+        ))}
       </Menu>
+
+      <StudentBalanceActionDrawer
+        action={balanceAction}
+        onClose={() => setBalanceAction(null)}
+        studentId={student.uid}
+        studentName={student.name}
+        memberships={groupMemberships ?? []}
+      />
 
       <FreezeModal
         open={Boolean(freezeTarget)}

@@ -11,7 +11,8 @@ import { sectionTitleStyle } from "./styles";
 // badge shows) — the single source of truth for whether the student owes
 // money. `summary` (GET /students/{id}/payments' totals) is only shown as a
 // breakdown next to it, never used to re-derive a second, possibly
-// conflicting balance.
+// conflicting balance — "Total due" is therefore paid − balance (so
+// due − paid always equals the balance shown), not summary.totalCharged.
 export const OutstandingBalanceCard = ({
   balance, summary, isLoading, onPrintNotice,
 }: {
@@ -58,7 +59,7 @@ export const OutstandingBalanceCard = ({
           {hasBreakdown && (
             <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 6 }}>
               {t("studentPayments.totalDue", "Total due")}:{" "}
-              <strong style={{ color: "var(--color-text-primary)" }}>{formatUzs(summary!.totalCharged)}</strong>
+              <strong style={{ color: "var(--color-text-primary)" }}>{formatUzs(summary!.totalPaid - balance)}</strong>
               {"   ·   "}{t("studentPayments.alreadyPaid", "Already paid")}:{" "}
               <strong style={{ color: "var(--color-text-primary)" }}>{formatUzs(summary!.totalPaid)}</strong>
             </div>

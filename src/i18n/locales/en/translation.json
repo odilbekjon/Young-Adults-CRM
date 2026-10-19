@@ -140,6 +140,18 @@
     "issuedAt": "Issued at"
   },
   "studentPayments": {
+    "actions": {
+      "returnMoney": "Return money",
+      "writeOff": "Write-off",
+      "returnDone": "Money returned",
+      "returnError": "Failed to return the money",
+      "writeOffDone": "Amount written off",
+      "writeOffError": "Failed to write off the amount",
+      "group": "Group",
+      "allGroups": "All groups (overall balance)",
+      "returnHint": "Cash given back to the student. It is recorded as a cashbox withdrawal.",
+      "writeOffHint": "Cancels part of the student's debt. No cash moves — the balance simply increases."
+    },
     "balanceTitle": "Balance",
     "outstanding": "Outstanding balance",
     "credit": "Credit balance",

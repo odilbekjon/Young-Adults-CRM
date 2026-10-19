@@ -1,5 +1,6 @@
 import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
+import { decimalToNumber } from "../../../utils/decimal";
 import {
     studentByIdResponse,
     studentsRequest,
@@ -15,6 +16,8 @@ import {
     StudentGroupMembership,
     StudentGroupMembershipsResponse,
     UpdateStudentStatusRequest,
+    WriteOffStudentRequest,
+    WriteOffStudentResponse,
     UpdateStudentStatusResponse,
     StudentComment,
     CreateStudentCommentRequest,
@@ -47,12 +50,10 @@ const asString = (raw: unknown): string | null => {
 // /students/{id}/payments returns amount this way, same as GET
 // /finance/payments — this module didn't have the fix, so every payment
 // amount and monthly charge/paid figure on StudentProfile showed 0 UZS).
-const asMoney = (raw: unknown): number => {
-    if (raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).d)) {
-        return Number((raw as { d: unknown[] }).d[0]) || 0;
-    }
-    return Number(raw) || 0;
-};
+// Goes through decimalToNumber so the sign (`s`) and multi-word digit arrays
+// (amounts >= 10 000 000, fractions) are honored — reading only `d[0]` turned
+// a -300 000 balance into +300 000 and 12 000 000 into 1.
+const asMoney = (raw: unknown): number => decimalToNumber(raw) ?? 0;
 
 // Backend's exact envelope for GET /students/{id}/comments isn't documented
 // beyond a 200 status — normalized the same defensive way as groupsApi's
@@ -526,6 +527,18 @@ export const studentsApi = baseApi.injectEndpoints({
             // student out of every group roster (SingleGroup, Groups list).
             invalidatesTags: ["student", "archive", "studentGroup", "group"],
         }),
+        // POST /students/{id}/write-off — PROPOSED endpoint (see
+        // WriteOffStudentRequest in types.d.ts): cancels part of the student's
+        // debt with a mandatory reason, no cash movement. Until the backend
+        // ships it this surfaces the server's error to the caller.
+        writeOffStudent: builder.mutation<WriteOffStudentResponse, WriteOffStudentRequest>({
+            query: ({ id, ...data }) => ({
+                url: `${PATHS.STUDENTS}/${id}/write-off`,
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["student", "payment", "group", "studentGroup"],
+        }),
         studentComments: builder.query<StudentComment[], string>({
             query: (id) => ({
                 url: `${PATHS.STUDENTS}/${id}/comments`,
@@ -623,6 +636,7 @@ export const {
     useToggleStudentStatusMutation,
     useTransferStudentBranchMutation,
     useUpdateStudentStatusMutation,
+    useWriteOffStudentMutation,
     useStudentCommentsQuery,
     useCreateStudentCommentMutation,
     useStudentHistoryQuery,

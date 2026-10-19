@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Box } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useDebtorReceiptQuery } from "../../app/api/financeApi";
+import { useStudentByIdQuery } from "../../app/api/studentsApi";
 import { ReceiptModal, type ReceiptLine } from "../PaymentReceiptModal/ReceiptSheet";
 import { formatDateTime, formatUzs } from "../PaymentReceiptModal/format";
 
@@ -16,8 +17,15 @@ import { formatDateTime, formatUzs } from "../PaymentReceiptModal/format";
 //    Teacher, Payment amount, Time — with the totals appended.
 // This endpoint returns no check number / teacher / creator, so those lines
 // are simply left out (teacher can be supplied by the caller).
+//
+// The outstanding amount printed here is the student's own balance
+// (GET /students/{id}.balance — the figure the profile shows), not the
+// endpoint's separately computed debtAmount, so a notice can never disagree
+// with the profile or the Debtors list; "Total charged" is derived from it
+// (paid + outstanding). For a "system" check the charge's own amount/date
+// (chargeAmount/chargeDate) are printed instead of the lifetime totals.
 export const DebtorReceiptModal = ({
-  open, onClose, studentId, variant = "statement", groupName, teacherName,
+  open, onClose, studentId, variant = "statement", groupName, teacherName, chargeAmount, chargeDate,
 }: {
   open: boolean;
   onClose: () => void;
@@ -27,10 +35,15 @@ export const DebtorReceiptModal = ({
   // out of `groups` instead of listing every enrolled group.
   groupName?: string | null;
   teacherName?: string | null;
+  // "system" variant: the charge row's own amount and date.
+  chargeAmount?: number | null;
+  chargeDate?: string | null;
 }) => {
   const { t } = useTranslation();
   const p = (key: string) => t(`settings.ceo.general.invoice.preview.${key}`);
   const { data: receipt, isFetching, isError } = useDebtorReceiptQuery(studentId ?? "", { skip: !open || !studentId });
+  const { data: studentData } = useStudentByIdQuery(studentId ?? "", { skip: !open || !studentId });
+  const ownBalance = studentData?.data?.balance;
 
   let lines: ReceiptLine[] = [];
   let banner: ReactNode = null;
@@ -38,7 +51,9 @@ export const DebtorReceiptModal = ({
 
   if (receipt) {
     const time = formatDateTime(receipt.date) ?? formatDateTime(new Date().toISOString());
-    const owed = Math.abs(receipt.debtAmount);
+    const owed = ownBalance !== undefined ? Math.max(0, -ownBalance) : Math.abs(receipt.debtAmount);
+    const charged = ownBalance !== undefined ? receipt.totalPaid + owed : receipt.totalCharged;
+    const chargeDay = chargeDate ? formatDateTime(chargeDate) ?? chargeDate.slice(0, 10).split("-").reverse().join(".") : null;
 
     if (variant === "system") {
       const matched = groupName ? receipt.groups.find((g) => g.name === groupName) : undefined;
@@ -57,10 +72,13 @@ export const DebtorReceiptModal = ({
             : receipt.groups.map((g) => `${g.name}: ${formatUzs(g.price)}`).join(", "),
         },
         { label: p("teacher"), value: teacherName },
-        { label: p("paymentAmount"), value: formatUzs(receipt.totalPaid) },
-        { label: t("debtorReceipt.totalCharged") + ":", value: formatUzs(receipt.totalCharged) },
+        {
+          label: p("paymentAmount"),
+          value: chargeAmount !== undefined && chargeAmount !== null ? formatUzs(Math.abs(chargeAmount)) : formatUzs(receipt.totalPaid),
+        },
+        { label: t("debtorReceipt.totalPaid") + ":", value: formatUzs(receipt.totalPaid) },
         { label: t("debtorReceipt.balance") + ":", value: owed > 0 ? formatUzs(owed) : null },
-        { label: p("time"), value: time, muted: true },
+        { label: p("time"), value: chargeDay ?? time, muted: true },
       ];
     } else {
       banner = owed > 0 ? (
@@ -80,7 +98,7 @@ export const DebtorReceiptModal = ({
         { label: t("debtorReceipt.phone") + ":", value: receipt.student.phone },
         { label: t("debtorReceipt.group") + ":", value: receipt.groups.map((g) => g.name).join(", ") },
         { label: t("debtorReceipt.branch") + ":", value: receipt.branch?.name },
-        { label: t("debtorReceipt.totalCharged") + ":", value: formatUzs(receipt.totalCharged) },
+        { label: t("debtorReceipt.totalCharged") + ":", value: formatUzs(charged) },
         { label: t("debtorReceipt.totalPaid") + ":", value: formatUzs(receipt.totalPaid) },
         { label: t("debtorReceipt.balance") + ":", value: formatUzs(owed) },
         { label: t("debtorReceipt.issuedAt") + ":", value: time },

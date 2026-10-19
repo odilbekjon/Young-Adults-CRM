@@ -12,6 +12,7 @@ import { extractApiError } from "../../../utils/extractApiError";
 import { PaymentReceiptModal } from "../../../components/PaymentReceiptModal";
 import { DebtorReceiptModal } from "../../../components/DebtorReceiptModal";
 import { buildTransactions, type PaymentTx } from "./buildTransactions";
+import { reconcileFinanceHistory } from "./reconcileHistory";
 import { MonthlyBalance, OutstandingBalanceCard } from "./BalanceCards";
 import { PaymentsTable } from "./PaymentsTable";
 import { EditPaymentDrawer } from "./EditPaymentDrawer";
@@ -39,12 +40,16 @@ export const StudentPaymentsSection = ({
     data: paymentsData, isFetching: isPaymentsLoading, isError: isPaymentsError,
   } = useStudentPaymentsQuery({ id: studentId, page: 1, limit: 50 }, { skip: !studentId });
   const {
-    data: history, isFetching: isHistoryLoading, isError: isHistoryError,
+    data: rawHistory, isFetching: isHistoryLoading, isError: isHistoryError,
   } = useStudentFinanceHistoryQuery(studentId, { skip: !studentId });
+  // The ledger is trimmed to what the profile's own balance accounts for, so a
+  // single unpaid month isn't repeated as a charge for every month (see
+  // reconcileFinanceHistory).
+  const history = useMemo(() => reconcileFinanceHistory(rawHistory ?? [], balance), [rawHistory, balance]);
   const { data: memberships } = useStudentGroupMembershipsQuery(studentId, { skip: !studentId });
 
   const transactions = useMemo(
-    () => buildTransactions(history ?? [], paymentsData?.rows ?? []),
+    () => buildTransactions(history, paymentsData?.rows ?? []),
     [history, paymentsData]
   );
   const groups = useMemo(() => memberships ?? [], [memberships]);
@@ -96,7 +101,7 @@ export const StudentPaymentsSection = ({
         isLoading={isPaymentsLoading}
         onPrintNotice={() => setStatementOpen(true)}
       />
-      <MonthlyBalance rows={history ?? []} isLoading={isHistoryLoading} isError={isHistoryError} />
+      <MonthlyBalance rows={history} isLoading={isHistoryLoading} isError={isHistoryError} />
       <PaymentsTable
         transactions={transactions}
         isLoading={isPaymentsLoading || isHistoryLoading}
@@ -127,6 +132,8 @@ export const StudentPaymentsSection = ({
         variant="system"
         groupName={receiptTx?.groupName}
         teacherName={teacherOf(receiptTx?.groupId ?? null)}
+        chargeAmount={receiptTx?.amount}
+        chargeDate={receiptTx?.date}
       />
       <DebtorReceiptModal open={statementOpen} onClose={() => setStatementOpen(false)} studentId={studentId} />
 

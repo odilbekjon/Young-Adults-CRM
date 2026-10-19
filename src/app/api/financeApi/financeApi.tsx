@@ -1,5 +1,6 @@
 import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
+import { decimalToNumber } from "../../../utils/decimal";
 import {
     CreatePaymentRequest,
     UpdatePaymentRequest,
@@ -144,12 +145,10 @@ const asId = (raw: unknown): string => {
 // `.d[0]` as the actual amount for this exact shape (see groupsApi's
 // GroupCoursePrice) — every payment/expense/withdrawal row in "All
 // payments" showed "0 UZS" before this because of it.
-const asMoney = (raw: unknown): number => {
-    if (raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).d)) {
-        return Number((raw as { d: unknown[] }).d[0]) || 0;
-    }
-    return Number(raw) || 0;
-};
+// Goes through decimalToNumber so the sign (`s`) and multi-word digit arrays
+// (amounts >= 10 000 000, fractions) are honored — reading only `d[0]` turned
+// a -300 000 balance into +300 000 and 12 000 000 into 1.
+const asMoney = (raw: unknown): number => decimalToNumber(raw) ?? 0;
 
 // Backend's exact row shape isn't documented beyond the endpoint
 // description, so each field is read from a few plausible name variants

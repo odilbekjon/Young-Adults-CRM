@@ -79,6 +79,7 @@ import { AddPayment } from "../../components/AddPayment";
 import { MoveStudentDialog } from "./MoveStudentDialog";
 import { RemoveStudentDialog } from "./RemoveStudentDialog";
 import { decimalToNumber } from "../../utils/decimal";
+import { useStudentBalances } from "../../hooks/useStudentBalances";
 
 const TAB_KEYS = [
   "attendance", "grade", "onlineLessons",
@@ -358,10 +359,21 @@ export const SingleGroup = () => {
   // for exactly this, so it's reused here rather than firing a second request. Without
   // this overlay the roster's debt dot (bgcolor keyed off s.balance) always
   // read the placeholder 0 and rendered green even for actual debtors.
-  const balanceByStudentId = useMemo(
-    () => new Map((allStudentsData?.data ?? []).map((s) => [s.id, s.balance])),
-    [allStudentsData]
+  //
+  // That list only covers the first 100 students of the branch, so a roster
+  // member outside it would still read 0 (green). Every roster member's own
+  // balance (GET /students/{id} — the figure the student profile shows) is
+  // therefore fetched too, and wins over the list value once it arrives.
+  const rosterIds = useMemo(
+    () => [...students, ...extraStudents].map((s) => s.realId).filter(Boolean),
+    [students, extraStudents]
   );
+  const ownBalances = useStudentBalances(rosterIds);
+  const balanceByStudentId = useMemo(() => {
+    const map = new Map((allStudentsData?.data ?? []).map((s) => [s.id, s.balance]));
+    Object.entries(ownBalances).forEach(([sid, bal]) => map.set(sid, bal));
+    return map;
+  }, [allStudentsData, ownBalances]);
 
   // Overlays each student's real membership status/id (from
   // membershipByStudentId) on top of the neutral GroupDetail-derived
@@ -1180,6 +1192,7 @@ export const SingleGroup = () => {
             {sortedStudents.map((s, i) => {
               const isFrozen = !s.active && !s.archived;
               const isArchived = Boolean(s.archived);
+              const isDebtor = !isArchived && (s.balance ?? 0) < 0;
               return (
                 <ListItem
                   key={`${s.id}-${isArchived ? "arch" : "active"}`}
@@ -1207,14 +1220,13 @@ export const SingleGroup = () => {
                   <Typography fontSize={12} color="text.secondary" sx={{ minWidth: 22, flexShrink: 0 }}>
                     {i + 1}
                   </Typography>
-                  {s.active && !isArchived && (
+                  {!isArchived && (s.active || isDebtor) ? (
                     <Box sx={{
                       width: 8, height: 8, borderRadius: "50%",
-                      bgcolor: (s.balance ?? 0) >= 0 ? "#43a047" : "#e53935",
+                      bgcolor: isDebtor ? "#e53935" : "#43a047",
                       mx: 1, flexShrink: 0,
                     }} />
-                  )}
-                  {!s.active && !isArchived && (
+                  ) : (
                     <Box sx={{ width: 8, mx: 1, flexShrink: 0 }} />
                   )}
                   {isArchived && (
@@ -1233,7 +1245,7 @@ export const SingleGroup = () => {
                             py: isFrozen ? 0.35 : 0,
                             borderRadius: isFrozen ? "6px" : 0,
                             backgroundColor: isFrozen ? "#bfe3fa" : "transparent",
-                            color: isArchived ? "dimgray" : "var(--color-text-primary)",
+                            color: isArchived ? "dimgray" : isDebtor ? "#e53935" : "var(--color-text-primary)",
                             textDecoration: isArchived ? "line-through" : "none",
                           }}
                         >

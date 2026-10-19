@@ -18,6 +18,7 @@ import { useToast } from "../../../../Context/ToastContext";
 import { extractApiError } from "../../../../utils/extractApiError";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import { formatUZS } from "../../../../utils";
+import { useStudentBalances } from "../../../../hooks/useStudentBalances";
 import type { RootState } from "../../../../app/store";
 import { useBranch } from "../../../../Context/BranchContext";
 import { downloadExcelBlob } from "../../../../utils/downloadExcel";
@@ -124,11 +125,29 @@ export const Debtors = () => {
   const { data: totalData, isFetching: isTotalFetching } = useDebtorsTotalQuery(queryArgs);
   const [fetchDebtorsExcel, { isFetching: isExporting }] = useLazyDebtorsExcelQuery();
 
-  const rows = data?.rows ?? [];
   const meta = data?.meta;
   const total = meta?.total ?? 0;
   const totalPages = Math.max(1, meta?.totalPages ?? 1);
-  const filteredTotalDebt = totalData?.total ?? 0;
+
+  // The amount owed is the student's own balance (GET /students/{id}.balance —
+  // exactly what the student profile shows), not the debtors endpoint's
+  // separately computed figure, so this page can never disagree with the
+  // profile. Rows whose real balance turns out not to be a debt are dropped.
+  const rawRows = useMemo(() => data?.rows ?? [], [data]);
+  const ownBalances = useStudentBalances(rawRows.map((d) => d.studentId ?? ""));
+  const rows = useMemo(
+    () => rawRows.filter((d) => !d.studentId || ownBalances[d.studentId] === undefined || ownBalances[d.studentId] < 0),
+    [rawRows, ownBalances]
+  );
+  const debtOf = (d: DebtorRow) => {
+    const own = d.studentId ? ownBalances[d.studentId] : undefined;
+    return own !== undefined ? Math.max(0, -own) : Math.abs(d.balance);
+  };
+  // The endpoint total is a different calculation too — when every debtor fits
+  // on this page (and all their balances have arrived) the real sum is shown.
+  const allOwnLoaded = rawRows.length > 0 && rawRows.every((d) => !d.studentId || ownBalances[d.studentId] !== undefined);
+  const filteredTotalDebt =
+    allOwnLoaded && rawRows.length === total ? rows.reduce((sum, d) => sum + debtOf(d), 0) : totalData?.total ?? 0;
 
   const handleExportExcel = async () => {
     try {
@@ -330,7 +349,7 @@ export const Debtors = () => {
                   <td className="px-3 py-3 text-gray-500 dark:text-gray-400 text-xs">{(applied.page - 1) * applied.limit + i + 1}.</td>
                   <td className="px-3 py-3 font-medium text-gray-800 dark:text-gray-100 whitespace-nowrap">{d.name || "—"}</td>
                   <td className="px-3 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{d.phone || "—"}</td>
-                  <td className="px-3 py-3 text-gray-700 dark:text-gray-200 whitespace-nowrap">{formatUZS(d.balance)}</td>
+                  <td className="px-3 py-3 text-gray-700 dark:text-gray-200 whitespace-nowrap">{formatUZS(debtOf(d))}</td>
                   <td className="px-3 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{d.groupName || "—"}</td>
                   <td className="px-3 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{d.status || "—"}</td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>

@@ -137,22 +137,27 @@ const normalizeDaysType = (r: Row): string | null => {
     return null;
 };
 
-const normalizeGroup = (r: Row): TeacherPortalGroup => {
-    const course = (r.course ?? {}) as Row;
-    const room = (r.room ?? {}) as Row;
+// The group may arrive flat or wrapped ({ group: {...}, students: [...] });
+// course/room may be objects, plain strings, or flat *Name fields.
+const normalizeGroup = (raw: Row): TeacherPortalGroup => {
+    const r = raw.group && typeof raw.group === "object" && !Array.isArray(raw.group)
+        ? { ...raw, ...(raw.group as Row) }
+        : raw;
+    const course = (r.course && typeof r.course === "object" ? r.course : {}) as Row;
+    const room = (r.room && typeof r.room === "object" ? r.room : {}) as Row;
     return {
         id: str(r.id, r._id, r.groupId),
         name: str(r.name, r.groupName),
-        courseName: str(r.courseName, course.name),
+        courseName: str(r.courseName, r.course, r.courseTitle),
         daysType: normalizeDaysType(r),
-        time: strOrNull(r.time, r.startTime, r.lessonTime),
+        time: strOrNull(r.time, r.startTime, r.lessonTime, r.lessonStartTime),
         studentsCount: countOrNull(r.studentsCount, r.totalStudents, r.activeStudentsCount, r.students) ?? 0,
         roomName: strOrNull(r.roomName, room.name, typeof r.room === "string" ? r.room : null),
         roomCapacity: numOrNull(r.roomCapacity, room.capacity),
         // Course price: plain number/string or a serialized decimal.js object.
         price: [r.coursePrice, r.price, course.price].map(decimalToNumber).find((n) => n !== null) ?? null,
-        trainingStart: strOrNull(r.trainingStart, r.startDate),
-        trainingEnd: strOrNull(r.trainingEnd, r.endDate),
+        trainingStart: strOrNull(r.trainingStart, r.startDate, r.trainingStartDate, r.startsAt),
+        trainingEnd: strOrNull(r.trainingEnd, r.endDate, r.trainingEndDate, r.endsAt),
     };
 };
 
@@ -205,18 +210,20 @@ const normalizeScheduleItem = (r: Row): TeacherPortalScheduleItem => {
     const groupText = typeof r.group === "string" ? r.group : "";
     const room = (r.room && typeof r.room === "object" ? r.room : {}) as Row;
     const roomText = typeof r.room === "string" ? r.room : "";
-    const course = (r.course ?? {}) as Row;
     const teachers = Array.isArray(r.teachers)
         ? (r.teachers as unknown[]).map((x) => str(x)).filter(Boolean).join(", ")
         : str(r.teachers, r.teacherName, r.teacher);
     return {
         groupId: str(r.groupId, group.id, groupText),
         groupName: str(r.groupName, group.name, groupText),
-        courseName: str(r.courseName, course.name, group.courseName),
+        courseName: str(r.courseName, r.course, group.courseName, group.course),
         roomName: str(r.roomName, room.name, roomText),
         day: str(r.day, r.dayOfWeek).toUpperCase(),
         days: strList(r.days).map((d) => d.toUpperCase()),
-        daysType: str(r.daysType, group.daysType).toUpperCase(),
+        // ODD/EVEN straight from the row/group, else inferred from its weekday(s).
+        daysType: normalizeDaysType({
+            ...group, ...r, days: strList(r.days).length > 0 ? r.days : r.day ? [r.day] : group.days,
+        }) ?? "",
         time: strOrNull(r.time, r.startTime, group.time),
         teachers,
         trainingStart: strOrNull(r.trainingStart, group.trainingStart),

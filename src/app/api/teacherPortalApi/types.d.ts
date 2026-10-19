@@ -21,6 +21,11 @@ export interface TeacherPortalGroupStudent {
   // Membership/student status when the backend sends one (ACTIVE, FROZEN,
   // PROBATION, ...) — empty string when it doesn't.
   status: string;
+  // Hover-card extras — each is null when the roster endpoint leaves it out.
+  balance: number | null;
+  createdAt: string | null;
+  activatedAt: string | null;
+  comment: string | null;
 }
 
 // GET /teacher-portal/groups — "O'qituvchi o'qitayotgan barcha guruhlar

@@ -113,6 +113,12 @@ const normalizeGroupStudent = (raw: Row): TeacherPortalGroupStudent => {
         name: str(r.name, r.fullName, raw.studentName),
         phone: strOrNull(r.phone, r.phoneNumber, raw.studentPhone),
         status: str(raw.status, r.status).toUpperCase(),
+        balance: [r.balance, raw.balance].map(decimalToNumber).find((n) => n !== null) ?? null,
+        // Account creation date (the nested student's own createdAt wins over
+        // the membership row's), then the date the student started in the group.
+        createdAt: strOrNull(inner?.createdAt, r.createdAt, r.addedAt),
+        activatedAt: strOrNull(r.groupsStart, raw.paymentStartDate, raw.joinedAt),
+        comment: strOrNull(r.comment, r.comments),
     };
 };
 
@@ -139,14 +145,14 @@ const normalizeGroup = (r: Row): TeacherPortalGroup => {
         name: str(r.name, r.groupName),
         courseName: str(r.courseName, course.name),
         daysType: normalizeDaysType(r),
-        time: strOrNull(r.time, r.startTime),
+        time: strOrNull(r.time, r.startTime, r.lessonTime),
         studentsCount: countOrNull(r.studentsCount, r.totalStudents, r.activeStudentsCount, r.students) ?? 0,
-        roomName: strOrNull(r.roomName, room.name),
+        roomName: strOrNull(r.roomName, room.name, typeof r.room === "string" ? r.room : null),
         roomCapacity: numOrNull(r.roomCapacity, room.capacity),
         // Course price: plain number/string or a serialized decimal.js object.
         price: [r.coursePrice, r.price, course.price].map(decimalToNumber).find((n) => n !== null) ?? null,
-        trainingStart: strOrNull(r.trainingStart),
-        trainingEnd: strOrNull(r.trainingEnd),
+        trainingStart: strOrNull(r.trainingStart, r.startDate),
+        trainingEnd: strOrNull(r.trainingEnd, r.endDate),
     };
 };
 

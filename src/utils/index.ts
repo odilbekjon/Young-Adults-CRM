@@ -3,6 +3,7 @@ export * from "./balance";
 export * from "./extractApiError";
 export * from "./paymentProvider";
 export * from "./formatTrainingDate";
+export * from "./formatPhone";
 export * from "./groupDays";
 export * from "./downloadExcel";
 export * from "./decimal";

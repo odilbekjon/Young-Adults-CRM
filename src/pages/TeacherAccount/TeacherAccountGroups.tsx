@@ -1,6 +1,8 @@
-// "Groups" half of the TEACHER Account → Profile tab: this teacher's own groups
+// "Groups" part of the TEACHER Account → Profile tab: this teacher's own groups
 // as cards (GET /teacher-portal/groups) and, for the selected one, its details
-// and roster (GET /teacher-portal/groups/{id} + /students).
+// and roster (GET /teacher-portal/groups/{id} + /students). Renders two grid
+// cells (cards column + selected-group panel) for TeacherOwnProfile's
+// `.teacher-profile-grid`, mirroring the admin TeacherProfile layout.
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -11,6 +13,7 @@ import {
   useTeacherPortalGroupStudentsQuery,
 } from "../../app/api/teacherPortalApi";
 import { formatTrainingDate } from "../../utils/formatTrainingDate";
+import { TeacherStudentRow } from "./TeacherStudentRow";
 
 const cardSx = {
   bgcolor: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 2, minWidth: 0,
@@ -44,11 +47,11 @@ export const TeacherAccountGroups = () => {
     start || end ? `${formatTrainingDate(start)} — ${formatTrainingDate(end)}` : "";
 
   if (isLoading) {
-    return <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress size={26} /></Box>;
+    return <Box sx={{ display: "flex", justifyContent: "center", py: 6, gridColumn: { lg: "span 2" } }}><CircularProgress size={26} /></Box>;
   }
   if (isError) {
     return (
-      <Box>
+      <Box sx={{ gridColumn: { lg: "span 2" } }}>
         <Typography color="error" fontSize={14} mb={1.5}>{t("teacherGroups.loadError")}</Typography>
         <Button size="small" variant="outlined" onClick={() => refetch()} sx={{ textTransform: "none" }}>
           {t("teacherDashboard.schedule.retry")}
@@ -61,20 +64,17 @@ export const TeacherAccountGroups = () => {
   const time = detail?.time ?? selected?.time;
 
   return (
-    <Box>
-      <Typography variant="h5" fontWeight={500} sx={{ mb: 2, color: "var(--color-text-primary)" }}>
-        {t("teacherPortal.account.groups")}
-      </Typography>
+    <>
+      {/* ── Group cards ── */}
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="h5" fontWeight={500} sx={{ mb: 1.5, color: "var(--color-text-primary)" }}>
+          {t("teacherPortal.account.groups")}
+        </Typography>
 
-      {groups.length === 0 ? (
-        <Typography color="text.secondary" fontSize={14}>{t("teacherGroups.empty")}</Typography>
-      ) : (
-        <Box sx={{
-          display: "grid", gap: 2.5, alignItems: "start",
-          gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 1fr) minmax(0, 1fr)" },
-        }}>
-          {/* ── Group cards ── */}
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+        {groups.length === 0 ? (
+          <Typography color="text.secondary" fontSize={14}>{t("teacherGroups.empty")}</Typography>
+        ) : (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25, maxHeight: { lg: 560 }, overflowY: "auto", pr: 0.25 }}>
             {groups.map((g) => {
               const active = g.id === selectedId;
               const schedule = [daysLabel(g.daysType), g.time].filter(Boolean).join(" • ");
@@ -84,19 +84,19 @@ export const TeacherAccountGroups = () => {
                   elevation={0}
                   onClick={() => setSelectedId(g.id)}
                   sx={{
-                    ...cardSx, p: 2, cursor: "pointer", display: "flex", alignItems: "center",
-                    justifyContent: "space-between", gap: 1.5,
+                    ...cardSx, p: 1.75, cursor: "pointer", display: "flex", alignItems: "center",
+                    justifyContent: "space-between", gap: 1.5, flexShrink: 0,
                     borderColor: active ? "var(--color-primary)" : "var(--color-border)",
                     boxShadow: active ? "0 0 0 1px var(--color-primary)" : "none",
                   }}
                 >
-                  <Box sx={{ minWidth: 0 }}>
+                  <Box sx={{ minWidth: 0, flex: "1 1 0" }}>
                     <Chip label={g.name} size="small" sx={{ fontWeight: 600, mb: 0.75, maxWidth: "100%" }} />
                     <Typography fontSize={14} sx={{ color: "var(--color-text-primary)", wordBreak: "break-word" }}>
                       {g.courseName || "—"}
                     </Typography>
                   </Box>
-                  <Box sx={{ textAlign: "left", fontSize: 13, color: "var(--color-text-secondary)", flexShrink: 0 }}>
+                  <Box sx={{ textAlign: "center", fontSize: 12.5, lineHeight: 1.5, color: "var(--color-text-secondary)", flexShrink: 0 }}>
                     <Box>{dates(g.trainingStart, g.trainingEnd)}</Box>
                     <Box>{schedule}</Box>
                   </Box>
@@ -110,57 +110,50 @@ export const TeacherAccountGroups = () => {
               );
             })}
           </Box>
+        )}
+      </Box>
 
-          {/* ── Selected group ── */}
-          {selected && (
-            <Paper elevation={0} sx={{ ...cardSx, p: 2.5 }}>
-              <Box sx={{ textAlign: "right", mb: 2 }}>
-                <Chip label={selected.name} sx={{ fontWeight: 600, fontSize: 16, height: 34, mb: 1 }} />
-                <Typography fontSize={20} sx={{ color: "var(--color-text-primary)" }}>{selected.courseName || "—"}</Typography>
-                <Typography fontSize={15} sx={{ color: "var(--color-text-secondary)" }}>
-                  {t("singleGroup.leftPanel.rooms")}: <b>{room || "—"}</b>
-                </Typography>
-                <Typography fontSize={15} sx={{ color: "var(--color-text-secondary)" }}>
-                  {t("teacherPortal.account.start")}: <b>{time || "—"}</b>
-                </Typography>
+      {/* ── Selected group: details + roster ── */}
+      {selected && (
+        <Paper elevation={0} sx={{ ...cardSx, p: 2.5, mt: { lg: 5 } }}>
+          <Box sx={{ textAlign: "right", mb: 2 }}>
+            <Chip label={selected.name} sx={{ fontWeight: 600, fontSize: 15, height: 32, mb: 1, maxWidth: "100%" }} />
+            <Typography fontSize={19} sx={{ color: "var(--color-text-primary)", wordBreak: "break-word" }}>{selected.courseName || "—"}</Typography>
+            <Typography fontSize={15} sx={{ color: "var(--color-text-secondary)" }}>
+              {t("singleGroup.leftPanel.rooms")}: <b>{room || "—"}</b>
+            </Typography>
+            <Typography fontSize={15} sx={{ color: "var(--color-text-secondary)" }}>
+              {t("teacherPortal.account.start")}: <b>{time || "—"}</b>
+            </Typography>
+          </Box>
+
+          <Box sx={{ borderTop: "1px solid var(--color-border)", pt: 1.5, maxHeight: 360, overflowY: "auto" }}>
+            {studentsLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
+            ) : studentsError ? (
+              <Box>
+                <Typography color="error" fontSize={13} mb={1}>{t("teacherGroups.rosterLoadError")}</Typography>
+                <Button size="small" variant="outlined" onClick={() => refetchStudents()} sx={{ textTransform: "none" }}>
+                  {t("teacherDashboard.schedule.retry")}
+                </Button>
               </Box>
+            ) : (students ?? []).length === 0 ? (
+              <Typography fontSize={13} color="text.secondary">{t("teacherGroups.rosterEmpty")}</Typography>
+            ) : (
+              (students ?? []).map((s) => <TeacherStudentRow key={s.id} student={s} />)
+            )}
+          </Box>
 
-              <Box sx={{ borderTop: "1px solid var(--color-border)", pt: 1.5 }}>
-                {studentsLoading ? (
-                  <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
-                ) : studentsError ? (
-                  <Box>
-                    <Typography color="error" fontSize={13} mb={1}>{t("teacherGroups.rosterLoadError")}</Typography>
-                    <Button size="small" variant="outlined" onClick={() => refetchStudents()} sx={{ textTransform: "none" }}>
-                      {t("teacherDashboard.schedule.retry")}
-                    </Button>
-                  </Box>
-                ) : (students ?? []).length === 0 ? (
-                  <Typography fontSize={13} color="text.secondary">{t("teacherGroups.rosterEmpty")}</Typography>
-                ) : (
-                  (students ?? []).map((s) => (
-                    <Box key={s.id} sx={{ display: "flex", justifyContent: "space-between", gap: 2, py: 0.9 }}>
-                      <Typography fontSize={14} sx={{ color: "var(--color-text-primary)" }}>{s.name}</Typography>
-                      <Typography fontSize={13} sx={{ color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
-                        {s.phone || t("teacherGroups.noPhone")}
-                      </Typography>
-                    </Box>
-                  ))
-                )}
-              </Box>
-
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => navigate(`/groups/${selected.id}`)}
-                sx={{ mt: 2, textTransform: "none" }}
-              >
-                {t("teacherPortal.account.openGroup")}
-              </Button>
-            </Paper>
-          )}
-        </Box>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => navigate(`/groups/${selected.id}`)}
+            sx={{ mt: 2, textTransform: "none" }}
+          >
+            {t("teacherPortal.account.openGroup")}
+          </Button>
+        </Paper>
       )}
-    </Box>
+    </>
   );
 };

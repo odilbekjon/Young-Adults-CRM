@@ -23,9 +23,12 @@ const normalizeList = <T,>(data: unknown): T[] => {
 
 export const coursesApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        allCourses: builder.query<CoursesResponse, void>({
-            query: () => ({
-                url: PATHS.COURSES,
+        // `branchId` is sent explicitly on top of the x-branch-id header (same as
+        // students/teachers/reasons) so the list really is scoped to the
+        // selected branch; omitted = whatever the header alone decides.
+        allCourses: builder.query<CoursesResponse, { branchId?: string } | void>({
+            query: (args) => ({
+                url: args?.branchId ? `${PATHS.COURSES}?branchId=${encodeURIComponent(args.branchId)}` : PATHS.COURSES,
                 method: "GET"
             }),
             transformResponse: (response: CoursesResponse) => ({

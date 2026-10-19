@@ -503,7 +503,7 @@ const HistoryTab = ({ teacherId, teacherName, teacherPhone }: { teacherId: strin
         >
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 20, color: "var(--color-text-primary)", lineHeight: 1.25, marginBottom: 16 }}>
-              {t(`teacherProfile.history.types.${entry.type}`, { defaultValue: entry.type.toLowerCase().split("_").filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") || "—" })}
+              {entry.title || t(`teacherProfile.history.types.${entry.type}`, { defaultValue: entry.type.toLowerCase().split("_").filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") || "—" })}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#185FA5", flexWrap: "wrap" }}>
               <BsPerson size={14} style={{ flexShrink: 0 }} />
@@ -523,6 +523,7 @@ const HistoryTab = ({ teacherId, teacherName, teacherPhone }: { teacherId: strin
           <div style={{ textAlign: "right", flexShrink: 0, fontSize: 14, color: "var(--color-text-muted)", lineHeight: 1.5 }}>
             {entry.createdAt && <div>{formatStamp(entry.createdAt)}</div>}
             {entry.actor && <div>{entry.actor}</div>}
+            {entry.device && <div style={{ fontSize: 12 }}>{entry.device}</div>}
           </div>
         </div>
       ))}

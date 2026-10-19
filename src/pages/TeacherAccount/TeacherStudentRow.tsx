@@ -1,13 +1,17 @@
 // One roster row of the TEACHER Account → Profile → selected-group panel, with
 // the student hover card (name/id, status, debtor badge, phone, balance,
-// added/activated dates, note, coins). Everything shown comes from GET
-// /teacher-portal/groups/{id}/students — a teacher has no access to the
+// added/activated dates, note, coins). Data comes from GET
+// /teacher-portal/groups/{id}/students; whatever that roster row leaves out
+// (the added/activated dates in particular) is filled from GET
+// /students/{id} while the card is open - a best-effort lookup whose failure
+// (e.g. no permission for a teacher) is ignored. A teacher must not open the
 // student profile, so unlike the admin cards there is deliberately no
 // "Go to profile" link and the row itself is not clickable.
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Typography } from "@mui/material";
 import type { TeacherPortalGroupStudent } from "../../app/api/teacherPortalApi/types";
+import { useStudentByIdQuery } from "../../app/api/studentsApi";
 import { BALANCE_STATUS_COLOR, classifyBalance, formatPhone, formatTrainingDate } from "../../utils";
 
 const CARD_WIDTH = 300;
@@ -29,12 +33,17 @@ const StudentHoverCard = ({
   onMouseLeave: () => void;
 }) => {
   const { t } = useTranslation();
-  const { balance } = student;
+  const { data: detailData } = useStudentByIdQuery(student.id, { skip: !student.id });
+  const detail = detailData?.data;
+  const balance = student.balance ?? detail?.balance ?? null;
+  const createdAt = student.createdAt ?? detail?.createdAt ?? null;
+  const activatedAt = student.activatedAt ?? detail?.groupsStart ?? null;
+  const comment = student.comment ?? detail?.comment ?? null;
   const isDebtor = balance !== null && balance < 0;
   const statusLabel =
-    student.status === "INACTIVE"
+    (student.status || detail?.status) === "INACTIVE"
       ? t("singleGroup.studentHoverCard.inactiveArchived")
-      : student.status === "FROZEN"
+      : (student.status || detail?.status) === "FROZEN"
       ? t("singleGroup.studentHoverCard.frozenPaused")
       : t("singleGroup.studentHoverCard.activeLearns");
   const shortId = student.id.length > 12 ? `${student.id.slice(0, 8)}…` : student.id;
@@ -104,12 +113,12 @@ const StudentHoverCard = ({
         </Field>
       )}
 
-      <Field label={t("singleGroup.studentHoverCard.addedAt")}>{formatTrainingDate(student.createdAt)}</Field>
-      <Field label={t("singleGroup.studentHoverCard.activatedAt")}>{formatTrainingDate(student.activatedAt)}</Field>
+      <Field label={t("singleGroup.studentHoverCard.addedAt")}>{formatTrainingDate(createdAt)}</Field>
+      <Field label={t("singleGroup.studentHoverCard.activatedAt")}>{formatTrainingDate(activatedAt)}</Field>
 
-      {student.comment && (
+      {comment && (
         <Field label={t("singleGroup.studentHoverCard.note")}>
-          <Box component="span" sx={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{student.comment}</Box>
+          <Box component="span" sx={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{comment}</Box>
         </Field>
       )}
 

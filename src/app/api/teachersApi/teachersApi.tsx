@@ -50,13 +50,23 @@ const normalizeHistory = (raw: unknown): TeacherHistoryEntry[] => {
         ? container.data
         : [];
 
-    return (list as Record<string, unknown>[]).map((r, i) => ({
-        id: String(r.id ?? r._id ?? i),
-        type: String(r.type ?? r.action ?? r.event ?? "").toUpperCase(),
-        detail: String(r.detail ?? r.description ?? r.message ?? ""),
-        createdAt: String(r.createdAt ?? r.timestamp ?? r.date ?? ""),
-        actor: asString(r.modifiedBy ?? r.actor ?? r.createdBy ?? r.user),
-    }));
+    // Confirmed against Swagger (GET /teachers/{id}/history): rows are
+    // { id, teacherProfileId, action (already a localized sentence, e.g.
+    // "Mevericks guruhiga biriktirildi"), date, device: { deviceName },
+    // user: { name } }, newest first.
+    return (list as Record<string, unknown>[]).map((r, i) => {
+        const device = r.device && typeof r.device === "object" ? (r.device as Record<string, unknown>) : null;
+        const hasType = typeof r.type === "string" && r.type !== "";
+        return {
+            id: String(r.id ?? r._id ?? i),
+            type: String(hasType ? r.type : r.event ?? "").toUpperCase(),
+            title: hasType ? "" : String(r.action ?? ""),
+            detail: String(r.detail ?? r.description ?? r.message ?? ""),
+            createdAt: String(r.date ?? r.createdAt ?? r.timestamp ?? ""),
+            actor: asString(r.user ?? r.modifiedBy ?? r.actor ?? r.createdBy),
+            device: device && typeof device.deviceName === "string" && device.deviceName ? device.deviceName : null,
+        };
+    });
 };
 
 const appendTeacherFormData = (formData: FormData, data: Partial<CreateTeacherRequest>) => {

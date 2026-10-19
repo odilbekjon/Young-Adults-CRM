@@ -127,6 +127,8 @@ export const Archive = () => {
   const { data, isLoading, isError } = useAllArchivesQuery({
     page,
     limit: PAGE_SIZE,
+    // Explicit on top of the x-branch-id header, like the students/teachers lists.
+    branchId: selectedBranchId ?? undefined,
     search: debouncedSearch || undefined,
     role: (filterRole as ArchiveRole) || undefined,
     reasonId: filterReason || undefined,

@@ -117,7 +117,12 @@ export interface ToggleTeacherStatusResponse {
 export interface TeacherHistoryEntry {
   id: string;
   type: string;
+  // The backend's own (already localized) description of the action, when it
+  // sends one instead of a machine `type`.
+  title: string;
   detail: string;
   createdAt: string;
   actor: string | null;
+  // Browser/device the change was made from (e.g. "Chrome").
+  device: string | null;
 }

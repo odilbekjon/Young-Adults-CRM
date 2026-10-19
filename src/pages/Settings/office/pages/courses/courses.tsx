@@ -75,7 +75,7 @@ export const Courses = () => {
   const { branch: selectedBranch } = useBranch();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
-  const { data, isLoading, isError, refetch, isFetching } = useAllCoursesQuery();
+  const { data, isLoading, isError, refetch, isFetching } = useAllCoursesQuery({ branchId: selectedBranchId ?? undefined });
   const { data: branchesData } = useAllBranchesQuery();
   const [createCourse, { isLoading: isCreating }] = useCreateCourseMutation();
   const [updateCourse, { isLoading: isUpdating }] = useUpdateCourseMutation();
@@ -85,7 +85,9 @@ export const Courses = () => {
   // from view entirely rather than exposed behind a second tab here.
   const courses = (data?.data ?? [])
     .filter((c) => c.status === "ACTIVE")
-    .filter((c) => selectedBranch === "all" || c.branch?.name === selectedBranch);
+    // Courses belong to one branch (Course.branchId): when a branch is picked in
+    // the header only its own courses are listed; "All branches" lists everything.
+    .filter((c) => (selectedBranchId ? c.branchId === selectedBranchId : selectedBranch === "all" || c.branch?.name === selectedBranch));
   const activeBranches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
 
   const [drawerOpen, setDrawerOpen] = useState(false);

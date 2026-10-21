@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Typography } from "@mui/material";
 import type { TeacherPortalGroupStudent } from "../../app/api/teacherPortalApi/types";
-import { useStudentByIdQuery } from "../../app/api/studentsApi";
+import { useStudentByIdQuery, useStudentGroupMembershipsQuery } from "../../app/api/studentsApi";
 import { BALANCE_STATUS_COLOR, classifyBalance, formatPhone, formatTrainingDate } from "../../utils";
 
 const CARD_WIDTH = 300;
@@ -25,9 +25,10 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 );
 
 const StudentHoverCard = ({
-  student, position, onMouseEnter, onMouseLeave,
+  student, groupId, position, onMouseEnter, onMouseLeave,
 }: {
   student: TeacherPortalGroupStudent;
+  groupId: string;
   position: { top: number; left: number; arrowSide: "left" | "right" };
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -35,17 +36,24 @@ const StudentHoverCard = ({
   const { t } = useTranslation();
   const { data: detailData } = useStudentByIdQuery(student.id, { skip: !student.id });
   const detail = detailData?.data;
+  // This student's own dates in THIS group (entry `id` = group id); a failure
+  // (e.g. no permission for a teacher) just leaves the lines out.
+  const { data: memberships } = useStudentGroupMembershipsQuery(student.id, { skip: !student.id });
+  const membership = memberships?.find((m) => m.id === groupId);
   const balance = student.balance ?? detail?.balance ?? null;
   const createdAt = student.createdAt ?? detail?.createdAt ?? null;
-  const activatedAt = student.activatedAt ?? detail?.groupsStart ?? null;
+  const joinedAt = membership?.joinedAt ?? null;
+  const activatedAt = membership?.paymentStartDate ?? student.activatedAt ?? null;
   const comment = student.comment ?? detail?.comment ?? null;
   const isDebtor = balance !== null && balance < 0;
-  const statusLabel =
-    (student.status || detail?.status) === "INACTIVE"
-      ? t("singleGroup.studentHoverCard.inactiveArchived")
-      : (student.status || detail?.status) === "FROZEN"
-      ? t("singleGroup.studentHoverCard.frozenPaused")
-      : t("singleGroup.studentHoverCard.activeLearns");
+  const knownStatus = student.status || detail?.status;
+  const statusLabel = !knownStatus
+    ? null
+    : knownStatus === "INACTIVE"
+    ? t("singleGroup.studentHoverCard.inactiveArchived")
+    : knownStatus === "FROZEN"
+    ? t("singleGroup.studentHoverCard.frozenPaused")
+    : t("singleGroup.studentHoverCard.activeLearns");
   const shortId = student.id.length > 12 ? `${student.id.slice(0, 8)}…` : student.id;
 
   return (
@@ -84,7 +92,7 @@ const StudentHoverCard = ({
           (id:{shortId})
         </Typography>
       </Box>
-      <Box sx={{ fontSize: 13, color: "var(--color-text-muted)", mb: 1 }}>{statusLabel}</Box>
+      {statusLabel && <Box sx={{ fontSize: 13, color: "var(--color-text-muted)", mb: 1 }}>{statusLabel}</Box>}
       {isDebtor && (
         <Box
           component="span"
@@ -97,7 +105,9 @@ const StudentHoverCard = ({
         </Box>
       )}
 
-      <Field label={t("singleGroup.studentHoverCard.phone")}>{formatPhone(student.phone) || "—"}</Field>
+      {formatPhone(student.phone) && (
+        <Field label={t("singleGroup.studentHoverCard.phone")}>{formatPhone(student.phone)}</Field>
+      )}
 
       {balance !== null && (
         <Field label={t("singleGroup.studentHoverCard.balance")}>
@@ -113,8 +123,9 @@ const StudentHoverCard = ({
         </Field>
       )}
 
-      <Field label={t("singleGroup.studentHoverCard.addedAt")}>{formatTrainingDate(createdAt)}</Field>
-      <Field label={t("singleGroup.studentHoverCard.activatedAt")}>{formatTrainingDate(activatedAt)}</Field>
+      {createdAt && <Field label={t("singleGroup.studentHoverCard.addedAt")}>{formatTrainingDate(createdAt)}</Field>}
+      {joinedAt && <Field label={t("singleGroup.studentHoverCard.joinedAt")}>{formatTrainingDate(joinedAt)}</Field>}
+      {activatedAt && <Field label={t("singleGroup.studentHoverCard.activatedAt")}>{formatTrainingDate(activatedAt)}</Field>}
 
       {comment && (
         <Field label={t("singleGroup.studentHoverCard.note")}>
@@ -122,18 +133,11 @@ const StudentHoverCard = ({
         </Field>
       )}
 
-      {/* Coins are not tracked by the backend yet: static 0, same as the admin cards. */}
-      <Field label={t("singleGroup.studentHoverCard.allCoins")}>
-        <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
-          <Box aria-hidden component="span" sx={{ width: 16, height: 16, borderRadius: "50%", bgcolor: "#f5a623", display: "inline-block" }} />
-          0
-        </Box>
-      </Field>
     </Box>
   );
 };
 
-export const TeacherStudentRow = ({ student }: { student: TeacherPortalGroupStudent }) => {
+export const TeacherStudentRow = ({ student, groupId }: { student: TeacherPortalGroupStudent; groupId: string }) => {
   const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number; arrowSide: "left" | "right" }>({
@@ -194,6 +198,7 @@ export const TeacherStudentRow = ({ student }: { student: TeacherPortalGroupStud
       {hovered && (
         <StudentHoverCard
           student={student}
+          groupId={groupId}
           position={position}
           onMouseEnter={clearTimers}
           onMouseLeave={handleMouseLeave}

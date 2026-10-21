@@ -177,17 +177,21 @@ export const StudentHoverCard = ({
 
       <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "0 0 10px" }} />
 
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.addedAt")}</div>
-        <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{student.addedAt || "—"}</div>
-      </div>
-
-      <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "0 0 10px" }} />
-
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.joinedAt")}</div>
-        <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{student.joinedAt || "—"}</div>
-      </div>
+      {([
+        ["addedAt", student.addedAt],
+        ["joinedAt", student.joinedAt],
+        ["activatedAt", student.activatedAt],
+      ] as const).map(([key, value]) =>
+        value ? (
+          <div key={key}>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 2 }}>{t(`singleGroup.studentHoverCard.${key}`)}</div>
+              <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{value}</div>
+            </div>
+            <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "0 0 10px" }} />
+          </div>
+        ) : null
+      )}
 
       {student.note && (
         <>

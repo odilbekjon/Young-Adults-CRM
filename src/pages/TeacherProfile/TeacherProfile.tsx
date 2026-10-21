@@ -11,8 +11,9 @@ import { useTeacherByIdQuery, useTeacherForEditQuery, useUpdateTeacherMutation, 
 import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useAllGroupsQuery } from "../../app/api/groupsApi";
-import { useStudentByIdQuery } from "../../app/api/studentsApi";
+import { useStudentByIdQuery, useStudentGroupMembershipsQuery } from "../../app/api/studentsApi";
 import { BALANCE_STATUS_COLOR, classifyBalance } from "../../utils/balance";
+import { formatPhone } from "../../utils/formatPhone";
 import { useTeacherSalariesQuery } from "../../app/api/salariesApi";
 import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
@@ -253,12 +254,12 @@ const GroupCard = ({ group, index, isSelected, onSelect }: { group: ProfileGroup
   return (
     <div onClick={onSelect} style={{ border: isSelected ? "1.5px solid #185FA5" : "1px solid var(--color-border)", borderRadius: 10, padding: "11px 14px", cursor: "pointer", background: isSelected ? "#f7fbff" : "var(--color-surface)", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 10 }}>
       <div style={{ flexShrink: 0, width: 110 }}>
-        <span style={{ display: "inline-block", fontSize: 10, fontWeight: 500, padding: "2px 7px", borderRadius: 5, background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border}`, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{group.courseName}</span>
+        {group.courseName && <span style={{ display: "inline-block", fontSize: 10, fontWeight: 500, padding: "2px 7px", borderRadius: 5, background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border}`, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{group.courseName}</span>}
         <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{group.name}</div>
       </div>
       <div style={{ flex: 1, textAlign: "center", fontSize: 11, color: "var(--color-text-muted)", lineHeight: 1.6 }}>
-        <div>{formatDate(group.startDate)} — {formatDate(group.endDate)}</div>
-        <div>{group.schedule}</div>
+        {(group.startDate || group.endDate) && <div>{formatDate(group.startDate)} — {formatDate(group.endDate)}</div>}
+        {group.schedule && <div>{group.schedule}</div>}
       </div>
       <div style={{ width: 32, height: 32, borderRadius: 8, background: "#1a3a5c", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
         {group.students.length}
@@ -270,7 +271,8 @@ const GroupCard = ({ group, index, isSelected, onSelect }: { group: ProfileGroup
 /* ── StudentTooltip ──
    Hover card for a student row. The group payload only carries name/phone,
    so balance/status/dates come from GET /students/{id} (RTK-cached, fetched
-   only while the card is open). */
+   only while the card is open). A line with no data is left out — nothing
+   is shown as an empty "—" or a made-up value. */
 const TooltipField = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div style={{ borderTop: "1px solid var(--color-border-subtle)", padding: "9px 0" }}>
     <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 3 }}>{label}</div>
@@ -279,9 +281,11 @@ const TooltipField = ({ label, children }: { label: string; children: React.Reac
 );
 
 const StudentTooltip = ({
-  student, position, onNavigate, onMouseEnter, onMouseLeave,
+  student, groupId, position, onNavigate, onMouseEnter, onMouseLeave,
 }: {
   student: ProfileGroupStudent;
+  // The group this roster belongs to — picks this group's own membership dates.
+  groupId: string;
   position: { top: number; left: number };
   onNavigate: (id: string) => void;
   onMouseEnter: () => void;
@@ -290,17 +294,24 @@ const StudentTooltip = ({
   const { t } = useTranslation();
   const { data } = useStudentByIdQuery(student.id);
   const detail = data?.data;
+  // GET /students/{id}/groups — `id` of each entry is the group's id. Its
+  // joinedAt / paymentStartDate are this student's dates in THIS group (the
+  // account-level createdAt / groupsStart are the same for every group).
+  const { data: memberships } = useStudentGroupMembershipsQuery(student.id);
+  const membership = memberships?.find((m) => m.id === groupId);
 
   const name = detail?.name ?? student.name;
-  const phone = detail?.phone ?? student.phone;
+  const phone = formatPhone(detail?.phone ?? student.phone);
   const balance = detail?.balance;
   const isDebtor = balance !== undefined && balance < 0;
-  const statusLabel =
-    detail?.status === "INACTIVE"
-      ? t("singleGroup.studentHoverCard.inactiveArchived")
-      : detail?.status === "FROZEN"
-      ? t("singleGroup.studentHoverCard.frozenPaused")
-      : t("singleGroup.studentHoverCard.activeLearns");
+  // Only known once GET /students/{id} has answered — never a guessed status.
+  const statusLabel = !detail?.status
+    ? null
+    : detail.status === "INACTIVE"
+    ? t("singleGroup.studentHoverCard.inactiveArchived")
+    : detail.status === "FROZEN"
+    ? t("singleGroup.studentHoverCard.frozenPaused")
+    : t("singleGroup.studentHoverCard.activeLearns");
 
   return (
     <div
@@ -316,41 +327,38 @@ const StudentTooltip = ({
           (id:{student.id.length > 8 ? `${student.id.slice(0, 8)}…` : student.id})
         </span>
       </div>
-      <div style={{ fontSize: 13, color: "var(--color-text-muted)", marginBottom: 8 }}>{statusLabel}</div>
+      {statusLabel && <div style={{ fontSize: 13, color: "var(--color-text-muted)", marginBottom: 8 }}>{statusLabel}</div>}
       {isDebtor && (
         <span style={{ display: "inline-block", background: BALANCE_STATUS_COLOR.debtor, color: "#fff", fontSize: 11, fontWeight: 600, borderRadius: 20, padding: "3px 12px", marginBottom: 12 }}>
           {t("singleGroup.studentHoverCard.debtor")}
         </span>
       )}
 
-      <TooltipField label={t("singleGroup.studentHoverCard.phone")}>{phone || "—"}</TooltipField>
+      {phone && <TooltipField label={t("singleGroup.studentHoverCard.phone")}>{phone}</TooltipField>}
 
-      <TooltipField label={t("singleGroup.studentHoverCard.balance")}>
-        {balance === undefined || balance === 0 ? (
-          <span style={{ color: "var(--color-text-muted)" }}>—</span>
-        ) : (
-          <span style={{ display: "inline-block", background: BALANCE_STATUS_COLOR[classifyBalance(balance)], color: "#fff", fontSize: 12, fontWeight: 600, borderRadius: 20, padding: "3px 12px" }}>
+      {balance !== undefined && (
+        <TooltipField label={t("singleGroup.studentHoverCard.balance")}>
+          <span style={{ display: "inline-block", background: balance === 0 ? "#6b7280" : BALANCE_STATUS_COLOR[classifyBalance(balance)], color: "#fff", fontSize: 12, fontWeight: 600, borderRadius: 20, padding: "3px 12px" }}>
             {balance > 0 ? "+" : ""}{balance.toLocaleString("ru-RU")} UZS
           </span>
-        )}
-      </TooltipField>
+        </TooltipField>
+      )}
 
-      <TooltipField label={t("singleGroup.studentHoverCard.addedAt")}>{detail?.createdAt ? formatDate(detail.createdAt) : "—"}</TooltipField>
-      <TooltipField label={t("singleGroup.studentHoverCard.activatedAt")}>{detail?.groupsStart ? formatDate(detail.groupsStart) : "—"}</TooltipField>
+      {detail?.createdAt && (
+        <TooltipField label={t("singleGroup.studentHoverCard.addedAt")}>{formatDate(detail.createdAt)}</TooltipField>
+      )}
+      {membership?.joinedAt && (
+        <TooltipField label={t("singleGroup.studentHoverCard.joinedAt")}>{formatDate(membership.joinedAt)}</TooltipField>
+      )}
+      {membership?.paymentStartDate && (
+        <TooltipField label={t("singleGroup.studentHoverCard.activatedAt")}>{formatDate(membership.paymentStartDate)}</TooltipField>
+      )}
 
       {detail?.comment && (
         <TooltipField label={t("singleGroup.studentHoverCard.note")}>
           <span style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{detail.comment}</span>
         </TooltipField>
       )}
-
-      {/* Coins are not tracked by the backend yet: static 0, same as the
-          SingleGroup hover card. */}
-      <TooltipField label={t("singleGroup.studentHoverCard.allCoins")}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <span aria-hidden style={{ width: 16, height: 16, borderRadius: "50%", background: "#f5a623", display: "inline-block" }} /> 0
-        </span>
-      </TooltipField>
 
       <div style={{ borderTop: "1px solid var(--color-border-subtle)", paddingTop: 10, textAlign: "right" }}>
         <span onClick={() => onNavigate(student.id)} style={{ fontSize: 14, color: "var(--color-text-primary)", cursor: "pointer" }}>
@@ -363,9 +371,10 @@ const StudentTooltip = ({
 
 /* ── StudentRow ── */
 const StudentRow = ({
-  student, isLast, onNavigate,
+  student, groupId, isLast, onNavigate,
 }: {
   student: ProfileGroupStudent;
+  groupId: string;
   isLast: boolean;
   onNavigate: (id: string) => void;
 }) => {
@@ -416,6 +425,7 @@ const StudentRow = ({
       {hovered && (
         <StudentTooltip
           student={student}
+          groupId={groupId}
           position={tooltipPos}
           onNavigate={onNavigate}
           onMouseEnter={clearTimers}
@@ -438,15 +448,18 @@ const StudentsList = ({
     <div style={{ border: "1px solid var(--color-border)", borderRadius: 12, overflow: "hidden", background: "var(--color-surface)", display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid var(--color-border-subtle)", background: "var(--color-surface-alt)" }}>
         <div style={{ fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>{group.name}</div>
-        <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 3 }}>
-          Room: <strong style={{ color: "var(--color-text-primary)" }}>{group.room}</strong>
-        </div>
+        {group.room && (
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 3 }}>
+            Room: <strong style={{ color: "var(--color-text-primary)" }}>{group.room}</strong>
+          </div>
+        )}
       </div>
       <div style={{ overflowY: "auto", maxHeight: 360 }}>
         {group.students.map((s, idx) => (
           <StudentRow
             key={s.id}
             student={s}
+            groupId={group.id}
             isLast={idx === group.students.length - 1}
             onNavigate={onNavigateToStudent}
           />

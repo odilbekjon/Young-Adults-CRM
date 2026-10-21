@@ -179,7 +179,7 @@ export const TeacherAccountGroups = () => {
             ) : (students ?? []).length === 0 ? (
               <Typography fontSize={13} color="text.secondary">{t("teacherGroups.rosterEmpty")}</Typography>
             ) : (
-              (students ?? []).map((s) => <TeacherStudentRow key={s.id} student={s} />)
+              (students ?? []).map((s) => <TeacherStudentRow key={s.id} student={s} groupId={selectedId} />)
             )}
           </Box>
 

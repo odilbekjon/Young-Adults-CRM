@@ -29,7 +29,6 @@ export interface PaymentTx {
 }
 
 const day = (iso: string | null | undefined) => (iso ?? "").slice(0, 10);
-const hasTime = (iso: string) => iso.length > 10;
 
 // Flattens every month's debts + payments into one newest-first list.
 //
@@ -55,7 +54,9 @@ export const buildTransactions = (history: StudentFinanceHistoryEntry[], payment
         comment: d.description || null,
         notes: null,
         creator: d.author || null,
-        createdAt: hasTime(d.date) ? d.date : null,
+        // The charge's own date is a billing date (00:00:00), not the moment
+        // anything was created — shown as a "time" it would be a made-up stamp.
+        createdAt: null,
         paymentId: null,
         paymentMethodId: null,
         status: null,
@@ -80,7 +81,7 @@ export const buildTransactions = (history: StudentFinanceHistoryEntry[], payment
         comment: p.method || matched?.paymentMethodName || null,
         notes: p.notes || matched?.notes || null,
         creator: matched?.createdBy || p.author || null,
-        createdAt: matched?.createdAt ?? (hasTime(p.date) ? p.date : null),
+        createdAt: matched?.createdAt ?? null,
         paymentId: matched?.id ?? null,
         paymentMethodId: matched?.paymentMethodId || null,
         status: matched?.status || null,

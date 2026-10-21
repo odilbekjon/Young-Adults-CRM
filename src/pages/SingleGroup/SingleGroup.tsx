@@ -569,7 +569,9 @@ export const SingleGroup = () => {
       // loaded counts — the roster placeholder 0 must not read as "0 UZS".
       balance: detail?.balance ?? balanceByStudentId.get(student.realId),
       addedAt: detail?.createdAt ? formatDate(detail.createdAt) : student.addedAt,
-      activatedAt: detail?.groupsStart ? formatDate(detail.groupsStart) : student.activatedAt,
+      // This group's own billing start (membership.paymentStartDate), not the
+      // account-wide detail.groupsStart — absent for a trial membership.
+      activatedAt: membership?.paymentStartDate ? formatDate(membership.paymentStartDate) : undefined,
       joinedAt: membership?.joinedAt ? formatDate(membership.joinedAt) : undefined,
       // Read-only — GET /students/{id} returns this, but no endpoint in this
       // app can write it, so "Add new note" (StudentActionsMenu) can't save

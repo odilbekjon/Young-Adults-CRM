@@ -118,8 +118,10 @@ export const StudentHoverCard = ({
       {showStatusBox && (
         <>
           <div style={{
-            background: isDebtor ? "rgba(229,57,53,0.1)" : "var(--color-success-surface)",
-            border: `1px solid ${isDebtor ? "rgba(229,57,53,0.3)" : "var(--color-success-border)"}`,
+            // A debtor looks like any other student here — the red dot beside
+            // the name in the roster is the only marker.
+            background: isDebtor ? "var(--color-surface)" : "var(--color-success-surface)",
+            border: `1px solid ${isDebtor ? "var(--color-border)" : "var(--color-success-border)"}`,
             borderRadius: 10,
             padding: "12px 14px",
             marginBottom: 12,
@@ -157,15 +159,15 @@ export const StudentHoverCard = ({
       {!showStatusBox && (
         <div style={{ marginBottom: 10 }}>
           <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 4 }}>{t("singleGroup.studentHoverCard.balance")}</div>
-          {student.balance !== undefined && student.balance !== 0 ? (
+          {student.balance !== undefined ? (
             <span style={{
               display: "inline-block",
-              background: balanceColor,
+              background: student.balance === 0 ? "#6b7280" : balanceColor,
               color: "#fff", fontSize: 12, fontWeight: 600,
               borderRadius: 20, padding: "3px 10px",
             }}>
               {student.balance > 0 ? "+" : ""}
-              {student.balance.toLocaleString()} UZS
+              {student.balance.toLocaleString("ru-RU")} UZS
             </span>
           ) : (
             <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>—</span>

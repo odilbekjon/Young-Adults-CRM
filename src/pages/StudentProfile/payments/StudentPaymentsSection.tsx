@@ -12,7 +12,6 @@ import { extractApiError } from "../../../utils/extractApiError";
 import { PaymentReceiptModal } from "../../../components/PaymentReceiptModal";
 import { DebtorReceiptModal } from "../../../components/DebtorReceiptModal";
 import { buildTransactions, type PaymentTx } from "./buildTransactions";
-import { reconcileFinanceHistory } from "./reconcileHistory";
 import { MonthlyBalance, OutstandingBalanceCard } from "./BalanceCards";
 import { PaymentsTable } from "./PaymentsTable";
 import { EditPaymentDrawer } from "./EditPaymentDrawer";
@@ -42,10 +41,9 @@ export const StudentPaymentsSection = ({
   const {
     data: rawHistory, isFetching: isHistoryLoading, isError: isHistoryError,
   } = useStudentFinanceHistoryQuery(studentId, { skip: !studentId });
-  // The ledger is trimmed to what the profile's own balance accounts for, so a
-  // single unpaid month isn't repeated as a charge for every month (see
-  // reconcileFinanceHistory).
-  const history = useMemo(() => reconcileFinanceHistory(rawHistory ?? [], balance), [rawHistory, balance]);
+  // Shown exactly as the backend returns it — no client-side trimming or
+  // re-totalling of the ledger.
+  const history = useMemo(() => rawHistory ?? [], [rawHistory]);
   const { data: memberships } = useStudentGroupMembershipsQuery(studentId, { skip: !studentId });
 
   const transactions = useMemo(
@@ -60,6 +58,7 @@ export const StudentPaymentsSection = ({
   const [statementOpen, setStatementOpen] = useState(false);
   const [editPaymentTx, setEditPaymentTx] = useState<PaymentTx | null>(null);
   const [editDebtTx, setEditDebtTx] = useState<PaymentTx | null>(null);
+  const [removeDebtTx, setRemoveDebtTx] = useState<PaymentTx | null>(null);
   const [confirm, setConfirm] = useState<{ tx: PaymentTx; mode: "refund" | "remove" } | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
@@ -109,7 +108,11 @@ export const StudentPaymentsSection = ({
         onPrint={setReceiptTx}
         onEdit={(tx) => (tx.kind === "system" ? setEditDebtTx(tx) : setEditPaymentTx(tx))}
         onRefund={(tx) => { setConfirmError(null); setConfirm({ tx, mode: "refund" }); }}
-        onRemove={(tx) => { setConfirmError(null); setConfirm({ tx, mode: "remove" }); }}
+        onRemove={(tx) => {
+          if (tx.kind === "system") { setRemoveDebtTx(tx); return; }
+          setConfirmError(null);
+          setConfirm({ tx, mode: "remove" });
+        }}
       />
 
       {/* Receipts: a real payment prints its own GET /finance/payments/{id}/receipt;
@@ -146,6 +149,13 @@ export const StudentPaymentsSection = ({
         open={Boolean(editDebtTx)}
         onClose={() => setEditDebtTx(null)}
         tx={editDebtTx}
+        studentId={studentId}
+      />
+      <EditDebtDialog
+        mode="remove"
+        open={Boolean(removeDebtTx)}
+        onClose={() => setRemoveDebtTx(null)}
+        tx={removeDebtTx}
         studentId={studentId}
       />
 

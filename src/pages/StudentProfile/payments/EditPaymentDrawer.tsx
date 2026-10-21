@@ -14,6 +14,12 @@ import type { PaymentTx } from "./buildTransactions";
 
 const day = (iso: string | null | undefined) => (iso ?? "").slice(0, 10);
 
+// Ledger month label ("2026-09" / "2026-09-01...") -> forMonth "2026-09-01".
+const monthStart = (month: string | null | undefined) => {
+  const m = /^(\d{4})-(\d{2})/.exec(month ?? "");
+  return m ? `${m[1]}-${m[2]}-01` : "";
+};
+
 // Edit an existing payment: PATCH /finance/payments/{id} (multipart/form-data,
 // every field optional). Only fields the user actually changed (or, for
 // `forMonth`, filled in — the list endpoints don't return it) are sent;
@@ -46,7 +52,7 @@ export const EditPaymentDrawer = ({
     setMethodId(tx.paymentMethodId ?? "");
     setMethod(undefined);
     setDate(day(tx.date));
-    setForMonth("");
+    setForMonth(monthStart(tx.month));
     setNotes(tx.notes ?? "");
     setGroupId(tx.groupId ?? "");
     setError(null);
@@ -73,14 +79,19 @@ export const EditPaymentDrawer = ({
       if (method) body.provider = getProviderFromMethodName(method.name);
     }
     if (date && date !== day(tx.date)) body.date = date;
-    if (forMonth) body.forMonth = forMonth;
+    const originalMonth = monthStart(tx.month);
+    const monthChanged = Boolean(forMonth) && forMonth !== originalMonth;
     if (notes.trim() !== (tx.notes ?? "").trim()) body.notes = notes.trim();
     if (groupId && groupId !== (tx.groupId ?? "")) body.groupId = groupId;
 
-    if (Object.keys(body).length === 0) {
+    if (Object.keys(body).length === 0 && !monthChanged) {
       setError(t("studentPayments.edit.noChanges", "Nothing was changed"));
       return;
     }
+    // Always send the month the payment already counts for (or the one the
+    // user picked): a PATCH without it can re-file the payment under another
+    // month (e.g. the month of the edit/date) instead of leaving it where it was.
+    if (forMonth) body.forMonth = forMonth;
 
     try {
       await updatePayment({ id: tx.paymentId, ...body }).unwrap();

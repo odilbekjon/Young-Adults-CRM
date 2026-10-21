@@ -35,6 +35,7 @@ import {
     StudentAttendanceReportGroup,
 } from "./types";
 import type { PaymentRow } from "../financeApi/types";
+import { normalizeHistory } from "../groupsApi/groupsApi";
 
 const asString = (raw: unknown): string | null => {
     if (raw === undefined || raw === null) return null;
@@ -56,46 +57,56 @@ const asString = (raw: unknown): string | null => {
 const asMoney = (raw: unknown): number => decimalToNumber(raw) ?? 0;
 
 // Backend's exact envelope for GET /students/{id}/comments isn't documented
-// beyond a 200 status — normalized the same defensive way as groupsApi's
-// normalizeComments.
-const normalizeStudentComments = (raw: unknown): StudentComment[] => {
-    const container = (raw ?? {}) as Record<string, unknown>;
-    const list: unknown[] = Array.isArray(raw)
-        ? raw
-        : Array.isArray(container.comments)
-        ? container.comments
-        : Array.isArray(container.data)
-        ? container.data
-        : [];
-    return (list as Record<string, unknown>[]).map((r, i) => ({
-        id: String(r.id ?? r._id ?? i),
-        text: String(r.text ?? r.message ?? r.comment ?? r.content ?? ""),
-        author: asString(r.author ?? r.createdBy ?? r.user ?? r.modifiedBy),
-        createdAt: String(r.createdAt ?? r.timestamp ?? r.date ?? ""),
-    }));
+// beyond a 200 status, so the list is looked up under the usual wrappers and
+// each field under the names the backend might use (same defensive approach
+// as groupsApi's normalizeComments, just wider — a comment whose text sits
+// under an unexpected key used to render as an empty card).
+const personName = (raw: unknown): string | null => {
+    if (raw === undefined || raw === null || raw === "") return null;
+    if (typeof raw !== "object") return String(raw);
+    const o = raw as Record<string, unknown>;
+    const full = [o.firstName, o.lastName].filter((x) => typeof x === "string" && x).join(" ");
+    const name = o.name ?? o.fullName ?? (full || undefined) ?? o.username;
+    return name === undefined || name === null || name === "" ? null : String(name);
 };
 
-// GET /students/{id}/history — same defensive normalization as groupsApi's
-// normalizeHistory (undocumented envelope beyond a bare 200).
-const normalizeStudentHistory = (raw: unknown): StudentHistoryEntry[] => {
-    const container = (raw ?? {}) as Record<string, unknown>;
-    const list: unknown[] = Array.isArray(raw)
-        ? raw
-        : Array.isArray(container.history)
-        ? container.history
-        : Array.isArray(container.events)
-        ? container.events
-        : Array.isArray(container.data)
-        ? container.data
-        : [];
-    return (list as Record<string, unknown>[]).map((r, i) => ({
-        id: String(r.id ?? r._id ?? i),
-        type: String(r.type ?? r.action ?? r.event ?? "").toUpperCase(),
-        detail: String(r.detail ?? r.description ?? r.message ?? ""),
-        createdAt: String(r.createdAt ?? r.timestamp ?? r.date ?? ""),
-        actor: asString(r.modifiedBy ?? r.actor ?? r.createdBy ?? r.user),
-    }));
+const firstPresent = (r: Record<string, unknown>, keys: string[]): unknown => {
+    for (const k of keys) {
+        const v = r[k];
+        if (v !== undefined && v !== null && v !== "") return v;
+    }
+    return undefined;
 };
+
+const COMMENT_TEXT_KEYS = ["text", "comment", "message", "content", "note", "body", "description"];
+const COMMENT_AUTHOR_KEYS = ["author", "authorName", "createdBy", "createdByName", "user", "admin", "creator", "modifiedBy", "teacher"];
+
+const findCommentList = (raw: unknown): unknown[] => {
+    if (Array.isArray(raw)) return raw;
+    if (!raw || typeof raw !== "object") return [];
+    const c = raw as Record<string, unknown>;
+    for (const k of ["comments", "rows", "items", "data"]) {
+        const found = findCommentList(c[k]);
+        if (found.length) return found;
+    }
+    return [];
+};
+
+const normalizeStudentComments = (raw: unknown): StudentComment[] =>
+    (findCommentList(raw).filter((r) => !!r && typeof r === "object") as Record<string, unknown>[]).map((r, i) => {
+        const text = firstPresent(r, COMMENT_TEXT_KEYS);
+        return {
+            id: String(r.id ?? r._id ?? i),
+            text: typeof text === "string" ? text : text !== undefined ? String(text) : "",
+            author: personName(firstPresent(r, COMMENT_AUTHOR_KEYS)),
+            createdAt: String(firstPresent(r, ["createdAt", "created_at", "timestamp", "date", "updatedAt"]) ?? ""),
+        };
+    });
+
+// GET /students/{id}/history — run through the same normalizer as a group's
+// history (status transitions with reason/comment, group, field changes,
+// actor, full timestamp) so every recorded event reaches the UI.
+const normalizeStudentHistory = (raw: unknown): StudentHistoryEntry[] => normalizeHistory(raw);
 
 const normalizeStudentSmsHistory = (raw: unknown): StudentSmsEntry[] => {
     const container = (raw ?? {}) as Record<string, unknown>;

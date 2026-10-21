@@ -33,14 +33,18 @@ const formatStamp = (iso: string) => {
 
 const linkSx = { color: LINK_COLOR, textDecoration: "none", "&:hover": { textDecoration: "underline" } };
 
-const HistoryEntryRow = ({
+// Also rendered by StudentProfile's History tab (hideStudent: the profile is
+// already about that student; groupId/groupName then come from each entry).
+export const HistoryEntryRow = ({
   entry,
   groupId,
   groupName,
+  hideStudent = false,
 }: {
   entry: GroupHistoryEntry;
   groupId: string;
   groupName: string;
+  hideStudent?: boolean;
 }) => {
   const { t } = useTranslation();
 
@@ -62,7 +66,7 @@ const HistoryEntryRow = ({
   const targetGroupName = entry.groupName ?? groupName;
   // Raw UUIDs are noise — show the group's code, or a short numeric id.
   const groupCode = entry.groupCode ?? (entry.groupId && entry.groupId.length <= 8 ? entry.groupId : null);
-  const hasStudent = !!(entry.studentName || entry.studentPhone);
+  const hasStudent = !hideStudent && !!(entry.studentName || entry.studentPhone);
   const tr = entry.transition;
 
   return (
@@ -117,7 +121,7 @@ const HistoryEntryRow = ({
           </Typography>
         )}
 
-        {groupCode && (
+        {groupCode && targetGroupId && (
           <Typography sx={{ fontSize: 14, color: "var(--color-text-primary)" }}>
             {t("singleGroup.tabs.history.group")}:{" "}
             <Box component={RouterLink} to={`/groups/${targetGroupId}`} sx={linkSx}>

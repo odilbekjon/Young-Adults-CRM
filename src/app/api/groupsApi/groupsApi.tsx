@@ -149,7 +149,7 @@ const HISTORY_KNOWN_KEYS = new Set([
 // Containers whose scalar members are unwrapped into rows of their own.
 const HISTORY_NESTED_KEYS = ["data", "meta", "metadata", "payload", "extra", "info", "details"];
 
-const normalizeHistory = (raw: unknown): GroupHistoryEntry[] => {
+export const normalizeHistory = (raw: unknown): GroupHistoryEntry[] => {
     const container = (raw ?? {}) as Record<string, unknown>;
     const list: unknown[] = Array.isArray(raw)
         ? raw

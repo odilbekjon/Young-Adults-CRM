@@ -75,16 +75,16 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
   const dispatch = useDispatch<AppDispatch>();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { data: branchesData, isLoading: branchesLoading } = useAllBranchesQuery();
-  const { isSuperAdmin, branchIds } = useAuth();
+  const { isCeo, branchIds } = useAuth();
 
-  // Only SUPERADMIN (CEO) sees every branch / the "All branches" shortcut —
+  // Only SUPERADMIN / a CEO-position account sees every branch / the "All branches" shortcut —
   // everyone else is scoped to the branches their own account was assigned
   // (AUTH_ROLE_DOCS.md's branchIds), so they can't select their way into a
   // branch's data they don't otherwise have access to.
   const activeBranches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
-  const scopedBranches = isSuperAdmin ? activeBranches : activeBranches.filter((b) => branchIds.includes(b.id));
+  const scopedBranches = isCeo ? activeBranches : activeBranches.filter((b) => branchIds.includes(b.id));
 
-  const options: { value: BranchId; label: string; id: string | null }[] = isSuperAdmin
+  const options: { value: BranchId; label: string; id: string | null }[] = isCeo
     ? [{ value: "all", label: "All branches", id: null }, ...scopedBranches.map((b) => ({ value: b.name, label: b.name, id: b.id }))]
     : scopedBranches.map((b) => ({ value: b.name, label: b.name, id: b.id }));
   const current = options.find((o) => o.value === branch);

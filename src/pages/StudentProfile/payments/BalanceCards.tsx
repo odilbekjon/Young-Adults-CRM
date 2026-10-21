@@ -10,9 +10,8 @@ import { sectionTitleStyle } from "./styles";
 // `balance` is StudentDetail's own balance (the same figure the sidebar's
 // badge shows) — the single source of truth for whether the student owes
 // money. `summary` (GET /students/{id}/payments' totals) is only shown as a
-// breakdown next to it, never used to re-derive a second, possibly
-// conflicting balance — "Total due" is therefore paid − balance (so
-// due − paid always equals the balance shown), not summary.totalCharged.
+// breakdown next to it (the backend's own totals, shown as returned), never
+// used to re-derive a second balance.
 export const OutstandingBalanceCard = ({
   balance, summary, isLoading, onPrintNotice,
 }: {
@@ -34,8 +33,9 @@ export const OutstandingBalanceCard = ({
       <div style={{ ...sectionTitleStyle, margin: "0 0 12px" }}>{t("studentPayments.balanceTitle", "Balance")}</div>
       <div
         style={{
-          background: isDebt ? "rgba(229,57,53,0.08)" : "var(--color-success-surface)",
-          border: `1px solid ${isDebt ? "rgba(229,57,53,0.3)" : "var(--color-success-border)"}`,
+          // A debtor is marked by a red edge only — no red fill.
+          background: isDebt ? "var(--color-surface)" : "var(--color-success-surface)",
+          border: `1px solid ${isDebt ? "var(--color-danger, #ef4444)" : "var(--color-success-border)"}`,
           borderRadius: 12,
           padding: 16,
           display: "flex",
@@ -59,7 +59,7 @@ export const OutstandingBalanceCard = ({
           {hasBreakdown && (
             <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 6 }}>
               {t("studentPayments.totalDue", "Total due")}:{" "}
-              <strong style={{ color: "var(--color-text-primary)" }}>{formatUzs(summary!.totalPaid - balance)}</strong>
+              <strong style={{ color: "var(--color-text-primary)" }}>{formatUzs(summary!.totalCharged)}</strong>
               {"   ·   "}{t("studentPayments.alreadyPaid", "Already paid")}:{" "}
               <strong style={{ color: "var(--color-text-primary)" }}>{formatUzs(summary!.totalPaid)}</strong>
             </div>

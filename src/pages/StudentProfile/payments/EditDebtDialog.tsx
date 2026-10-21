@@ -10,14 +10,18 @@ import type { PaymentTx } from "./buildTransactions";
 // JSON {amount, reason}. Per Swagger this edits the student's special debt /
 // the current group's monthly payment amount for that group — not one
 // historical charge line — hence the hint below the fields.
+// mode "remove": the backend has no DELETE for a charge, so removing it is the
+// same PATCH with amount 0 (reason required), and only asks for the reason.
 export const EditDebtDialog = ({
-  open, onClose, tx, studentId,
+  open, onClose, tx, studentId, mode = "edit",
 }: {
   open: boolean;
   onClose: () => void;
   tx: PaymentTx | null;
   studentId: string;
+  mode?: "edit" | "remove";
 }) => {
+  const isRemove = mode === "remove";
   const { t } = useTranslation();
   const toast = useToast();
   const [updateDebt, { isLoading }] = useUpdateDebtMutation();
@@ -34,8 +38,8 @@ export const EditDebtDialog = ({
 
   const submit = async () => {
     if (!tx?.groupId) return;
-    const num = Number(amount);
-    if (!amount || !Number.isFinite(num) || num < 0) {
+    const num = isRemove ? 0 : Number(amount);
+    if ((!isRemove && !amount) || !Number.isFinite(num) || num < 0) {
       setError(t("addPayment.errors.amount", "Enter a valid amount"));
       return;
     }
@@ -46,7 +50,7 @@ export const EditDebtDialog = ({
     setError(null);
     try {
       await updateDebt({ studentId, groupId: tx.groupId, amount: num, reason: reason.trim() }).unwrap();
-      toast.success(t("studentPayments.toast.debtUpdated", "Amount updated"));
+      toast.success(isRemove ? t("studentPayments.toast.removed", "Charge removed") : t("studentPayments.toast.debtUpdated", "Amount updated"));
       onClose();
     } catch (err) {
       const detail = extractApiError(err);
@@ -59,19 +63,27 @@ export const EditDebtDialog = ({
 
   return (
     <Dialog open={open} onClose={isLoading ? undefined : onClose} PaperProps={{ sx: { borderRadius: 3, width: 420, maxWidth: "calc(100vw - 32px)" } }}>
-      <DialogTitle sx={{ fontWeight: 600 }}>{t("studentPayments.debt.title", "Edit amount")}</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 600 }}>
+        {isRemove ? t("studentPayments.removeChargeTitle", "Remove charge") : t("studentPayments.debt.title", "Edit amount")}
+      </DialogTitle>
       <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: "8px !important" }}>
         {tx?.groupName && (
           <div style={{ fontSize: 13, color: "var(--color-text-secondary, #6b7280)" }}>{tx.groupName}</div>
         )}
-        <TextField
-          label={t("addPayment.amount", "Amount")}
-          type="number"
-          size="small"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          fullWidth
-        />
+        {isRemove ? (
+          <div style={{ fontSize: 14, color: "var(--color-text-secondary, #6b7280)" }}>
+            {tx ? `${tx.amount.toLocaleString("ru-RU")} UZS` : ""}
+          </div>
+        ) : (
+          <TextField
+            label={t("addPayment.amount", "Amount")}
+            type="number"
+            size="small"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            fullWidth
+          />
+        )}
         <TextField
           label={t("studentPayments.debt.reason", "Reason")}
           size="small"
@@ -82,7 +94,9 @@ export const EditDebtDialog = ({
           fullWidth
         />
         <div style={{ fontSize: 12, color: "var(--color-text-muted, #9ca3af)" }}>
-          {t("studentPayments.debt.hint", "This changes the student's special debt / the group's monthly payment amount, not a single past charge.")}
+          {isRemove
+            ? t("studentPayments.debt.removeHint", "The group's monthly charge for this student is set to 0.")
+            : t("studentPayments.debt.hint", "This changes the student's special debt / the group's monthly payment amount, not a single past charge.")}
         </div>
         {error && <div style={{ fontSize: 13, color: "var(--color-danger, #ef4444)" }}>{error}</div>}
       </DialogContent>
@@ -90,8 +104,8 @@ export const EditDebtDialog = ({
         <Button onClick={onClose} disabled={isLoading} sx={{ color: "var(--color-text-secondary)", textTransform: "none" }}>
           {t("studentPayments.cancel", "Cancel")}
         </Button>
-        <Button variant="contained" onClick={submit} disabled={isLoading} sx={{ borderRadius: 2, textTransform: "none", bgcolor: "#26a9b8", "&:hover": { bgcolor: "#1f8c99" } }}>
-          {isLoading ? t("addPayment.saving", "Saving...") : t("addPayment.updateSubmit", "Save")}
+        <Button variant="contained" onClick={submit} disabled={isLoading} sx={{ borderRadius: 2, textTransform: "none", bgcolor: isRemove ? "#dc2626" : "#26a9b8", "&:hover": { bgcolor: isRemove ? "#b91c1c" : "#1f8c99" } }}>
+          {isLoading ? t("addPayment.saving", "Saving...") : isRemove ? t("studentPayments.menu.remove", "Remove") : t("addPayment.updateSubmit", "Save")}
         </Button>
       </DialogActions>
     </Dialog>

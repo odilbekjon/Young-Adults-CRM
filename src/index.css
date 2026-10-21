@@ -163,9 +163,18 @@ html.dark .recharts-cartesian-axis-tick-value {
  * width. Never let them be wider than the viewport (phones/tablets).
  */
 .MuiDialog-paper {
-  max-width: calc(100vw - 24px) !important;
   margin: 12px !important;
 }
+
+/* Cap at the viewport, but keep the dialog's own maxWidth (xs/sm/md/...) when
+   it is narrower — a blanket max-width here made every fullWidth dialog,
+   receipts included, stretch across the whole screen. */
+.MuiDialog-paperWidthXs { max-width: min(444px, calc(100vw - 24px)) !important; }
+.MuiDialog-paperWidthSm { max-width: min(600px, calc(100vw - 24px)) !important; }
+.MuiDialog-paperWidthMd { max-width: min(900px, calc(100vw - 24px)) !important; }
+.MuiDialog-paperWidthLg { max-width: min(1200px, calc(100vw - 24px)) !important; }
+.MuiDialog-paperWidthXl { max-width: min(1536px, calc(100vw - 24px)) !important; }
+.MuiDialog-paperWidthFalse { max-width: calc(100vw - 24px) !important; }
 
 .MuiDrawer-paper {
   max-width: 100vw;

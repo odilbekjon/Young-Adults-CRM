@@ -99,12 +99,12 @@ const StudentHoverCard = ({
 
       <Field label={t("singleGroup.studentHoverCard.phone")}>{formatPhone(student.phone) || "—"}</Field>
 
-      {balance !== null && balance !== 0 && (
+      {balance !== null && (
         <Field label={t("singleGroup.studentHoverCard.balance")}>
           <Box
             component="span"
             sx={{
-              display: "inline-block", bgcolor: BALANCE_STATUS_COLOR[classifyBalance(balance)], color: "#fff",
+              display: "inline-block", bgcolor: balance === 0 ? "#6b7280" : BALANCE_STATUS_COLOR[classifyBalance(balance)], color: "#fff",
               fontSize: 12, fontWeight: 600, borderRadius: "20px", px: 1.5, py: 0.4,
             }}
           >

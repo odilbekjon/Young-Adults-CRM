@@ -165,7 +165,9 @@ export const Archive = () => {
   const [updateStudentGroup] = useUpdateStudentGroupMutation();
 
   const isRestoring = isRestoringStudent || isRestoringTeacher || isRestoringStaff || isBulkProcessing;
-  const isPermDeleting = isDeletingStudent || isDeletingTeacher || isDeletingStaffUser || isBulkProcessing;
+  const [isSingleDeleting, setIsSingleDeleting] = useState(false);
+  const isPermDeleting =
+    isDeletingStudent || isDeletingTeacher || isDeletingStaffUser || isSingleDeleting || isBulkProcessing;
 
   const roleActionsFor = (role?: string | null) => {
     switch ((role ?? "").toUpperCase()) {
@@ -241,25 +243,68 @@ export const Archive = () => {
     }
   };
 
+  // DELETE /students/{id} is rejected while the student still has live group
+  // memberships, and an account archived through toggle-status can still carry
+  // some — end them first (best effort: if this fails the DELETE itself
+  // reports the real reason).
+  const endLiveMemberships = async (studentId: string) => {
+    try {
+      const lists = await Promise.all(
+        (["PROBATION", "ACTIVE", "FROZEN"] as const).map((status) =>
+          fetchMemberships({ studentId, status, limit: 200 }).unwrap()
+        )
+      );
+      const live = lists
+        .flatMap((l) => l.rows)
+        .filter((m) => m.status !== "INACTIVE" && m.status !== "DELETED" && (!m.studentId || m.studentId === studentId));
+      for (const m of live) {
+        await updateStudentGroup({ id: m.id, status: "INACTIVE" }).unwrap();
+      }
+    } catch {
+      /* surfaced by the DELETE call below */
+    }
+  };
+
+  const permanentlyDelete = async (r: ArchiveRecord) => {
+    const actions = roleActionsFor(r.role);
+    if (!actions) throw new Error("unsupported-role");
+    if (isStudentRecord(r)) await endLiveMemberships(r.id);
+    await actions.permanentDelete(r.id).unwrap();
+  };
+
+  // 409 on DELETE /users/{id} = the staff member is still attached to a
+  // branch; the backend's own text is kept, with a hint on what to do.
+  const deleteErrorText = (err: unknown, r: ArchiveRecord, generic: string) => {
+    const detail = extractApiError(err);
+    const status = (err as { status?: unknown })?.status;
+    const hint =
+      status === 409
+        ? t("settings.office.archive.permanentDeleteConfirm.conflict", {
+            defaultValue: "It is still linked to other records (branch or groups) and cannot be deleted yet.",
+          })
+        : null;
+    return [generic, detail ?? hint].filter(Boolean).join(": ") + (r.name ? ` (${r.name})` : "");
+  };
+
   const handlePermanentDelete = async () => {
     if (!permDeleteTarget) return;
-    const actions = roleActionsFor(permDeleteTarget.role);
-    if (!actions) {
+    if (!roleActionsFor(permDeleteTarget.role)) {
       setPermDeleteError(t("settings.office.archive.permanentDeleteConfirm.unsupportedRole"));
       return;
     }
     setPermDeleteError(null);
+    setIsSingleDeleting(true);
     try {
-      await actions.permanentDelete(permDeleteTarget.id).unwrap();
+      await permanentlyDelete(permDeleteTarget);
       toast.success(t("settings.office.archive.toast.permanentlyDeleted"));
       setPermDeleteTarget(null);
       setSelected((s) => s.filter((id) => id !== permDeleteTarget.id));
     } catch (err) {
-      const detail = extractApiError(err);
-      const generic = t("settings.office.archive.permanentDeleteConfirm.error");
-      const message = detail ? `${generic}: ${detail}` : generic;
+      const message = deleteErrorText(err, permDeleteTarget, t("settings.office.archive.permanentDeleteConfirm.error"));
       setPermDeleteError(message);
       toast.error(message);
+    } finally {
+      setIsSingleDeleting(false);
     }
   };
 
@@ -290,21 +335,23 @@ export const Archive = () => {
     setIsBulkProcessing(true);
     try {
       const targets = pageData.filter((r) => selected.includes(r.id));
-      await Promise.all(
-        targets.map((r) => {
-          const actions = roleActionsFor(r.role);
-          return actions ? actions.permanentDelete(r.id).unwrap() : Promise.resolve();
-        })
-      );
-      toast.success(t("settings.office.archive.toast.permanentlyDeleted"));
-      setSelected([]);
-      setBulkPermDeleteConfirmOpen(false);
-    } catch (err) {
-      const detail = extractApiError(err);
-      const generic = t("settings.office.archive.bulkPermanentDeleteConfirm.error");
-      const message = detail ? `${generic}: ${detail}` : generic;
-      setBulkActionError(message);
-      toast.error(message);
+      // allSettled, not all: one rejected record (e.g. a staff member still on
+      // a branch) must not hide the others that were deleted, nor leave them
+      // selected.
+      const results = await Promise.allSettled(targets.map((r) => permanentlyDelete(r)));
+      const failures = results.flatMap((res, i) => (res.status === "rejected" ? [{ record: targets[i], reason: res.reason }] : []));
+      const deletedIds = targets.filter((_, i) => results[i].status === "fulfilled").map((r) => r.id);
+      setSelected((s) => s.filter((id) => !deletedIds.includes(id)));
+
+      if (failures.length === 0) {
+        toast.success(t("settings.office.archive.toast.permanentlyDeleted"));
+        setBulkPermDeleteConfirmOpen(false);
+      } else {
+        const generic = t("settings.office.archive.bulkPermanentDeleteConfirm.error");
+        const message = failures.map((f) => deleteErrorText(f.reason, f.record, generic)).join("\n");
+        setBulkActionError(message);
+        toast.error(message);
+      }
     } finally {
       setIsBulkProcessing(false);
     }
@@ -454,7 +501,7 @@ export const Archive = () => {
       </div>
 
       {bulkActionError && (
-        <div className="mb-3 text-sm text-red-500">{bulkActionError}</div>
+        <div className="mb-3 text-sm text-red-500 whitespace-pre-line">{bulkActionError}</div>
       )}
 
       {/* Table */}
@@ -613,7 +660,7 @@ export const Archive = () => {
             </div>
           )}
           {restoreError && (
-            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
+            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem", whiteSpace: "pre-line" }}>
               {restoreError}
             </Typography>
           )}
@@ -654,7 +701,7 @@ export const Archive = () => {
             {t("settings.office.archive.permanentDeleteConfirm.message", { name: permDeleteTarget?.name ?? "" })}
           </DialogContentText>
           {permDeleteError && (
-            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
+            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem", whiteSpace: "pre-line" }}>
               {permDeleteError}
             </Typography>
           )}
@@ -703,7 +750,7 @@ export const Archive = () => {
             </div>
           )}
           {bulkActionError && (
-            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
+            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem", whiteSpace: "pre-line" }}>
               {bulkActionError}
             </Typography>
           )}
@@ -744,7 +791,7 @@ export const Archive = () => {
             {t("settings.office.archive.bulkPermanentDeleteConfirm.message", { count: selected.length })}
           </DialogContentText>
           {bulkActionError && (
-            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem" }}>
+            <Typography sx={{ mt: 1.5, color: "#ef5350", fontSize: "0.8125rem", whiteSpace: "pre-line" }}>
               {bulkActionError}
             </Typography>
           )}

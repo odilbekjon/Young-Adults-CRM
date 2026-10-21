@@ -24,6 +24,21 @@ export const isSuperAdminRole = (role?: string | null) => {
   const r = normalizeRole(role);
   return r === SYSTEM_ROLES.SUPERADMIN || r === SYSTEM_ROLES.CEO;
 };
+// "CEO" as a *position* (RolePermission.name) held by an ADMIN account — the
+// system role stays ADMIN, but the account is the company's top tier: every
+// branch, every menu, every permission (same as SUPERADMIN). Looks at the
+// flattened `roles` names and at each assigned RolePermission's name.
+export const CEO_POSITION_NAME = "CEO";
+
+export const isCeoPositionName = (name?: string | null) =>
+  (name ?? "").trim().toUpperCase() === CEO_POSITION_NAME;
+
+export const hasCeoPosition = (
+  user: Partial<Pick<MeUser, "roles" | "rolePermissions">> | null | undefined
+): boolean =>
+  (user?.roles ?? []).some((r) => isCeoPositionName(r)) ||
+  (user?.rolePermissions ?? []).some((rp) => isCeoPositionName(rp?.name));
+
 export const isAdminRole = (role?: string | null) => normalizeRole(role) === SYSTEM_ROLES.ADMIN;
 export const isTeacherRole = (role?: string | null) => normalizeRole(role) === SYSTEM_ROLES.TEACHER;
 export const isStudentRole = (role?: string | null) => normalizeRole(role) === SYSTEM_ROLES.STUDENT;
@@ -54,7 +69,7 @@ export const hasPermission = (
   action: PermissionAction
 ): boolean => {
   if (!user) return false;
-  if (isSuperAdminRole(user.role)) return true;
+  if (isSuperAdminRole(user.role) || hasCeoPosition(user)) return true;
 
   return (user.rolePermissions ?? []).some((rp) =>
     (rp.permissions ?? []).some((p) => p.label === label && (p.action === action || p.action === "MANAGE"))
@@ -68,6 +83,6 @@ export const hasLabelAccess = (
   label: PermissionLabel
 ): boolean => {
   if (!user) return false;
-  if (isSuperAdminRole(user.role)) return true;
+  if (isSuperAdminRole(user.role) || hasCeoPosition(user)) return true;
   return (user.rolePermissions ?? []).some((rp) => (rp.permissions ?? []).some((p) => p.label === label));
 };

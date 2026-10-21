@@ -126,6 +126,7 @@ const toScheduleEvents = (
 // Student Left Group (Router.tsx: settings/office/students-left-group) reads
 // ?leftType=active|trial. Override the route/filter in constants/DashboardStats.
 const STAT_TARGETS: Record<string, string> = {
+  students:   "/students?status=active",
   trial:      "/students?status=trial",
   paid:       "/students?financial=paid_month",
   leftActive: "/settings/office/students-left-group?leftType=active",
@@ -232,6 +233,11 @@ export const Dashboard = () => {
   // used on the Groups list page — see realStudentCount's own comment.
   const { data: inactiveMembershipsData } = useStudentGroupsQuery({ status: "INACTIVE", branchId, limit: 1000 });
   const { data: deletedMembershipsData } = useStudentGroupsQuery({ status: "DELETED", branchId, limit: 1000 });
+  // "Active students" = students who currently have an ACTIVE group
+  // membership — the same definition (and the same query) the Students page's
+  // Status → Active filter uses, so the card's number matches the list it opens.
+  const { data: activeMembershipsData, isFetching: activeStudentsLoading } =
+    useStudentGroupsQuery({ status: "ACTIVE", branchId, limit: 1000 });
   const { data: attendanceData, isLoading: attendanceLoading, isError: attendanceError } = useDashboardAttendanceStatsQuery(undefined, refetchOnMount);
   const { data: activitiesData, isLoading: activitiesLoading, isError: activitiesError } = useDashboardRecentActivitiesQuery(undefined, refetchOnMount);
   const { data: teacherPerfData, isLoading: teacherPerfLoading, isError: teacherPerfError } = useDashboardTeacherPerformanceQuery(undefined, refetchOnMount);
@@ -288,9 +294,22 @@ export const Dashboard = () => {
     return chartMonths.reduce((max, point) => (point.totalPayments > max.totalPayments ? point : max), chartMonths[0]);
   }, [chartMonths]);
 
+  // Distinct students with an ACTIVE membership. If the membership list was cut
+  // off by the row limit the count would be too low, so the backend's own
+  // /dashboard/stats figure is used instead.
+  const activeStudentsStat = (() => {
+    if (activeMembershipsData) {
+      const complete = (activeMembershipsData.meta?.total ?? activeMembershipsData.rows.length) <= activeMembershipsData.rows.length;
+      if (complete) {
+        return { value: new Set(activeMembershipsData.rows.map((r) => r.studentId).filter(Boolean)).size, loading: false };
+      }
+    }
+    return { value: statsData?.data.activeStudentsCount ?? 0, loading: activeStudentsLoading && !statsData };
+  })();
+
   const liveStatValues: Record<string, { value: number; loading: boolean }> = {
     leads:      { value: activeLeadsData?.meta?.total ?? activeLeadsData?.data.length ?? 0, loading: activeLeadsLoading },
-    students:   { value: statsData?.data.activeStudentsCount ?? 0, loading: !statsData },
+    students:   activeStudentsStat,
     groups:     { value: statsData?.data.activeGroupsCount ?? 0, loading: !statsData },
     debtors:    { value: debtorsData?.meta.total ?? 0, loading: debtorsLoading },
     trial:      { value: trialGroupsData?.meta.total ?? 0, loading: trialLoading },

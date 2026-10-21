@@ -52,6 +52,28 @@ const firstOf = (r: Row, keys: string[]): unknown => {
 // again so the Reason and Comment columns line up.
 const SEPARATOR = " — ";
 
+// Restore (toggle-status) and permanent delete both address the underlying
+// student/teacher/staff record, never the archive row itself — so when the
+// backend sends a role-specific id next to its own `id`, that one wins.
+// `id` stays the fallback (and the only source for rows without such a key).
+const ENTITY_ID_KEYS: Record<string, string[]> = {
+  STUDENT: ["studentId"],
+  TEACHER: ["teacherId"],
+  ADMIN: ["userId"],
+  SUPERADMIN: ["userId"],
+};
+
+const entityIdOf = (r: Row): string => {
+  const role = (text(r.role) ?? "").toUpperCase();
+  const keys = ENTITY_ID_KEYS[role] ?? [];
+  for (const k of keys) {
+    const v = text(r[k]);
+    if (v) return v;
+  }
+  const nested = refId(r[role.toLowerCase()]);
+  return nested ?? text(r.id) ?? text(r.userId) ?? "";
+};
+
 // GET /archives' response schema isn't published (Swagger only expands the
 // request), so each row is normalized defensively over the field names the
 // backend might use — same approach as groupsApi's normalizeStudentGroupRecord.
@@ -74,7 +96,7 @@ const normalizeArchiveRecord = (r: Row): ArchiveRecord => {
 
   return {
     ...(r as unknown as ArchiveRecord),
-    id: String(r.id ?? r.userId ?? ""),
+    id: entityIdOf(r),
     name: refName(r) ?? "",
     phone: text(r.phone),
     role: text(r.role),

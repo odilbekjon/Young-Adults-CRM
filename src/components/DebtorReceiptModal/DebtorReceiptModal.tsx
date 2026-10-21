@@ -21,8 +21,8 @@ import { formatDateTime, formatUzs } from "../PaymentReceiptModal/format";
 // The outstanding amount printed here is the student's own balance
 // (GET /students/{id}.balance — the figure the profile shows), not the
 // endpoint's separately computed debtAmount, so a notice can never disagree
-// with the profile or the Debtors list; "Total charged" is derived from it
-// (paid + outstanding). For a "system" check the charge's own amount/date
+// with the profile or the Debtors list; the other totals are the endpoint's
+// own figures, shown as returned. For a "system" check the charge's own amount/date
 // (chargeAmount/chargeDate) are printed instead of the lifetime totals.
 export const DebtorReceiptModal = ({
   open, onClose, studentId, variant = "statement", groupName, teacherName, chargeAmount, chargeDate,
@@ -52,7 +52,7 @@ export const DebtorReceiptModal = ({
   if (receipt) {
     const time = formatDateTime(receipt.date) ?? formatDateTime(new Date().toISOString());
     const owed = ownBalance !== undefined ? Math.max(0, -ownBalance) : Math.abs(receipt.debtAmount);
-    const charged = ownBalance !== undefined ? receipt.totalPaid + owed : receipt.totalCharged;
+    const charged = receipt.totalCharged;
     const chargeDay = chargeDate ? formatDateTime(chargeDate) ?? chargeDate.slice(0, 10).split("-").reverse().join(".") : null;
 
     if (variant === "system") {

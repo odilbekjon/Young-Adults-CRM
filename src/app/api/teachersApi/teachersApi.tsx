@@ -114,7 +114,16 @@ export const teachersApi = baseApi.injectEndpoints({
                 url: `${PATHS.TEACHERS}/select?branchId=${encodeURIComponent(branchId)}`,
                 method: "GET",
             }),
-            transformResponse: (response: { data: unknown }) => normalizeList<TeacherSelectOption>(response?.data),
+            // With branchId "all" the backend can list the same teacher once per
+            // branch/role link — each person is kept once, by id.
+            transformResponse: (response: { data: unknown }) => {
+                const seen = new Set<string>();
+                return normalizeList<TeacherSelectOption>(response?.data).filter((o) => {
+                    if (!o?.id || seen.has(o.id)) return false;
+                    seen.add(o.id);
+                    return true;
+                });
+            },
             providesTags: ["teacher"],
         }),
         teacherById: builder.query<teacherByIdResponse, string>({

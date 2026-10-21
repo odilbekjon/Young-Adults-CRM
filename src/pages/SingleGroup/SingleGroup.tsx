@@ -565,7 +565,9 @@ export const SingleGroup = () => {
       phone: detail?.phone ?? student.phone,
       active: detail ? detail.status === "ACTIVE" : student.active,
       status: detail?.status,
-      balance: detail?.balance ?? student.balance,
+      // Before GET /students/{id} resolves, only a balance that was really
+      // loaded counts — the roster placeholder 0 must not read as "0 UZS".
+      balance: detail?.balance ?? balanceByStudentId.get(student.realId),
       addedAt: detail?.createdAt ? formatDate(detail.createdAt) : student.addedAt,
       activatedAt: detail?.groupsStart ? formatDate(detail.groupsStart) : student.activatedAt,
       joinedAt: membership?.joinedAt ? formatDate(membership.joinedAt) : undefined,
@@ -1245,7 +1247,7 @@ export const SingleGroup = () => {
                             py: isFrozen ? 0.35 : 0,
                             borderRadius: isFrozen ? "6px" : 0,
                             backgroundColor: isFrozen ? "#bfe3fa" : "transparent",
-                            color: isArchived ? "dimgray" : isDebtor ? "#e53935" : "var(--color-text-primary)",
+                            color: isArchived ? "dimgray" : "var(--color-text-primary)",
                             textDecoration: isArchived ? "line-through" : "none",
                           }}
                         >

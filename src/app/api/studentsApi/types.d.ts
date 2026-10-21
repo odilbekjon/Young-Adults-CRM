@@ -277,13 +277,10 @@ export interface CreateStudentCommentResponse {
 // voqealar xronologiyasi (status o'zgarishi, guruhga qo'shilish va h.k)".
 // Envelope/fields aren't documented beyond a bare 200, so normalized
 // defensively the same way groupsApi's normalizeHistory is.
-export interface StudentHistoryEntry {
-  id: string;
-  type: string;
-  detail: string;
-  createdAt: string;
-  actor: string | null;
-}
+// Same normalized shape as a group's history row (see groupsApi's
+// normalizeHistory) — status moves, reasons, group names, field changes — so
+// the student timeline can show everything the backend records.
+export type StudentHistoryEntry = import("../groupsApi/types").GroupHistoryEntry;
 
 // GET /students/{id}/sms-history — "Bitta talabaga yuborilgan barcha SMS
 // xabarlar tarixini olish". Envelope/fields aren't documented beyond a bare

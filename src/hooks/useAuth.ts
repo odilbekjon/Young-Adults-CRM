@@ -7,6 +7,7 @@ import type { PermissionAction, PermissionLabel } from "../app/api/authApi/types
 import {
   collectUserLabels,
   hasLabelAccess as hasLabelAccessUtil,
+  hasCeoPosition,
   hasPermission as hasPermissionUtil,
   isAdminRole,
   isStudentRole,
@@ -23,7 +24,9 @@ import {
 // the account's role changed) /auth/me wins and the stored role is corrected.
 //
 // Access to staff routes/nav items (see PermissionRoute + Sidebar):
-//   - SUPERADMIN/CEO                       -> everything
+//   - SUPERADMIN/CEO                       -> everything (CEO = the system
+//     role, or any account holding the "CEO" position, e.g. an ADMIN created
+//     in Settings > Staff with that position)
 //   - /auth/sidebar {allAccess:true}       -> everything
 //   - ADMIN whose label list is empty in BOTH /auth/sidebar and /auth/me's
 //     rolePermissions (or whose /auth/sidebar call failed and /auth/me has
@@ -58,6 +61,9 @@ export const useAuth = () => {
   const isTeacher = isTeacherRole(role);
   const isSuperAdmin = isSuperAdminRole(role);
   const isAdmin = isAdminRole(role);
+  // Holds the "CEO" position (see utils/permissions.ts) — sees every branch and
+  // has full access just like SUPERADMIN, even though the system role is ADMIN.
+  const isCeo = isSuperAdmin || (!isTeacher && !isStudent && hasCeoPosition(user));
 
   const sidebar = token ? sidebarQuery.data?.data : undefined;
 
@@ -106,7 +112,7 @@ export const useAuth = () => {
 
   const backendAllAccess = sidebar?.allAccess === true;
   const isAdminFallback = isAdmin && isPermissionsReady && !backendAllAccess && sidebarLabels.length === 0;
-  const hasFullAccess = !isTeacher && !isStudent && (isSuperAdmin || backendAllAccess || isAdminFallback);
+  const hasFullAccess = !isTeacher && !isStudent && (isCeo || backendAllAccess || isAdminFallback);
   const branchIds = user?.branchIds ?? [];
 
   const hasPermission = (label: PermissionLabel, action: PermissionAction) =>
@@ -123,6 +129,7 @@ export const useAuth = () => {
     isStudent,
     isTeacher,
     isSuperAdmin,
+    isCeo,
     isAdmin,
     user,
     isMeLoading,

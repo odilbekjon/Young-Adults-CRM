@@ -61,7 +61,7 @@ export const ReceiptModal = ({
   banner?: ReactNode;
   footnote?: ReactNode;
 }) => (
-  <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 2, maxWidth: 400 } }}>
+  <Dialog open={open} onClose={onClose} maxWidth={false} fullWidth PaperProps={{ sx: { borderRadius: 2, "&&": { maxWidth: "min(625px, calc(100vw - 24px)) !important" } } }}>
     <style>{`
       @media print {
         body * { visibility: hidden !important; }
@@ -82,7 +82,9 @@ export const ReceiptModal = ({
         <Box
           id={printId}
           sx={{
-            width: "100%",
+            // A narrow, tall paper slip centred in the dialog.
+            width: 310,
+            maxWidth: "100%",
             background: "#fff",
             color: "#222",
             boxShadow: "0 2px 14px rgba(0,0,0,0.12)",

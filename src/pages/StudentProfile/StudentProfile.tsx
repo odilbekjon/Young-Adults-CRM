@@ -25,6 +25,7 @@ import {
   useUpdateStudentMutation,
   useTransferStudentBranchMutation,
   useStudentCommentsQuery,
+  useCreateStudentCommentMutation,
   useStudentHistoryQuery,
   useStudentSmsHistoryQuery,
 } from "../../app/api/studentsApi";
@@ -52,6 +53,7 @@ import { StudentPaymentsSection } from "./payments/StudentPaymentsSection";
 import { FreezeModal } from "../SingleGroup/FreezeModal";
 import { ActivateModal } from "../SingleGroup/ActivateModal";
 import { AttendanceTab } from "./attendance";
+import { HistoryEntryRow } from "../SingleGroup/tabs/History";
 
 /* ─── TYPES ─────────────────────────────────────────── */
 const TABS = ["Groups", "Comments", "Attendance", "SMS", "History", "Lead history"];
@@ -1247,6 +1249,17 @@ const GroupCard = ({
   );
 };
 
+// "21.10.2026 14:05" from the ISO stamp (local time); date-only or unparsable
+// values fall back to the plain date / the raw text.
+const formatItemStamp = (iso: string) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  if (!iso.includes("T")) return formatDate(iso.slice(0, 10));
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
 /* ─── SIMPLE HISTORY / COMMENTS / SMS LIST ───────────── */
 // Shared renderer for the Comments/SMS/History tabs — same envelope
 // (id/primary text/secondary line/date), just fed by whichever endpoint is
@@ -1277,10 +1290,10 @@ const SimpleHistoryList = ({
           key={item.id}
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 10, padding: "12px 16px" }}
         >
-          <div style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{item.primary || "—"}</div>
+          <div style={{ fontSize: 13, color: "var(--color-text-primary)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{item.primary || "—"}</div>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 12, color: "var(--color-text-muted)" }}>
             <span>{item.secondary || "—"}</span>
-            <span>{item.date ? formatDate(item.date.slice(0, 10)) : ""}</span>
+            <span>{formatItemStamp(item.date)}</span>
           </div>
         </div>
       ))}
@@ -1385,13 +1398,15 @@ export const StudentProfile = () => {
   // actually opened — no point firing three extra requests on every profile
   // load for tabs the staff member may never click.
   const { data: commentsData, isFetching: isCommentsLoading, isError: isCommentsError } = useStudentCommentsQuery(
-    student?.uid ?? "", { skip: !student || activeTab !== 1 }
+    student?.uid ?? "", { skip: !student || activeTab !== 1, refetchOnMountOrArgChange: true }
   );
+  const [createStudentComment, { isLoading: isSavingComment }] = useCreateStudentCommentMutation();
+  const [commentDraft, setCommentDraft] = useState("");
   const { data: smsData, isFetching: isSmsLoading, isError: isSmsError } = useStudentSmsHistoryQuery(
     { id: student?.uid ?? "", page: 1, limit: 50 }, { skip: !student || activeTab !== 3 }
   );
   const { data: historyData, isFetching: isHistoryLoading, isError: isHistoryError } = useStudentHistoryQuery(
-    student?.uid ?? "", { skip: !student || activeTab !== 4 }
+    student?.uid ?? "", { skip: !student || activeTab !== 4, refetchOnMountOrArgChange: true }
   );
 
   if (isLoading) {
@@ -1453,6 +1468,21 @@ export const StudentProfile = () => {
       setSaveError("Failed to save the student");
       toast.error("Failed to save the student");
       return false;
+    }
+  };
+
+  // POST /students/{id}/comments — the new note shows up in the Comments tab
+  // right away (the mutation invalidates the "student" tag the list provides).
+  const handleAddComment = async () => {
+    const comment = commentDraft.trim();
+    if (!comment || isSavingComment) return;
+    try {
+      await createStudentComment({ id: student.uid, comment }).unwrap();
+      setCommentDraft("");
+      toast.success("Comment added");
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to add the comment: ${detail}` : "Failed to add the comment");
     }
   };
 
@@ -1672,12 +1702,34 @@ export const StudentProfile = () => {
                   />
                 </>
               ) : activeTab === 1 ? (
-                <SimpleHistoryList
-                  isLoading={isCommentsLoading}
-                  isError={isCommentsError}
-                  emptyLabel="No comments yet"
-                  items={(commentsData ?? []).map((c) => ({ id: c.id, primary: c.text, secondary: c.author, date: c.createdAt }))}
-                />
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+                    <TextField
+                      multiline
+                      minRows={3}
+                      fullWidth
+                      placeholder="Write a comment about this student"
+                      value={commentDraft}
+                      onChange={(e) => setCommentDraft(e.target.value)}
+                      disabled={isSavingComment}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14, alignItems: "flex-start" } }}
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={handleAddComment}
+                      disabled={!commentDraft.trim() || isSavingComment}
+                      sx={{ alignSelf: "flex-start", textTransform: "none", fontWeight: 600, borderRadius: "8px", background: "#1e3a5f", "&:hover": { background: "#1e40af" } }}
+                    >
+                      {isSavingComment ? "Saving..." : "Add comment"}
+                    </Button>
+                  </div>
+                  <SimpleHistoryList
+                    isLoading={isCommentsLoading}
+                    isError={isCommentsError}
+                    emptyLabel="No comments yet"
+                    items={(commentsData ?? []).map((c) => ({ id: c.id, primary: c.text, secondary: c.author, date: c.createdAt }))}
+                  />
+                </>
               ) : activeTab === 2 ? (
                 <AttendanceTab
                   studentId={student.uid}
@@ -1693,12 +1745,19 @@ export const StudentProfile = () => {
                   items={(smsData ?? []).map((s) => ({ id: s.id, primary: s.text, secondary: s.status, date: s.createdAt }))}
                 />
               ) : activeTab === 4 ? (
-                <SimpleHistoryList
-                  isLoading={isHistoryLoading}
-                  isError={isHistoryError}
-                  emptyLabel="No history yet"
-                  items={(historyData ?? []).map((h) => ({ id: h.id, primary: h.detail || h.type, secondary: h.actor, date: h.createdAt }))}
-                />
+                isHistoryLoading ? (
+                  <div style={{ padding: 32, textAlign: "center", color: "var(--color-text-muted)", fontSize: 14 }}>Loading...</div>
+                ) : isHistoryError ? (
+                  <div style={{ padding: 32, textAlign: "center", color: "#ef4444", fontSize: 14 }}>Failed to load</div>
+                ) : (historyData ?? []).length === 0 ? (
+                  <div style={{ padding: 32, textAlign: "center", color: "var(--color-text-muted)", fontSize: 14 }}>No history yet</div>
+                ) : (
+                  <div>
+                    {(historyData ?? []).map((entry) => (
+                      <HistoryEntryRow key={entry.id} entry={entry} groupId="" groupName="" hideStudent />
+                    ))}
+                  </div>
+                )
               ) : (
                 <div
                   style={{

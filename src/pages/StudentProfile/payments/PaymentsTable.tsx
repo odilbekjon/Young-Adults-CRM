@@ -25,10 +25,11 @@ const tdStyle = { padding: "12px 16px", verticalAlign: "top" } as const;
 // Which of the row's actions are available. Only completed real payments can
 // be refunded/removed (DELETE /finance/payments/{id}); a "system" charge is a
 // computed monthly line with no payment record, so it can only be printed and
-// (when its group is known) edited via PATCH /finance/debt/{studentId}/{groupId}.
+// (when its group is known) edited — or removed, i.e. set to 0 — via
+// PATCH /finance/debt/{studentId}/{groupId}.
 const actionsFor = (tx: PaymentTx) => {
   if (tx.kind === "system") {
-    return { print: true, edit: Boolean(tx.groupId), refund: false, remove: false };
+    return { print: true, edit: Boolean(tx.groupId), refund: false, remove: Boolean(tx.groupId) };
   }
   const live = Boolean(tx.paymentId) && isCompletedPaymentStatus(tx.status);
   return { print: live, edit: live, refund: live, remove: live };

@@ -23,6 +23,9 @@ export interface PaymentTx {
   paymentId: string | null;
   paymentMethodId: string | null;
   status: string | null;
+  // The finance-history month ("YYYY-MM...") this entry is listed under — the
+  // month the payment currently counts for (null for rows outside the ledger).
+  month: string | null;
 }
 
 const day = (iso: string | null | undefined) => (iso ?? "").slice(0, 10);
@@ -56,6 +59,7 @@ export const buildTransactions = (history: StudentFinanceHistoryEntry[], payment
         paymentId: null,
         paymentMethodId: null,
         status: null,
+        month: null,
       });
     });
 
@@ -80,6 +84,7 @@ export const buildTransactions = (history: StudentFinanceHistoryEntry[], payment
         paymentId: matched?.id ?? null,
         paymentMethodId: matched?.paymentMethodId || null,
         status: matched?.status || null,
+        month: month.month || null,
       });
     });
   });
@@ -100,6 +105,7 @@ export const buildTransactions = (history: StudentFinanceHistoryEntry[], payment
       paymentId: r.id,
       paymentMethodId: r.paymentMethodId || null,
       status: r.status,
+      month: null,
     });
   });
 

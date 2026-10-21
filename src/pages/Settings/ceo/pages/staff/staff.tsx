@@ -59,6 +59,7 @@ import {
 } from "../../../../../app/api/usersApi";
 import type { UserStatus } from "../../../../../app/api/usersApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi";
+import { isCeoPositionName } from "../../../../../utils/permissions";
 import {
   useRolePermissionsSelectQuery,
   useAssignRolePermissionToUserMutation,
@@ -207,6 +208,11 @@ export const Staff = () => {
     .filter((b) => b.status === "ACTIVE")
     .map((b) => ({ id: b.id, name: b.name }));
 
+  // A CEO-position account works across the whole company, so it is linked to
+  // every active branch (the branch picker is replaced by a note).
+  const hasCeoSelected = (form: StaffForm) =>
+    form.rolePermissionIds.some((id) => isCeoPositionName(rolePermissionOptions?.find((o) => o.id === id)?.name));
+
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -332,7 +338,9 @@ export const Staff = () => {
       // A new staff member goes to whichever branch is selected in the
       // header (the picker below is hidden then); with "All branches" the
       // picker decides.
-      branchIds: !isEdit && selectedBranchId ? [selectedBranchId] : form.branchIds.length ? form.branchIds : undefined,
+      branchIds: hasCeoSelected(form) && branchOptions.length
+        ? branchOptions.map((b) => b.id)
+        : !isEdit && selectedBranchId ? [selectedBranchId] : form.branchIds.length ? form.branchIds : undefined,
       birthdate: form.dateOfBirth || undefined,
       gender: form.gender || undefined,
       photo: form.photo ?? undefined,
@@ -731,7 +739,13 @@ export const Staff = () => {
               )}
             </Box>
 
-            {(isEdit || !selectedBranchId) && (
+            {hasCeoSelected(form) && (
+              <Typography fontSize={12} color="var(--color-text-muted)">
+                {t("settings.ceo.staff.form.ceoAllBranches", "CEO sees and manages every branch — all active branches are assigned automatically.")}
+              </Typography>
+            )}
+
+            {!hasCeoSelected(form) && (isEdit || !selectedBranchId) && (
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.branches")}</Typography>
               <Select

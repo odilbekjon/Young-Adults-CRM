@@ -7,3 +7,4 @@ export * from "./formatPhone";
 export * from "./groupDays";
 export * from "./downloadExcel";
 export * from "./decimal";
+export * from "./localDate";

@@ -36,10 +36,11 @@ import { formatUZS } from "../../../../utils";
 import type { RootState } from "../../../../app/store";
 import { useBranch } from "../../../../Context/BranchContext";
 import { downloadExcelBlob } from "../../../../utils/downloadExcel";
+import { todayLocalISO } from "../../../../utils/localDate";
 
 // ---------- Helpers ----------
 const fmtDate = (d: string | null) => (d ? d.split("-").reverse().join(".") : "—");
-const todayISO = () => new Date().toISOString().split("T")[0];
+const todayISO = todayLocalISO;
 
 const PAGE_LIMIT = 20;
 

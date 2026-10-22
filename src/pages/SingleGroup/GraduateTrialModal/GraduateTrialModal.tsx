@@ -9,8 +9,9 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButt
 import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { DatePickerField } from "../DatePickerField";
+import { todayLocalISO } from "../../../utils/localDate";
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
+const todayISO = todayLocalISO;
 
 export const GraduateTrialModal = ({
   open, onClose, onConfirm, isSaving, defaultDate,

@@ -11,6 +11,7 @@ import { useWriteOffStudentMutation } from "../../../app/api/studentsApi";
 import type { StudentGroupMembership } from "../../../app/api/studentsApi/types";
 import type { RootState } from "../../../app/store";
 import { extractApiError } from "../../../utils/extractApiError";
+import { todayLocalISO } from "../../../utils/localDate";
 
 export type BalanceAction = "return" | "writeoff";
 
@@ -24,7 +25,7 @@ const labelStyle: React.CSSProperties = {
 };
 const hintStyle: React.CSSProperties = { fontSize: 12, color: "var(--color-text-muted)", marginTop: 6, lineHeight: 1.45 };
 
-const todayISO = () => new Date().toISOString().split("T")[0];
+const todayISO = todayLocalISO;
 
 // "Return money" and "Write-off", opened from the chevron next to "Add payment".
 //

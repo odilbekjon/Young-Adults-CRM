@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { FlatStudent, mapApiStudentToFlat, formatDate, formatLongDate } from "../../constants/FlatStudents";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { decimalToNumber } from "../../utils/decimal";
 import { useArchiveStudent } from "../../hooks/useArchiveStudent";
 import {
   useStudentByIdQuery,
@@ -1053,12 +1054,7 @@ const moneyOrDash = (n: number | null | undefined) =>
 // Course price on Group/GroupCourse is serialized as a decimal.js-style
 // object ({s,e,d}) on read (same as financeApi/studentsApi's own asMoney) —
 // membership.customPrice (StudentGroupMembership) is already a plain number.
-const asCoursePrice = (raw: unknown): number | null => {
-  if (raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).d)) {
-    return Number((raw as { d: unknown[] }).d[0]) || 0;
-  }
-  return typeof raw === "number" ? raw : null;
-};
+const asCoursePrice = (raw: unknown): number | null => decimalToNumber(raw);
 
 // Total lessons / present / absent for this ONE student in this ONE group.
 // No endpoint returns a per-student-per-group attendance summary directly —

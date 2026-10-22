@@ -142,6 +142,10 @@ export interface CreateStudentRequest {
   instagram?: string;
   branchIds?: string[];
   tagIds?: string[];
+  // PROPOSED — the backend is adding a comment field to POST /students (the
+  // name `comment` is assumed). Until it ships, AddStudent saves the note
+  // through POST /students/{id}/comments instead (COMMENT_IN_CREATE_REQUEST).
+  comment?: string;
 }
 
 export interface UpdateStudentRequest extends Partial<Omit<CreateStudentRequest, "name" | "password">> {

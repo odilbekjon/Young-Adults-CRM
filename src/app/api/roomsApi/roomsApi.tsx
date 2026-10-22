@@ -19,11 +19,17 @@ const normalizeList = <T,>(data: unknown): T[] => {
     return [];
 };
 
+// GET /rooms falls back to the backend's default page size (10) when no limit
+// is sent, so only the first 10 rooms ever came back — every room picker (and
+// the Rooms page itself) silently lost the rest. Callers get the whole list
+// by default; the Rooms page paginates it client-side.
+const ALL_ROOMS_LIMIT = 500;
+
 export const roomsApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         allRooms: builder.query<RoomsResponse, void>({
             query: () => ({
-                url: PATHS.ROOMS,
+                url: `${PATHS.ROOMS}?page=1&limit=${ALL_ROOMS_LIMIT}`,
                 method: "GET"
             }),
             transformResponse: (response: RoomsResponse) => ({

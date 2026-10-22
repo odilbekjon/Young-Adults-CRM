@@ -16,8 +16,9 @@ import type { RootState } from "../../app/store";
 import type { PaymentMethod, PaymentProvider } from "../../app/api/financeApi/types";
 import { extractApiError } from "../../utils/extractApiError";
 import { getProviderFromMethodName } from "../../utils/paymentProvider";
+import { todayLocalISO } from "../../utils/localDate";
 
-const todayISO = () => new Date().toISOString().split("T")[0];
+const todayISO = todayLocalISO;
 
 // Set to edit an existing payment instead of creating a new one — the
 // student is fixed (a payment doesn't move between students), everything

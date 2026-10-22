@@ -32,6 +32,7 @@ import {
 } from "recharts";
 import { ALL_STUDENTS } from "../../constants/Students";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
+import { toLocalISODate } from "../../utils/localDate";
 
 
 
@@ -70,7 +71,7 @@ function DateField({ value, onChange }: { value: string; onChange: (v: string) =
 // ─── Main component ───────────────────────────────────────────────────────────
 export const Rating = () => {
   const today = new Date();
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const fmt = toLocalISODate;
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
 
   const [dateFrom, setDateFrom] = useState(fmt(yesterday));

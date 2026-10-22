@@ -12,6 +12,7 @@ import type {
   AttendanceReportGroupStatus,
   AttendanceReportAttendanceStatus,
 } from "../../app/api/attendancesApi/types";
+import { todayLocalISO } from "../../utils/localDate";
 
 const STATUSES: AttendanceReportGroupStatus[] = ["ACTIVE", "INACTIVE", "PROBATION", "FROZEN", "DELETED"];
 const ATTENDANCES: AttendanceReportAttendanceStatus[] = ["PRESENT", "ABSENT", "EXCUSED", "UNMARKED"];
@@ -72,7 +73,7 @@ interface AppliedFilters {
 const LIMIT = 10;
 
 export const AttendanceReport = () => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocalISO();
 
   // Draft inputs (secondary filters only apply on "Filter" click)
   const [draftName, setDraftName] = useState("");

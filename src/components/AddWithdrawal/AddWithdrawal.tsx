@@ -10,6 +10,7 @@ import type { RootState } from "../../app/store";
 import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
 
 import { MdKeyboardArrowDown } from "react-icons/md";
+import { todayLocalISO } from "../../utils/localDate";
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -32,7 +33,7 @@ const labelStyle: React.CSSProperties = {
   display: "block",
 };
 
-const todayISO = () => new Date().toISOString().split("T")[0];
+const todayISO = todayLocalISO;
 
 export const AddWithdrawal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const { t } = useTranslation();

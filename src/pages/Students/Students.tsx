@@ -78,6 +78,7 @@ import { useBranch } from "../../Context/BranchContext";
 import type { RootState } from "../../app/store";
 
 import { SendSmsModal } from "../../components/SendSmsModal";
+import { decimalToNumber } from "../../utils/decimal";
 
 /* ─── TYPES ─────────────────────────────────────────── */
 type SortDir = "asc" | "desc";
@@ -743,8 +744,7 @@ export const Students = () => {
 
     const coursePriceOf = (groupId: string): number | null => {
       const raw = allGroupRows.find((g) => g.id === groupId)?.course?.price as unknown;
-      if (raw && typeof raw === "object" && Array.isArray((raw as { d?: unknown[] }).d)) return Number((raw as { d: unknown[] }).d[0]) || 0;
-      return typeof raw === "number" ? raw : null;
+      return decimalToNumber(raw);
     };
     const markDiscount = (m: StudentGroupRecord) => {
       const base = m.customPrice != null ? coursePriceOf(m.groupId) : null;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
@@ -18,6 +18,7 @@ import {
   TableRow,
   Select,
   MenuItem,
+  Pagination,
   CircularProgress,
   Dialog,
   DialogTitle,
@@ -47,6 +48,8 @@ interface FormState {
 
 const defaultForm: FormState = { name: "", capacity: "", branchId: "" };
 
+const PAGE_SIZE = 10;
+
 export const Rooms = () => {
   const { t } = useTranslation();
   const toast = useToast();
@@ -62,10 +65,19 @@ export const Rooms = () => {
   const [deleteRoom, { isLoading: isDeleting }] = useDeleteRoomMutation();
 
   const [tab, setTab] = useState<"faol" | "arxiv">("faol");
+  const [page, setPage] = useState(1);
 
-  const rooms = (data?.data ?? [])
+  const filteredRooms = (data?.data ?? [])
     .filter((r) => (tab === "faol" ? r.status === "ACTIVE" : r.status !== "ACTIVE"))
     .filter((r) => selectedBranch === "all" || r.branch?.name === selectedBranch);
+  // Every room is loaded; the table shows PAGE_SIZE of them at a time.
+  const totalRooms = filteredRooms.length;
+  const totalPages = Math.max(1, Math.ceil(totalRooms / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const rooms = filteredRooms.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // A different tab or branch is a different list — start from its first page.
+  useEffect(() => { setPage(1); }, [tab, selectedBranch]);
   const activeBranches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -359,6 +371,34 @@ export const Rooms = () => {
               )}
             </TableBody>
           </Table>
+
+          {totalRooms > 0 && (
+            <Box
+              sx={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1.5,
+                px: 2, py: 1.5, borderTop: "1px solid var(--color-border)",
+              }}
+            >
+              <Typography fontSize={13} color="var(--color-text-secondary)">
+                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalRooms)} / {totalRooms}
+              </Typography>
+              {totalPages > 1 && (
+                <Pagination
+                  count={totalPages}
+                  page={currentPage}
+                  onChange={(_, value) => setPage(value)}
+                  shape="rounded"
+                  showFirstButton
+                  showLastButton
+                  sx={{
+                    "& .MuiPaginationItem-root": { color: "var(--color-text-secondary)", fontWeight: 600, borderRadius: "8px" },
+                    "& .MuiPaginationItem-root.Mui-selected": { bgcolor: "#1a3f6f", color: "#fff" },
+                    "& .MuiPaginationItem-root.Mui-selected:hover": { bgcolor: "#15345c" },
+                  }}
+                />
+              )}
+            </Box>
+          )}
         </TableContainer>
       )}
 

@@ -8,7 +8,7 @@ import {
 import { IoClose } from "react-icons/io5";
 import { RightDrawer } from "../common/RightDrawer";
 import { useToast } from "../../Context/ToastContext";
-import { useCreateStudentMutation } from "../../app/api/studentsApi/studentsApi";
+import { useCreateStudentMutation, useCreateStudentCommentMutation } from "../../app/api/studentsApi/studentsApi";
 import type { StudentGender } from "../../app/api/studentsApi/types";
 import {
   useAllGroupsQuery,
@@ -76,11 +76,19 @@ interface AddStudentDrawerProps {
   onSuccess?: () => void;
 }
 
+// Flip to true once the backend accepts `comment` on POST /students: the note
+// then travels in the create request itself and the separate
+// POST /students/{id}/comments call below is skipped (never both — that would
+// save the comment twice). While false, sending the unknown field could be
+// rejected by the backend's validation and block student creation.
+const COMMENT_IN_CREATE_REQUEST = false;
+
 export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) => {
   const { t } = useTranslation();
   const toast = useToast();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const [createStudent, { isLoading: isSaving }] = useCreateStudentMutation();
+  const [createStudentComment] = useCreateStudentCommentMutation();
   const { data: groupsData, isFetching: isGroupsLoading, isError: isGroupsError } = useAllGroupsQuery(
     { page: 1, limit: 100 },
     { skip: !open }
@@ -169,7 +177,21 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
         // instead of just the one currently active in the header.
         branchIds: [selectedBranchId],
         tagIds: tagIds.length ? tagIds : undefined,
+        comment: COMMENT_IN_CREATE_REQUEST ? comment.trim() || undefined : undefined,
       }).unwrap();
+
+      // POST /students has no comment field, so the note typed here used to be
+      // dropped. It is saved as the student's first comment instead
+      // (POST /students/{id}/comments) — the same list StudentProfile's
+      // Comments tab reads. A failure here doesn't undo the created student.
+      const note = comment.trim();
+      if (note && !COMMENT_IN_CREATE_REQUEST) {
+        try {
+          await createStudentComment({ id: created.data.id, comment: note }).unwrap();
+        } catch {
+          toast.error(t("addStudent.toast.commentFailed", "Student created, but the comment could not be saved"));
+        }
+      }
 
       if (showGroupField && group) {
         try {

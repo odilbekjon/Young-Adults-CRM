@@ -24,6 +24,7 @@ import {
   usePaymentMethodsQuery,
   useFinanceStatsQuery,
 } from "../../../../app/api/financeApi";
+import type { FinanceListQueryArgs } from "../../../../app/api/financeApi/types";
 import { useToast } from "../../../../Context/ToastContext";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import type { RootState } from "../../../../app/store";
@@ -56,6 +57,36 @@ const Input = ({ value, onChange, placeholder, type = "text" }: {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const PAGE_LIMIT = 20;
+
+// One payment method's share of the filtered result: its own
+// GET /finance/payments/total call with the page's filters plus
+// paymentMethodId. Methods with nothing paid through them are left out.
+const MethodTotal = ({
+  method, args, overall,
+}: {
+  method: { id: string; name: string };
+  args: FinanceListQueryArgs;
+  overall: number;
+}) => {
+  const { data, isFetching } = usePaymentsTotalQuery({ ...args, paymentMethodId: method.id });
+  const amount = data?.total ?? 0;
+  if (!isFetching && amount === 0) return null;
+  const share = overall > 0 ? Math.min(100, Math.round((amount / overall) * 100)) : 0;
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] px-4 py-3 shadow-sm">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 truncate">{method.name}</p>
+        {!isFetching && <span className="text-[11px] font-semibold text-[#003366] dark:text-[var(--color-nav-active)]">{share}%</span>}
+      </div>
+      <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
+        {isFetching ? "…" : fmt(amount)} <span className="text-xs font-normal text-gray-400">UZS</span>
+      </p>
+      <div className="mt-2 h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+        <div className="h-full rounded-full bg-[#003366] transition-all" style={{ width: `${isFetching ? 0 : share}%` }} />
+      </div>
+    </div>
+  );
+};
 
 export const AllPayments = () => {
   const navigate = useNavigate();
@@ -104,7 +135,10 @@ export const AllPayments = () => {
     isError: paymentsError, refetch: refetchPayments,
   } = usePaymentsListQuery(queryArgs);
   // Aggregate sum matching the current filters (GET /finance/payments/total).
-  const { data: filteredTotalData, isFetching: isFilteredTotalFetching } = usePaymentsTotalQuery(queryArgs);
+  // Totals depend only on the filters, not on the table's page — paging must
+  // not refetch them.
+  const totalArgs = useMemo(() => ({ ...queryArgs, page: 1, limit: PAGE_LIMIT }), [queryArgs]);
+  const { data: filteredTotalData, isFetching: isFilteredTotalFetching } = usePaymentsTotalQuery(totalArgs);
   const [fetchPaymentsExcel, { isFetching: isExporting }] = useLazyPaymentsExcelQuery();
   // Current-month summary (GET /finance/stats).
   const { data: monthStats } = useFinanceStatsQuery();
@@ -351,12 +385,41 @@ export const AllPayments = () => {
         </Collapse>
       </div>
 
-      {/* Filtered total (GET /finance/payments/total) */}
-      <div className="flex items-center justify-end px-1 mb-2">
-        <span className="text-sm text-gray-600 dark:text-gray-400">
-          {t("finance.allPayments.stats.filteredTotal")}{" "}
-          <strong className="text-gray-800 dark:text-gray-200">{isFilteredTotalFetching ? "…" : fmt(filteredTotalData?.total ?? 0)} UZS</strong>
-        </span>
+      {/* Result of the current filters (GET /finance/payments/total): the
+          overall sum plus one card per payment method (same filters + that
+          method). Follows the date range, search, method and branch. */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between rounded-2xl border border-gray-200 dark:border-gray-700 border-l-[5px] border-l-[#003366] bg-white dark:bg-[var(--color-surface)] px-6 py-4 shadow-sm mb-3">
+          <div>
+            <p className="text-[13px] font-semibold text-gray-500 dark:text-gray-400 mb-1">
+              {t("finance.allPayments.stats.filteredTotal")}
+            </p>
+            <p className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+              {isFilteredTotalFetching ? "…" : fmt(filteredTotalData?.total ?? 0)}
+              <span className="text-base font-semibold text-gray-500 dark:text-gray-400 ml-2">UZS</span>
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              📅 {applied.startDate || applied.endDate
+                ? `${applied.startDate ? fmtDate(applied.startDate) : "…"} — ${applied.endDate ? fmtDate(applied.endDate) : "…"}`
+                : t("finance.allPayments.stats.allTime", "All time")}
+              {" · "}{total} {t("finance.allPayments.footer.payments")}
+            </p>
+          </div>
+          <BsCash size={34} className="text-[#003366] dark:text-[var(--color-nav-active)] opacity-80 shrink-0 ml-4" />
+        </div>
+
+        {(applied.paymentMethodId ? paymentMethods.filter((m) => m.id === applied.paymentMethodId) : paymentMethods).length > 0 && (
+          <>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+              {t("finance.allPayments.stats.byMethod", "By payment method")}
+            </p>
+            <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))" }}>
+              {(applied.paymentMethodId ? paymentMethods.filter((m) => m.id === applied.paymentMethodId) : paymentMethods).map((m) => (
+                <MethodTotal key={m.id} method={m} args={totalArgs} overall={filteredTotalData?.total ?? 0} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Table (real data: GET /finance/payments) ── */}

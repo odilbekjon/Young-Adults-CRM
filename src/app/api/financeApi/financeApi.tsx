@@ -397,7 +397,7 @@ const normalizeWithdrawalRows = (raw: unknown): WithdrawalRow[] => {
 const normalizeFinanceTotal = (raw: unknown): FinanceTotalResult => {
     const obj = (raw ?? {}) as Record<string, unknown>;
     if (typeof raw === "number") return { total: raw };
-    return { total: asMoney(obj.total ?? obj.sum ?? obj.amount) };
+    return { total: asMoney(obj.total ?? obj.totalAmount ?? obj.totalPayments ?? obj.sum ?? obj.amount) };
 };
 
 const normalizeDebtorReceipt = (raw: unknown): DebtorReceipt => {

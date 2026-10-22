@@ -20,10 +20,14 @@ export const useThemeMode = (): ThemeModeContextValue => {
   return ctx;
 };
 
+// Light unless the user has explicitly switched to dark (saved choice). The
+// operating system's dark-mode preference is deliberately NOT followed.
 const getInitialMode = (): ThemeMode => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  try {
+    return localStorage.getItem(STORAGE_KEY) === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
 };
 
 interface ProviderProps {
@@ -39,7 +43,11 @@ export const ThemeModeProvider = ({ children }: ProviderProps) => {
 
   const setMode = (next: ThemeMode) => {
     setModeState(next);
-    localStorage.setItem(STORAGE_KEY, next);
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      /* storage unavailable — the choice just lasts for this session */
+    }
   };
 
   const toggleMode = () => setMode(mode === "dark" ? "light" : "dark");

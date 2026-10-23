@@ -1430,7 +1430,24 @@ export const Students = () => {
                         </Typography>
                       </TableCell>
                     )}
-                    {col("comment") && <TableCell />}
+                    {col("comment") && (
+                      <TableCell sx={{ minWidth: 160, maxWidth: 260 }}>
+                        {s.comment ? (
+                          <Tooltip title={<span style={{ whiteSpace: "pre-wrap" }}>{s.comment}</span>} arrow placement="top">
+                            <Typography
+                              fontSize={13}
+                              color="var(--color-text-secondary)"
+                              sx={{
+                                display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                                overflow: "hidden", wordBreak: "break-word", whiteSpace: "pre-wrap",
+                              }}
+                            >
+                              {s.comment}
+                            </Typography>
+                          </Tooltip>
+                        ) : null}
+                      </TableCell>
+                    )}
 
                     {/* ACTIONS */}
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>

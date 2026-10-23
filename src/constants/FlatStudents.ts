@@ -75,7 +75,7 @@ export const mapApiStudentToFlat = (s: Student | StudentDetail): FlatStudent => 
   const teacher = "teachers" in s ? s.teachers?.[0] : undefined;
   const branchName = "branch" in s ? s.branch[0]?.name ?? "" : "";
   const active = "status" in s ? s.status === "ACTIVE" : true;
-  const comment = "comments" in s ? s.comments : "comment" in s ? s.comment : null;
+  const comment = s.description || ("comments" in s ? s.comments : "comment" in s ? s.comment : null);
   const groupsStart = "groupsStart" in s ? s.groupsStart : null;
   // GET /students rows carry the span as one string, "2026-10-15 - 2026-11-15"
   // (the earliest group start to the latest group end).

@@ -44,7 +44,7 @@ const StudentHoverCard = ({
   const createdAt = student.createdAt ?? detail?.createdAt ?? null;
   const joinedAt = membership?.joinedAt ?? null;
   const activatedAt = membership?.paymentStartDate ?? student.activatedAt ?? null;
-  const comment = student.comment ?? detail?.comment ?? null;
+  const comment = student.comment ?? detail?.description ?? detail?.comment ?? null;
   const isDebtor = balance !== null && balance < 0;
   const knownStatus = student.status || detail?.status;
   const statusLabel = !knownStatus

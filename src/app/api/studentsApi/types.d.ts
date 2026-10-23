@@ -32,6 +32,9 @@ export interface StudentExtraFields {
   telegram?: string | null;
   instagram?: string | null;
   createdAt?: string | null;
+  // The student's general note (POST /students `description`); read next to
+  // the older `comment`/`comments` fields, whichever the backend returns.
+  description?: string | null;
   // Tags attached to the student (PATCH/POST accept `tagIds`). The GET shape
   // isn't documented, so both a `tags` object list and a flat `tagIds` list
   // are tolerated when prefilling the edit forms.
@@ -142,10 +145,8 @@ export interface CreateStudentRequest {
   instagram?: string;
   branchIds?: string[];
   tagIds?: string[];
-  // PROPOSED — the backend is adding a comment field to POST /students (the
-  // name `comment` is assumed). Until it ships, AddStudent saves the note
-  // through POST /students/{id}/comments instead (COMMENT_IN_CREATE_REQUEST).
-  comment?: string;
+  // POST /students `description` (Swagger): the student's general note.
+  description?: string;
 }
 
 export interface UpdateStudentRequest extends Partial<Omit<CreateStudentRequest, "name" | "password">> {

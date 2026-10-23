@@ -4,12 +4,12 @@ import {
   FiEdit2, FiMail, FiFlag,
   FiChevronDown, FiUsers, FiDollarSign, FiPhone,
   FiCalendar, FiGitBranch, FiPause, FiPlay, FiUser, FiX,
-  FiMessageSquare, FiArchive,
+  FiMessageSquare, FiArchive, FiRefreshCw,
 } from "react-icons/fi";
 import { IoArrowBack } from "react-icons/io5";
 import {
   Avatar, Chip, Tab, Tabs, Button, IconButton, Tooltip, Box,
-  Drawer, Dialog, DialogTitle, DialogContent, DialogActions,
+  Drawer, Dialog, DialogTitle, DialogContent,
   TextField, Radio, RadioGroup, FormControlLabel,
   InputAdornment, Menu, MenuItem,
 } from "@mui/material";
@@ -25,6 +25,7 @@ import {
   useStudentGroupMembershipsQuery,
   useUpdateStudentMutation,
   useTransferStudentBranchMutation,
+  useUpdateStudentStatusMutation,
   useStudentCommentsQuery,
   useCreateStudentCommentMutation,
   useStudentHistoryQuery,
@@ -36,8 +37,10 @@ import type {
 import {
   useAllGroupsQuery, useAddStudentToGroupMutation, useStudentGroupsQuery,
   useFreezeStudentGroupMutation, useUnfreezeStudentGroupMutation, useUpdateStudentGroupStatusMutation,
+  useUpdateStudentGroupMutation, useGraduateTrialStudentGroupMutation, useLazyStudentGroupsQuery,
 } from "../../app/api/groupsApi";
-import type { Group } from "../../app/api/groupsApi/types";
+import type { Group, StudentGroupRecord } from "../../app/api/groupsApi/types";
+import { useLazyStudentFreezesQuery } from "../../app/api/studentFreezesApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useAttendanceReportQuery } from "../../app/api/attendancesApi";
 import { useSendSmsToStudentsMutation } from "../../app/api/smsApi";
@@ -53,8 +56,11 @@ import { StudentTagsSelect } from "../../components/StudentTagsSelect";
 import { StudentPaymentsSection } from "./payments/StudentPaymentsSection";
 import { FreezeModal } from "../SingleGroup/FreezeModal";
 import { ActivateModal } from "../SingleGroup/ActivateModal";
+import { GraduateTrialModal } from "../SingleGroup/GraduateTrialModal";
 import { AttendanceTab } from "./attendance";
 import { HistoryEntryRow } from "../SingleGroup/tabs/History";
+
+const isLiveMembershipStatus = (status: string) => status !== "INACTIVE" && status !== "DELETED";
 
 /* ─── TYPES ─────────────────────────────────────────── */
 const TABS = ["Groups", "Comments", "Attendance", "SMS", "History", "Lead history"];
@@ -1017,8 +1023,14 @@ const SideCard = ({
           minHeight: 40,
           borderLeft: "4px solid #60a5fa",
           paddingLeft: 10,
+          fontSize: 13,
+          color: "var(--color-text-primary)",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
         }}
-      />
+      >
+        {student.comment}
+      </div>
     </div>
   </div>
 );
@@ -1113,7 +1125,7 @@ const AttendanceSummary = ({ groupId, studentId }: { groupId: string | undefined
 };
 
 const GroupCard = ({
-  membership, group, studentId, branchName, onOpenGroup, onPauseOrPlay, onArchive,
+  membership, group, studentId, branchName, onOpenGroup, onPauseOrPlay, onGraduate, onRestore, onArchive,
 }: {
   membership: StudentGroupMembership;
   // The group's schedule/room/course price aren't returned by GET
@@ -1132,6 +1144,10 @@ const GroupCard = ({
   // one membership — undefined (button hidden) once it's already
   // INACTIVE/DELETED, since there's nothing left to pause.
   onPauseOrPlay?: () => void;
+  // PROBATION (trial) -> ACTIVE.
+  onGraduate?: () => void;
+  // Ended (INACTIVE/DELETED) -> ACTIVE again.
+  onRestore?: () => void;
   // Ends this one membership (PATCH /student-groups/{id}/status -> INACTIVE),
   // same action SingleGroup's "Remove from group" performs at the
   // per-membership level.
@@ -1208,38 +1224,45 @@ const GroupCard = ({
         <div style={{ flex: 1, minWidth: 200 }}>
           <AttendanceSummary groupId={group?.id} studentId={studentId} />
         </div>
-        {!isEnded && (
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-            <Tooltip title={isFrozen ? "Activate" : "Freeze"}>
-              <IconButton
-                size="small"
-                onClick={onPauseOrPlay}
-                sx={{
-                  border: "1.5px solid #06b6d4",
-                  color: "#06b6d4",
-                  width: 36,
-                  height: 36,
-                }}
-              >
-                {isFrozen ? <FiPlay size={15} /> : <FiPause size={15} />}
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Remove from group">
-              <IconButton
-                size="small"
-                onClick={onArchive}
-                sx={{
-                  border: "1.5px solid #ef4444",
-                  color: "#ef4444",
-                  width: 36,
-                  height: 36,
-                }}
-              >
-                <FiArchive size={15} />
-              </IconButton>
-            </Tooltip>
-          </div>
-        )}
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+          {isEnded ? (
+            onRestore && (
+              <Tooltip title="Return to group">
+                <IconButton size="small" onClick={onRestore} sx={{ border: "1.5px solid #22c55e", color: "#22c55e", width: 36, height: 36 }}>
+                  <FiRefreshCw size={15} />
+                </IconButton>
+              </Tooltip>
+            )
+          ) : (
+            <>
+              {membership.status === "PROBATION" && onGraduate && (
+                <Tooltip title="Activate">
+                  <IconButton size="small" onClick={onGraduate} sx={{ border: "1.5px solid #22c55e", color: "#22c55e", width: 36, height: 36 }}>
+                    <FiPlay size={15} />
+                  </IconButton>
+                </Tooltip>
+              )}
+              <Tooltip title={isFrozen ? "Activate" : "Freeze"}>
+                <IconButton
+                  size="small"
+                  onClick={onPauseOrPlay}
+                  sx={{ border: "1.5px solid #06b6d4", color: "#06b6d4", width: 36, height: 36 }}
+                >
+                  {isFrozen ? <FiPlay size={15} /> : <FiPause size={15} />}
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Remove from group">
+                <IconButton
+                  size="small"
+                  onClick={onArchive}
+                  sx={{ border: "1.5px solid #ef4444", color: "#ef4444", width: 36, height: 36 }}
+                >
+                  <FiArchive size={15} />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1321,11 +1344,24 @@ export const StudentProfile = () => {
   // mapping for the rest. A high limit here mirrors SingleGroup's own
   // studentGroups fetch.
   const { data: studentGroupRecords } = useStudentGroupsQuery({ studentId: id ?? "", limit: 500 }, { skip: !id });
-  const realStudentGroupIdByGroupId = useMemo(() => {
-    const map = new Map<string, string>();
-    (studentGroupRecords?.rows ?? []).forEach((r) => map.set(r.groupId, r.id));
+  // A student can have several rows for one group (an ended INACTIVE one and a
+  // newer live one) - every action must hit the LIVE row, else the newest.
+  const membershipRowByGroupId = useMemo(() => {
+    const map = new Map<string, StudentGroupRecord>();
+    (studentGroupRecords?.rows ?? []).forEach((r) => {
+      const cur = map.get(r.groupId);
+      const better =
+        !cur ||
+        (isLiveMembershipStatus(r.status) && !isLiveMembershipStatus(cur.status)) ||
+        (isLiveMembershipStatus(r.status) === isLiveMembershipStatus(cur.status) && (r.createdAt ?? "") > (cur.createdAt ?? ""));
+      if (better) map.set(r.groupId, r);
+    });
     return map;
   }, [studentGroupRecords]);
+  const realStudentGroupIdByGroupId = useMemo(
+    () => new Map([...membershipRowByGroupId].map(([groupId, row]) => [groupId, row.id])),
+    [membershipRowByGroupId]
+  );
 
   const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
   const { archiveStudent: archiveStudentFlow } = useArchiveStudent();
@@ -1336,6 +1372,11 @@ export const StudentProfile = () => {
   const [freezeStudentGroup, { isLoading: isFreezingGroup }] = useFreezeStudentGroupMutation();
   const [unfreezeStudentGroup, { isLoading: isUnfreezingGroup }] = useUnfreezeStudentGroupMutation();
   const [updateStudentGroupStatus, { isLoading: isArchivingGroup }] = useUpdateStudentGroupStatusMutation();
+  const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
+  const [graduateTrialStudentGroup, { isLoading: isGraduatingTrial }] = useGraduateTrialStudentGroupMutation();
+  const [updateStudentStatus] = useUpdateStudentStatusMutation();
+  const [fetchMemberships] = useLazyStudentGroupsQuery();
+  const [fetchStudentFreezes] = useLazyStudentFreezesQuery();
 
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
   const groupsById = useMemo(() => {
@@ -1388,7 +1429,14 @@ export const StudentProfile = () => {
   const [balanceAction, setBalanceAction] = useState<BalanceAction | null>(null);
   const [freezeTarget, setFreezeTarget] = useState<StudentGroupMembership | null>(null);
   const [activateTarget, setActivateTarget] = useState<StudentGroupMembership | null>(null);
+  const [graduateTarget, setGraduateTarget] = useState<StudentGroupMembership | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<StudentGroupMembership | null>(null);
+  // "Remove from group" - same dialog/fields as SingleGroup's roster action.
   const [archiveGroupTarget, setArchiveGroupTarget] = useState<StudentGroupMembership | null>(null);
+  const [removeReasonId, setRemoveReasonId] = useState("");
+  const [removeComment, setRemoveComment] = useState("");
+  const [removeScope, setRemoveScope] = useState<"current" | "all">("current");
+  const [removeDeleteMode, setRemoveDeleteMode] = useState(false);
 
   // Tab content for Comments/SMS/History is only fetched once its tab is
   // actually opened — no point firing three extra requests on every profile
@@ -1469,6 +1517,16 @@ export const StudentProfile = () => {
 
   // POST /students/{id}/comments — the new note shows up in the Comments tab
   // right away (the mutation invalidates the "student" tag the list provides).
+  // Comments from GET /students/{id}/comments, plus the note typed when the
+  // student was added (POST /students `description`, read back on the student)
+  // as the oldest entry - unless a comment with the same text is already listed.
+  const commentItems = [
+    ...(commentsData ?? []).map((c) => ({ id: c.id, primary: c.text, secondary: c.author, date: c.createdAt })),
+    ...(student.comment && !(commentsData ?? []).some((c) => c.text.trim() === student.comment?.trim())
+      ? [{ id: "student-note", primary: student.comment, secondary: "Added with the student", date: student.createdAt ?? "" }]
+      : []),
+  ];
+
   const handleAddComment = async () => {
     const comment = commentDraft.trim();
     if (!comment || isSavingComment) return;
@@ -1557,38 +1615,157 @@ export const StudentProfile = () => {
     }
   };
 
-  const handleUnfreezeConfirm = async () => {
+  // The membership actions below mirror SingleGroup's roster actions exactly
+  // (same endpoints, same order), so a student ends up in the same state
+  // whichever page the staff member used.
+  //
+  // Live membership row id for a group: from the cached rows, else straight
+  // from GET /student-groups (e.g. a row created a moment ago).
+  const resolveLiveMembershipId = async (groupId: string): Promise<string | undefined> => {
+    const cached = membershipRowByGroupId.get(groupId);
+    if (cached && isLiveMembershipStatus(cached.status)) return cached.id;
+    try {
+      const found = await fetchMemberships({ groupId, studentId: student.uid, limit: 20 }).unwrap();
+      const live = found.rows
+        .filter((r) => isLiveMembershipStatus(r.status) && (!r.groupId || r.groupId === groupId) && (!r.studentId || r.studentId === student.uid))
+        .sort((x, y) => (y.createdAt ?? "").localeCompare(x.createdAt ?? ""));
+      if (live[0]?.id) return live[0].id;
+    } catch {
+      /* fall through to the cached row */
+    }
+    return cached?.id;
+  };
+
+  const dateOnly = (iso?: string | null) => (iso ? iso.slice(0, 10) : undefined);
+
+  // Start date of the membership's running freeze (GET /student-freezes), else
+  // the day the student joined the group.
+  const findFreezeStart = async (membership: StudentGroupMembership, studentGroupId: string) => {
+    try {
+      const res = await fetchStudentFreezes({ studentId: student.uid, groupId: membership.id, status: "ACTIVE", limit: 50 }).unwrap();
+      const latest = res.rows
+        .filter((r) => r.startDate && (!r.studentGroupId || r.studentGroupId === studentGroupId))
+        .map((r) => r.startDate.slice(0, 10))
+        .sort()
+        .pop();
+      if (latest) return latest;
+    } catch {
+      /* fall through to the join date */
+    }
+    return dateOnly(membership.joinedAt);
+  };
+
+  // FROZEN -> ACTIVE: POST /student-groups/{id}/unfreeze {endDate}, then PATCH
+  // /student-groups/{id} {paymentStartDate} - payment accounting starts on the
+  // picked date. The freeze must END on the day billing starts (never before
+  // the freeze's own start).
+  const handleUnfreezeConfirm = async (paymentStartDate: string) => {
     if (!activateTarget) return;
-    const realId = realStudentGroupIdByGroupId.get(activateTarget.id);
-    if (!realId) {
+    const studentGroupId = await resolveLiveMembershipId(activateTarget.id);
+    if (!studentGroupId) {
+      toast.error("Failed to activate: membership not found");
+      return;
+    }
+    const freezeStart = await findFreezeStart(activateTarget, studentGroupId);
+    const unfreezeEnd = freezeStart && paymentStartDate < freezeStart ? freezeStart : paymentStartDate;
+    try {
+      await unfreezeStudentGroup({ id: studentGroupId, endDate: unfreezeEnd }).unwrap();
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to activate: ${detail}` : "Failed to activate");
+      return;
+    }
+    setActivateTarget(null);
+    // Reported separately: the student IS active once the unfreeze went through.
+    try {
+      await updateStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
+      toast.success("Group membership activated");
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Activated, but the payment start date was not saved: ${detail}` : "Activated, but the payment start date was not saved");
+    }
+  };
+
+  // PROBATION (trial) -> ACTIVE: POST /student-groups/{id}/graduate-trial, then
+  // PATCH {paymentStartDate} with the picked date.
+  const handleGraduateConfirm = async (paymentStartDate: string) => {
+    const target = graduateTarget;
+    setGraduateTarget(null);
+    if (!target) return;
+    const studentGroupId = await resolveLiveMembershipId(target.id);
+    if (!studentGroupId) {
       toast.error("Failed to activate: membership not found");
       return;
     }
     try {
-      await unfreezeStudentGroup(realId).unwrap();
+      await graduateTrialStudentGroup(studentGroupId).unwrap();
+      await updateStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
       toast.success("Group membership activated");
-      setActivateTarget(null);
     } catch (err) {
       const detail = extractApiError(err);
       toast.error(detail ? `Failed to activate: ${detail}` : "Failed to activate");
     }
   };
 
-  // PATCH /student-groups/{id}/status -> INACTIVE — ends just this one
-  // membership, the per-group equivalent of SingleGroup's "Remove from
-  // group" (which additionally archives the whole account; this action is
-  // scoped to a single group card here, so it doesn't).
-  const handleArchiveGroupConfirm = async () => {
-    if (!archiveGroupTarget) return;
-    const realId = realStudentGroupIdByGroupId.get(archiveGroupTarget.id);
-    if (!realId) {
-      toast.error("Failed to remove from the group: membership not found");
+  // Ended (INACTIVE/DELETED) membership -> ACTIVE again, one PATCH with status
+  // + paymentStartDate (same call the Archive page's restore makes).
+  const handleRestoreConfirm = async (paymentStartDate: string) => {
+    const target = restoreTarget;
+    if (!target) return;
+    const row = membershipRowByGroupId.get(target.id);
+    if (!row) {
+      toast.error("Failed to restore: membership not found");
       return;
     }
     try {
-      await updateStudentGroupStatus({ id: realId, status: "INACTIVE" }).unwrap();
-      toast.success("Removed from the group");
-      setArchiveGroupTarget(null);
+      await updateStudentGroup({ id: row.id, status: "ACTIVE", paymentStartDate }).unwrap();
+      toast.success("Student returned to the group");
+      setRestoreTarget(null);
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to restore: ${detail}` : "Failed to restore");
+    }
+  };
+
+  const closeRemoveDialog = () => {
+    setArchiveGroupTarget(null);
+    setRemoveReasonId("");
+    setRemoveComment("");
+    setRemoveScope("current");
+    setRemoveDeleteMode(false);
+  };
+
+  // Same two steps as SingleGroup's handleRemoveStudent: PATCH
+  // /student-groups/{id}/status INACTIVE (reasonId, reason, isAllGroup only
+  // when true), then - only when every group is ended - POST
+  // /students/{id}/status INACTIVE archives the account. Never a hard DELETE.
+  const handleRemoveFromGroupConfirm = async () => {
+    const target = archiveGroupTarget;
+    if (!target) return;
+    const studentGroupId = await resolveLiveMembershipId(target.id);
+    if (!studentGroupId) {
+      toast.error("Failed to remove from the group: membership not found");
+      return;
+    }
+    const effectiveScope = removeDeleteMode ? "all" : removeScope;
+    try {
+      await updateStudentGroupStatus({
+        id: studentGroupId,
+        status: "INACTIVE",
+        reasonId: removeReasonId || undefined,
+        reason: removeComment.trim() || undefined,
+        isAllGroup: effectiveScope === "all" ? true : undefined,
+      }).unwrap();
+      if (effectiveScope === "all") {
+        await updateStudentStatus({
+          id: student.uid,
+          status: "INACTIVE",
+          reasonId: removeReasonId || undefined,
+          reason: removeComment.trim() || undefined,
+        }).unwrap();
+      }
+      toast.success(removeDeleteMode ? "Student moved to archive" : "Removed from the group");
+      closeRemoveDialog();
     } catch (err) {
       const detail = extractApiError(err);
       toast.error(detail ? `Failed to remove from the group: ${detail}` : "Failed to remove from the group");
@@ -1682,6 +1859,8 @@ export const StudentProfile = () => {
                           branchName={branchId ? branchNameById.get(branchId) ?? null : null}
                           onOpenGroup={() => navigate(`/groups/${m.id}`)}
                           onPauseOrPlay={() => (m.status === "FROZEN" ? setActivateTarget(m) : setFreezeTarget(m))}
+                          onGraduate={() => setGraduateTarget(m)}
+                          onRestore={() => setRestoreTarget(m)}
                           onArchive={() => setArchiveGroupTarget(m)}
                         />
                       );
@@ -1723,7 +1902,7 @@ export const StudentProfile = () => {
                     isLoading={isCommentsLoading}
                     isError={isCommentsError}
                     emptyLabel="No comments yet"
-                    items={(commentsData ?? []).map((c) => ({ id: c.id, primary: c.text, secondary: c.author, date: c.createdAt }))}
+                    items={commentItems}
                   />
                 </>
               ) : activeTab === 2 ? (
@@ -1912,36 +2091,44 @@ export const StudentProfile = () => {
         open={Boolean(activateTarget)}
         onClose={() => setActivateTarget(null)}
         onConfirm={handleUnfreezeConfirm}
-        isSaving={isUnfreezingGroup}
+        isSaving={isUnfreezingGroup || isSavingMembershipDates}
+        defaultDate={dateOnly(activateTarget?.joinedAt)}
       />
 
-      <Dialog
+      <GraduateTrialModal
+        open={Boolean(graduateTarget)}
+        onClose={() => setGraduateTarget(null)}
+        onConfirm={handleGraduateConfirm}
+        isSaving={isGraduatingTrial || isSavingMembershipDates}
+        defaultDate={dateOnly(graduateTarget?.joinedAt)}
+      />
+
+      {/* Return an ended membership to ACTIVE, picking the billing start date. */}
+      <ActivateModal
+        open={Boolean(restoreTarget)}
+        onClose={() => setRestoreTarget(null)}
+        onConfirm={handleRestoreConfirm}
+        isSaving={isSavingMembershipDates}
+      />
+
+      <RemoveStudentDialog
         open={Boolean(archiveGroupTarget)}
-        onClose={() => setArchiveGroupTarget(null)}
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Remove from group</DialogTitle>
-        <DialogContent>
-          <div style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>
-            Remove {student.name} from {archiveGroupTarget?.name}? This only ends this one
-            membership — the student account itself stays active.
-          </div>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setArchiveGroupTarget(null)} disabled={isArchivingGroup} sx={{ color: "var(--color-text-secondary)" }}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            disabled={isArchivingGroup}
-            onClick={handleArchiveGroupConfirm}
-            sx={{ borderRadius: 2 }}
-          >
-            Remove
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onClose={closeRemoveDialog}
+        onConfirm={handleRemoveFromGroupConfirm}
+        reasonId={removeReasonId}
+        onReasonIdChange={setRemoveReasonId}
+        reasons={archiveReasonOptions ?? []}
+        showDeleteToggle
+        deleteMode={removeDeleteMode}
+        onDeleteModeChange={setRemoveDeleteMode}
+        comment={removeComment}
+        onCommentChange={setRemoveComment}
+        recalculate={false}
+        onRecalculateChange={() => {}}
+        scope={removeScope}
+        onScopeChange={setRemoveScope}
+        loading={isArchivingGroup}
+      />
     </div>
   );
 };

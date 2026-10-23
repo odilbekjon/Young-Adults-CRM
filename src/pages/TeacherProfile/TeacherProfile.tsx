@@ -354,9 +354,9 @@ const StudentTooltip = ({
         <TooltipField label={t("singleGroup.studentHoverCard.activatedAt")}>{formatDate(membership.paymentStartDate)}</TooltipField>
       )}
 
-      {detail?.comment && (
+      {(detail?.description || detail?.comment) && (
         <TooltipField label={t("singleGroup.studentHoverCard.note")}>
-          <span style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{detail.comment}</span>
+          <span style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{detail.description || detail.comment}</span>
         </TooltipField>
       )}
 

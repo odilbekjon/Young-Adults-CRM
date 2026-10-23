@@ -8,8 +8,7 @@ import {
 import { IoClose } from "react-icons/io5";
 import { RightDrawer } from "../common/RightDrawer";
 import { useToast } from "../../Context/ToastContext";
-import { extractApiError } from "../../utils/extractApiError";
-import { useCreateStudentMutation, useCreateStudentCommentMutation } from "../../app/api/studentsApi/studentsApi";
+import { useCreateStudentMutation } from "../../app/api/studentsApi/studentsApi";
 import type { StudentGender } from "../../app/api/studentsApi/types";
 import {
   useAllGroupsQuery,
@@ -77,22 +76,11 @@ interface AddStudentDrawerProps {
   onSuccess?: () => void;
 }
 
-// The backend is adding a `comment` field to POST /students. Until it ships the
-// note is saved through POST /students/{id}/comments instead (below). Set
-// VITE_STUDENT_COMMENT_IN_CREATE=true in the environment once the backend is
-// live: the note then travels in the create request itself and the separate
-// comment call is skipped (never both — that would save it twice). If the
-// backend still rejects the field (400 naming "comment"), the create is retried
-// without it and the note falls back to the comments endpoint, so enabling the
-// switch early can't block adding a student.
-const COMMENT_IN_CREATE_REQUEST = import.meta.env.VITE_STUDENT_COMMENT_IN_CREATE === "true";
-
 export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) => {
   const { t } = useTranslation();
   const toast = useToast();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const [createStudent, { isLoading: isSaving }] = useCreateStudentMutation();
-  const [createStudentComment] = useCreateStudentCommentMutation();
   const { data: groupsData, isFetching: isGroupsLoading, isError: isGroupsError } = useAllGroupsQuery(
     { page: 1, limit: 100 },
     { skip: !open }
@@ -162,54 +150,29 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
     if (!fullPhone && !additionalValues.email.trim()) { setError(t("addStudent.errors.contact")); return; }
     if (!selectedBranchId) { setError(t("addStudent.errors.branch")); return; }
 
-    const buildPayload = (withComment: boolean) => ({
-      name: name.trim(),
-      password: password.trim() || undefined,
-      phone: fullPhone || undefined,
-      email: additionalValues.email.trim() || undefined,
-      gender: gender || undefined,
-      birthdate: dob || undefined,
-      parentName: additionalValues.parentName.trim() || undefined,
-      parentPhone: additionalValues.parentPhone.trim() || undefined,
-      schoolName: additionalValues.schoolName.trim() || undefined,
-      location: additionalValues.location.trim() || undefined,
-      passport: additionalValues.passport.trim() || undefined,
-      telegram: additionalValues.telegram.trim() || undefined,
-      instagram: additionalValues.instagram.trim() || undefined,
-      // Without this, the backend enrolled the new student in every branch
-      // instead of just the one currently active in the header.
-      branchIds: [selectedBranchId],
-      tagIds: tagIds.length ? tagIds : undefined,
-      comment: withComment ? comment.trim() || undefined : undefined,
-    });
-
     try {
-      const note = comment.trim();
-      let commentSent = false; // true when the create request carried the note
-      let created;
-      try {
-        created = await createStudent(buildPayload(COMMENT_IN_CREATE_REQUEST)).unwrap();
-        commentSent = COMMENT_IN_CREATE_REQUEST;
-      } catch (err) {
-        const detail = extractApiError(err) ?? "";
-        const status = (err as { status?: unknown })?.status;
-        if (COMMENT_IN_CREATE_REQUEST && note && status === 400 && /comment/i.test(detail)) {
-          created = await createStudent(buildPayload(false)).unwrap();
-        } else {
-          throw err;
-        }
-      }
-
-      // Saved as the student's first comment (POST /students/{id}/comments) —
-      // the same list StudentProfile's Comments tab reads. A failure here
-      // doesn't undo the created student.
-      if (note && !commentSent) {
-        try {
-          await createStudentComment({ id: created.data.id, comment: note }).unwrap();
-        } catch {
-          toast.error(t("addStudent.toast.commentFailed", "Student created, but the comment could not be saved"));
-        }
-      }
+      const created = await createStudent({
+        name: name.trim(),
+        password: password.trim() || undefined,
+        phone: fullPhone || undefined,
+        email: additionalValues.email.trim() || undefined,
+        gender: gender || undefined,
+        birthdate: dob || undefined,
+        parentName: additionalValues.parentName.trim() || undefined,
+        parentPhone: additionalValues.parentPhone.trim() || undefined,
+        schoolName: additionalValues.schoolName.trim() || undefined,
+        location: additionalValues.location.trim() || undefined,
+        passport: additionalValues.passport.trim() || undefined,
+        telegram: additionalValues.telegram.trim() || undefined,
+        instagram: additionalValues.instagram.trim() || undefined,
+        // POST /students `description` (Swagger: the student's general note) -
+        // the Comment field of this form.
+        description: comment.trim() || undefined,
+        // Without this, the backend enrolled the new student in every branch
+        // instead of just the one currently active in the header.
+        branchIds: [selectedBranchId],
+        tagIds: tagIds.length ? tagIds : undefined,
+      }).unwrap();
 
       if (showGroupField && group) {
         try {

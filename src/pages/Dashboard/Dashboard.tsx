@@ -26,6 +26,7 @@ import { useDebtorsQuery, usePaymentsListQuery, useFinanceChartQuery } from "../
 import { useReportLeftStudentsQuery } from "../../app/api/reportsApi";
 import { SCHEDULE_COLORS, DEFAULT_LESSON_DURATION, SCHEDULE_TIME_START, SCHEDULE_TIME_END } from "../../constants/DashboardData";
 import { STATS } from "../../constants/DashboardStats";
+import { useActiveStudentCount } from "../../hooks/useActiveStudentCount";
 
 // "This month" as [firstOfMonth, today] in the plain YYYY-MM-DD format every
 // finance list endpoint expects (same format the date-range filters on the
@@ -233,11 +234,8 @@ export const Dashboard = () => {
   // used on the Groups list page — see realStudentCount's own comment.
   const { data: inactiveMembershipsData } = useStudentGroupsQuery({ status: "INACTIVE", branchId, limit: 1000 });
   const { data: deletedMembershipsData } = useStudentGroupsQuery({ status: "DELETED", branchId, limit: 1000 });
-  // "Active students" = students who currently have an ACTIVE group
-  // membership — the same definition (and the same query) the Students page's
-  // Status → Active filter uses, so the card's number matches the list it opens.
-  const { data: activeMembershipsData, isFetching: activeStudentsLoading } =
-    useStudentGroupsQuery({ status: "ACTIVE", branchId, limit: 1000 });
+  // "Active students": a group AND an ACTIVE status in it (see the hook).
+  const activeStudents = useActiveStudentCount(branchId);
   const { data: attendanceData, isLoading: attendanceLoading, isError: attendanceError } = useDashboardAttendanceStatsQuery(undefined, refetchOnMount);
   const { data: activitiesData, isLoading: activitiesLoading, isError: activitiesError } = useDashboardRecentActivitiesQuery(undefined, refetchOnMount);
   const { data: teacherPerfData, isLoading: teacherPerfLoading, isError: teacherPerfError } = useDashboardTeacherPerformanceQuery(undefined, refetchOnMount);
@@ -294,18 +292,12 @@ export const Dashboard = () => {
     return chartMonths.reduce((max, point) => (point.totalPayments > max.totalPayments ? point : max), chartMonths[0]);
   }, [chartMonths]);
 
-  // Distinct students with an ACTIVE membership. If the membership list was cut
-  // off by the row limit the count would be too low, so the backend's own
-  // /dashboard/stats figure is used instead.
-  const activeStudentsStat = (() => {
-    if (activeMembershipsData) {
-      const complete = (activeMembershipsData.meta?.total ?? activeMembershipsData.rows.length) <= activeMembershipsData.rows.length;
-      if (complete) {
-        return { value: new Set(activeMembershipsData.rows.map((r) => r.studentId).filter(Boolean)).size, loading: false };
-      }
-    }
-    return { value: statsData?.data.activeStudentsCount ?? 0, loading: activeStudentsLoading && !statsData };
-  })();
+  // Backend's /dashboard/stats figure only while the real count is unavailable
+  // (loading / the lists failed) - never as the answer once it is known.
+  const activeStudentsStat =
+    activeStudents.count !== null
+      ? { value: activeStudents.count, loading: false }
+      : { value: statsData?.data.activeStudentsCount ?? 0, loading: activeStudents.isLoading && !statsData };
 
   const liveStatValues: Record<string, { value: number; loading: boolean }> = {
     leads:      { value: activeLeadsData?.meta?.total ?? activeLeadsData?.data.length ?? 0, loading: activeLeadsLoading },

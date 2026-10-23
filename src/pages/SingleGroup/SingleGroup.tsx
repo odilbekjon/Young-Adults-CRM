@@ -576,7 +576,7 @@ export const SingleGroup = () => {
       // Read-only — GET /students/{id} returns this, but no endpoint in this
       // app can write it, so "Add new note" (StudentActionsMenu) can't save
       // to it yet.
-      note: detail?.comment ?? undefined,
+      note: detail?.description || detail?.comment || undefined,
       frozenAt: student.frozenAt,
     };
   }

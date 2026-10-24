@@ -46,6 +46,7 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils/extractApiError";
 import { downloadExcelBlob } from "../../utils/downloadExcel";
+import { compressImage } from "../../utils/compressImage";
 import {
   useAllTeachersQuery,
   useCreateTeacherMutation,
@@ -183,7 +184,9 @@ export const Teachers = () => {
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) { setForm((prev) => ({ ...prev, photo: file })); setPhotoPreview(URL.createObjectURL(file)); }
+    if (file) {
+      compressImage(file).then((small) => { setForm((prev) => ({ ...prev, photo: small })); setPhotoPreview(URL.createObjectURL(small)); });
+    }
   };
 
   /* ── validate ── */

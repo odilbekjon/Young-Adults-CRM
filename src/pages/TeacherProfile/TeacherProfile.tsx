@@ -17,6 +17,8 @@ import { formatPhone } from "../../utils/formatPhone";
 import { useTeacherSalariesQuery } from "../../app/api/salariesApi";
 import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
+import { compressImage } from "../../utils/compressImage";
+import { extractApiError } from "../../utils/extractApiError";
 
 const BADGE_COLORS = [
   { bg: "#E6F1FB", color: "#185FA5", border: "#B5D4F4" },
@@ -192,7 +194,7 @@ const EditDrawer = ({
             <div style={{ display: "flex", border: "1px solid var(--color-border)", borderRadius: 8, overflow: "hidden" }}>
               <div style={{ flex: 1, padding: "10px 12px", fontSize: 13, color: photo ? "var(--color-text-primary)" : "var(--color-text-muted)" }}>{photo ? photo.name : "No file chosen"}</div>
               <label style={{ padding: "10px 18px", background: "var(--color-surface-alt)", borderLeft: "1px solid var(--color-border)", fontSize: 13, color: "var(--color-text-primary)", cursor: "pointer", userSelect: "none" }}>
-                Browse<input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => setPhoto(e.target.files?.[0])} />
+                Browse<input type="file" accept="image/*" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; setPhoto(f ? await compressImage(f) : undefined); }} />
               </label>
             </div>
           </div>
@@ -755,8 +757,15 @@ export const TeacherProfile = () => {
       }).unwrap();
       toast.success(t("teacherProfile.toast.updated"));
       setEditOpen(false);
-    } catch {
-      toast.error(t("teacherProfile.toast.error"));
+    } catch (err) {
+      // A failed fetch with no HTTP status = the server's proxy cut the request
+      // off (typically a too-large upload), not a validation problem.
+      if ((err as { status?: unknown })?.status === "FETCH_ERROR") {
+        toast.error(t("teacherProfile.toast.networkError"));
+        return;
+      }
+      const detail = extractApiError(err);
+      toast.error(detail ? `${t("teacherProfile.toast.error")}: ${detail}` : t("teacherProfile.toast.error"));
     }
   };
 

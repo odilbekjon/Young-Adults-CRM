@@ -58,6 +58,11 @@ const rawBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError
     const result = await fetchQuery(args, api, extraOptions);
     if (!result.error) return result;
     if (result.error.status === "FETCH_ERROR" || result.error.status === "TIMEOUT_ERROR") {
+      // Only reads are retried. A write that failed at transport level (e.g. an
+      // upload the proxy cut off) would otherwise be re-sent a dozen times —
+      // minutes of spinner, and a risk of duplicate submits.
+      const method = typeof args === "string" ? "GET" : (args.method ?? "GET").toUpperCase();
+      if (method !== "GET" && method !== "HEAD") retry.fail(result.error);
       return result;
     }
     // Any real HTTP response (including error statuses) is final — stop retrying.

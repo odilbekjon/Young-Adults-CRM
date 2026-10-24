@@ -591,7 +591,8 @@
     },
     "toast": {
       "updated": "Teacher updated",
-      "error": "Failed to save. Please try again."
+      "error": "Failed to save. Please try again.",
+      "networkError": "Couldn't reach the server — the photo may be too large. Try a smaller image."
     }
   },
   "leadsPage": {

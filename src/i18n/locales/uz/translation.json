@@ -591,7 +591,8 @@
     },
     "toast": {
       "updated": "O'qituvchi ma'lumotlari yangilandi",
-      "error": "Ma'lumotlarni saqlab bo'lmadi. Qaytadan urinib ko'ring."
+      "error": "Ma'lumotlarni saqlab bo'lmadi. Qaytadan urinib ko'ring.",
+      "networkError": "Serverga ulanib bo'lmadi — rasm hajmi katta bo'lishi mumkin. Kichikroq rasm tanlang."
     }
   },
   "leadsPage": {

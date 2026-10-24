@@ -813,13 +813,15 @@ export const Students = () => {
     allGroupRows.forEach((g) => { if (g.courseId) m.set(g.id, g.courseId); });
     return m;
   }, [allGroupRows]);
+  const groupById = useMemo(() => new Map(allGroupRows.map((g) => [g.id, g])), [allGroupRows]);
   const studentRefs = useMemo(() => {
-    const m = new Map<string, { teacherIds: Set<string>; courseIds: Set<string> }>();
+    const m = new Map<string, { teacherIds: Set<string>; courseIds: Set<string>; firstGroupId?: string }>();
     const rows = [...(studentsData?.data ?? []), ...(includeArchived ? archivedStudentsData?.data ?? [] : [])];
     rows.forEach((s) => {
       m.set(s.id, {
         teacherIds: new Set((s.teachers ?? []).map((tch) => tch.id)),
         courseIds: new Set((s.groups ?? []).map((g) => groupCourseId.get(g.id)).filter((x): x is string => Boolean(x))),
+        firstGroupId: s.groups?.[0]?.id,
       });
     });
     return m;
@@ -1383,6 +1385,8 @@ export const Students = () => {
               {pageRows.map((s, i) => {
                 const badge      = BADGE_COLORS[s.groupBadgeColor] ?? BADGE_COLORS.blue;
                 const isSelected = selected.includes(s.uid);
+                // List rows only carry the group's name — course and lesson time come from GET /groups.
+                const rowGroup  = groupById.get(studentRefs.get(s.uid)?.firstGroupId ?? "");
                 return (
                   <TableRow
                     key={s.uid}
@@ -1416,12 +1420,14 @@ export const Students = () => {
                     {col("groups") && (
                       <TableCell sx={{ minWidth: 220 }}>
                         <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
-                          <Chip
-                            label={s.groupBadge} size="small"
-                            sx={{ fontSize: 10, height: 20, fontWeight: 600, bgcolor: badge.bg, color: badge.color, borderRadius: "4px" }}
-                          />
+                          {rowGroup?.course?.name && (
+                            <Chip
+                              label={rowGroup.course.name} size="small"
+                              sx={{ fontSize: 10, height: 20, fontWeight: 600, bgcolor: badge.bg, color: badge.color, borderRadius: "4px" }}
+                            />
+                          )}
                           <Typography fontSize={13} color="var(--color-text-secondary)">{s.groupName}</Typography>
-                          <Typography fontSize={12} color="var(--color-text-muted)">({s.groupSchedule.split("• ")[1] || ""})</Typography>
+                          {rowGroup?.time && <Typography fontSize={12} color="var(--color-text-muted)">({rowGroup.time})</Typography>}
                         </Stack>
                       </TableCell>
                     )}

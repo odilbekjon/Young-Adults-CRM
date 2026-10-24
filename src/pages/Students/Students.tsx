@@ -1,8 +1,9 @@
 // src/pages/Students.tsx
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useAuth } from "../../hooks/useAuth";
+import { usePersistedState } from "../../hooks/usePersistedState";
 import { useArchiveStudent } from "../../hooks/useArchiveStudent";
 import {
   Avatar,
@@ -548,7 +549,7 @@ export const Students = () => {
 
   const [sendSmsOpen, setSendSmsOpen] = useState(false);
 
-  const [page, setPage] = useState(1);
+  const [page, setPage] = usePersistedState("students:page", 1);
   const limit = 20;
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { branchLabel } = useBranch();
@@ -566,7 +567,7 @@ export const Students = () => {
   // GET /courses/select + GET /teachers/select — the complete lists for the
   // "By courses" / "By teacher" filters (they used to be derived from the
   // students on the current page, so most options never appeared).
-  const { data: courseOptions } = useCoursesSelectQuery({ branchId: selectedBranchId ?? "all" });
+  const { data: courseOptions } = useCoursesSelectQuery();
   const { data: teacherOptions } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" });
   // GET /groups is paginated (100 per page): pages 2-3 are only requested when
   // the previous page came back full. The group list serves the Add-to-group
@@ -586,9 +587,9 @@ export const Students = () => {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const [selected,          setSelected]          = useState<string[]>([]);
-  const [sortKey,           setSortKey]           = useState<SortKey>("");
-  const [sortDir,           setSortDir]           = useState<SortDir>("asc");
-  const [visibleCols,       setVisibleCols]       = useState<string[]>(ALL_COLUMNS.map((c) => c.key));
+  const [sortKey,           setSortKey]           = usePersistedState<SortKey>("students:sortKey", "");
+  const [sortDir,           setSortDir]           = usePersistedState<SortDir>("students:sortDir", "asc");
+  const [visibleCols,       setVisibleCols]       = usePersistedState<string[]>("students:visibleCols", ALL_COLUMNS.map((c) => c.key));
   const [columnsAnchor,     setColumnsAnchor]     = useState<null | HTMLElement>(null);
   const [actionMenu,        setActionMenu]        = useState<{ el: HTMLElement; uid: string } | null>(null);
   const [archiveUid,        setArchiveUid]        = useState<string | null>(null);
@@ -612,11 +613,15 @@ export const Students = () => {
   const [searchParams] = useSearchParams();
   const initialStatusParam = searchParams.get("status") ?? "";
   const initialFinancialParam = searchParams.get("financial") ?? "";
-  const [filters, setFilters] = useState<Filters>({
-    ...EMPTY_FILTERS,
-    status: (STATUS_FILTER_KEYS as readonly string[]).includes(initialStatusParam) ? initialStatusParam : "",
-    financial: (FINANCIAL_FILTER_KEYS as readonly string[]).includes(initialFinancialParam) ? initialFinancialParam : "",
-  });
+  const urlStatus = (STATUS_FILTER_KEYS as readonly string[]).includes(initialStatusParam) ? initialStatusParam : "";
+  const urlFinancial = (FINANCIAL_FILTER_KEYS as readonly string[]).includes(initialFinancialParam) ? initialFinancialParam : "";
+  // Filters are kept across a browser refresh; a link that carries its own
+  // status/financial (e.g. from the Dashboard) wins over the saved copy.
+  const [filters, setFilters] = usePersistedState<Filters>(
+    "students:filters",
+    { ...EMPTY_FILTERS, status: urlStatus, financial: urlFinancial },
+    Boolean(urlStatus || urlFinancial),
+  );
   const [advancedAnchor, setAdvancedAnchor] = useState<null | HTMLElement>(null);
 
   // Status / Financial filters that have no backend query param on GET
@@ -777,12 +782,18 @@ export const Students = () => {
   // re-queries the backend with a different result set (see above) — reset
   // to page 1 so the user isn't stranded on a page number that no longer
   // exists for the new filter/branch.
-  useEffect(() => {
-    setPage(1);
-  }, [
+  // Compared against the previous value (not run on mount) so the page
+  // restored after a refresh isn't thrown back to 1.
+  const resetKey = [
     filters.status, filters.tags, filters.financial, filters.search, filters.teacher, filters.course,
     filters.groupCount, filters.fromCreated, filters.toCreatedDate, selectedBranchId,
-  ]);
+  ].join("|");
+  const prevResetKey = useRef(resetKey);
+  useEffect(() => {
+    if (prevResetKey.current === resetKey) return;
+    prevResetKey.current = resetKey;
+    setPage(1);
+  }, [resetKey, setPage]);
 
   const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) =>
     setFilters((p) => ({ ...p, [key]: val }));

@@ -21,6 +21,7 @@ import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import type { RootState } from "../../../../app/store";
 import { useBranch } from "../../../../Context/BranchContext";
 import { downloadExcelBlob } from "../../../../utils/downloadExcel";
+import { usePersistedState } from "../../../../hooks/usePersistedState";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,11 +57,11 @@ export const Withdraw = () => {
   const { branchLabel } = useBranch();
   const [addWithdrawalOpen, setAddWithdrawalOpen] = useState(false);
 
-  const [draftSearch, setDraftSearch] = useState("");
-  const [draftStartDate, setDraftStartDate] = useState("");
-  const [draftEndDate, setDraftEndDate] = useState("");
+  const [draftSearch, setDraftSearch] = usePersistedState("withdraw:draftSearch", "");
+  const [draftStartDate, setDraftStartDate] = usePersistedState("withdraw:draftStartDate", "");
+  const [draftEndDate, setDraftEndDate] = usePersistedState("withdraw:draftEndDate", "");
 
-  const [applied, setApplied] = useState({ search: "", startDate: "", endDate: "", page: 1 });
+  const [applied, setApplied] = usePersistedState("withdraw:applied", { search: "", startDate: "", endDate: "", page: 1 });
 
   const queryArgs = useMemo(
     () => ({

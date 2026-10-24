@@ -65,6 +65,7 @@ import {
   useAssignRolePermissionToUserMutation,
   useRemoveRolePermissionFromUserMutation,
 } from "../../../../../app/api/rolePermissionsApi";
+import { usePersistedState } from "../../../../../hooks/usePersistedState";
 
 // POST /users' `role` (SUPERADMIN/ADMIN) is a legacy field, optional per
 // Swagger (unlike `rolePermissionId`, which is required and is what actually
@@ -142,9 +143,9 @@ export const Staff = () => {
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { branchLabel } = useBranch();
 
-  const [searchValue, setSearchValue] = useState("");
+  const [searchValue, setSearchValue] = usePersistedState("staff:searchValue", "");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | UserStatus>("");
+  const [statusFilter, setStatusFilter] = usePersistedState<"" | UserStatus>("staff:statusFilter", "");
   const [page, setPage] = useState(1);
 
   useEffect(() => {

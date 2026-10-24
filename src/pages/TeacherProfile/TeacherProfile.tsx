@@ -50,6 +50,21 @@ function formatDate(d: string | null) {
   return `${day}.${m}.${y}`;
 }
 
+/* Round photo; falls back to coloured initials when there is no photo or it fails to load. */
+const TeacherAvatar = ({ id, name, photo, size = 64 }: { id: string; name: string; photo: string | null; size?: number }) => {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [photo]);
+  const color = getAvatarColor(id);
+  if (photo && !failed) {
+    return <img src={photo} alt={name} onError={() => setFailed(true)} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", marginBottom: 10, flexShrink: 0 }} />;
+  }
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: color.bg, color: color.text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size / 3, fontWeight: 500, marginBottom: 10, flexShrink: 0 }}>
+      {getInitials(name)}
+    </div>
+  );
+};
+
 /* ── group shape derived from real groupsApi data for this teacher ── */
 interface ProfileGroupStudent {
   id: string;
@@ -91,6 +106,8 @@ const EditDrawer = ({
     teacher.branches?.map((b) => b.id) ?? []
   );
   const [photo, setPhoto] = useState<File | undefined>(undefined);
+  const photoPreview = useMemo(() => (photo ? URL.createObjectURL(photo) : teacher.photo), [photo, teacher.photo]);
+  useEffect(() => () => { if (photo && photoPreview) URL.revokeObjectURL(photoPreview); }, [photo, photoPreview]);
   // "Set password" is collapsed by default (same as the student forms); an
   // empty value is never sent, so the current password stays untouched.
   const [showPassword, setShowPassword] = useState(false);
@@ -169,6 +186,9 @@ const EditDrawer = ({
           </div>
           <div>
             <label style={labelStyle}>Photo</label>
+            {photoPreview && (
+              <img src={photoPreview} alt={name} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", marginBottom: 10, display: "block" }} />
+            )}
             <div style={{ display: "flex", border: "1px solid var(--color-border)", borderRadius: 8, overflow: "hidden" }}>
               <div style={{ flex: 1, padding: "10px 12px", fontSize: 13, color: photo ? "var(--color-text-primary)" : "var(--color-text-muted)" }}>{photo ? photo.name : "No file chosen"}</div>
               <label style={{ padding: "10px 18px", background: "var(--color-surface-alt)", borderLeft: "1px solid var(--color-border)", fontSize: 13, color: "var(--color-text-primary)", cursor: "pointer", userSelect: "none" }}>
@@ -753,7 +773,6 @@ export const TeacherProfile = () => {
     );
   }
 
-  const avatarColor = getAvatarColor(teacher.id);
   const activeGroupId = selectedGroupId ?? (teacherGroups[0]?.id ?? null);
   const activeGroup = teacherGroups.find((g) => g.id === activeGroupId);
 
@@ -799,13 +818,7 @@ export const TeacherProfile = () => {
               {iconBtn(<MdEdit size={13} />, () => setEditOpen(true))}
             </div>
             <div style={{ display: "flex" }}>
-              {teacher.photo ? (
-                <img src={teacher.photo} alt={teacher.name} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", marginBottom: 10 }} />
-              ) : (
-                <div style={{ width: 64, height: 64, borderRadius: "50%", background: avatarColor.bg, color: avatarColor.text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 500, marginBottom: 10 }}>
-                  {getInitials(teacher.name)}
-                </div>
-              )}
+              <TeacherAvatar id={teacher.id} name={teacher.name} photo={teacher.photo} />
               <div style={{ marginLeft: 12, marginTop: 10, fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>{teacher.name}</div>
             </div>
             <div style={{ fontSize: 13, marginBottom: 4 }}>ID: <span style={{ color: "#185FA5", fontWeight: 500 }}>{teacher.id}</span></div>

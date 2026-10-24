@@ -1,6 +1,8 @@
 import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
+import { resolveMediaUrl } from "../../../utils/mediaUrl";
 import {
+    Teacher,
     teachersRequest,
     teachersResponse,
     teacherByIdResponse,
@@ -24,6 +26,13 @@ const normalizeList = <T,>(data: unknown): T[] => {
         return (data as { data: T[] }).data;
     }
     return [];
+};
+
+// The photo can arrive under a few names and as a path relative to the API host.
+const normalizeTeacher = (raw: Teacher): Teacher => {
+    const r = raw as unknown as Record<string, unknown>;
+    const user = r.user && typeof r.user === "object" ? (r.user as Record<string, unknown>) : {};
+    return { ...raw, photo: resolveMediaUrl(r.photo ?? r.photoUrl ?? r.image ?? r.avatar ?? user.photo) };
 };
 
 const asString = (raw: unknown): string | null => {
@@ -101,7 +110,7 @@ export const teachersApi = baseApi.injectEndpoints({
             },
             transformResponse: (response: teachersResponse) => ({
                 ...response,
-                data: normalizeList<teachersResponse["data"][number]>(response.data),
+                data: normalizeList<teachersResponse["data"][number]>(response.data).map(normalizeTeacher),
             }),
             providesTags: ["teacher"],
         }),
@@ -131,6 +140,8 @@ export const teachersApi = baseApi.injectEndpoints({
                 url: `${PATHS.TEACHERS}/${id}`,
                 method: "GET",
             }),
+            transformResponse: (response: teacherByIdResponse) =>
+                response?.data ? { ...response, data: normalizeTeacher(response.data) } : response,
             providesTags: ["teacher"],
         }),
         teacherForEdit: builder.query<teacherForEditResponse, string>({
@@ -138,6 +149,8 @@ export const teachersApi = baseApi.injectEndpoints({
                 url: `${PATHS.TEACHERS}/${id}/for-edit`,
                 method: "GET",
             }),
+            transformResponse: (response: teacherForEditResponse) =>
+                response?.data ? { ...response, data: normalizeTeacher(response.data) } : response,
             providesTags: ["teacher"],
         }),
         // GET /teachers/excel — downloads the (optionally filtered) teachers

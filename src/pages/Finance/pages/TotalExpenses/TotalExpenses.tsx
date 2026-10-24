@@ -37,6 +37,7 @@ import type { RootState } from "../../../../app/store";
 import { useBranch } from "../../../../Context/BranchContext";
 import { downloadExcelBlob } from "../../../../utils/downloadExcel";
 import { todayLocalISO } from "../../../../utils/localDate";
+import { usePersistedState } from "../../../../hooks/usePersistedState";
 
 // ---------- Helpers ----------
 const fmtDate = (d: string | null) => (d ? d.split("-").reverse().join(".") : "—");
@@ -72,12 +73,12 @@ export const TotalExpenses = () => {
   const branches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
 
   // ── List filters (draft vs applied, same pattern as Debtors/AllPayments) ─
-  const [draftSearch, setDraftSearch] = useState("");
-  const [draftStartDate, setDraftStartDate] = useState("");
-  const [draftEndDate, setDraftEndDate] = useState("");
-  const [draftCategoryId, setDraftCategoryId] = useState("");
+  const [draftSearch, setDraftSearch] = usePersistedState("totalExpenses:draftSearch", "");
+  const [draftStartDate, setDraftStartDate] = usePersistedState("totalExpenses:draftStartDate", "");
+  const [draftEndDate, setDraftEndDate] = usePersistedState("totalExpenses:draftEndDate", "");
+  const [draftCategoryId, setDraftCategoryId] = usePersistedState("totalExpenses:draftCategoryId", "");
 
-  const [applied, setApplied] = useState({
+  const [applied, setApplied] = usePersistedState("totalExpenses:applied", {
     search: "", startDate: "", endDate: "", categoryId: "", page: 1,
   });
 

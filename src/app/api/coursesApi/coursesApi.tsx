@@ -23,12 +23,11 @@ const normalizeList = <T,>(data: unknown): T[] => {
 
 export const coursesApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        // `branchId` is sent explicitly on top of the x-branch-id header (same as
-        // students/teachers/reasons) so the list really is scoped to the
-        // selected branch; omitted = whatever the header alone decides.
-        allCourses: builder.query<CoursesResponse, { branchId?: string } | void>({
-            query: (args) => ({
-                url: args?.branchId ? `${PATHS.COURSES}?branchId=${encodeURIComponent(args.branchId)}` : PATHS.COURSES,
+        // Courses are shared by all branches, so the list is never scoped to the
+        // selected branch (baseApi also leaves x-branch-id off GET /courses).
+        allCourses: builder.query<CoursesResponse, void>({
+            query: () => ({
+                url: PATHS.COURSES,
                 method: "GET"
             }),
             transformResponse: (response: CoursesResponse) => ({
@@ -39,14 +38,16 @@ export const coursesApi = baseApi.injectEndpoints({
         }),
         // GET /courses/select — simplified dropdown list (id, name, code,
         // months, ...) used by filters/pickers. branchId is required by
-        // Swagger: the selected branch id, or "all" for every branch.
-        coursesSelect: builder.query<CourseSelectOption[], CoursesSelectRequest>({
-            query: ({ branchId }) => ({
-                url: `${PATHS.COURSES}/select?branchId=${encodeURIComponent(branchId)}`,
+        // Swagger: required branchId — always "all", since courses are shared
+        // by every branch (the arg is kept so callers stay unchanged).
+        coursesSelect: builder.query<CourseSelectOption[], CoursesSelectRequest | void>({
+            query: () => ({
+                url: `${PATHS.COURSES}/select?branchId=all`,
                 method: "GET",
             }),
             transformResponse: (response: { data: unknown }) => normalizeList<CourseSelectOption>(response?.data),
             providesTags: ["course"],
+            serializeQueryArgs: ({ endpointName }) => endpointName,
         }),
         createCourse: builder.mutation<CourseResponse, CreateCourseRequest>({
             query: ({ name, price, branchId, code, months, lessonDuration, lessonsPerMonth, description }) => {

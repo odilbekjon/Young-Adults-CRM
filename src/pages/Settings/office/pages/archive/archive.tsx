@@ -33,6 +33,7 @@ import { useToggleStaffUserStatusMutation, useDeleteStaffUserMutation } from "..
 import { useToast } from "../../../../../Context/ToastContext";
 import { extractApiError } from "../../../../../utils";
 import type { RootState } from "../../../../../app/store";
+import { usePersistedState } from "../../../../../hooks/usePersistedState";
 
 const SEARCH_DEBOUNCE_MS = 350;
 
@@ -85,11 +86,11 @@ export const Archive = () => {
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   // Archive filters & selection
-  const [search, setSearch] = useState("");
-  const [filterRole, setFilterRole] = useState("");
-  const [filterReason, setFilterReason] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [search, setSearch] = usePersistedState("archive:search", "");
+  const [filterRole, setFilterRole] = usePersistedState("archive:filterRole", "");
+  const [filterReason, setFilterReason] = usePersistedState("archive:filterReason", "");
+  const [startDate, setStartDate] = usePersistedState("archive:startDate", "");
+  const [endDate, setEndDate] = usePersistedState("archive:endDate", "");
   const [selected, setSelected] = useState<string[]>([]);
   const [page, setPage] = useState(1);
 

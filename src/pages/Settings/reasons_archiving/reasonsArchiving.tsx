@@ -48,6 +48,7 @@ import type { Reason, ReasonStatus } from "../../../app/api/reasonsApi/types";
 import type { RootState } from "../../../app/store";
 import { useToast } from "../../../Context/ToastContext";
 import { extractApiError } from "../../../utils";
+import { usePersistedState } from "../../../hooks/usePersistedState";
 
 const PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -79,9 +80,9 @@ export const ReasonsArchiving = () => {
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePersistedState("reasonsArchiving:search", "");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ReasonStatus | "">("");
+  const [statusFilter, setStatusFilter] = usePersistedState<ReasonStatus | "">("reasonsArchiving:statusFilter", "");
 
   useEffect(() => {
     const handle = setTimeout(() => {

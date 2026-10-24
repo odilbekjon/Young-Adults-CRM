@@ -22,6 +22,7 @@ import { useStudentBalances } from "../../../../hooks/useStudentBalances";
 import type { RootState } from "../../../../app/store";
 import { useBranch } from "../../../../Context/BranchContext";
 import { downloadExcelBlob } from "../../../../utils/downloadExcel";
+import { usePersistedState } from "../../../../hooks/usePersistedState";
 
 const PAGE_SIZE_OPTIONS = [20, 25, 50];
 
@@ -41,11 +42,11 @@ export const Debtors = () => {
   const { branchLabel } = useBranch();
 
   // Draft inputs — only committed to the request on "Filter" click
-  const [draftSearch, setDraftSearch] = useState("");
-  const [draftStartDate, setDraftStartDate] = useState("");
-  const [draftEndDate, setDraftEndDate] = useState("");
+  const [draftSearch, setDraftSearch] = usePersistedState("debtors:draftSearch", "");
+  const [draftStartDate, setDraftStartDate] = usePersistedState("debtors:draftStartDate", "");
+  const [draftEndDate, setDraftEndDate] = usePersistedState("debtors:draftEndDate", "");
 
-  const [applied, setApplied] = useState<AppliedFilters>({
+  const [applied, setApplied] = usePersistedState<AppliedFilters>("debtors:applied", {
     search: "", startDate: "", endDate: "", page: 1, limit: 20,
   });
 

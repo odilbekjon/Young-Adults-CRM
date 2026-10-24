@@ -14,6 +14,7 @@ import { downloadExcelBlob } from "../../../../utils/downloadExcel";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../../app/store";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
+import { usePersistedState } from "../../../../hooks/usePersistedState";
 
 type FunnelStage = "Incoming" | "Waiting" | "Set" | "Attended" | "Paid";
 
@@ -128,13 +129,13 @@ export const ConversionReports = () => {
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { branchLabel } = useBranch();
 
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [leadSource, setLeadSource] = useState("");
+  const [dateFrom, setDateFrom] = usePersistedState("conversationReports:dateFrom", "");
+  const [dateTo, setDateTo] = usePersistedState("conversationReports:dateTo", "");
+  const [leadSource, setLeadSource] = usePersistedState("conversationReports:leadSource", "");
   // Swagger's /reports/conversion takes a `userId`, but this project has no
   // users/employees endpoint to populate a picker from, so staff filtering is
   // applied to the returned rows by name instead of as a query parameter.
-  const [byStaff, setByStaff] = useState("");
+  const [byStaff, setByStaff] = usePersistedState("conversationReports:byStaff", "");
   const [activeStage, setActiveStage] = useState<FunnelStage | null>("Incoming");
 
   const queryArgs = useMemo(

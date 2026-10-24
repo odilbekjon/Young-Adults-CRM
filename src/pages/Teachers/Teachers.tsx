@@ -56,6 +56,7 @@ import {
 } from "../../app/api/teachersApi";
 import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
 import { useAllGroupsQuery } from "../../app/api/groupsApi";
+import { usePersistedState } from "../../hooks/usePersistedState";
 
 const EMPTY_FORM = {
   name: "",
@@ -106,7 +107,7 @@ export const Teachers = () => {
     return map;
   }, [allGroupsData]);
 
-  const [searchValue, setSearchValue]             = useState("");
+  const [searchValue, setSearchValue]             = usePersistedState("teachers:searchValue", "");
   const [open, setOpen]                           = useState(false);
   const [isEdit, setIsEdit]                       = useState(false);
   const [anchorEl, setAnchorEl]                   = useState<null | HTMLElement>(null);

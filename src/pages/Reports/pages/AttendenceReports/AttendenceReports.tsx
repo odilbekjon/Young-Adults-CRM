@@ -19,6 +19,7 @@ import { downloadExcelBlob } from "../../../../utils/downloadExcel";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../../app/store";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
+import { usePersistedState } from "../../../../hooks/usePersistedState";
 
 type SortKey = "name" | "status" | "group" | "attendance";
 type SortDir = "asc" | "desc";
@@ -170,14 +171,14 @@ export const AttendanceReports = () => {
 
   // Draft filter values (the sidebar) vs. the applied ones that hit the API —
   // the existing "Filter"/"Reset" buttons keep driving that transition.
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [branch, setBranch] = useState("");
-  const [group, setGroup] = useState("");
-  const [applied, setApplied] = useState({ startDate: "", endDate: "", branchId: "", groupId: "" });
+  const [dateFrom, setDateFrom] = usePersistedState("attendenceReports:dateFrom", "");
+  const [dateTo, setDateTo] = usePersistedState("attendenceReports:dateTo", "");
+  const [branch, setBranch] = usePersistedState("attendenceReports:branch", "");
+  const [group, setGroup] = usePersistedState("attendenceReports:group", "");
+  const [applied, setApplied] = usePersistedState("attendenceReports:applied", { startDate: "", endDate: "", branchId: "", groupId: "" });
 
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortKey, setSortKey] = usePersistedState<SortKey>("attendenceReports:sortKey", "name");
+  const [sortDir, setSortDir] = usePersistedState<SortDir>("attendenceReports:sortDir", "asc");
 
   const { data: branchesData } = useAllBranchesQuery();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);

@@ -19,6 +19,7 @@ import { useMemo, useRef, useState }     from "react";
 import { useNavigate }                   from "react-router-dom";
 import { useTranslation }                from "react-i18next";
 import { useSelector }                   from "react-redux";
+import { usePersistedState }            from "../../hooks/usePersistedState";
 
 import {
   useAllGroupsQuery, useCreateGroupMutation, useUpdateGroupMutation,
@@ -193,10 +194,15 @@ const isCompletedGroup = (g: GroupRow, today: string): boolean => {
   if (ARCHIVED_STATUSES.includes(status)) return false;
   return Boolean(g.endDate) && g.endDate.slice(0, 10) < today;
 };
+const isArchivedGroup = (g: GroupRow): boolean => ARCHIVED_STATUSES.includes(g.status.toUpperCase());
+// Archived ("deleted") groups are tinted red so they stand out in the
+// archive filter and in the all-groups list; the tint follows the theme.
+const ARCHIVED_ROW_BG = "color-mix(in srgb, var(--color-danger) 22%, var(--color-surface))";
+const ARCHIVED_ROW_BG_HOVER = "color-mix(in srgb, var(--color-danger) 30%, var(--color-surface))";
 const matchesStatus = (g: GroupRow, status: string, today: string): boolean => {
   if (!status) return true;
   if (status === "COMPLETED") return isCompletedGroup(g, today);
-  if (status === "ARCHIVE")   return ARCHIVED_STATUSES.includes(g.status.toUpperCase());
+  if (status === "ARCHIVE")   return isArchivedGroup(g);
   return g.status.toUpperCase() === "ACTIVE" && !isCompletedGroup(g, today);
 };
 
@@ -405,7 +411,7 @@ export const Groups = () => {
 
   // Declared ahead of useAllGroupsQuery below so filters.tags[0] can be
   // forwarded to it as a real server-side tagId filter.
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [filters, setFilters] = usePersistedState<Filters>("groups:filters", DEFAULT_FILTERS);
 
   const { data: groupsData, isLoading: groupsLoading, isError: groupsError } = useAllGroupsQuery({
     page: 1,
@@ -446,7 +452,7 @@ export const Groups = () => {
   // GET /courses/select — full course list for the Courses filter (the
   // filter used to be built from the courses of the already-loaded groups,
   // so a course without groups, or beyond the page limit, never showed up).
-  const { data: courseOptions } = useCoursesSelectQuery({ branchId: selectedBranchId ?? "all" });
+  const { data: courseOptions } = useCoursesSelectQuery();
   // GET /tags/select — real, admin-managed tags for the Groups "Tags"
   // filter. `type` is required by the endpoint and the only enum values are
   // GROUP | STUDENT (Settings > Tags). Live data showed existing tags stored
@@ -542,9 +548,8 @@ export const Groups = () => {
     [branchFilteredGroups, archivedMembershipKeys]
   );
 
-  const activeCourses = (coursesData?.data ?? [])
-    .filter((c) => c.status === "ACTIVE")
-    .filter((c) => selectedBranch === "all" || c.branch?.name === selectedBranch);
+  // Courses are shared by every branch, so they are not filtered by branch.
+  const activeCourses = (coursesData?.data ?? []).filter((c) => c.status === "ACTIVE");
   const activeRooms = (roomsData?.data ?? [])
     .filter((r) => r.status === "ACTIVE")
     .filter((r) => selectedBranch === "all" || r.branch?.name === selectedBranch);
@@ -568,12 +573,12 @@ export const Groups = () => {
   const [deleteConfirmId,   setDeleteConfirmId]   = useState<string | null>(null);
   const [smsGroupId,        setSmsGroupId]        = useState<string | null>(null);
   const [smsStudentIds,     setSmsStudentIds]     = useState<string[]>([]);
-  const [sortKey,           setSortKey]           = useState<SortKey>("");
-  const [sortDir,           setSortDir]           = useState<SortDir>("asc");
-  const [visibleCols,       setVisibleCols]       = useState<string[]>(ALL_COLUMNS.map((c) => c.key));
+  const [sortKey,           setSortKey]           = usePersistedState<SortKey>("groups:sortKey", "");
+  const [sortDir,           setSortDir]           = usePersistedState<SortDir>("groups:sortDir", "asc");
+  const [visibleCols,       setVisibleCols]       = usePersistedState<string[]>("groups:visibleCols", ALL_COLUMNS.map((c) => c.key));
   const [columnsAnchor,     setColumnsAnchor]     = useState<null | HTMLElement>(null);
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
-  const [visibleFilters,   setVisibleFilters]   = useState<string[]>(["status", "teacher", "course", "days", "tags", "date"]);
+  const [visibleFilters,   setVisibleFilters]   = usePersistedState<string[]>("groups:visibleFilters", ["status", "teacher", "course", "days", "tags", "date"]);
 
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -1024,12 +1029,12 @@ export const Groups = () => {
                   onClick={() => navigate(`/groups/${g.id}`)}
                   sx={{
                     cursor: "pointer",
-                    bgcolor: "var(--color-surface)",
+                    bgcolor: isArchivedGroup(g) ? ARCHIVED_ROW_BG : "var(--color-surface)",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                     "& td": { border: "none", py: 1.8, fontSize: 13 },
                     "& td:first-of-type": { borderTopLeftRadius: 12, borderBottomLeftRadius: 12 },
                     "& td:last-of-type": { borderTopRightRadius: 12, borderBottomRightRadius: 12 },
-                    "&:hover": { bgcolor: "var(--color-surface-alt)" },
+                    "&:hover": { bgcolor: isArchivedGroup(g) ? ARCHIVED_ROW_BG_HOVER : "var(--color-surface-alt)" },
                   }}
                 >
                   <TableCell sx={{ color: "var(--color-text-muted)", fontSize: 12 }}>{i + 1}.</TableCell>

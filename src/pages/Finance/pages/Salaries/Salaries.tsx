@@ -25,6 +25,7 @@ import { useToast } from "../../../../Context/ToastContext";
 import { extractApiError, downloadExcelBlob } from "../../../../utils";
 import { useBranch } from "../../../../Context/BranchContext";
 import type { RootState } from "../../../../app/store";
+import { usePersistedState } from "../../../../hooks/usePersistedState";
 
 const PAGE_SIZE = 10;
 const STATUSES: PayrollStatus[] = ["DRAFT", "PUBLISHED", "PAID"];
@@ -237,7 +238,7 @@ export const Salaries = () => {
 
   const branchArg = selectedBranchId ?? "all";
   const { data: teacherOptions } = useTeachersSelectQuery({ branchId: branchArg }, { skip: scope !== "teacher" });
-  const { data: courseOptions } = useCoursesSelectQuery({ branchId: branchArg }, { skip: scope !== "course" });
+  const { data: courseOptions } = useCoursesSelectQuery(undefined, { skip: scope !== "course" });
   const { data: groupOptions } = useGroupsSelectQuery(undefined, { skip: scope !== "group" });
 
   const entityOptions =
@@ -313,9 +314,9 @@ export const Salaries = () => {
   };
 
   // ── Payrolls (GET /salaries/payrolls) ───────────────────────────────────────
-  const [payrollPeriod, setPayrollPeriod] = useState("");
-  const [payrollStatus, setPayrollStatus] = useState("");
-  const [page, setPage] = useState(1);
+  const [payrollPeriod, setPayrollPeriod] = usePersistedState("salaries:payrollPeriod", "");
+  const [payrollStatus, setPayrollStatus] = usePersistedState("salaries:payrollStatus", "");
+  const [page, setPage] = usePersistedState("salaries:page", 1);
 
   const payrollArgs = useMemo(() => {
     const { year, month } = splitPeriod(payrollPeriod);

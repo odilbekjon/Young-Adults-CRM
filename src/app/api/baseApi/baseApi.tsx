@@ -21,14 +21,22 @@ import { logout, setToken } from "../../store/authSlice";
 // cold starts, which don't apply to this host, but harmless to keep as a
 // general resilience margin against transient network errors.
 
-const API_BASE_URL = "https://api.youngadults-crm.uz/api/v1";
+export const API_BASE_URL = "https://api.youngadults-crm.uz/api/v1";
+
+// Courses are shared by every branch, so reading them must not be narrowed
+// by the branch picked in the header.
+const isCoursesRead = (arg: string | FetchArgs): boolean => {
+  const url = typeof arg === "string" ? arg : arg.url;
+  const method = typeof arg === "string" ? "GET" : (arg.method ?? "GET").toUpperCase();
+  return method === "GET" && /^\/?courses(\/|\?|$)/.test(url);
+};
 
 const fetchQuery = fetchBaseQuery({
   // Fixed on purpose: a stale VITE_API_URL left in the hosting dashboard
   // (Vercel) kept builds pointing at the old Render backend.
   baseUrl: API_BASE_URL,
   credentials: 'include',
-  prepareHeaders: (headers, { getState }) => {
+  prepareHeaders: (headers, { getState, arg }) => {
     const token = useStorage.getTokens()?.accessToken;
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
@@ -36,7 +44,7 @@ const fetchQuery = fetchBaseQuery({
   
     const state = getState() as { branch?: { selectedBranchId?: string | null } };
     const branchId = state.branch?.selectedBranchId;
-    if (branchId) {
+    if (branchId && !isCoursesRead(arg)) {
       headers.set("x-branch-id", branchId);
     }
     headers.set("x-lang", i18n.language);

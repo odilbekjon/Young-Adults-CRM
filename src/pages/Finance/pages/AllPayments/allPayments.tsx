@@ -30,6 +30,7 @@ import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import type { RootState } from "../../../../app/store";
 import { useBranch } from "../../../../Context/BranchContext";
 import { downloadExcelBlob } from "../../../../utils/downloadExcel";
+import { usePersistedState } from "../../../../hooks/usePersistedState";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -101,16 +102,18 @@ export const AllPayments = () => {
   const [searchParams] = useSearchParams();
   const initialStartDate = searchParams.get("startDate") ?? "";
   const initialEndDate = searchParams.get("endDate") ?? "";
+  // A link carrying its own dates wins over the filters saved for a refresh.
+  const fromLink = Boolean(initialStartDate || initialEndDate);
 
   // Draft inputs — only committed to the request on "Filter" click
-  const [draftSearch, setDraftSearch] = useState("");
-  const [draftStartDate, setDraftStartDate] = useState(initialStartDate);
-  const [draftEndDate, setDraftEndDate] = useState(initialEndDate);
-  const [draftPaymentMethodId, setDraftPaymentMethodId] = useState("");
+  const [draftSearch, setDraftSearch] = usePersistedState("allPayments:draftSearch", "");
+  const [draftStartDate, setDraftStartDate] = usePersistedState("allPayments:draftStartDate", initialStartDate, fromLink);
+  const [draftEndDate, setDraftEndDate] = usePersistedState("allPayments:draftEndDate", initialEndDate, fromLink);
+  const [draftPaymentMethodId, setDraftPaymentMethodId] = usePersistedState("allPayments:draftPaymentMethodId", "");
 
-  const [applied, setApplied] = useState({
+  const [applied, setApplied] = usePersistedState("allPayments:applied", {
     search: "", startDate: initialStartDate, endDate: initialEndDate, paymentMethodId: "", page: 1,
-  });
+  }, fromLink);
 
   const [showFilters, setShowFilters] = useState(true);
 

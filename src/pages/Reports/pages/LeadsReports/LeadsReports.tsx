@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { BsCashStack } from "react-icons/bs";
 import { FiDownload } from "react-icons/fi";
@@ -28,6 +28,7 @@ import { downloadExcelBlob } from "../../../../utils/downloadExcel";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../../app/store";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
+import { usePersistedState } from "../../../../hooks/usePersistedState";
 
 // Known sources keep their established colours; anything else the backend
 // returns falls back to a generated one instead of all sharing a single grey.
@@ -58,9 +59,9 @@ export const LeadsReports = () => {
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { branchLabel } = useBranch();
 
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [applied, setApplied] = useState({ startDate: "", endDate: "" });
+  const [dateFrom, setDateFrom] = usePersistedState("leadsReports:dateFrom", "");
+  const [dateTo, setDateTo] = usePersistedState("leadsReports:dateTo", "");
+  const [applied, setApplied] = usePersistedState("leadsReports:applied", { startDate: "", endDate: "" });
 
   const queryArgs = useMemo(
     () => ({

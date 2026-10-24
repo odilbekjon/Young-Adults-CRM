@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   MenuItem, Select, FormControl, TextField, IconButton, CircularProgress,
@@ -13,6 +13,7 @@ import type {
   AttendanceReportAttendanceStatus,
 } from "../../app/api/attendancesApi/types";
 import { todayLocalISO } from "../../utils/localDate";
+import { usePersistedState } from "../../hooks/usePersistedState";
 
 const STATUSES: AttendanceReportGroupStatus[] = ["ACTIVE", "INACTIVE", "PROBATION", "FROZEN", "DELETED"];
 const ATTENDANCES: AttendanceReportAttendanceStatus[] = ["PRESENT", "ABSENT", "EXCUSED", "UNMARKED"];
@@ -76,15 +77,15 @@ export const AttendanceReport = () => {
   const today = todayLocalISO();
 
   // Draft inputs (secondary filters only apply on "Filter" click)
-  const [draftName, setDraftName] = useState("");
-  const [draftPhone, setDraftPhone] = useState("");
-  const [draftStatus, setDraftStatus] = useState<AttendanceReportGroupStatus | "">("");
-  const [draftGroupId, setDraftGroupId] = useState("");
-  const [draftTeacherId, setDraftTeacherId] = useState("");
-  const [draftAttendance, setDraftAttendance] = useState<AttendanceReportAttendanceStatus | "">("");
+  const [draftName, setDraftName] = usePersistedState("attendanceReport:draftName", "");
+  const [draftPhone, setDraftPhone] = usePersistedState("attendanceReport:draftPhone", "");
+  const [draftStatus, setDraftStatus] = usePersistedState<AttendanceReportGroupStatus | "">("attendanceReport:draftStatus", "");
+  const [draftGroupId, setDraftGroupId] = usePersistedState("attendanceReport:draftGroupId", "");
+  const [draftTeacherId, setDraftTeacherId] = usePersistedState("attendanceReport:draftTeacherId", "");
+  const [draftAttendance, setDraftAttendance] = usePersistedState<AttendanceReportAttendanceStatus | "">("attendanceReport:draftAttendance", "");
 
   // Committed filters that actually drive the request
-  const [applied, setApplied] = useState<AppliedFilters>({
+  const [applied, setApplied] = usePersistedState<AppliedFilters>("attendanceReport:applied", {
     date: today,
     name: "",
     phone: "",

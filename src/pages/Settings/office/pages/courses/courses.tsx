@@ -29,7 +29,6 @@ import {
 } from "../../../../../app/api/coursesApi/coursesApi";
 import type { Course } from "../../../../../app/api/coursesApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi/branchesApi";
-import { useBranch } from "../../../../../Context/BranchContext";
 import { useToast } from "../../../../../Context/ToastContext";
 import type { RootState } from "../../../../../app/store";
 import { CARD_COLORS } from "../../../../../constants/CardColors";
@@ -72,10 +71,9 @@ export const Courses = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
-  const { branch: selectedBranch } = useBranch();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
-  const { data, isLoading, isError, refetch, isFetching } = useAllCoursesQuery({ branchId: selectedBranchId ?? undefined });
+  const { data, isLoading, isError, refetch, isFetching } = useAllCoursesQuery();
   const { data: branchesData } = useAllBranchesQuery();
   const [createCourse, { isLoading: isCreating }] = useCreateCourseMutation();
   const [updateCourse, { isLoading: isUpdating }] = useUpdateCourseMutation();
@@ -83,11 +81,8 @@ export const Courses = () => {
 
   // Only active courses belong in the catalog — archived ones are retired
   // from view entirely rather than exposed behind a second tab here.
-  const courses = (data?.data ?? [])
-    .filter((c) => c.status === "ACTIVE")
-    // Courses belong to one branch (Course.branchId): when a branch is picked in
-    // the header only its own courses are listed; "All branches" lists everything.
-    .filter((c) => (selectedBranchId ? c.branchId === selectedBranchId : selectedBranch === "all" || c.branch?.name === selectedBranch));
+  // Courses are shared by every branch — the header's branch never narrows them.
+  const courses = (data?.data ?? []).filter((c) => c.status === "ACTIVE");
   const activeBranches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
 
   const [drawerOpen, setDrawerOpen] = useState(false);

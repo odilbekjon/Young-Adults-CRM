@@ -22,6 +22,7 @@ import { downloadExcelBlob } from "../../../../utils/downloadExcel";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../../app/store";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
+import { usePersistedState } from "../../../../hooks/usePersistedState";
 
 interface SelectOption {
   value: string;
@@ -89,10 +90,10 @@ export const StudentsLeftGroup = () => {
   const { t } = useTranslation();
   const toast = useToast();
 
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [branchId, setBranchId] = useState("");
-  const [applied, setApplied] = useState({ startDate: "", endDate: "", branchId: "" });
+  const [dateFrom, setDateFrom] = usePersistedState("studentsLeftGroup:dateFrom", "");
+  const [dateTo, setDateTo] = usePersistedState("studentsLeftGroup:dateTo", "");
+  const [branchId, setBranchId] = usePersistedState("studentsLeftGroup:branchId", "");
+  const [applied, setApplied] = usePersistedState("studentsLeftGroup:applied", { startDate: "", endDate: "", branchId: "" });
 
   // Swagger's /reports/left-students accepts only startDate/endDate/branchId/
   // groupId, so course/teacher/reason are applied to the returned breakdowns
@@ -100,9 +101,9 @@ export const StudentsLeftGroup = () => {
   // a distinct, report-specific filter — separate from the header's globally
   // selected branch — so it's staged/applied on "Filter" like the dates,
   // not applied immediately like course/teacher/reason below.
-  const [course, setCourse] = useState("");
-  const [teacher, setTeacher] = useState("");
-  const [reason, setReason] = useState("");
+  const [course, setCourse] = usePersistedState("studentsLeftGroup:course", "");
+  const [teacher, setTeacher] = usePersistedState("studentsLeftGroup:teacher", "");
+  const [reason, setReason] = usePersistedState("studentsLeftGroup:reason", "");
 
   const queryArgs = useMemo(
     () => ({

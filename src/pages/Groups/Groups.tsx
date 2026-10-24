@@ -793,8 +793,7 @@ export const Groups = () => {
             label={t("groups.filters.status")}
             value={filters.status ? [filters.status] : []}
             options={STATUS_OPTIONS}
-            onChange={(v) => setFilter("status", v[0] ?? DEFAULT_FILTERS.status)}
-            clearable={false}
+            onChange={(v) => setFilter("status", v[0] ?? "")}
           />
         )}
         {visibleFilters.includes("teacher") && (

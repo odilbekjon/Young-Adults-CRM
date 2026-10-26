@@ -32,6 +32,7 @@ import {
   useFreezeStudentGroupMutation,
   useUnfreezeStudentGroupMutation,
   useUpdateStudentGroupStatusMutation,
+  useRemoveStudentFromGroupMutation,
   useUpdateStudentGroupMutation,
   useGraduateTrialStudentGroupMutation,
 } from "../../app/api/groupsApi";
@@ -229,6 +230,7 @@ export const SingleGroup = () => {
   const [freezeStudentGroup, { isLoading: isFreezing }] = useFreezeStudentGroupMutation();
   const [unfreezeStudentGroup, { isLoading: isUnfreezing }] = useUnfreezeStudentGroupMutation();
   const [updateStudentGroupStatus, { isLoading: isChangingMembershipStatus }] = useUpdateStudentGroupStatusMutation();
+  const [removeStudentFromGroup] = useRemoveStudentFromGroupMutation();
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
   const [graduateTrialStudentGroup] = useGraduateTrialStudentGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
@@ -838,7 +840,7 @@ export const SingleGroup = () => {
     if (!selectedStudent) return;
     const studentId = selectedStudent.realId;
     const studentGroupId = await resolveLiveMembershipId(selectedStudent);
-    if (!studentGroupId) {
+    if (!studentGroupId && !id) {
       toast.error(t("singleGroup.removeStudentDialog.toast.error"));
       return;
     }
@@ -851,17 +853,26 @@ export const SingleGroup = () => {
       // with isAllGroup, every membership this student has) so it stops
       // showing as active in whichever group(s) it covers. Swagger: status
       // required; reason/reasonId/isAllGroup optional.
-      await updateStudentGroupStatus({
-        id: studentGroupId,
-        status: "INACTIVE",
-        reasonId: removeReasonId || undefined,
-        reason: removeComment.trim() || undefined,
-        // Only ever sent when true — multipart carries booleans as strings and
-        // this backend's validator rejects/mis-coerces a literal "false"
-        // (same story as PaymentMethod.isDefault), so "current group" simply
-        // omits the flag and lets it default to false.
-        isAllGroup: effectiveScope === "all" ? true : undefined,
-      }).unwrap();
+      if (studentGroupId) {
+        await updateStudentGroupStatus({
+          id: studentGroupId,
+          status: "INACTIVE",
+          reasonId: removeReasonId || undefined,
+          reason: removeComment.trim() || undefined,
+          // Only ever sent when true — multipart carries booleans as strings and
+          // this backend's validator rejects/mis-coerces a literal "false"
+          // (same story as PaymentMethod.isDefault), so "current group" simply
+          // omits the flag and lets it default to false.
+          isAllGroup: effectiveScope === "all" ? true : undefined,
+        }).unwrap();
+      } else if (id) {
+        // The student is listed only by the group's legacy student relation —
+        // GET /student-groups has no live membership for them (a member added
+        // through POST /groups/{id}/students/assign never got one), so there
+        // is nothing to end. DELETE /groups/{id}/students/{studentId} is the
+        // endpoint that clears that legacy row.
+        await removeStudentFromGroup({ id, studentId }).unwrap();
+      }
 
       // Step 2 — archive the student's whole account (POST
       // /students/{id}/status INACTIVE with the reasonId + comment, which

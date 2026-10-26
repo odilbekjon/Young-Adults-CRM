@@ -2,7 +2,7 @@ import {
   useLazyStudentGroupsQuery,
   useUpdateStudentGroupStatusMutation,
 } from "../app/api/groupsApi/groupsApi";
-import { useUpdateStudentStatusMutation } from "../app/api/studentsApi";
+import { useDeleteStudentMutation, useUpdateStudentStatusMutation } from "../app/api/studentsApi";
 import type { StudentGroupRecord } from "../app/api/groupsApi/types";
 
 export interface ArchiveStudentArgs {
@@ -21,13 +21,18 @@ const LIVE_STATUSES = ["PROBATION", "ACTIVE", "FROZEN"] as const;
 //     membership left over is ended one by one.
 //  2. POST /students/{id}/status INACTIVE with the same reasonId + reason
 //     (Swagger: records the reason to the student's history) archives the
-//     account. A real DELETE /students/{id} is NOT used: it sets status
-//     DELETED and hides the student entirely, instead of moving them to the
-//     Archive page.
+//     account. That alone is "archive": the student stays on the Archive page.
+//
+// deleteStudent is the second, separate outcome ("Delete student" in the
+// dialog): the same two steps first (so memberships are ended — the backend
+// refuses DELETE while any is live — and the reason lands in the student's
+// history), then DELETE /students/{id}, which sets status DELETED and takes
+// the student off the Archive page too.
 export const useArchiveStudent = () => {
   const [fetchMemberships] = useLazyStudentGroupsQuery();
   const [updateStudentGroupStatus] = useUpdateStudentGroupStatusMutation();
   const [updateStudentStatus] = useUpdateStudentStatusMutation();
+  const [deleteStudentRequest] = useDeleteStudentMutation();
 
   const loadLive = async (studentId: string): Promise<StudentGroupRecord[]> => {
     const lists = await Promise.all(
@@ -63,5 +68,10 @@ export const useArchiveStudent = () => {
     await updateStudentStatus({ id: studentId, status: "INACTIVE", reasonId: reasonId || undefined, reason: note }).unwrap();
   };
 
-  return { archiveStudent };
+  const deleteStudent = async (args: ArchiveStudentArgs) => {
+    await archiveStudent(args);
+    await deleteStudentRequest(args.studentId).unwrap();
+  };
+
+  return { archiveStudent, deleteStudent };
 };

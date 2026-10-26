@@ -49,6 +49,8 @@
     "passwordPlaceholder": "Parol",
     "submit": "Yuborish",
     "saving": "Saqlanmoqda...",
+    "duplicatePhone": "Bu raqam bilan o'quvchi allaqachon mavjud: {{names}}. Baribir yana bittasini yaratishingiz mumkin.",
+    "createAnyway": "Baribir yaratish",
     "removeField": "Olib tashlash",
     "toast": {
       "created": "O'quvchi muvaffaqiyatli qo'shildi",
@@ -1772,7 +1774,7 @@
       "removeFromGroup": "Guruhdan o'chirish",
       "deleteStudent": "O'quvchini o'chirish",
       "deleteOnlyInArchive": "Butunlay o'chirish faqat Arxiv sahifasida mavjud",
-      "deleteStudentHint": "O'quvchi arxivga o'tkaziladi (butunlay o'chirish faqat Arxiv sahifasida mavjud)",
+      "deleteStudentHint": "O'quvchi tizimdan o'chiriladi (sabab avval tarixga yoziladi)",
       "reasonsForRemoval": "O'chirish sabablari",
       "reasonsLoading": "Sabablar yuklanmoqda...",
       "reasonsEmpty": "Sabablar mavjud emas",

@@ -26,6 +26,7 @@ import {
   useUpdateStudentMutation,
   useTransferStudentBranchMutation,
   useUpdateStudentStatusMutation,
+  useDeleteStudentMutation,
   useStudentCommentsQuery,
   useCreateStudentCommentMutation,
   useStudentHistoryQuery,
@@ -872,6 +873,26 @@ const SideCard = ({
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>{student.parentPhone}</div>
         </div>
       )}
+      {student.parentName && (
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          Contact person: <strong style={{ color: "var(--color-text-primary)" }}>{student.parentName}</strong>
+        </div>
+      )}
+      {student.email && (
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          Email: <strong style={{ color: "var(--color-text-primary)" }}>{student.email}</strong>
+        </div>
+      )}
+      {student.telegram && (
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          Telegram: <strong style={{ color: "var(--color-text-primary)" }}>{student.telegram}</strong>
+        </div>
+      )}
+      {student.instagram && (
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          Instagram: <strong style={{ color: "var(--color-text-primary)" }}>{student.instagram}</strong>
+        </div>
+      )}
       {student.birthdate && (
         <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
           Birthday: <strong style={{ color: "var(--color-text-primary)" }}>{formatDate(student.birthdate)}</strong>
@@ -916,15 +937,18 @@ const SideCard = ({
         </div>
       )}
       <div
-        style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-secondary)" }}
+        style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 13, color: "var(--color-text-secondary)" }}
       >
         <FiGitBranch size={14} />
-        <span>Branch:</span>
-        <Chip
-          label={student.branch || "—"}
-          size="small"
-          sx={{ fontSize: 11, height: 20, bgcolor: "var(--color-surface-alt)" }}
-        />
+        <span>Branches:</span>
+        {(student.branches?.length ? student.branches : [student.branch || "—"]).map((name) => (
+          <Chip
+            key={name}
+            label={name}
+            size="small"
+            sx={{ fontSize: 11, height: 20, bgcolor: "var(--color-surface-alt)" }}
+          />
+        ))}
       </div>
       <div
         style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-secondary)" }}
@@ -1364,7 +1388,7 @@ export const StudentProfile = () => {
   );
 
   const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
-  const { archiveStudent: archiveStudentFlow } = useArchiveStudent();
+  const { archiveStudent: archiveStudentFlow, deleteStudent: deleteStudentFlow } = useArchiveStudent();
   const [isArchivingStudent, setIsArchivingStudent] = useState(false);
   const { data: archiveReasonOptions } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 });
   const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
@@ -1375,6 +1399,7 @@ export const StudentProfile = () => {
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
   const [graduateTrialStudentGroup, { isLoading: isGraduatingTrial }] = useGraduateTrialStudentGroupMutation();
   const [updateStudentStatus] = useUpdateStudentStatusMutation();
+  const [deleteStudent] = useDeleteStudentMutation();
   const [fetchMemberships] = useLazyStudentGroupsQuery();
   const [fetchStudentFreezes] = useLazyStudentFreezesQuery();
 
@@ -1421,6 +1446,8 @@ export const StudentProfile = () => {
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiveReasonId, setArchiveReasonId] = useState("");
   const [archiveComment, setArchiveComment] = useState("");
+  // Dialog switch: false = archive the student, true = delete the student.
+  const [archiveDeleteMode, setArchiveDeleteMode] = useState(false);
   const [addToGroupOpen, setAddToGroupOpen] = useState(false);
   const [moveBranchOpen, setMoveBranchOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
@@ -1540,21 +1567,26 @@ export const StudentProfile = () => {
     }
   };
 
-  // Archives the student through the shared flow (see useArchiveStudent):
-  // ends every live group membership, then POST /students/{id}/status
-  // INACTIVE with the picked reasonId/comment.
+  // Archives (or, with the dialog's "Delete student" switch, deletes) the
+  // student through the shared flow (see useArchiveStudent): ends every live
+  // group membership, then POST /students/{id}/status INACTIVE with the
+  // picked reasonId/comment — plus DELETE /students/{id} when deleting.
   const handleArchive = async () => {
     setIsArchivingStudent(true);
     try {
-      await archiveStudentFlow({ studentId: student.uid, reasonId: archiveReasonId || undefined, comment: archiveComment });
-      toast.success("Student moved to archive");
+      const args = { studentId: student.uid, reasonId: archiveReasonId || undefined, comment: archiveComment };
+      if (archiveDeleteMode) await deleteStudentFlow(args);
+      else await archiveStudentFlow(args);
+      toast.success(archiveDeleteMode ? "Student deleted" : "Student moved to archive");
       setArchiveOpen(false);
       setArchiveReasonId("");
       setArchiveComment("");
+      setArchiveDeleteMode(false);
       navigate(-1);
     } catch (err) {
       const detail = extractApiError(err);
-      const message = detail ? `Failed to archive the student: ${detail}` : "Failed to archive the student";
+      const action = archiveDeleteMode ? "delete" : "archive";
+      const message = detail ? `Failed to ${action} the student: ${detail}` : `Failed to ${action} the student`;
       toast.error(message);
     } finally {
       setIsArchivingStudent(false);
@@ -1738,7 +1770,8 @@ export const StudentProfile = () => {
   // Same two steps as SingleGroup's handleRemoveStudent: PATCH
   // /student-groups/{id}/status INACTIVE (reasonId, reason, isAllGroup only
   // when true), then - only when every group is ended - POST
-  // /students/{id}/status INACTIVE archives the account. Never a hard DELETE.
+  // /students/{id}/status INACTIVE archives the account, and for the "Delete
+  // student" switch DELETE /students/{id} follows.
   const handleRemoveFromGroupConfirm = async () => {
     const target = archiveGroupTarget;
     if (!target) return;
@@ -1763,9 +1796,11 @@ export const StudentProfile = () => {
           reasonId: removeReasonId || undefined,
           reason: removeComment.trim() || undefined,
         }).unwrap();
+        if (removeDeleteMode) await deleteStudent(student.uid).unwrap();
       }
-      toast.success(removeDeleteMode ? "Student moved to archive" : "Removed from the group");
+      toast.success(removeDeleteMode ? "Student deleted" : "Removed from the group");
       closeRemoveDialog();
+      if (removeDeleteMode) navigate(-1);
     } catch (err) {
       const detail = extractApiError(err);
       toast.error(detail ? `Failed to remove from the group: ${detail}` : "Failed to remove from the group");
@@ -1969,7 +2004,7 @@ export const StudentProfile = () => {
 
       <RemoveStudentDialog
         open={archiveOpen}
-        onClose={() => { setArchiveOpen(false); setArchiveReasonId(""); setArchiveComment(""); }}
+        onClose={() => { setArchiveOpen(false); setArchiveReasonId(""); setArchiveComment(""); setArchiveDeleteMode(false); }}
         onConfirm={handleArchive}
         reasonId={archiveReasonId}
         onReasonIdChange={setArchiveReasonId}
@@ -1982,6 +2017,9 @@ export const StudentProfile = () => {
         onScopeChange={() => {}}
         showGroupScope={false}
         archiveLabel="Archive student"
+        showDeleteToggle
+        deleteMode={archiveDeleteMode}
+        onDeleteModeChange={setArchiveDeleteMode}
         loading={isArchivingStudent}
       />
 

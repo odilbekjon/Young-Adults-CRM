@@ -49,6 +49,8 @@
     "passwordPlaceholder": "Password",
     "submit": "Submit",
     "saving": "Saving...",
+    "duplicatePhone": "A student with this phone number already exists: {{names}}. You can still create another one.",
+    "createAnyway": "Create anyway",
     "removeField": "Remove",
     "toast": {
       "created": "Student added successfully",
@@ -1772,7 +1774,7 @@
       "removeFromGroup": "Remove from group",
       "deleteStudent": "Delete student",
       "deleteOnlyInArchive": "Permanent deletion is only available from the Archive page",
-      "deleteStudentHint": "The student will be archived (permanent deletion is only available from the Archive page)",
+      "deleteStudentHint": "The student will be deleted from the system (the reason is recorded first)",
       "reasonsForRemoval": "Reasons for removal",
       "reasonsLoading": "Loading reasons...",
       "reasonsEmpty": "No reasons available",

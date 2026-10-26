@@ -20,6 +20,8 @@ export interface FlatStudent {
   startDate: string;
   endDate: string;
   branch: string;
+  // Every branch the student belongs to (`branch` above is just the first).
+  branches?: string[];
   room: string;
   price: number;
   balance: number;
@@ -28,6 +30,10 @@ export interface FlatStudent {
   gender?: "MALE" | "FEMALE" | null;
   birthdate?: string | null;
   parentPhone?: string | null;
+  parentName?: string | null;
+  email?: string | null;
+  telegram?: string | null;
+  instagram?: string | null;
   address?: string | null;
   createdAt?: string | null;
   groupsCount?: number;
@@ -73,7 +79,8 @@ export const buildFlatStudents = (): FlatStudent[] => {
 export const mapApiStudentToFlat = (s: Student | StudentDetail): FlatStudent => {
   const group = "groups" in s ? s.groups?.[0] : undefined;
   const teacher = "teachers" in s ? s.teachers?.[0] : undefined;
-  const branchName = "branch" in s ? s.branch[0]?.name ?? "" : "";
+  const branchNames = "branch" in s ? (s.branch ?? []).map((b) => b.name).filter(Boolean) : [];
+  const branchName = branchNames[0] ?? "";
   const active = "status" in s ? s.status === "ACTIVE" : true;
   const comment = s.description || ("comments" in s ? s.comments : "comment" in s ? s.comment : null);
   const groupsStart = "groupsStart" in s ? s.groupsStart : null;
@@ -100,6 +107,7 @@ export const mapApiStudentToFlat = (s: Student | StudentDetail): FlatStudent => 
     startDate: trainingFrom || groupsStart || "",
     endDate: trainingTo,
     branch: branchName,
+    branches: branchNames,
     room: "",
     price: 0,
     balance: s.balance,
@@ -108,6 +116,10 @@ export const mapApiStudentToFlat = (s: Student | StudentDetail): FlatStudent => 
     gender: s.gender ?? undefined,
     birthdate: s.birthdate ?? undefined,
     parentPhone: s.parentPhone ?? undefined,
+    parentName: s.parentName ?? undefined,
+    email: s.email ?? undefined,
+    telegram: s.telegram ?? undefined,
+    instagram: s.instagram ?? undefined,
     address: s.location ?? undefined,
     createdAt: s.createdAt ?? undefined,
     groupsCount: "groups" in s ? s.groups?.length ?? 0 : undefined,

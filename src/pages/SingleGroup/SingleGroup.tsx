@@ -41,6 +41,7 @@ import {
   useTransferStudentBranchMutation,
   useLazyStudentByIdQuery,
   useUpdateStudentStatusMutation,
+  useDeleteStudentMutation,
 } from "../../app/api/studentsApi";
 import type { StudentDetail } from "../../app/api/studentsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
@@ -232,6 +233,7 @@ export const SingleGroup = () => {
   const [graduateTrialStudentGroup] = useGraduateTrialStudentGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [updateStudentStatus, { isLoading: isArchivingStudent }] = useUpdateStudentStatusMutation();
+  const [deleteStudent] = useDeleteStudentMutation();
   const [fetchStudentDetail] = useLazyStudentByIdQuery();
   const [fetchGroupExcel, { isFetching: isExportingExcel }] = useLazyGroupExcelQuery();
 
@@ -840,10 +842,9 @@ export const SingleGroup = () => {
       toast.error(t("singleGroup.removeStudentDialog.toast.error"));
       return;
     }
-    // "Delete student" = archive the whole account, i.e. the same outcome as
-    // removing from ALL groups (and never a permanent DELETE), so it takes
-    // the "all" path below regardless of what the scope radios (locked to
-    // "all" in this mode) last held.
+    // "Delete student" = remove from ALL groups, archive the account, then
+    // delete it, so it takes the "all" path below regardless of what the
+    // scope radios (locked to "all" in this mode) last held.
     const effectiveScope = removeDeleteMode ? "all" : removeScope;
     try {
       // Step 1 — PATCH /student-groups/{id}/status: ends this membership (or,
@@ -867,8 +868,9 @@ export const SingleGroup = () => {
       // also records the reason to their history) only when they were
       // removed from EVERY group — removing them from just the current group
       // must leave their account-wide status and other memberships
-      // untouched. A permanent DELETE is never used here (it hides the
-      // student instead of archiving them).
+      // untouched. Step 3 (DELETE /students/{id}) runs only for the
+      // "Delete student" switch, once nothing live is left for the backend
+      // to reject it over.
       if (effectiveScope === "all") {
         await updateStudentStatus({
           id: studentId,
@@ -876,10 +878,11 @@ export const SingleGroup = () => {
           reasonId: removeReasonId || undefined,
           reason: removeComment.trim() || undefined,
         }).unwrap();
+        if (removeDeleteMode) await deleteStudent(studentId).unwrap();
       }
 
       toast.success(t(removeDeleteMode
-        ? "singleGroup.removeStudentDialog.toast.archived"
+        ? "singleGroup.removeStudentDialog.toast.deleted"
         : "singleGroup.removeStudentDialog.toast.removed"));
       setRemoveOpen(false);
       resetRemoveState();

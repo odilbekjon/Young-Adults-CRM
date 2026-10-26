@@ -554,7 +554,7 @@ export const Students = () => {
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { branchLabel } = useBranch();
   const [updateStudent,{ isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
-  const { archiveStudent: archiveStudentFlow } = useArchiveStudent();
+  const { archiveStudent: archiveStudentFlow, deleteStudent: deleteStudentFlow } = useArchiveStudent();
   const [fetchMemberships] = useLazyStudentGroupsQuery();
   const [freezeStudentGroup] = useFreezeStudentGroupMutation();
   const [isArchiving, setIsArchiving] = useState(false);
@@ -595,6 +595,8 @@ export const Students = () => {
   const [archiveUid,        setArchiveUid]        = useState<string | null>(null);
   const [archiveReasonId,   setArchiveReasonId]   = useState("");
   const [archiveComment,    setArchiveComment]    = useState("");
+  // Dialog switch: false = archive the student, true = delete the student.
+  const [archiveDeleteMode, setArchiveDeleteMode] = useState(false);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
   const [editDrawerOpen,    setEditDrawerOpen]    = useState(false);
@@ -948,6 +950,7 @@ export const Students = () => {
     setArchiveUid(null);
     setArchiveReasonId("");
     setArchiveComment("");
+    setArchiveDeleteMode(false);
   };
 
   // Archives a student through the shared flow (see useArchiveStudent): ends
@@ -962,10 +965,11 @@ export const Students = () => {
     setActionError(null);
     setIsArchiving(true);
     try {
-      await archiveStudent(archiveUid, archiveReasonId, archiveComment);
+      if (archiveDeleteMode) await deleteStudentFlow({ studentId: archiveUid, reasonId: archiveReasonId, comment: archiveComment });
+      else await archiveStudent(archiveUid, archiveReasonId, archiveComment);
       setSelected((p) => p.filter((x) => x !== archiveUid));
       resetArchiveState();
-      toast.success(t("students.toast.archived"));
+      toast.success(t(archiveDeleteMode ? "students.toast.deleted" : "students.toast.archived"));
     } catch (err) {
       const detail = extractApiError(err);
       const message = detail ? `${t("students.archiveDialog.error")}: ${detail}` : t("students.archiveDialog.error");
@@ -1589,10 +1593,9 @@ export const Students = () => {
 
       {/* Delete/archive dialog — optional reason + an "Archive" vs "Delete
           student" toggle (RemoveStudentDialog, shared with SingleGroup).
-          Archive: POST /students/{id}/status -> INACTIVE (reason recorded,
-          shows up on the Archive page). Delete: real DELETE /students/{id},
-          which the backend rejects while the student still has active group
-          memberships. */}
+          Archive: memberships ended + POST /students/{id}/status -> INACTIVE
+          (reason recorded, shows up on the Archive page). Delete: the same,
+          then DELETE /students/{id} (see useArchiveStudent). */}
       <RemoveStudentDialog
         open={Boolean(archiveUid)}
         onClose={resetArchiveState}
@@ -1608,6 +1611,9 @@ export const Students = () => {
         onScopeChange={() => {}}
         showGroupScope={false}
         archiveLabel={t("students.removeDialog.archiveLabel")}
+        showDeleteToggle
+        deleteMode={archiveDeleteMode}
+        onDeleteModeChange={setArchiveDeleteMode}
         loading={isArchiving}
       />
 

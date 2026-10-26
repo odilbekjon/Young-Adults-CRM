@@ -8,7 +8,8 @@ import {
 import { IoClose } from "react-icons/io5";
 import { RightDrawer } from "../common/RightDrawer";
 import { useToast } from "../../Context/ToastContext";
-import { useCreateStudentMutation } from "../../app/api/studentsApi/studentsApi";
+import { useCreateStudentMutation, useLazyAllStudentsQuery } from "../../app/api/studentsApi/studentsApi";
+import { extractApiError } from "../../utils/extractApiError";
 import type { StudentGender } from "../../app/api/studentsApi/types";
 import {
   useAllGroupsQuery,
@@ -81,6 +82,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
   const toast = useToast();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const [createStudent, { isLoading: isSaving }] = useCreateStudentMutation();
+  const [fetchStudents] = useLazyAllStudentsQuery();
   const { data: groupsData, isFetching: isGroupsLoading, isError: isGroupsError } = useAllGroupsQuery(
     { page: 1, limit: 100 },
     { skip: !open }
@@ -102,6 +104,10 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
   const [password, setPassword] = useState("");
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Names of existing students who already use the entered phone. Several
+  // students may share one number, so this only warns once: while it is set,
+  // the next submit skips the check and creates the student ("Create anyway").
+  const [duplicateNames, setDuplicateNames] = useState<string[]>([]);
 
   // har bir additional field uchun ochiq/yopiqligi
   const [openFields, setOpenFields] = useState<Record<AdditionalFieldId, boolean>>({
@@ -129,7 +135,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
 
   const handleClose = () => {
     setPhone(""); setName(""); setDob(""); setGender("");
-    setComment(""); setGroup(""); setJoinedAt(todayLocalISO()); setPassword(""); setTagIds([]); setError(null);
+    setComment(""); setGroup(""); setJoinedAt(todayLocalISO()); setPassword(""); setTagIds([]); setError(null); setDuplicateNames([]);
     setShowGroupField(false); setShowPasswordField(false);
     setOpenFields({
       parentPhone: false, passport: false, parentName: false, email: false,
@@ -149,6 +155,24 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
     if (!name.trim()) { setError(t("addStudent.errors.name")); return; }
     if (!fullPhone && !additionalValues.email.trim()) { setError(t("addStudent.errors.contact")); return; }
     if (!selectedBranchId) { setError(t("addStudent.errors.branch")); return; }
+
+    if (fullPhone && duplicateNames.length === 0) {
+      try {
+        // GET /students' `search` isn't confirmed to be honored server-side
+        // (see StudentSearchField), so the branch's roster is read and
+        // compared by the phone's last 9 digits instead — same full-roster
+        // read the Students page already does for its client-side filters.
+        const roster = await fetchStudents({ page: 1, limit: 3000, branchId: selectedBranchId }).unwrap();
+        const key = fullPhone.replace(/\D/g, "").slice(-9);
+        const same = roster.data.filter((s) => (s.phone ?? "").replace(/\D/g, "").slice(-9) === key);
+        if (same.length > 0) {
+          setDuplicateNames(same.map((s) => s.name));
+          return;
+        }
+      } catch {
+        // The check is only a courtesy — if it can't run, creating goes ahead.
+      }
+    }
 
     try {
       const created = await createStudent({
@@ -209,9 +233,11 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
 
       onSuccess?.();
       handleClose();
-    } catch {
-      setError(t("addStudent.errors.save"));
-      toast.error(t("addStudent.errors.save"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const message = detail ? `${t("addStudent.errors.save")}: ${detail}` : t("addStudent.errors.save");
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -231,7 +257,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
             <input
               style={{ ...inputStyle, flex: 1 }}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => { setPhone(e.target.value); setDuplicateNames([]); }}
               placeholder="90 123 45 67"
               type="tel"
             />
@@ -418,6 +444,12 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
           <div style={{ fontSize: 13, color: "#d93f4f" }}>{error}</div>
         )}
 
+        {duplicateNames.length > 0 && (
+          <div style={{ fontSize: 13, color: "#b45309", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, padding: "10px 12px" }}>
+            {t("addStudent.duplicatePhone", { names: duplicateNames.join(", ") })}
+          </div>
+        )}
+
         {/* Submit */}
         <div style={{ marginTop: 4 }}>
           <button
@@ -430,7 +462,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
               opacity: isSaving || isAssigning ? 0.7 : 1,
             }}
           >
-            {isSaving || isAssigning ? t("addStudent.saving") : t("addStudent.submit")}
+            {isSaving || isAssigning ? t("addStudent.saving") : duplicateNames.length > 0 ? t("addStudent.createAnyway") : t("addStudent.submit")}
           </button>
         </div>
       </div>

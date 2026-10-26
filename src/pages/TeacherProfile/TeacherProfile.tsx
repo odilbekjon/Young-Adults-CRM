@@ -728,8 +728,13 @@ export const TeacherProfile = () => {
   // orqali) hisoblanadi, yangi endpoint o'ylab topilmadi.
   const teacherGroups: ProfileGroup[] = useMemo(() => {
     if (!teacher) return [];
+    const today = new Date();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     return (allGroupsData?.data ?? [])
       .filter((g) => g.teachers.some((tch) => tch.id === teacher.id))
+      // Only groups that are running now — same "Active" meaning as the Groups
+      // page filter: ACTIVE status and the training end date not yet passed.
+      .filter((g) => g.status?.toUpperCase() === "ACTIVE" && !(g.trainingEnd && g.trainingEnd.slice(0, 10) < todayIso))
       .map((g) => ({
         id: g.id,
         name: g.name,

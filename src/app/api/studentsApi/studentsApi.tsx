@@ -637,6 +637,7 @@ export const studentsApi = baseApi.injectEndpoints({
 
 export const {
     useAllStudentsQuery,
+    useLazyAllStudentsQuery,
     useLazyStudentsExcelQuery,
     useStudentByIdQuery,
     useLazyStudentByIdQuery,

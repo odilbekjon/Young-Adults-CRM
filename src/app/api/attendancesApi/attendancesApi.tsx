@@ -1,5 +1,6 @@
 import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
+import { runLimited } from "../../../utils/runLimited";
 import {
   SaveAttendanceRequest,
   SaveAttendanceResponse,
@@ -289,15 +290,14 @@ export const attendancesApi = baseApi.injectEndpoints({
     // the query only errors when EVERY request failed.
     studentMonthAttendance: builder.query<StudentAttendanceDay[], StudentMonthAttendanceArgs>({
       queryFn: async ({ studentId, groupIds, month }, _api, _extra, fetchWithBQ) => {
-        const results = await Promise.all(
-          groupIds.map(async (groupId) => {
-            const [datesRes, recordsRes] = await Promise.all([
-              fetchWithBQ({ url: `${PATHS.ATTENDANCES}/group/${groupId}/dates?month=${month}`, method: "GET" }),
-              fetchWithBQ({ url: `${PATHS.ATTENDANCES}/group/${groupId}?month=${month}`, method: "GET" }),
-            ]);
-            return { groupId, datesRes, recordsRes };
-          })
-        );
+        // At most 3 groups (6 requests) in flight, not every group at once.
+        const results = await runLimited(groupIds, 3, async (groupId) => {
+          const [datesRes, recordsRes] = await Promise.all([
+            fetchWithBQ({ url: `${PATHS.ATTENDANCES}/group/${groupId}/dates?month=${month}`, method: "GET" }),
+            fetchWithBQ({ url: `${PATHS.ATTENDANCES}/group/${groupId}?month=${month}`, method: "GET" }),
+          ]);
+          return { groupId, datesRes, recordsRes };
+        });
         if (results.length > 0 && results.every((r) => r.datesRes.error && r.recordsRes.error)) {
           return { error: results[0].recordsRes.error ?? results[0].datesRes.error! };
         }

@@ -3,6 +3,8 @@ import { PATHS } from "./paths";
 import { decimalToNumber } from "../../../utils/decimal";
 import {
     studentByIdResponse,
+    StudentForEdit,
+    studentForEditResponse,
     studentsRequest,
     studentsResponse,
     StudentsExcelQueryArgs,
@@ -354,6 +356,45 @@ const normalizeStudentAttendanceReport = (raw: unknown): StudentAttendanceReport
     return { attended, excused, absent, total: attended + excused + absent, byGroup };
 };
 
+// GET /students/{id}/for-edit is a user object with the student-specific
+// fields nested under `studentProfile`; every field is looked up on the profile
+// first, then on the root, and empty values are dropped so they never overwrite
+// what GET /students/{id} already knows.
+const normalizeStudentForEdit = (raw: unknown): StudentForEdit => {
+    const root = ((raw as { data?: unknown })?.data ?? raw ?? {}) as Record<string, unknown>;
+    const profile = (root.studentProfile && typeof root.studentProfile === "object" ? root.studentProfile : {}) as Record<string, unknown>;
+    const pick = (key: string): string | null => {
+        const v = profile[key] ?? root[key];
+        return v === undefined || v === null || v === "" ? null : String(v);
+    };
+    const idsOf = (v: unknown): string[] =>
+        Array.isArray(v)
+            ? v.map((x) => (x && typeof x === "object"
+                ? String((x as Record<string, unknown>).id ?? (x as Record<string, unknown>).branchId ?? ((x as Record<string, unknown>).branch as Record<string, unknown> | undefined)?.id ?? "")
+                : String(x ?? ""))).filter(Boolean)
+            : [];
+    const gender = pick("gender");
+    return {
+        id: String(root.id ?? ""),
+        name: String(root.name ?? ""),
+        phone: String(root.phone ?? ""),
+        photo: pick("photo"),
+        email: pick("email"),
+        gender: gender === "MALE" || gender === "FEMALE" ? gender : null,
+        birthdate: pick("birthdate"),
+        parentName: pick("parentName"),
+        parentPhone: pick("parentPhone"),
+        schoolName: pick("schoolName"),
+        location: pick("location"),
+        passport: pick("passport"),
+        telegram: pick("telegram"),
+        instagram: pick("instagram"),
+        description: pick("description") ?? pick("comment"),
+        tagIds: idsOf(profile.tagIds ?? root.tagIds ?? profile.tags ?? root.tags),
+        branchIds: idsOf(root.branchIds ?? profile.branchIds ?? root.branches ?? profile.branches),
+    };
+};
+
 const appendStudentFormData = (formData: FormData, data: Partial<CreateStudentRequest>) => {
     const { branchIds, tagIds, ...rest } = data;
     (Object.keys(rest) as (keyof typeof rest)[]).forEach((key) => {
@@ -434,6 +475,13 @@ export const studentsApi = baseApi.injectEndpoints({
         // /students/{id} (StudentDetail), neither of which include per-group
         // status/course/teacher/dates — those pages previously fell back to
         // unrelated mock data for this.
+        // GET /students/{id}/for-edit — every personal/contact field of the
+        // student plus branch ids; used by the profile card and the edit forms.
+        studentForEdit: builder.query<studentForEditResponse, string>({
+            query: (id) => ({ url: `${PATHS.STUDENTS}/${id}/for-edit`, method: "GET" }),
+            transformResponse: (response: unknown) => ({ success: true, data: normalizeStudentForEdit(response) }),
+            providesTags: ["student"],
+        }),
         studentGroupMemberships: builder.query<StudentGroupMembership[], string>({
             query: (id) => ({
                 url: `${PATHS.STUDENTS}/${id}/groups`,
@@ -640,6 +688,7 @@ export const {
     useLazyAllStudentsQuery,
     useLazyStudentsExcelQuery,
     useStudentByIdQuery,
+    useStudentForEditQuery,
     useLazyStudentByIdQuery,
     useStudentGroupMembershipsQuery,
     useCreateStudentMutation,

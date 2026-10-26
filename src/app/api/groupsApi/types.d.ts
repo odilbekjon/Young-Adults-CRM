@@ -209,6 +209,11 @@ export interface GroupHistoryChange {
 export interface GroupHistoryEntry {
   id: string;
   type: string;
+  // The backend's own (already localized) description, when it sends one
+  // instead of a machine `type`; empty otherwise.
+  title?: string;
+  // Browser/device the change was made from (e.g. "Chrome").
+  device?: string | null;
   studentId: string | null;
   studentName: string | null;
   studentPhone: string | null;

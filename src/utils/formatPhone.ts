@@ -8,3 +8,15 @@ export const formatPhone = (value?: string | null): string => {
   if (national.length !== 9) return value;
   return `(${national.slice(0, 2)}) ${national.slice(2, 5)}-${national.slice(5, 7)}-${national.slice(7)}`;
 };
+
+// Edit forms show the number after a fixed "+998" box: "+998950640912" ->
+// "950640912" for the input, and back to "+998950640912" for the request
+// (empty input -> empty string).
+export const toPhoneInput = (value?: string | null): string => {
+  const digits = (value ?? "").replace(/\D/g, "");
+  return digits.length > 9 && digits.startsWith("998") ? digits.slice(3) : digits;
+};
+export const fromPhoneInput = (input: string): string => {
+  const digits = input.replace(/\D/g, "");
+  return digits ? `+998${digits.length > 9 && digits.startsWith("998") ? digits.slice(3) : digits}` : "";
+};

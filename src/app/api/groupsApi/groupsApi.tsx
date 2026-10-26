@@ -149,19 +149,22 @@ const HISTORY_KNOWN_KEYS = new Set([
 // Containers whose scalar members are unwrapped into rows of their own.
 const HISTORY_NESTED_KEYS = ["data", "meta", "metadata", "payload", "extra", "info", "details"];
 
+// The rows may be the payload itself or sit under one of several wrapper keys,
+// possibly one level deeper ({data: {rows: [...], meta}}).
+const HISTORY_LIST_KEYS = ["history", "events", "logs", "rows", "items", "results", "records", "data"];
+const extractHistoryList = (raw: unknown, depth = 0): unknown[] => {
+    if (Array.isArray(raw)) return raw;
+    if (!raw || typeof raw !== "object" || depth > 2) return [];
+    const container = raw as Record<string, unknown>;
+    for (const key of HISTORY_LIST_KEYS) {
+        const found = extractHistoryList(container[key], depth + 1);
+        if (found.length > 0 || Array.isArray(container[key])) return found;
+    }
+    return [];
+};
+
 export const normalizeHistory = (raw: unknown): GroupHistoryEntry[] => {
-    const container = (raw ?? {}) as Record<string, unknown>;
-    const list: unknown[] = Array.isArray(raw)
-        ? raw
-        : Array.isArray(container.history)
-        ? container.history
-        : Array.isArray(container.events)
-        ? container.events
-        : Array.isArray(container.logs)
-        ? container.logs
-        : Array.isArray(container.data)
-        ? container.data
-        : [];
+    const list = extractHistoryList(raw);
 
     return (list as unknown[])
         .filter((row): row is Record<string, unknown> => !!row && typeof row === "object")
@@ -255,6 +258,12 @@ export const normalizeHistory = (raw: unknown): GroupHistoryEntry[] => {
             return {
                 id: String(r.id ?? r._id ?? `row-${i}`),
                 type: String(historyFirst(r, ["type", "action", "event", "eventType"]) ?? "").toUpperCase(),
+                // `action` can be a ready-made localized sentence ("Mevericks
+                // guruhiga biriktirildi") when the row has no machine `type`.
+                title: typeof r.type === "string" && r.type !== "" ? "" : String(r.action ?? ""),
+                device: r.device && typeof r.device === "object" && typeof (r.device as Record<string, unknown>).deviceName === "string"
+                    ? String((r.device as Record<string, unknown>).deviceName) || null
+                    : typeof r.device === "string" && r.device ? r.device : null,
                 studentId: asId(r.studentId ?? r.student),
                 studentName: historyPerson(r.studentName ?? r.student),
                 studentPhone: historyScalar(historyFirst(r, ["studentPhone", "phone"]) ?? student.phone),

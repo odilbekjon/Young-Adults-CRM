@@ -48,7 +48,7 @@ export const HistoryEntryRow = ({
 }) => {
   const { t } = useTranslation();
 
-  const title = t(`singleGroup.tabs.history.types.${entry.type}`, {
+  const title = entry.title || t(`singleGroup.tabs.history.types.${entry.type}`, {
     defaultValue: humanize(entry.type) || "—",
   });
 
@@ -173,6 +173,7 @@ export const HistoryEntryRow = ({
       <Box sx={{ textAlign: "right", flexShrink: 0, fontSize: 14, color: MUTED, lineHeight: 1.6 }}>
         {entry.createdAt && <div>{formatStamp(entry.createdAt)}</div>}
         {entry.actor && <div>{entry.actor}</div>}
+        {entry.device && <div style={{ fontSize: 12 }}>{entry.device}</div>}
       </Box>
     </Box>
   );

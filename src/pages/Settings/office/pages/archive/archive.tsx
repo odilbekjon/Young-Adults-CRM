@@ -33,6 +33,7 @@ import { useToggleStaffUserStatusMutation, useDeleteStaffUserMutation } from "..
 import { useToast } from "../../../../../Context/ToastContext";
 import { extractApiError } from "../../../../../utils";
 import type { RootState } from "../../../../../app/store";
+import { runLimited, runLimitedSettled } from "../../../../../utils/runLimited";
 import { usePersistedState } from "../../../../../hooks/usePersistedState";
 
 const SEARCH_DEBOUNCE_MS = 350;
@@ -315,7 +316,7 @@ export const Archive = () => {
     setIsBulkProcessing(true);
     try {
       const targets = pageData.filter((r) => selected.includes(r.id));
-      await Promise.all(targets.map((r) => restoreRecord(r, restoreSince)));
+      await runLimited(targets, 3, (r) => restoreRecord(r, restoreSince));
       toast.success(t("settings.office.archive.toast.restored"));
       setSelected([]);
       setBulkRestoreConfirmOpen(false);
@@ -339,7 +340,7 @@ export const Archive = () => {
       // allSettled, not all: one rejected record (e.g. a staff member still on
       // a branch) must not hide the others that were deleted, nor leave them
       // selected.
-      const results = await Promise.allSettled(targets.map((r) => permanentlyDelete(r)));
+      const results = await runLimitedSettled(targets, 3, (r) => permanentlyDelete(r));
       const failures = results.flatMap((res, i) => (res.status === "rejected" ? [{ record: targets[i], reason: res.reason }] : []));
       const deletedIds = targets.filter((_, i) => results[i].status === "fulfilled").map((r) => r.id);
       setSelected((s) => s.filter((id) => !deletedIds.includes(id)));

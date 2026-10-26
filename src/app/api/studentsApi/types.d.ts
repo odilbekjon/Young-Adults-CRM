@@ -120,6 +120,11 @@ export interface studentsResponse {
   };
 }
 
+export interface studentForEditResponse {
+  success: boolean;
+  data: StudentForEdit;
+}
+
 export interface studentByIdResponse {
   success: boolean;
   message: string;
@@ -127,6 +132,20 @@ export interface studentByIdResponse {
 }
 
 export type StudentGender = "MALE" | "FEMALE";
+
+// GET /students/{id}/for-edit — "Talabani tahrirlash formasi uchun olish": a
+// user-shaped payload ({id, name, phone, email, photo, gender, birthdate, ...,
+// studentProfile: {parentName, parentPhone, schoolName, location, passport,
+// telegram, instagram, ...}}) plus the student's branch ids. Normalized flat
+// (see normalizeStudentForEdit in studentsApi.tsx); it carries no balance, so
+// GET /students/{id} still supplies that.
+export interface StudentForEdit extends StudentExtraFields {
+  id: string;
+  name: string;
+  phone: string;
+  photo: string | null;
+  branchIds: string[];
+}
 
 export interface CreateStudentRequest {
   name: string;

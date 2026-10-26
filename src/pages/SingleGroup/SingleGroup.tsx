@@ -365,14 +365,20 @@ export const SingleGroup = () => {
   // read the placeholder 0 and rendered green even for actual debtors.
   //
   // That list only covers the first 100 students of the branch, so a roster
-  // member outside it would still read 0 (green). Every roster member's own
-  // balance (GET /students/{id} — the figure the student profile shows) is
+  // member outside it would still read 0 (green). The balance of each such
+  // member (GET /students/{id} — the figure the student profile shows) is
   // therefore fetched too, and wins over the list value once it arrives.
   const rosterIds = useMemo(
     () => [...students, ...extraStudents].map((s) => s.realId).filter(Boolean),
     [students, extraStudents]
   );
-  const ownBalances = useStudentBalances(rosterIds);
+  // Only roster members GET /students (above) didn't return are fetched one by
+  // one — and not before that list has arrived — instead of one request per
+  // member on every visit.
+  const ownBalances = useStudentBalances(
+    rosterIds.filter((rid) => !(allStudentsData?.data ?? []).some((s) => s.id === rid)),
+    !allStudentsData,
+  );
   const balanceByStudentId = useMemo(() => {
     const map = new Map((allStudentsData?.data ?? []).map((s) => [s.id, s.balance]));
     Object.entries(ownBalances).forEach(([sid, bal]) => map.set(sid, bal));

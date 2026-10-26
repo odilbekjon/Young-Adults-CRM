@@ -28,11 +28,11 @@ export const useStudentBalances = (ids: string[], skip = false): Record<string, 
 
     const run = async () => {
       // Small batches so a 100-row page doesn't fire 100 requests at once.
-      for (let i = 0; i < pending.length; i += 6) {
-        const batch = pending.slice(i, i + 6);
+      for (let i = 0; i < pending.length; i += 4) {
+        const batch = pending.slice(i, i + 4);
         const results = await Promise.all(
           batch.map(async (id) => {
-            const sub = dispatch(studentsApi.endpoints.studentById.initiate(id, { forceRefetch: true }));
+            const sub = dispatch(studentsApi.endpoints.studentById.initiate(id));
             try {
               const res = await sub.unwrap();
               return [id, res.data.balance] as const;

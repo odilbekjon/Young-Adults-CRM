@@ -47,7 +47,7 @@ import { PiMicrosoftExcelLogoFill } from "react-icons/pi";
 
 import { FlatStudent, mapApiStudentToFlat, formatDate } from "../../constants/FlatStudents";
 import { StudentTagsSelect } from "../../components/StudentTagsSelect";
-import { ALL_COLUMNS, CONTACT_ICONS, BADGE_COLORS } from "../../constants/StudentsTable";
+import { ALL_COLUMNS, BADGE_COLORS } from "../../constants/StudentsTable";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { AddStudent } from "../../components/AddStudent";
@@ -55,8 +55,16 @@ import { AddPayment } from "../../components/AddPayment";
 import {
   useAllStudentsQuery,
   useUpdateStudentMutation,
+  useStudentForEditQuery,
   useLazyStudentsExcelQuery,
 } from "../../app/api/studentsApi";
+import type { StudentGender } from "../../app/api/studentsApi/types";
+import { StudentContactFields, EMPTY_CONTACTS, type ContactValues } from "../../components/StudentContactFields/StudentContactFields";
+import { toPhoneInput, fromPhoneInput } from "../../utils/formatPhone";
+import { runLimited, runLimitedSettled } from "../../utils/runLimited";
+
+// Bulk actions send at most this many requests at once.
+const BULK_CONCURRENCY = 3;
 import {
   useAllGroupsQuery,
   useAddStudentToGroupMutation,
@@ -98,13 +106,13 @@ interface Filters {
 }
 
 // Status / Financial filter values (also accepted from the URL:
-// /students?status=<key>&financial=<key>). "inactive" is a legacy status
-// value — still honoured (server-side INACTIVE list) but no longer offered.
+// /students?status=<key>&financial=<key>). "inactive" = the archived
+// students (GET /students?status=INACTIVE).
 const STATUS_OPTION_KEYS = [
   "added_this_month", "signed_offer", "trial", "active", "frozen",
-  "without_group", "left_after_trial", "left_active",
+  "without_group", "left_after_trial", "left_active", "inactive",
 ] as const;
-const STATUS_FILTER_KEYS = [...STATUS_OPTION_KEYS, "inactive"] as const;
+const STATUS_FILTER_KEYS = STATUS_OPTION_KEYS;
 const FINANCIAL_FILTER_KEYS = ["debt", "discount", "no_debt", "positive", "paid_month"] as const;
 // Status values that need student-group memberships (GET /student-groups).
 const MEMBERSHIP_STATUS_KEYS: string[] = [
@@ -437,7 +445,7 @@ const EditStudentDrawer = ({
   open: boolean;
   student: FlatStudent | null;
   onClose: () => void;
-  onSave: (uid: string, data: { name: string; phone: string; tagIds: string[] }) => Promise<boolean>;
+  onSave: (uid: string, data: { name: string; phone: string; gender: StudentGender | undefined; birthdate: string; tagIds: string[]; contacts: ContactValues }) => Promise<boolean>;
   saving?: boolean;
   error?: string | null;
 }) => {
@@ -445,12 +453,27 @@ const EditStudentDrawer = ({
   const [name,   setName]   = useState("");
   const [phone,  setPhone]  = useState("");
   const [dob,    setDob]    = useState("");
-  const [gender, setGender] = useState("male");
+  const [gender, setGender] = useState("");
   const [tagIds, setTagIds] = useState<string[]>([]);
+  const [contacts, setContacts] = useState<ContactValues>(EMPTY_CONTACTS);
+
+  // The list row only knows name/phone/tags — GET /students/{id}/for-edit
+  // supplies the rest (birthdate, gender, contacts) when the drawer opens.
+  const { data: forEditData } = useStudentForEditQuery(student?.uid ?? "", { skip: !open || !student });
+  const forEdit = forEditData?.data;
 
   React.useEffect(() => {
-    if (student) { setName(student.name); setPhone(student.phone); setTagIds(student.tagIds ?? []); }
-  }, [student]);
+    if (!open || !student) return;
+    setName(forEdit?.name || student.name);
+    setPhone(toPhoneInput(forEdit?.phone || student.phone));
+    setDob(forEdit?.birthdate ? forEdit.birthdate.slice(0, 10) : "");
+    setGender(forEdit?.gender === "FEMALE" ? "female" : forEdit?.gender === "MALE" ? "male" : "");
+    setTagIds(forEdit?.tagIds?.length ? forEdit.tagIds : student.tagIds ?? []);
+    setContacts({
+      parentPhone: forEdit?.parentPhone ?? "", passport: forEdit?.passport ?? "", parentName: forEdit?.parentName ?? "", email: forEdit?.email ?? "",
+      telegram: forEdit?.telegram ?? "", schoolName: forEdit?.schoolName ?? "", location: forEdit?.location ?? "", instagram: forEdit?.instagram ?? "",
+    });
+  }, [open, student, forEdit]);
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose} PaperProps={{ sx: { width: 420 } }}>
@@ -501,15 +524,7 @@ const EditStudentDrawer = ({
 
         <Box mb={2.5}>
           <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={1}>{t("students.editDrawer.additionalContacts")}</Typography>
-          <Stack direction="row" gap={1} flexWrap="wrap">
-            {CONTACT_ICONS.map((item, i) => (
-              <Tooltip key={i} title={t(`students.contacts.${item.key}`)} arrow>
-                <IconButton size="small" sx={{ width: 40, height: 40, border: "1.5px solid var(--color-border)", borderRadius: "50%", color: "#5c7fa3", bgcolor: "var(--color-surface)" }}>
-                  {item.icon}
-                </IconButton>
-              </Tooltip>
-            ))}
-          </Stack>
+          <StudentContactFields values={contacts} onChange={(id, value) => setContacts((p) => ({ ...p, [id]: value }))} />
         </Box>
 
         <Box mb={2.5}>
@@ -529,7 +544,7 @@ const EditStudentDrawer = ({
         <Button
           variant="contained" fullWidth
           disabled={saving}
-          onClick={async () => { if (!student) return; const ok = await onSave(student.uid, { name, phone, tagIds }); if (ok) onClose(); }}
+          onClick={async () => { if (!student) return; const ok = await onSave(student.uid, { name, phone: fromPhoneInput(phone), gender: gender === "female" ? "FEMALE" : gender === "male" ? "MALE" : undefined, birthdate: dob, tagIds, contacts }); if (ok) onClose(); }}
           sx={{ borderRadius: "20px", py: 1.2, fontWeight: 600, fontSize: 14, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" }, boxShadow: "none", textTransform: "none" }}
         >
           {saving ? t("students.editDrawer.saving") : t("students.editDrawer.submit")}
@@ -991,14 +1006,13 @@ export const Students = () => {
     setIsArchiving(true);
     const failed: string[] = [];
     let firstError: unknown = null;
-    for (const uid of selected) {
-      try {
-        await archiveStudent(uid);
-      } catch (err) {
-        failed.push(uid);
-        if (firstError === null) firstError = err;
+    const settled = await runLimitedSettled(selected, BULK_CONCURRENCY, (uid) => archiveStudent(uid));
+    settled.forEach((res, i) => {
+      if (res.status === "rejected") {
+        failed.push(selected[i]);
+        if (firstError === null) firstError = res.reason;
       }
-    }
+    });
     setIsArchiving(false);
     setSelected(failed);
     if (failed.length === 0) {
@@ -1019,10 +1033,15 @@ export const Students = () => {
     await handleBulkDelete();
   };
 
-  const handleSaveEdit = async (uid: string, data: { name: string; phone: string; tagIds: string[] }): Promise<boolean> => {
+  const handleSaveEdit = async (uid: string, data: { name: string; phone: string; gender: StudentGender | undefined; birthdate: string; tagIds: string[]; contacts: ContactValues }): Promise<boolean> => {
     setActionError(null);
     try {
-      await updateStudent({ id: uid, name: data.name, phone: data.phone, tagIds: data.tagIds.length ? data.tagIds : undefined }).unwrap();
+      // Empty contact fields are left out (a multipart empty string would be stored as a value).
+      const contacts = Object.fromEntries(Object.entries(data.contacts).map(([k, v]) => [k, v.trim() || undefined]));
+      await updateStudent({
+        id: uid, name: data.name, phone: data.phone || undefined, gender: data.gender,
+        birthdate: data.birthdate || undefined, tagIds: data.tagIds.length ? data.tagIds : undefined, ...contacts,
+      }).unwrap();
       toast.success(t("students.toast.updated"));
       return true;
     } catch {
@@ -1069,15 +1088,13 @@ export const Students = () => {
         return "notFrozen";
       }
     };
-    const results = await Promise.all(
-      eligibleUids.map(async (uid) => {
-        try {
-          return { uid, outcome: await addOne(uid), error: null as unknown };
-        } catch (err) {
-          return { uid, outcome: "failed" as const, error: err };
-        }
-      }),
-    );
+    const results = await runLimited(eligibleUids, BULK_CONCURRENCY, async (uid) => {
+      try {
+        return { uid, outcome: await addOne(uid), error: null as unknown };
+      } catch (err) {
+        return { uid, outcome: "failed" as const, error: err };
+      }
+    });
     setIsAddingToGroup(false);
 
     const failed = results.filter((r) => r.outcome === "failed");

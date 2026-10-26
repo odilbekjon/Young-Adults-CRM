@@ -34,6 +34,8 @@ export interface FlatStudent {
   email?: string | null;
   telegram?: string | null;
   instagram?: string | null;
+  schoolName?: string | null;
+  passport?: string | null;
   address?: string | null;
   createdAt?: string | null;
   groupsCount?: number;
@@ -120,6 +122,8 @@ export const mapApiStudentToFlat = (s: Student | StudentDetail): FlatStudent => 
     email: s.email ?? undefined,
     telegram: s.telegram ?? undefined,
     instagram: s.instagram ?? undefined,
+    schoolName: s.schoolName ?? undefined,
+    passport: s.passport ?? undefined,
     address: s.location ?? undefined,
     createdAt: s.createdAt ?? undefined,
     groupsCount: "groups" in s ? s.groups?.length ?? 0 : undefined,

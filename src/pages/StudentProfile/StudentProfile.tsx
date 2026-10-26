@@ -2,9 +2,9 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   FiEdit2, FiMail, FiFlag,
-  FiChevronDown, FiUsers, FiDollarSign, FiPhone,
+  FiChevronDown, FiUsers, FiDollarSign,
   FiCalendar, FiGitBranch, FiPause, FiPlay, FiUser, FiX,
-  FiMessageSquare, FiArchive, FiRefreshCw,
+  FiArchive, FiRefreshCw,
 } from "react-icons/fi";
 import { IoArrowBack } from "react-icons/io5";
 import {
@@ -22,6 +22,7 @@ import { decimalToNumber } from "../../utils/decimal";
 import { useArchiveStudent } from "../../hooks/useArchiveStudent";
 import {
   useStudentByIdQuery,
+  useStudentForEditQuery,
   useStudentGroupMembershipsQuery,
   useUpdateStudentMutation,
   useTransferStudentBranchMutation,
@@ -54,6 +55,8 @@ import { AddPayment } from "../../components/AddPayment";
 import { TbArrowBackUp, TbCalculator } from "react-icons/tb";
 import { StudentBalanceActionDrawer, type BalanceAction } from "./payments/StudentBalanceActionDrawer";
 import { StudentTagsSelect } from "../../components/StudentTagsSelect";
+import { StudentContactFields, EMPTY_CONTACTS, type ContactValues } from "../../components/StudentContactFields/StudentContactFields";
+import { toPhoneInput, fromPhoneInput } from "../../utils/formatPhone";
 import { StudentPaymentsSection } from "./payments/StudentPaymentsSection";
 import { FreezeModal } from "../SingleGroup/FreezeModal";
 import { ActivateModal } from "../SingleGroup/ActivateModal";
@@ -97,30 +100,31 @@ const EditStudentDrawer = ({
   open: boolean;
   onClose: () => void;
   student: FlatStudent;
-  onSave: (data: { name: string; phone: string; gender: StudentGender; birthdate: string; tagIds: string[] }) => Promise<boolean>;
+  onSave: (data: { name: string; phone: string; gender: StudentGender | undefined; birthdate: string; tagIds: string[]; contacts: ContactValues }) => Promise<boolean>;
   saving?: boolean;
   error?: string | null;
 }) => {
   const [name, setName] = useState(student.name);
-  const [phone, setPhone] = useState(student.phone);
+  const [phone, setPhone] = useState(toPhoneInput(student.phone));
   const [dob, setDob] = useState("");
-  const [gender, setGender] = useState("male");
+  const [gender, setGender] = useState("");
   const [tagIds, setTagIds] = useState<string[]>([]);
+  const [contacts, setContacts] = useState<ContactValues>(EMPTY_CONTACTS);
 
+  // `student` already carries GET /students/{id}/for-edit (see the page), so
+  // the form opens with everything the backend knows about the student.
   useEffect(() => {
-    if (open) { setName(student.name); setPhone(student.phone); setTagIds(student.tagIds ?? []); }
+    if (!open) return;
+    setName(student.name);
+    setPhone(toPhoneInput(student.phone));
+    setDob(student.birthdate ? student.birthdate.slice(0, 10) : "");
+    setGender(student.gender === "FEMALE" ? "female" : student.gender === "MALE" ? "male" : "");
+    setTagIds(student.tagIds ?? []);
+    setContacts({
+      parentPhone: student.parentPhone ?? "", passport: student.passport ?? "", parentName: student.parentName ?? "", email: student.email ?? "",
+      telegram: student.telegram ?? "", schoolName: student.schoolName ?? "", location: student.address ?? "", instagram: student.instagram ?? "",
+    });
   }, [open, student]);
-
-  const additionalContactIcons = [
-    { icon: <FiPhone size={16} />, label: "Phone" },
-    { icon: <FiUser size={16} />, label: "Parent" },
-    { icon: <FiUser size={16} />, label: "Profile" },
-    { icon: <FiMail size={16} />, label: "Email" },
-    { icon: <FiMessageSquare size={16} />, label: "Telegram" },
-    { icon: <FiUser size={16} />, label: "Education" },
-    { icon: <FiGitBranch size={16} />, label: "Location" },
-    { icon: <FiFlag size={16} />, label: "Document" },
-  ];
 
   return (
     <Drawer
@@ -343,25 +347,7 @@ const EditStudentDrawer = ({
           >
             Additional contacts
           </label>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {additionalContactIcons.map((item, i) => (
-              <Tooltip key={i} title={item.label}>
-                <IconButton
-                  size="small"
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    border: "1.5px solid var(--color-border)",
-                    color: "var(--color-text-secondary)",
-                    borderRadius: "50%",
-                    "&:hover": { borderColor: "var(--color-primary)", color: "var(--color-primary)" },
-                  }}
-                >
-                  {item.icon}
-                </IconButton>
-              </Tooltip>
-            ))}
-          </div>
+          <StudentContactFields values={contacts} onChange={(id, value) => setContacts((p) => ({ ...p, [id]: value }))} />
         </div>
 
         {/* Tags */}
@@ -408,10 +394,11 @@ const EditStudentDrawer = ({
           onClick={async () => {
             const ok = await onSave({
               name,
-              phone,
-              gender: gender === "female" ? "FEMALE" : "MALE",
+              phone: fromPhoneInput(phone),
+              gender: gender === "female" ? "FEMALE" : gender === "male" ? "MALE" : undefined,
               birthdate: dob,
               tagIds,
+              contacts,
             });
             if (ok) onClose();
           }}
@@ -908,6 +895,16 @@ const SideCard = ({
           Address: <strong style={{ color: "var(--color-text-primary)" }}>{student.address}</strong>
         </div>
       )}
+      {student.schoolName && (
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          School: <strong style={{ color: "var(--color-text-primary)" }}>{student.schoolName}</strong>
+        </div>
+      )}
+      {student.passport && (
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          Passport: <strong style={{ color: "var(--color-text-primary)" }}>{student.passport}</strong>
+        </div>
+      )}
     </div>
 
     <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "14px 0" }} />
@@ -1353,7 +1350,10 @@ export const StudentProfile = () => {
 
   // ✅ uid (string) — real API id orqali topiladi, navigate('/students/:id') bilan mos
   const { data, isLoading } = useStudentByIdQuery(id ?? "", { skip: !id });
-  const student = data ? mapApiStudentToFlat(data.data) : undefined;
+  // GET /students/{id}/for-edit carries every personal/contact field; the
+  // plain GET /students/{id} still supplies the balance and group start, so
+  // the for-edit values are laid over it (empty ones are skipped).
+  const { data: forEditData } = useStudentForEditQuery(id ?? "", { skip: !id });
   const { data: groupMemberships, isLoading: isGroupMembershipsLoading } = useStudentGroupMembershipsQuery(id ?? "", { skip: !id });
   // Confirmed live (2026-09-25): GET /students/{id}/groups' own `id` field
   // IS the group's real id, not a separate membership-row id — a student
@@ -1415,6 +1415,22 @@ export const StudentProfile = () => {
   );
 
   const { data: branchesData } = useAllBranchesQuery();
+  const student = useMemo(() => {
+    if (!data) return undefined;
+    const filled = Object.fromEntries(
+      Object.entries(forEditData?.data ?? {}).filter(([, v]) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)),
+    );
+    const merged = { ...data.data, ...filled } as typeof data.data;
+    // The branch names come from GET /students/{id}; when it sent none, the
+    // branch ids of for-edit are resolved against the branches list.
+    if (!merged.branch?.length && forEditData?.data.branchIds.length) {
+      merged.branch = forEditData.data.branchIds
+        .map((bid) => (branchesData?.data ?? []).find((b) => b.id === bid))
+        .filter((b): b is NonNullable<typeof b> => Boolean(b))
+        .map((b) => ({ id: b.id, name: b.name }));
+    }
+    return mapApiStudentToFlat(merged);
+  }, [data, forEditData, branchesData]);
   // GET /branches includes soft-deleted (status: "DELETED") and deactivated
   // (status: "INACTIVE") branches — filter to ACTIVE only, same as Header's
   // own branch dropdown, so this picker can't transfer a student into a
@@ -1423,7 +1439,10 @@ export const StudentProfile = () => {
     () => (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE").map((b) => ({ id: b.id, name: b.name })),
     [branchesData]
   );
-  const currentBranchIds = useMemo(() => (data?.data.branch ?? []).map((b) => b.id), [data]);
+  const currentBranchIds = useMemo(
+    () => ((data?.data.branch?.length ? data.data.branch.map((b) => b.id) : forEditData?.data.branchIds) ?? []),
+    [data, forEditData],
+  );
   // Group/GroupDetail carries no branch field of its own — a membership's
   // branch is derived from its course's branchId (every course belongs to
   // one branch), cross-referenced against the same branches list already
@@ -1522,16 +1541,20 @@ export const StudentProfile = () => {
     );
   }
 
-  const handleSaveStudent = async (data: { name: string; phone: string; gender: StudentGender; birthdate: string; tagIds: string[] }): Promise<boolean> => {
+  const handleSaveStudent = async (data: { name: string; phone: string; gender: StudentGender | undefined; birthdate: string; tagIds: string[]; contacts: ContactValues }): Promise<boolean> => {
     setSaveError(null);
     try {
+      // Empty contact fields are left out (a multipart empty string would be
+      // stored as a value), so only filled ones are sent.
+      const contacts = Object.fromEntries(Object.entries(data.contacts).map(([k, v]) => [k, v.trim() || undefined]));
       await updateStudent({
         id: student.uid,
         name: data.name,
-        phone: data.phone,
+        phone: data.phone || undefined,
         gender: data.gender,
         birthdate: data.birthdate || undefined,
         tagIds: data.tagIds.length ? data.tagIds : undefined,
+        ...contacts,
       }).unwrap();
       toast.success("Student updated successfully");
       return true;

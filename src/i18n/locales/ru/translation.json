@@ -385,7 +385,7 @@
         "without_group": "Без группы",
         "left_after_trial": "Ушли после пробного (до активации)",
         "left_active": "Ушли из активной группы (после активации)",
-        "inactive": "Неактивный"
+        "inactive": "Архивные студенты"
       },
       "financialSituation": "Финансовое состояние",
       "financialOptions": {

@@ -46,7 +46,8 @@ export const useArchiveStudent = () => {
   const archiveStudent = async ({ studentId, reasonId, comment }: ArchiveStudentArgs) => {
     const note = comment?.trim() || undefined;
 
-    const first = (await loadLive(studentId))[0];
+    const live = await loadLive(studentId);
+    const first = live[0];
     if (first) {
       await updateStudentGroupStatus({
         id: first.id,
@@ -55,13 +56,17 @@ export const useArchiveStudent = () => {
         reason: note,
         isAllGroup: true,
       }).unwrap();
-      for (const m of await loadLive(studentId)) {
-        await updateStudentGroupStatus({
-          id: m.id,
-          status: "INACTIVE",
-          reasonId: reasonId || undefined,
-          reason: note,
-        }).unwrap();
+      // Anything isAllGroup didn't end is picked up by a second look — only
+      // worth the 3 extra requests when there was more than one membership.
+      if (live.length > 1) {
+        for (const m of await loadLive(studentId)) {
+          await updateStudentGroupStatus({
+            id: m.id,
+            status: "INACTIVE",
+            reasonId: reasonId || undefined,
+            reason: note,
+          }).unwrap();
+        }
       }
     }
 

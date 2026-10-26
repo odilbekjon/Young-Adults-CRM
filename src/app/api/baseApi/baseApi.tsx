@@ -53,16 +53,51 @@ const fetchQuery = fetchBaseQuery({
 });
 
 
+// At most MAX_IN_FLIGHT requests are on the wire at once; the rest wait their
+// turn. Pages mount a dozen-plus queries and bulk actions add many more — all
+// fired together they stall the browser and flood the backend (each one also
+// waits behind the others anyway). Writes jump the queue so a click is never
+// stuck behind a pile of background reads. A request cancelled while still
+// queued is dropped without being sent.
+const MAX_IN_FLIGHT = 6;
+let inFlight = 0;
+const queue: { start: () => void }[] = [];
+
+const withSlot = async <T,>(signal: AbortSignal | undefined, isWrite: boolean, run: () => Promise<T>): Promise<T | null> => {
+  if (inFlight >= MAX_IN_FLIGHT) {
+    await new Promise<void>((resolve) => {
+      const entry = { start: resolve };
+      if (isWrite) queue.unshift(entry);
+      else queue.push(entry);
+    });
+  } else {
+    inFlight += 1;
+  }
+  // The slot is now ours (handed over by `release`, or taken just above).
+  try {
+    if (signal?.aborted) return null;
+    return await run();
+  } finally {
+    const next = queue.shift();
+    if (next) next.start();
+    else inFlight -= 1;
+  }
+};
+
 const rawBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = retry(
   async (args, api, extraOptions) => {
-    const result = await fetchQuery(args, api, extraOptions);
+    const method = typeof args === "string" ? "GET" : (args.method ?? "GET").toUpperCase();
+    const isWrite = method !== "GET" && method !== "HEAD";
+    const sent = await withSlot(api.signal, isWrite, async () => fetchQuery(args, api, extraOptions));
+    const result = sent ?? { error: { status: "FETCH_ERROR" as const, error: "Request cancelled" } };
+    // Cancelled before it was sent: nothing to retry, nothing to report.
+    if (sent === null) retry.fail(result.error);
     if (!result.error) return result;
     if (result.error.status === "FETCH_ERROR" || result.error.status === "TIMEOUT_ERROR") {
       // Only reads are retried. A write that failed at transport level (e.g. an
       // upload the proxy cut off) would otherwise be re-sent a dozen times —
       // minutes of spinner, and a risk of duplicate submits.
-      const method = typeof args === "string" ? "GET" : (args.method ?? "GET").toUpperCase();
-      if (method !== "GET" && method !== "HEAD") retry.fail(result.error);
+      if (isWrite) retry.fail(result.error);
       return result;
     }
     // Any real HTTP response (including error statuses) is final — stop retrying.

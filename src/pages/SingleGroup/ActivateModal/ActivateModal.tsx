@@ -9,6 +9,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButt
 import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { DatePickerField } from "../DatePickerField";
+import { submitOnEnter } from "../../../utils/submitOnEnter";
 
 // Local calendar date — toISOString() is UTC, which is still "yesterday" for
 // the first hours after midnight in UTC+5.
@@ -44,6 +45,7 @@ export const ActivateModal = ({
     <Dialog
       open={open}
       onClose={onClose}
+      onKeyDown={submitOnEnter(handleSubmit, isSaving)}
       PaperProps={{ sx: { borderRadius: 3, width: 400, maxWidth: "95vw" } }}
     >
       <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pb: 1, pt: 2.5, px: 2.5 }}>

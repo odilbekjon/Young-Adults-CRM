@@ -22,7 +22,7 @@ import { useCoursesSelectQuery } from "../../../../app/api/coursesApi";
 import { useGroupsSelectQuery } from "../../../../app/api/groupsApi";
 import { StudentSearchField, type SearchedStudent } from "../../../../components/AddPayment/StudentSearchField";
 import { useToast } from "../../../../Context/ToastContext";
-import { extractApiError, downloadExcelBlob } from "../../../../utils";
+import { extractApiError, downloadExcelBlob, submitOnEnter } from "../../../../utils";
 import { useBranch } from "../../../../Context/BranchContext";
 import type { RootState } from "../../../../app/store";
 import { usePersistedState } from "../../../../hooks/usePersistedState";
@@ -765,7 +765,11 @@ export const Salaries = () => {
       {/* ---- Pay modal (POST /salaries/payrolls/{id}/pay) ---- */}
       {payTarget && (
         <div className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/30 p-6" onClick={() => setPayTarget(null)}>
-          <div className="w-full max-w-sm rounded-lg bg-white dark:bg-[var(--color-surface)] p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="w-full max-w-sm rounded-lg bg-white dark:bg-[var(--color-surface)] p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={submitOnEnter(handlePay, !payMethodId || isPaying)}
+          >
             <h2 className="mb-4 text-base font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("finance.salaries.payrolls.pay.title")}</h2>
 
             <label className="mb-1.5 block text-sm text-gray-600 dark:text-[var(--color-text-secondary)]">{t("finance.salaries.payrolls.pay.paymentMethod")}</label>

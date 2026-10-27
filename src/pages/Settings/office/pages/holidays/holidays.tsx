@@ -25,7 +25,7 @@ import {
 import type { Holiday } from "../../../../../app/api/holidaysApi/types";
 import { useToast } from "../../../../../Context/ToastContext";
 import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
-import { extractApiError } from "../../../../../utils";
+import { extractApiError, submitOnEnter } from "../../../../../utils";
 
 // Swagger's write contract is YYYY-MM-DD, but reads can come back as a full
 // ISO timestamp — both are trimmed to the date part so <input type="date">
@@ -125,6 +125,8 @@ export const Holidays = () => {
       toast.error(message);
     }
   };
+
+  const submitDisabled = !name.trim() || !date || isSaving || isLoadingForEdit;
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
@@ -288,6 +290,7 @@ export const Holidays = () => {
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
+        onKeyDown={submitOnEnter(handleSubmit, submitDisabled)}
         TransitionProps={{ timeout: 300 }}
         PaperProps={{
           sx: {
@@ -380,7 +383,7 @@ export const Holidays = () => {
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={!name.trim() || !date || isSaving || isLoadingForEdit}
+            disabled={submitDisabled}
             startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : undefined}
             sx={{
               backgroundColor: "#29b6f6",

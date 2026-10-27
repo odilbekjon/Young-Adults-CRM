@@ -23,6 +23,7 @@ import { useCreateLeadSectionMutation } from "../../app/api/leadSectionsApi";
 import { useAllLeadsQuery } from "../../app/api/leadsApi";
 import type { RootState } from "../../app/store";
 import { useToast } from "../../Context/ToastContext";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 import { hasActiveLeadFilters, type LeadFilters } from "../FromWhere/leadFilters";
 import { LeadSectionBlock } from "./LeadSectionBlock";
 import { withApiDetail } from "./withApiDetail";
@@ -100,7 +101,10 @@ const ColumnMenu = ({
         </Box>
       ) : editing ? (
         <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
-          <TextField size="small" fullWidth value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          <TextField
+            size="small" fullWidth value={name} onChange={(e) => setName(e.target.value)} autoFocus
+            onKeyDown={submitOnEnter(handleSave, isUpdating)}
+          />
           <IconButton size="small" onClick={handleSave} disabled={isUpdating}>
             {isUpdating ? <CircularProgress size={14} /> : <FiEdit2 size={13} />}
           </IconButton>
@@ -148,7 +152,7 @@ const AddColumnTile = () => {
             size="small" fullWidth autoFocus value={name}
             placeholder={t("leadsPage.columns.newColumnPlaceholder")}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+            onKeyDown={submitOnEnter(handleCreate, isLoading)}
             sx={{ mb: 1, "& input": { fontSize: 13 } }}
           />
           <Box sx={{ display: "flex", gap: 1 }}>
@@ -198,7 +202,7 @@ const AddSectionRow = ({ columnId }: { columnId: string }) => {
           size="small" fullWidth autoFocus value={name}
           placeholder={t("leadsPage.sections.newSectionPlaceholder")}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+          onKeyDown={submitOnEnter(handleCreate, isLoading)}
           sx={{ mb: 1, "& input": { fontSize: 12.5 } }}
         />
         <Box sx={{ display: "flex", gap: 1 }}>

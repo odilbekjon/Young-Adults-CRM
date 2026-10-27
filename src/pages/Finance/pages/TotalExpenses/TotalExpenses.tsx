@@ -32,7 +32,7 @@ import { useAllBranchesQuery } from "../../../../app/api/branchesApi/branchesApi
 import { PaymentMethodPicker } from "../../../../components/PaymentMethodPicker";
 import { useToast } from "../../../../Context/ToastContext";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
-import { formatUZS } from "../../../../utils";
+import { formatUZS, submitOnEnter } from "../../../../utils";
 import type { RootState } from "../../../../app/store";
 import { useBranch } from "../../../../Context/BranchContext";
 import { downloadExcelBlob } from "../../../../utils/downloadExcel";
@@ -614,7 +614,11 @@ export const TotalExpenses = () => {
       {/* ===== Manage categories modal (real: GET/POST/PATCH/DELETE /finance/expense-categories) ===== */}
       {addCategoryOpen && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={closeAddCategory}>
-          <div className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-lg w-96 p-5 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="bg-white dark:bg-[var(--color-surface)] rounded-lg shadow-lg w-96 p-5 max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={submitOnEnter(handleCreateCategory, isSavingCategory)}
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold text-gray-800 dark:text-[var(--color-text-primary)]">{t("finance.totalExpenses.categoryModal.manageTitle")}</h3>
               <button onClick={closeAddCategory} className="text-gray-400 dark:text-[var(--color-text-muted)] hover:text-gray-600 dark:hover:text-[var(--color-text-secondary)]">
@@ -638,6 +642,7 @@ export const TotalExpenses = () => {
                             className="flex-1 border border-gray-300 dark:border-[var(--color-border)] rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-400"
                             value={editingCategoryName}
                             onChange={(e) => setEditingCategoryName(e.target.value)}
+                            onKeyDown={submitOnEnter(saveEditCategory, isUpdatingCategory)}
                           />
                           <button type="button" onClick={saveEditCategory} disabled={isUpdatingCategory} className="text-teal-600 hover:text-teal-700">
                             <FiCheck size={14} />

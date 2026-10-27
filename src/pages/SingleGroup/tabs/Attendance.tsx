@@ -38,8 +38,11 @@ import type { AttendanceStatus } from "../../../app/api/attendancesApi/types";
 import { useToast } from "../../../Context/ToastContext";
 import { downloadExcelBlob } from "../../../utils/downloadExcel";
 import { extractApiError } from "../../../utils/extractApiError";
+import { StudentStatusDot } from "../StudentStatusDot";
 
-type AttendanceStudent = Student & { realId: string };
+// `archived`/`balance` only come from the admin page's roster (they drive the
+// status dot and the struck-through name); the teacher view leaves them out.
+type AttendanceStudent = Student & { realId: string; archived?: boolean; balance?: number };
 
 interface Props {
   groupId: string;
@@ -328,16 +331,18 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
         </Alert>
       )}
 
-      {/* TABLE — o'zi X scroll qiladi */}
+      {/* TABLE — scrolls on its own in both directions, so the sticky header
+          row and the sticky name column stay put while a long roster or many
+          lesson days are scrolled. maxHeight leaves room for the tab strip and
+          the header above so the page's own scroll doesn't kick in as well. */}
       <TableContainer
         component={Paper}
         elevation={0}
         sx={{
           borderRadius: 2,
           border: "1px solid var(--color-border)",
-          overflowX: "scroll",
-          overflowY: "visible",
-          // width: "100%",
+          overflow: "auto",
+          maxHeight: "calc(100vh - 340px)",
         }}
       >
         <Table
@@ -351,6 +356,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
               <TableCell
                 sx={{
                   minWidth: 180,
+                  px: 1.5,
                   fontWeight: 600,
                   position: "sticky",
                   left: 0,
@@ -376,7 +382,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                       fontSize: 12,
                       bgcolor: isToday ? "var(--color-primary-surface)" : "var(--color-surface-alt)",
                       borderBottom: isToday
-                        ? "2px solid #1976d2"
+                        ? "2px solid var(--color-primary)"
                         : undefined,
                     }}
                   >
@@ -393,10 +399,14 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
 
           <TableBody>
             {students.map((student) => (
-              <TableRow key={student.id} hover>
-                {/* Sticky name cell */}
+              // Every cell gets the hover tint (not MUI's `hover` prop): the
+              // sticky name cell is opaque, so only an explicit background
+              // keeps it in step with the rest of the row.
+              <TableRow key={student.id} sx={{ "&:hover > td": { bgcolor: "var(--color-surface-hover)" } }}>
+                {/* Sticky name cell — the lesson days follow right after it */}
                 <TableCell
                   sx={{
+                    px: 1.5,
                     position: "sticky",
                     left: 0,
                     zIndex: 1,
@@ -404,13 +414,24 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                     borderRight: "1px solid var(--color-border)",
                   }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <Avatar sx={{ width: 28, height: 28, fontSize: 12 }}>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ width: 200 }}>
+                    <Avatar sx={{ width: 28, height: 28, fontSize: 12, flexShrink: 0 }}>
                       {student.name[0]}
                     </Avatar>
-                    <Typography fontSize={13} noWrap>
-                      {student.name}
-                    </Typography>
+                    <StudentStatusDot active={student.active} archived={student.archived} balance={student.balance} />
+                    <Tooltip title={student.name} placement="top-start" enterDelay={400} disableInteractive>
+                      <Typography
+                        fontSize={13}
+                        noWrap
+                        sx={{
+                          minWidth: 0,
+                          color: student.archived ? "text.secondary" : undefined,
+                          textDecoration: student.archived ? "line-through" : "none",
+                        }}
+                      >
+                        {student.name}
+                      </Typography>
+                    </Tooltip>
                   </Stack>
                 </TableCell>
 
@@ -438,7 +459,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                         sx={{
                           position: "relative",
                           width: 48,
-                          height: 28,
+                          height: 24,
                           mx: "auto",
                           "& .cell-value": { transition: "opacity 0.12s" },
                           "&:hover .cell-value": { opacity: isEditable ? 0 : 1 },
@@ -473,7 +494,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                             // Frozen (read-only) day for a TEACHER session.
                             opacity: restrictToToday && !isEditable ? 0.55 : 1,
                             border: isToday
-                              ? "2px solid #1976d2"
+                              ? "2px solid var(--color-primary)"
                               : "1px solid var(--color-border)",
                             bgcolor:
                               val === "Was"
@@ -505,7 +526,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                             px: 0.25,
                             bgcolor: "var(--color-surface)",
                             border: isToday
-                              ? "2px solid #1976d2"
+                              ? "2px solid var(--color-primary)"
                               : "1px solid var(--color-border)",
                             borderRadius: "6px",
                             boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
@@ -544,8 +565,8 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                                 height: 20,
                                 p: 0,
                                 bgcolor: "var(--color-surface)",
-                                color: "#1976d2",
-                                border: "2px solid #1976d2",
+                                color: "var(--color-primary)",
+                                border: "2px solid var(--color-primary)",
                                 "&:hover": { bgcolor: "var(--color-primary-surface)" },
                               }}
                             >

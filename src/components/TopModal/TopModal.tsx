@@ -2,9 +2,12 @@
 import { MdClose } from "react-icons/md";
 
 export const TopModal = ({
-  open, onClose, title, maxWidth = 520, children,
+  open, onClose, title, maxWidth = 520, onKeyDown, children,
 }: {
-  open: boolean; onClose: () => void; title: string; maxWidth?: number; children: React.ReactNode;
+  open: boolean; onClose: () => void; title: string; maxWidth?: number;
+  // Key handler for the whole modal (only while open — a closed one stays mounted off-screen),
+  // e.g. submitOnEnter(...) so Enter presses the primary button.
+  onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>; children: React.ReactNode;
 }) => (
   <>
     <div
@@ -19,6 +22,7 @@ export const TopModal = ({
       }}
     />
     <div
+      onKeyDown={open ? onKeyDown : undefined}
       style={{
         position: "fixed",
         top: 0,

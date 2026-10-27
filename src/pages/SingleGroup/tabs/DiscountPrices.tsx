@@ -34,6 +34,7 @@ import {
 import type { StudentDiscountRecord, StudentDiscountType } from "../../../app/api/studentDiscountsApi/types";
 import { useToast } from "../../../Context/ToastContext";
 import { extractApiError } from "../../../utils/extractApiError";
+import { submitOnEnter } from "../../../utils/submitOnEnter";
 
 type DiscountStudent = Student & { realId: string; studentGroupId?: string };
 
@@ -201,6 +202,10 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
     }
   };
 
+  const submitEditing = () => {
+    if (editingStudent) void saveDiscount(editingStudent, discountsByStudent.get(editingStudent.realId));
+  };
+
   const handleDelete = async (record: StudentDiscountRecord) => {
     try {
       await deleteDiscount(record.id).unwrap();
@@ -347,6 +352,7 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
       <Dialog
         open={Boolean(editingStudent && draft)}
         onClose={cancelEdit}
+        onKeyDown={submitOnEnter(submitEditing, isCreating || isUpdating)}
         fullWidth
         maxWidth="sm"
         PaperProps={{ sx: { borderRadius: 1, p: 1.5 } }}
@@ -436,7 +442,7 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
               <Button
                 variant="contained"
                 disabled={isCreating || isUpdating}
-                onClick={() => void saveDiscount(editingStudent, discountsByStudent.get(editingStudent.realId))}
+                onClick={submitEditing}
                 sx={{ textTransform: "none", borderRadius: 999, px: 2.5 }}
               >
                 {isCreating || isUpdating ? <CircularProgress size={20} color="inherit" /> : t("singleGroup.tabs.discountPrices.submit")}

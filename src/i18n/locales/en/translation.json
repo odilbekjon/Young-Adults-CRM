@@ -467,9 +467,7 @@
         "success": "Student(s) added to the group",
         "error": "Failed to add student(s) to the group",
         "alreadyInGroup": "Selected student(s) are already in this group",
-        "freezeError": "Student(s) added, but couldn't be set to frozen — check their status manually",
-        "partialError": "Added {{done}} of {{total}} student(s), the rest failed",
-        "failedStudents": "Not added: {{names}}"
+        "freezeError": "Student(s) added, but couldn't be set to frozen — check their status manually"
       }
     },
     "editDrawer": {
@@ -1489,10 +1487,6 @@
         "sheetName": "Students"
       }
     },
-    "rightPanel": {
-      "showCoins": "Show coins",
-      "hideCoins": "Hide coins"
-    },
     "tabs": {
       "attendance": {
         "tabLabel": "Attendance",
@@ -1735,7 +1729,8 @@
       "toast": {
         "success": "Student added to the group",
         "error": "Failed to add student. Please try again.",
-        "freezeError": "Student added, but couldn't be set to frozen — check their status manually"
+        "freezeError": "Student added, but couldn't be set to frozen — check their status manually",
+        "priceError": "Student added, but the individual price couldn't be saved — please set it again"
       }
     },
     "deleteDropdown": {
@@ -1899,7 +1894,6 @@
       "activatedAt": "Activated at",
       "joinedAt": "Joined date",
       "note": "Note",
-      "allCoins": "All coins",
       "goToProfile": "Go to profile →"
     }
   },

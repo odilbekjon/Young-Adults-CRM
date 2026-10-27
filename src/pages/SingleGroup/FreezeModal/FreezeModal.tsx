@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { DatePickerField } from "../DatePickerField";
 import { labelStyle, inputStyle, paymentSubmitBtn, cancelBtn } from "../styles";
 import { Student } from "../../../constants/Teachers";
+import { submitOnEnter } from "../../../utils/submitOnEnter";
 
 interface FreezeModalProps {
   open: boolean;
@@ -70,6 +71,7 @@ export const FreezeModal = ({ open, onClose, isSaving, onConfirm }: FreezeModalP
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={submitOnEnter(handleSubmit, isSaving)}
         style={{
           background: "var(--color-surface)", borderRadius: 14, width: 460, maxWidth: "92vw",
           boxShadow: "0 20px 60px rgba(0,0,0,0.25)",

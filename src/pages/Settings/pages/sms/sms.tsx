@@ -14,7 +14,7 @@ import {
 } from "../../../../app/api/smsApi";
 import type { AutoSmsSetting, SmsTemplate } from "../../../../app/api/smsApi/types";
 import { useToast } from "../../../../Context/ToastContext";
-import { extractApiError } from "../../../../utils";
+import { extractApiError, submitOnEnter } from "../../../../utils";
 import type { RootState } from "../../../../app/store";
 
 // NOTE: `desc` holds an i18n key (not raw text) because this array is defined
@@ -232,6 +232,8 @@ export const SettingsSms = () => {
       toast.error(withDetail(t("settings.sms.toast.error"), err));
     }
   };
+
+  const templateSubmitDisabled = isSavingTemplate || !templateTitle.trim() || !templateContent.trim();
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -576,6 +578,7 @@ export const SettingsSms = () => {
           <div
             className="relative w-96 bg-white dark:bg-[var(--color-surface)] h-full shadow-2xl flex flex-col z-50"
             style={{ animation: "slideInRight 0.25s ease-out" }}
+            onKeyDown={submitOnEnter(handleSubmitTemplate, templateSubmitDisabled)}
           >
             <style>{`
               @keyframes slideInRight {
@@ -624,7 +627,7 @@ export const SettingsSms = () => {
 
               <button
                 onClick={handleSubmitTemplate}
-                disabled={isSavingTemplate || !templateTitle.trim() || !templateContent.trim()}
+                disabled={templateSubmitDisabled}
                 className="bg-[#1b3d5e] hover:bg-[#162f4a] disabled:opacity-60 text-white text-sm font-bold px-7 py-2.5 rounded-full w-fit transition-colors shadow"
               >
                 {isSavingTemplate ? t("settings.sms.saving") : t("settings.sms.drawer.submit")}

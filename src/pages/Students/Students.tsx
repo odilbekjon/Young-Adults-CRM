@@ -62,6 +62,7 @@ import type { StudentFinanceStatus, StudentGender, studentsRequest } from "../..
 import { StudentContactFields, EMPTY_CONTACTS, type ContactValues } from "../../components/StudentContactFields/StudentContactFields";
 import { toPhoneInput, fromPhoneInput } from "../../utils/formatPhone";
 import { runLimited, runLimitedSettled } from "../../utils/runLimited";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 
 // Bulk actions send at most this many requests at once. The server rejects
 // more than 3 parallel requests to one endpoint (429) and a worker starts its
@@ -69,7 +70,7 @@ import { runLimited, runLimitedSettled } from "../../utils/runLimited";
 const BULK_CONCURRENCY = 2;
 import {
   useAllGroupsQuery,
-  useAddStudentToGroupMutation,
+  useAssignStudentsToGroupMutation,
   useStudentGroupsQuery,
   useLazyStudentGroupsQuery,
   useFreezeStudentGroupMutation,
@@ -305,20 +306,6 @@ const todayIso = () => {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 };
 
-// POST /student-groups' response envelope isn't documented beyond a 200, so
-// the new membership's id is picked up defensively ({data: {id}} or {id}) and
-// ignored if the row obviously belongs to a different group (same helper as
-// SingleGroup's handleAddStudentSubmit).
-const membershipIdFromCreateResponse = (res: unknown, groupId: string): string | undefined => {
-  if (!res || typeof res !== "object") return undefined;
-  const container = res as Record<string, unknown>;
-  const row = (container.data && typeof container.data === "object" && !Array.isArray(container.data)
-    ? container.data
-    : container) as Record<string, unknown>;
-  if (typeof row.groupId === "string" && row.groupId !== groupId) return undefined;
-  return typeof row.id === "string" && row.id ? row.id : undefined;
-};
-
 export interface AddToGroupPayload {
   groupId: string;
   joinedAt: string;
@@ -365,6 +352,7 @@ const AddToGroupModal = ({
     <Dialog
       open={open}
       onClose={handleClose}
+      onKeyDown={submitOnEnter(handleSubmit, !groupId || isSubmitting)}
       PaperProps={{ sx: { borderRadius: "12px", width: 580, maxWidth: "95vw", p: 0 } }}
     >
       <Stack
@@ -491,8 +479,14 @@ const EditStudentDrawer = ({
     });
   }, [open, student, forEdit]);
 
+  const handleSubmit = async () => {
+    if (!student) return;
+    const ok = await onSave(student.uid, { name, phone: fromPhoneInput(phone), gender: gender === "female" ? "FEMALE" : gender === "male" ? "MALE" : undefined, birthdate: dob, tagIds, contacts });
+    if (ok) onClose();
+  };
+
   return (
-    <Drawer anchor="right" open={open} onClose={onClose} PaperProps={{ sx: { width: 420 } }}>
+    <Drawer anchor="right" open={open} onClose={onClose} onKeyDown={submitOnEnter(handleSubmit, saving)} PaperProps={{ sx: { width: 420 } }}>
       <Stack
         direction="row" justifyContent="space-between" alignItems="center"
         sx={{ px: 3, py: 2.5, borderBottom: "1px solid var(--color-border)", bgcolor: "var(--color-surface)" }}
@@ -560,7 +554,7 @@ const EditStudentDrawer = ({
         <Button
           variant="contained" fullWidth
           disabled={saving}
-          onClick={async () => { if (!student) return; const ok = await onSave(student.uid, { name, phone: fromPhoneInput(phone), gender: gender === "female" ? "FEMALE" : gender === "male" ? "MALE" : undefined, birthdate: dob, tagIds, contacts }); if (ok) onClose(); }}
+          onClick={handleSubmit}
           sx={{ borderRadius: "20px", py: 1.2, fontWeight: 600, fontSize: 14, bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" }, boxShadow: "none", textTransform: "none" }}
         >
           {saving ? t("students.editDrawer.saving") : t("students.editDrawer.submit")}
@@ -611,7 +605,7 @@ export const Students = () => {
     () => [...(groupsPage1?.data ?? []), ...(groupsPage2?.data ?? []), ...(groupsPage3?.data ?? [])],
     [groupsPage1, groupsPage2, groupsPage3],
   );
-  const [addStudentToGroup] = useAddStudentToGroupMutation();
+  const [assignStudentsToGroup] = useAssignStudentsToGroupMutation();
   const [isAddingToGroup, setIsAddingToGroup] = useState(false);
 
   const [actionError, setActionError] = useState<string | null>(null);
@@ -1014,16 +1008,26 @@ export const Students = () => {
       return false;
     }
     setIsAddingToGroup(true);
-    // Same flow as SingleGroup's handleAddStudentSubmit: POST /student-groups
-    // as PROBATION (never ACTIVE — that would start payment accounting; no
-    // paymentStartDate) with joinedAt, then POST /student-groups/{id}/freeze
-    // (startDate = joinedAt) so the student lands FROZEN. Staff activate them
+    // Same flow as SingleGroup's handleAddStudentSubmit: ONE POST /groups/{id}/
+    // students/assign carries the whole selection, as PROBATION (never ACTIVE —
+    // that would start payment accounting; no paymentStartDate) with joinedAt,
+    // then each new membership gets POST /student-groups/{id}/freeze
+    // (startDate = joinedAt) so the students land FROZEN. Staff activate them
     // later ("since when" is asked then).
     //
-    // A couple of students at a time, each going straight from create to
-    // freeze, so the requests never pile up on one endpoint and the cache
-    // refetches (every mutation invalidates group/student lists) happen once
-    // the whole batch is done instead of between its steps.
+    // A failed request leaves everyone selected for another try; the group and
+    // student lists are refetched either way (the mutation invalidates them), so
+    // a retry skips whoever did get in.
+    try {
+      await assignStudentsToGroup({ id: groupId, studentIds: eligibleUids, status: "PROBATION", joinedAt }).unwrap();
+    } catch (err) {
+      setIsAddingToGroup(false);
+      const detail = extractApiError(err);
+      const base = t("students.addToGroup.toast.error");
+      toast.error(detail ? `${base}: ${detail}` : base);
+      return false;
+    }
+
     const freeze = async (membershipId: string): Promise<boolean> => {
       try {
         await freezeStudentGroup({ id: membershipId, startDate: joinedAt }).unwrap();
@@ -1033,68 +1037,35 @@ export const Students = () => {
         return false;
       }
     };
-    const created = await runLimitedSettled(eligibleUids, BULK_CONCURRENCY, async (studentId) => {
-      const res = await addStudentToGroup({ studentId, groupId, status: "PROBATION", joinedAt }).unwrap();
-      const membershipId = membershipIdFromCreateResponse(res, groupId);
-      if (!membershipId) return "unknownMembership" as const;
-      return (await freeze(membershipId)) ? ("frozen" as const) : ("notFrozen" as const);
-    });
-
-    const failed: { uid: string; error: unknown }[] = [];
-    const added: string[] = [];
-    const unknownMembership: string[] = [];
+    // The response names no memberships, so one look-up of the group's
+    // memberships finds the new ones for the whole batch; the freezes then run a
+    // couple at a time so they never pile up on one endpoint.
     let notFrozen = 0;
-    created.forEach((res, i) => {
-      const uid = eligibleUids[i];
-      if (res.status === "rejected") {
-        failed.push({ uid, error: res.reason });
-        return;
-      }
-      added.push(uid);
-      if (res.value === "notFrozen") notFrozen += 1;
-      if (res.value === "unknownMembership") unknownMembership.push(uid);
-    });
-
-    // When the create response doesn't name the new membership, one look-up
-    // of the group's trial memberships finds it for all those students.
-    if (unknownMembership.length > 0) {
+    try {
+      const found = await fetchMemberships({ groupId, limit: MEMBERSHIP_LIMIT }).unwrap();
+      const batch = new Set(eligibleUids);
       const newest = new Map<string, string>();
-      try {
-        const found = await fetchMemberships({ groupId, status: "PROBATION", limit: MEMBERSHIP_LIMIT }).unwrap();
-        // Oldest first, so a student's newest membership is the one kept.
-        [...found.rows]
-          .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""))
-          .forEach((m) => newest.set(m.studentId, m.id));
-      } catch {
-        // Those students just count as not frozen below.
-      }
-      const frozen = await runLimited(unknownMembership, BULK_CONCURRENCY, async (uid) => {
+      // Oldest first, so a student's newest live membership is the one kept.
+      [...found.rows]
+        .filter((m) => batch.has(m.studentId) && m.status !== "INACTIVE" && m.status !== "DELETED")
+        .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""))
+        .forEach((m) => newest.set(m.studentId, m.id));
+      const frozen = await runLimited(eligibleUids, BULK_CONCURRENCY, async (uid) => {
         const membershipId = newest.get(uid);
         return membershipId ? freeze(membershipId) : false;
       });
-      notFrozen += frozen.filter((ok) => !ok).length;
+      notFrozen = frozen.filter((ok) => !ok).length;
+    } catch {
+      // The students WERE added — only the look-up failed, so none got frozen.
+      notFrozen = eligibleUids.length;
     }
     setIsAddingToGroup(false);
 
-    if (added.length > 0) setSelected((p) => p.filter((uid) => !added.includes(uid)));
-
-    if (failed.length === 0) {
-      toast.success(t("students.addToGroup.toast.success"));
-      if (notFrozen > 0) toast.error(t("students.addToGroup.toast.freezeError"));
-      setAddToGroupOpen(false);
-      return true;
-    }
-    const detail = extractApiError(failed[0].error);
-    const base = added.length > 0
-      ? t("students.addToGroup.toast.partialError", { done: added.length, total: eligibleUids.length })
-      : t("students.addToGroup.toast.error");
-    // Who is left selected for another try, and what the server said.
-    const names = failed.map((f) => rawById.get(f.uid)?.name).filter(Boolean);
-    const shown = names.slice(0, 3).join(", ") + (names.length > 3 ? ` +${names.length - 3}` : "");
-    const message = detail ? `${base}: ${detail}` : base;
-    toast.error(shown ? `${message}. ${t("students.addToGroup.toast.failedStudents", { names: shown })}` : message);
+    setSelected((p) => p.filter((uid) => !eligibleUids.includes(uid)));
+    toast.success(t("students.addToGroup.toast.success"));
     if (notFrozen > 0) toast.error(t("students.addToGroup.toast.freezeError"));
-    return false;
+    setAddToGroupOpen(false);
+    return true;
   };
 
   const handleExportExcel = async () => {
@@ -1327,7 +1298,7 @@ export const Students = () => {
 
       {/* TABLE */}
       <Paper sx={{ borderRadius: "12px", overflow: "hidden", boxShadow: "0 1px 4px var(--color-shadow)", border: "1px solid var(--color-border)" }}>
-        <TableContainer sx={{ opacity: isListRefreshing ? 0.6 : 1, transition: "opacity 0.15s" }}>
+        <TableContainer sx={{ opacity: isListRefreshing ? 0.6 : 1, pointerEvents: isListRefreshing ? "none" : "auto", transition: "opacity 0.15s" }}>
           <Table>
             <TableHead>
               <TableRow

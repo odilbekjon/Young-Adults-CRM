@@ -205,16 +205,6 @@ export const StudentHoverCard = ({
 
       <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "0 0 10px" }} />
 
-      {/* Coins aren't tracked by the backend anywhere in this app yet — shown
-          as a static 0 to match the reference design rather than a fetched
-          value that doesn't exist. */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.allCoins")}</div>
-        <div style={{ fontSize: 13, color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
-          <span aria-hidden>🪙</span> 0
-        </div>
-      </div>
-
       <div style={{ textAlign: "right" }}>
         <span
           style={{ fontSize: 13, color: "#185FA5", cursor: "pointer", fontWeight: 600 }}

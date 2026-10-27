@@ -159,11 +159,21 @@ export interface DeleteGroupResponse {
   message?: string;
 }
 
+// POST /groups/{id}/students/assign — the one way students join a group (one
+// or many per request). Swagger (JSON body) lists studentIds, paymentStartDate,
+// joinedAt, date and status; only studentIds is treated as required. Dates are
+// YYYY-MM-DD. Swagger doesn't say what `date` means, so it isn't sent.
 export interface AssignStudentsRequest {
   id: string;
   studentIds: string[];
+  status?: "PROBATION" | "ACTIVE";
+  joinedAt?: string;
+  paymentStartDate?: string;
 }
 
+// Swagger documents the response as a bare 201, so no membership ids are
+// modeled: a caller that needs them (to freeze the new memberships, say)
+// looks them up with GET /student-groups.
 export interface AssignStudentsResponse {
   success: boolean;
   message?: string;
@@ -334,26 +344,6 @@ export interface StudentGroupsMeta {
 export interface StudentGroupsResult {
   rows: StudentGroupRecord[];
   meta: StudentGroupsMeta;
-}
-
-// POST /student-groups — adds a student as a brand-new member of a group
-// (initial status PROBATION or ACTIVE). Swagger declares the body as
-// multipart/form-data; only studentId/groupId are required, the rest are
-// optional per-student overrides.
-export interface AddStudentToGroupRequest {
-  studentId: string;
-  groupId: string;
-  status?: string;
-  joinedAt?: string;
-  paymentStartDate?: string;
-  customPrice?: number;
-  discountReason?: string;
-}
-
-export interface AddStudentToGroupResponse {
-  success?: boolean;
-  message?: string;
-  data?: unknown;
 }
 
 // POST /student-groups/{id}/freeze — {id} is the membership's own id

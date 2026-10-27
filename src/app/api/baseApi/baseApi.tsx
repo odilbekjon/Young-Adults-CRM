@@ -63,7 +63,7 @@ const fetchQuery = fetchBaseQuery({
 // On top of that the backend answers HTTP 429 ("Bir vaqtda bitta API ga 3 tadan
 // ortiq parallel so'rov yuborish taqiqlangan") to a 4th parallel request to ONE
 // endpoint, so the global cap alone is not enough: all 6 slots could go to the
-// same route (30 students added to a group = 30 POST /student-groups). Writes
+// same route (a bulk action firing 30 identical per-item writes). Writes
 // stay one below that limit: requests the browser aborted but the server is
 // still finishing, and other tabs, may be using the same budget. A 429 that
 // still slips through is retried below.
@@ -225,7 +225,9 @@ const requestTokenRefresh = async (
 
   const refreshResult = await rawBaseQuery(
     { url: "auth/refresh", method: "POST", body: formData },
-    api,
+    // Every waiting request shares this refresh, so it must outlive the one
+    // that started it — RTK aborts that caller's signal when it unmounts.
+    { ...api, signal: new AbortController().signal },
     extraOptions
   );
 

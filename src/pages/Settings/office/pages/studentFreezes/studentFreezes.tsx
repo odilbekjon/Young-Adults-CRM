@@ -22,7 +22,7 @@ import type {
 import { useAllStudentsQuery } from "../../../../../app/api/studentsApi";
 import { useGroupsSelectQuery } from "../../../../../app/api/groupsApi";
 import { useToast } from "../../../../../Context/ToastContext";
-import { extractApiError } from "../../../../../utils";
+import { extractApiError, submitOnEnter } from "../../../../../utils";
 import type { RootState } from "../../../../../app/store";
 import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
 import { StudentSearchField, type SearchedStudent } from "../../../../../components/AddPayment/StudentSearchField";
@@ -332,7 +332,12 @@ export const StudentFreezes = () => {
       </div>
 
       {/* Create modal */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} PaperProps={{ sx: { borderRadius: "12px", minWidth: 420 } }}>
+      <Dialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onKeyDown={submitOnEnter(handleCreate, !createForm.studentId || !createForm.startDate || isCreating)}
+        PaperProps={{ sx: { borderRadius: "12px", minWidth: 420 } }}
+      >
         <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1 }}>
           <Typography sx={{ fontWeight: 600, fontSize: "1rem", color: "var(--color-text-primary)" }}>
             {t("settings.office.studentFreezes.createTitle")}
@@ -414,7 +419,12 @@ export const StudentFreezes = () => {
       </Dialog>
 
       {/* Edit modal */}
-      <Dialog open={!!editTarget} onClose={() => setEditTarget(null)} PaperProps={{ sx: { borderRadius: "12px", minWidth: 420 } }}>
+      <Dialog
+        open={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        onKeyDown={submitOnEnter(handleUpdate, isUpdating || isLoadingForEdit)}
+        PaperProps={{ sx: { borderRadius: "12px", minWidth: 420 } }}
+      >
         <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1 }}>
           <Typography sx={{ fontWeight: 600, fontSize: "1rem", color: "var(--color-text-primary)" }}>
             {t("settings.office.studentFreezes.editTitle")}

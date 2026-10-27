@@ -24,8 +24,6 @@ import {
     UpdateGroupStatusRequest,
     UpdateGroupStatusResponse,
     ToggleGroupStatusResponse,
-    AddStudentToGroupRequest,
-    AddStudentToGroupResponse,
     GroupSelectOption,
     GroupsExcelQueryArgs,
     StudentGroupRecord,
@@ -599,13 +597,21 @@ export const groupsApi = baseApi.injectEndpoints({
             transformResponse: (response: { data: unknown }) => normalizeComments(response?.data),
             providesTags: ["group"],
         }),
+        // POST /groups/{id}/students/assign (Swagger: JSON body) — the single
+        // way a student, or many at once, is added to a group. An older backend
+        // never created the /student-groups membership row through it (so
+        // freeze/unfreeze/status calls had nothing to act on); the backend owner
+        // now wants it used for every add. Callers that need the new membership
+        // ids look them up afterwards (the response documents none). Pass status
+        // PROBATION, never ACTIVE, to add someone who is frozen right after:
+        // going through ACTIVE would start payment accounting too early.
         assignStudentsToGroup: builder.mutation<AssignStudentsResponse, AssignStudentsRequest>({
-            query: ({ id, studentIds }) => ({
+            query: ({ id, ...body }) => ({
                 url: `${PATHS.GROUPS}/${id}/students/assign`,
                 method: "POST",
-                body: { studentIds },
+                body,
             }),
-            invalidatesTags: ["group", "studentGroup"],
+            invalidatesTags: ["group", "student", "studentGroup"],
         }),
         removeStudentFromGroup: builder.mutation<RemoveStudentFromGroupResponse, RemoveStudentFromGroupRequest>({
             query: ({ id, studentId }) => ({
@@ -658,37 +664,6 @@ export const groupsApi = baseApi.injectEndpoints({
                 method: "PATCH",
             }),
             invalidatesTags: ["group"],
-        }),
-        addStudentToGroup: builder.mutation<AddStudentToGroupResponse, AddStudentToGroupRequest>({
-            // POST /student-groups (Swagger: multipart/form-data) — adds the
-            // student as a new member of the group, distinct from
-            // assignStudentsToGroup (POST /groups/{id}/students/assign) which
-            // this app already uses elsewhere; kept as its own endpoint since
-            // Swagger documents it as a separate resource with its own optional
-            // fields (status/joinedAt/paymentStartDate/customPrice/discountReason).
-            // Contract re-checked against Swagger ("Talabani guruhga
-            // biriktirish"): multipart/form-data with studentId* + groupId*
-            // required, status (PROBATION | ACTIVE), joinedAt and
-            // paymentStartDate as YYYY-MM-DD, customPrice as a number (so
-            // sent as its plain string form), discountReason. FormData is
-            // passed as-is so the browser sets the multipart boundary header
-            // itself (no manual Content-Type); empty/NaN values are omitted so
-            // optional fields never arrive as ""/"NaN".
-            query: (data) => {
-                const formData = new FormData();
-                (Object.keys(data) as (keyof AddStudentToGroupRequest)[]).forEach((key) => {
-                    const value = data[key];
-                    if (value === undefined || value === null || value === "") return;
-                    if (typeof value === "number" && !Number.isFinite(value)) return;
-                    formData.append(key, String(value));
-                });
-                return {
-                    url: PATHS.STUDENT_GROUPS,
-                    method: "POST",
-                    body: formData,
-                };
-            },
-            invalidatesTags: ["group", "student", "studentGroup"],
         }),
         studentGroups: builder.query<StudentGroupsResult, StudentGroupsRequest | void>({
             query: (args) => ({
@@ -816,7 +791,6 @@ export const {
     useRemoveTeacherFromGroupMutation,
     useUpdateGroupStatusMutation,
     useToggleGroupStatusMutation,
-    useAddStudentToGroupMutation,
     useStudentGroupsQuery,
     useLazyStudentGroupsQuery,
     useStudentGroupByIdQuery,

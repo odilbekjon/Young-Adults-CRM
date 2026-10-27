@@ -41,7 +41,7 @@ import {
 import type { Tag as TagEntity, TagType } from "../../../../../app/api/tagsApi/types";
 import type { RootState } from "../../../../../app/store";
 import { useToast } from "../../../../../Context/ToastContext";
-import { extractApiError } from "../../../../../utils";
+import { extractApiError, submitOnEnter } from "../../../../../utils";
 
 const PAGE_SIZE = 10;
 
@@ -298,7 +298,7 @@ export const Tag = () => {
       </Box>
 
       {/* Drawer Modal */}
-      <Drawer anchor="right" open={open} onClose={closeDrawer}>
+      <Drawer anchor="right" open={open} onClose={closeDrawer} onKeyDown={submitOnEnter(handleSave, isCreating || isUpdating)}>
         <Box sx={{ width: 400, maxWidth: "100vw", height: "100%", backgroundColor: "var(--color-surface)" }}>
           {/* Top */}
           <Box

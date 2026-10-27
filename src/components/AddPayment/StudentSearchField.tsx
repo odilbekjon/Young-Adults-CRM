@@ -136,6 +136,7 @@ export const StudentSearchField = ({ active, value, onChange, disabled }: {
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("addPayment.searchPlaceholder")}
           disabled={disabled}
+          data-no-enter-submit
           style={{ ...inputStyle, paddingLeft: 38, paddingRight: 38 }}
         />
         {isFetching && (

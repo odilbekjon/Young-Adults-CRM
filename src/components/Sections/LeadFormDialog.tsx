@@ -12,6 +12,7 @@ import { useAllLeadSourcesQuery } from "../../app/api/leadSourcesApi";
 import { useCoursesSelectQuery } from "../../app/api/coursesApi";
 import { useToast } from "../../Context/ToastContext";
 import { fromPhoneInput, toPhoneInput } from "../../utils/formatPhone";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 import type { RootState } from "../../app/store";
 import { withApiDetail } from "./withApiDetail";
 
@@ -32,7 +33,9 @@ export const LeadFormDialog = ({ open, onClose, sectionId, leadId }: Props) => {
   const isEdit = Boolean(leadId);
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
-  const { data: leadData, isLoading: leadLoading } = useLeadForEditQuery(leadId ?? "", { skip: !leadId || !open });
+  // currentData, not data: a skipped query keeps the last lead's data, which
+  // would prefill "Add lead" with whichever lead was edited before.
+  const { currentData: leadData, isLoading: leadLoading } = useLeadForEditQuery(leadId ?? "", { skip: !leadId || !open });
   const { data: sourcesData } = useAllLeadSourcesQuery(undefined, { skip: !open });
   const sources = sourcesData?.data ?? [];
   const { data: courses } = useCoursesSelectQuery(undefined, { skip: !open });
@@ -73,6 +76,7 @@ export const LeadFormDialog = ({ open, onClose, sectionId, leadId }: Props) => {
   // fields can't corrupt it.
   const phoneChanged = !isEdit || phone !== toPhoneInput(leadData?.data.phone);
   const phoneInvalid = phoneChanged && phone.replace(/\D/g, "").length !== 9;
+  const submitDisabled = isSaving || !name.trim() || phoneInvalid;
 
   const findDuplicateNames = async (): Promise<string[]> => {
     const key = phoneKey(phone);
@@ -129,7 +133,7 @@ export const LeadFormDialog = ({ open, onClose, sectionId, leadId }: Props) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
+    <Dialog open={open} onClose={onClose} onKeyDown={submitOnEnter(handleSubmit, submitDisabled)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
       <DialogTitle sx={{ fontSize: 16, fontWeight: 600 }}>
         {isEdit ? t("leadsPage.leadForm.editTitle") : t("leadsPage.leadForm.addTitle")}
       </DialogTitle>
@@ -175,7 +179,7 @@ export const LeadFormDialog = ({ open, onClose, sectionId, leadId }: Props) => {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={isSaving} sx={{ textTransform: "none" }}>{t("leadsPage.leadForm.cancel")}</Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={isSaving || !name.trim() || phoneInvalid} sx={{ textTransform: "none" }}>
+        <Button variant="contained" onClick={handleSubmit} disabled={submitDisabled} sx={{ textTransform: "none" }}>
           {isSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : duplicateNames.length > 0 ? t("leadsPage.leadForm.saveAnyway") : t("leadsPage.leadForm.save")}
         </Button>
       </DialogActions>

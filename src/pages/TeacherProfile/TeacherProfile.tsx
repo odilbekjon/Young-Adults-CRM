@@ -19,6 +19,7 @@ import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { compressImage } from "../../utils/compressImage";
 import { extractApiError } from "../../utils/extractApiError";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 
 const BADGE_COLORS = [
   { bg: "#E6F1FB", color: "#185FA5", border: "#B5D4F4" },
@@ -140,10 +141,13 @@ const EditDrawer = ({
     fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 6, display: "block",
   };
 
+  const handleSubmit = () =>
+    onSave({ name, phone, gender: gender || undefined, birthdate: dob, branchIds: selectedBranches, photo, password: password.trim() || undefined });
+
   return (
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.18)", zIndex: 1200, opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none", transition: "opacity 0.25s" }} />
-      <div style={{ position: "fixed", top: 0, right: 0, width: 440, maxWidth: "100vw", height: "100vh", background: "var(--color-surface)", zIndex: 1300, boxShadow: "-4px 0 24px rgba(0,0,0,0.12)", transform: open ? "translateX(0)" : "translateX(100%)", transition: "transform 0.28s cubic-bezier(.4,0,.2,1)", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+      <div onKeyDown={open ? submitOnEnter(handleSubmit, isSaving) : undefined} style={{ position: "fixed", top: 0, right: 0, width: 440, maxWidth: "100vw", height: "100vh", background: "var(--color-surface)", zIndex: 1300, boxShadow: "-4px 0 24px rgba(0,0,0,0.12)", transform: open ? "translateX(0)" : "translateX(100%)", transition: "transform 0.28s cubic-bezier(.4,0,.2,1)", display: "flex", flexDirection: "column", overflowY: "auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 16px", borderBottom: "1px solid var(--color-border-subtle)" }}>
           <span style={{ fontSize: 17, fontWeight: 600, color: "var(--color-text-primary)" }}>Edit Teacher</span>
           <div onClick={onClose} style={{ cursor: "pointer", color: "var(--color-text-muted)", fontSize: 20 }}><MdClose /></div>
@@ -217,7 +221,7 @@ const EditDrawer = ({
             )}
           </div>
           <button
-            onClick={() => onSave({ name, phone, gender: gender || undefined, birthdate: dob, branchIds: selectedBranches, photo, password: password.trim() || undefined })}
+            onClick={handleSubmit}
             disabled={isSaving}
             style={{ background: "#1a3a5c", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start", opacity: isSaving ? 0.7 : 1 }}
           >

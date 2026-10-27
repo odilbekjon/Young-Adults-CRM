@@ -8,7 +8,7 @@ import { GroupTagsSelect, getGroupTagIds } from "../../../components/GroupTagsSe
 import { inputStyle, labelStyle, submitBtn, cancelBtn } from "../styles";
 import { DatePickerField } from "../DatePickerField";
 import { TimeSelectField } from "../TimeSelectField";
-import { DAYS_PRESETS, classifyDayList, addMonthsToIsoDate, parseTrainingDate } from "../../../utils";
+import { DAYS_PRESETS, classifyDayList, addMonthsToIsoDate, parseTrainingDate, submitOnEnter } from "../../../utils";
 import type { GroupDay, GroupDetail, UpdateGroupRequest } from "../../../app/api/groupsApi/types";
 
 const ALL_DAYS: GroupDay[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
@@ -207,7 +207,7 @@ export const EditGroupDrawer = ({
   };
 
   return (
-    <RightDrawer open={open} onClose={onClose} title={t("singleGroup.editGroupDrawer.title")}>
+    <RightDrawer open={open} onClose={onClose} title={t("singleGroup.editGroupDrawer.title")} onKeyDown={submitOnEnter(handleSubmit, isSaving)}>
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <div>
           <label style={labelStyle}>{t("singleGroup.editGroupDrawer.groupName")}</label>

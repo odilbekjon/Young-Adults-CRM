@@ -46,7 +46,7 @@ import { useTranslation } from "react-i18next";
 import { SendSmsModal } from "../../../../../components/SendSmsModal";
 import { useToast } from "../../../../../Context/ToastContext";
 import { DatePickerField } from "../../../../SingleGroup/DatePickerField";
-import { extractApiError, downloadExcelBlob } from "../../../../../utils";
+import { extractApiError, downloadExcelBlob, submitOnEnter } from "../../../../../utils";
 import { useBranch } from "../../../../../Context/BranchContext";
 import type { RootState } from "../../../../../app/store";
 import {
@@ -633,7 +633,13 @@ export const Staff = () => {
       </Dialog>
 
       {/* Drawer */}
-      <Drawer anchor="right" open={open} onClose={() => setOpen(false)} PaperProps={{ sx: { width: 420, display: "flex", flexDirection: "column", bgcolor: "var(--color-surface)" } }}>
+      <Drawer
+        anchor="right"
+        open={open}
+        onClose={() => setOpen(false)}
+        onKeyDown={submitOnEnter(handleSubmit, isCreating || isUpdating || isSavingRoles)}
+        PaperProps={{ sx: { width: 420, display: "flex", flexDirection: "column", bgcolor: "var(--color-surface)" } }}
+      >
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 3, py: 2.5, borderBottom: "1px solid var(--color-border)" }}>
           <Typography fontWeight={700} fontSize={17} color="var(--color-text-primary)">
             {isEdit ? t("settings.ceo.staff.drawer.editTitle") : t("settings.ceo.staff.drawer.addTitle")}

@@ -12,6 +12,7 @@ import type { StudentGroupMembership } from "../../../app/api/studentsApi/types"
 import type { RootState } from "../../../app/store";
 import { extractApiError } from "../../../utils/extractApiError";
 import { todayLocalISO } from "../../../utils/localDate";
+import { submitOnEnter } from "../../../utils/submitOnEnter";
 
 export type BalanceAction = "return" | "writeoff";
 
@@ -127,7 +128,13 @@ export const StudentBalanceActionDrawer = ({
   };
 
   return (
-    <RightDrawer open={open} onClose={() => !isSaving && onClose()} title={title} width={440}>
+    <RightDrawer
+      open={open}
+      onClose={() => !isSaving && onClose()}
+      title={title}
+      width={440}
+      onKeyDown={submitOnEnter(handleSubmit, isSaving)}
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div>
           <label style={labelStyle}>{t("addPayment.student", "Student")}</label>

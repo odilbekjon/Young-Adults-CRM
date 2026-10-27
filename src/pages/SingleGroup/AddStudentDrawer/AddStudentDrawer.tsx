@@ -6,6 +6,7 @@ import { MdClose, MdSearch, MdCheckCircle, MdAcUnit } from "react-icons/md";
 import { DatePickerField } from "../DatePickerField";
 import { useAllStudentsQuery } from "../../../app/api/studentsApi";
 import type { RootState } from "../../../app/store";
+import { submitOnEnter } from "../../../utils/submitOnEnter";
 
 export interface AddStudentOption {
   id: string;
@@ -13,11 +14,12 @@ export interface AddStudentOption {
   phone: string;
 }
 
-// What the modal hands back on submit — mirrors POST /student-groups' own
-// optional fields (joinedAt, customPrice, discountReason). status /
+// What the modal hands back on submit. joinedAt goes to POST /groups/{id}/
+// students/assign; customPrice / discountReason aren't part of that body, so
+// SingleGroup applies them to the new membership afterwards. status /
 // paymentStartDate are deliberately not exposed here: SingleGroup always
-// creates the membership on PROBATION (no payment start date) and freezes it
-// right after, so a new student never reads as active until staff explicitly
+// adds the member on PROBATION (no payment start date) and freezes them right
+// after, so a new student never reads as active until staff explicitly
 // activate them.
 export interface AddStudentPayload {
   studentId: string;
@@ -193,6 +195,7 @@ export const AddStudentDrawer = ({
     <Dialog
       open={open}
       onClose={handleClose}
+      onKeyDown={submitOnEnter(handleSubmit, !canSubmit)}
       TransitionComponent={Grow}
       transitionDuration={{ enter: 240, exit: 160 }}
       maxWidth={false}
@@ -273,6 +276,7 @@ export const AddStudentDrawer = ({
                 />
                 <input
                   ref={searchRef}
+                  data-no-enter-submit
                   autoFocus
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}

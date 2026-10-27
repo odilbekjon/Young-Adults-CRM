@@ -4,6 +4,7 @@ import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { inputStyle, submitBtn, cancelBtn } from "../styles";
 import { GroupStudent } from "../types";
+import { submitOnEnter } from "../../../utils/submitOnEnter";
 
 interface GroupOption {
   id: string;
@@ -44,6 +45,7 @@ export const MoveStudentDialog = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={submitOnEnter(handleSubmit)}
         style={{ background: "var(--color-surface)", borderRadius: 12, padding: 24, width: 360, maxWidth: "calc(100vw - 24px)", display: "flex", flexDirection: "column", gap: 14 }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

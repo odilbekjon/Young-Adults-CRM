@@ -3,9 +3,12 @@ import { MdClose } from "react-icons/md";
 import { useHasOpened } from "../../hooks/useHasOpened";
 
 export const RightDrawer = ({
-  open, onClose, title, width = 480, children,
+  open, onClose, title, width = 480, onKeyDown, children,
 }: {
-  open: boolean; onClose: () => void; title: string; width?: number; children: React.ReactNode;
+  open: boolean; onClose: () => void; title: string; width?: number;
+  // Key handler for the whole drawer (only while open — a closed one stays mounted off-screen),
+  // e.g. submitOnEnter(...) so Enter presses the primary button.
+  onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>; children: React.ReactNode;
 }) => {
   const hasOpened = useHasOpened(open);
 
@@ -22,7 +25,7 @@ export const RightDrawer = ({
           transition: "opacity 0.25s",
         }}
       />
-      <div style={{
+      <div onKeyDown={open ? onKeyDown : undefined} style={{
         position: "fixed", top: 0, right: 0,
         width, height: "100vh",
         background: "var(--color-surface)",

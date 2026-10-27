@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "../../../Context/ToastContext";
 import { useUpdateDebtMutation } from "../../../app/api/financeApi";
 import { extractApiError } from "../../../utils/extractApiError";
+import { submitOnEnter } from "../../../utils/submitOnEnter";
 import type { PaymentTx } from "./buildTransactions";
 
 // Edit a "system" (charge) row: PATCH /finance/debt/{studentId}/{groupId},
@@ -62,7 +63,13 @@ export const EditDebtDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={isLoading ? undefined : onClose} PaperProps={{ sx: { borderRadius: 3, width: 420, maxWidth: "calc(100vw - 32px)" } }}>
+    <Dialog
+      open={open}
+      onClose={isLoading ? undefined : onClose}
+      // Removing a charge only asks for a reason (a textarea), so Enter submits just the amount edit.
+      onKeyDown={isRemove ? undefined : submitOnEnter(submit, isLoading)}
+      PaperProps={{ sx: { borderRadius: 3, width: 420, maxWidth: "calc(100vw - 32px)" } }}
+    >
       <DialogTitle sx={{ fontWeight: 600 }}>
         {isRemove ? t("studentPayments.removeChargeTitle", "Remove charge") : t("studentPayments.debt.title", "Edit amount")}
       </DialogTitle>

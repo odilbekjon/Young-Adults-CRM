@@ -34,7 +34,7 @@ import type {
   StudentGender, StudentGroupMembership,
 } from "../../app/api/studentsApi/types";
 import {
-  useAllGroupsQuery, useAddStudentToGroupMutation, useStudentGroupsQuery,
+  useAllGroupsQuery, useAssignStudentsToGroupMutation, useStudentGroupsQuery,
   useFreezeStudentGroupMutation, useUnfreezeStudentGroupMutation,
   useUpdateStudentGroupMutation, useGraduateTrialStudentGroupMutation, useLazyStudentGroupsQuery,
 } from "../../app/api/groupsApi";
@@ -54,6 +54,7 @@ import { StudentBalanceActionDrawer, type BalanceAction } from "./payments/Stude
 import { StudentTagsSelect } from "../../components/StudentTagsSelect";
 import { StudentContactFields, EMPTY_CONTACTS, type ContactValues } from "../../components/StudentContactFields/StudentContactFields";
 import { toPhoneInput, fromPhoneInput } from "../../utils/formatPhone";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 import { StudentPaymentsSection } from "./payments/StudentPaymentsSection";
 import { FreezeModal } from "../SingleGroup/FreezeModal";
 import { ActivateModal } from "../SingleGroup/ActivateModal";
@@ -123,11 +124,24 @@ const EditStudentDrawer = ({
     });
   }, [open, student]);
 
+  const handleSubmit = async () => {
+    const ok = await onSave({
+      name,
+      phone: fromPhoneInput(phone),
+      gender: gender === "female" ? "FEMALE" : gender === "male" ? "MALE" : undefined,
+      birthdate: dob,
+      tagIds,
+      contacts,
+    });
+    if (ok) onClose();
+  };
+
   return (
     <Drawer
       anchor="right"
       open={open}
       onClose={onClose}
+      onKeyDown={submitOnEnter(handleSubmit, saving)}
       PaperProps={{
         sx: {
           width: 420,
@@ -388,17 +402,7 @@ const EditStudentDrawer = ({
         <Button
           variant="contained"
           disabled={saving}
-          onClick={async () => {
-            const ok = await onSave({
-              name,
-              phone: fromPhoneInput(phone),
-              gender: gender === "female" ? "FEMALE" : gender === "male" ? "MALE" : undefined,
-              birthdate: dob,
-              tagIds,
-              contacts,
-            });
-            if (ok) onClose();
-          }}
+          onClick={handleSubmit}
           sx={{
             background: "#1e3a5f",
             borderRadius: "8px",
@@ -583,7 +587,7 @@ const AddToGroupModal = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
+    <Dialog open={open} onClose={handleClose} onKeyDown={submitOnEnter(handleSubmit)} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
       <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid var(--color-border)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-primary)" }}>
@@ -677,7 +681,7 @@ const MoveToBranchModal = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
+    <Dialog open={open} onClose={handleClose} onKeyDown={submitOnEnter(handleSubmit)} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
       <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid var(--color-border)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-primary)" }}>
@@ -1388,7 +1392,7 @@ export const StudentProfile = () => {
   const { leaveGroup, archiveStudent: archiveStudentFlow, deleteStudent: deleteStudentFlow } = useArchiveStudent();
   const [isArchivingStudent, setIsArchivingStudent] = useState(false);
   const { data: archiveReasonOptions } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 });
-  const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
+  const [assignStudentsToGroup, { isLoading: isAddingToGroup }] = useAssignStudentsToGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [freezeStudentGroup, { isLoading: isFreezingGroup }] = useFreezeStudentGroupMutation();
   const [unfreezeStudentGroup, { isLoading: isUnfreezingGroup }] = useUnfreezeStudentGroupMutation();
@@ -1613,7 +1617,7 @@ export const StudentProfile = () => {
   // is relied on to reject/ignore a duplicate membership.
   const handleAddToGroup = async (groupId: string, joinedAt: string): Promise<boolean> => {
     try {
-      await addStudentToGroup({ studentId: student.uid, groupId, joinedAt }).unwrap();
+      await assignStudentsToGroup({ id: groupId, studentIds: [student.uid], joinedAt }).unwrap();
       toast.success("Student added to the group");
       return true;
     } catch (err) {

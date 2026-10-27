@@ -14,6 +14,7 @@ import {
   useDeleteLeadColumnMutation,
 } from "../../app/api/leadColumnsApi";
 import { useToast } from "../../Context/ToastContext";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 import { withApiDetail } from "./withApiDetail";
 
 interface Props {
@@ -95,7 +96,7 @@ export const ManageLeadColumnsDialog = ({ open, onClose }: Props) => {
             size="small" fullWidth value={newName}
             placeholder={t("leadsPage.columns.newColumnPlaceholder")}
             onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+            onKeyDown={submitOnEnter(handleCreate, isCreating)}
           />
           <Button
             variant="contained" onClick={handleCreate} disabled={isCreating || !newName.trim()}
@@ -119,7 +120,10 @@ export const ManageLeadColumnsDialog = ({ open, onClose }: Props) => {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 1 }}>
                   {editingId === col.id ? (
                     <>
-                      <TextField size="small" fullWidth value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus />
+                      <TextField
+                        size="small" fullWidth value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus
+                        onKeyDown={submitOnEnter(handleSaveEdit, isUpdating)}
+                      />
                       <Button size="small" onClick={handleSaveEdit} disabled={isUpdating} sx={{ textTransform: "none" }}>
                         {isUpdating ? <CircularProgress size={14} /> : t("leadsPage.columns.save")}
                       </Button>

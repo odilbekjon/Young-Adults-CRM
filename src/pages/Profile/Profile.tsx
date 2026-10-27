@@ -10,7 +10,7 @@ import { useStaffUserByIdQuery, useUpdateOwnStaffProfileMutation, useToggleStaff
 import { logout } from "../../app/store/authSlice";
 import type { AppDispatch } from "../../app/store";
 import { useToast } from "../../Context/ToastContext";
-import { extractApiError } from "../../utils";
+import { extractApiError, submitOnEnter } from "../../utils";
 import { useAuth } from "../../hooks/useAuth";
 import { TeacherAccount } from "../TeacherAccount/TeacherAccount";
 
@@ -397,7 +397,7 @@ const AdminProfilePage = () => {
       </Box>
 
       {/* ══════════ EDIT MODAL ══════════ */}
-      <Modal open={editOpen} onClose={() => setEditOpen(false)}>
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} onKeyDown={submitOnEnter(handleSave, isSaving)}>
         <Box sx={modalStyle}>
           <Typography variant="h6" fontWeight={600} gutterBottom>
             Edit Profile

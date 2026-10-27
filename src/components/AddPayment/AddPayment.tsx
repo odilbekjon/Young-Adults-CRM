@@ -17,6 +17,7 @@ import type { PaymentMethod, PaymentProvider } from "../../app/api/financeApi/ty
 import { extractApiError } from "../../utils/extractApiError";
 import { getProviderFromMethodName } from "../../utils/paymentProvider";
 import { todayLocalISO } from "../../utils/localDate";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 
 const todayISO = todayLocalISO;
 
@@ -226,9 +227,17 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
     }
   };
 
+  const submitDisabled = isSaving || (isGroupsLoading && Boolean(studentId) && groupOptions.length === 0);
+
   return (
     <>
-    <RightDrawer open={open} onClose={handleClose} title={isEditing ? t("addPayment.editTitle") : t("addPayment.title")} width={420}>
+    <RightDrawer
+      open={open}
+      onClose={handleClose}
+      title={isEditing ? t("addPayment.editTitle") : t("addPayment.title")}
+      width={420}
+      onKeyDown={submitOnEnter(handleSubmit, submitDisabled)}
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Student — fixed when editing an existing payment; a payment doesn't move between students */}
@@ -346,7 +355,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
           type="button"
           style={{ ...paymentSubmitBtn, opacity: isSaving ? 0.7 : 1, cursor: isSaving ? "default" : "pointer" }}
           onClick={handleSubmit}
-          disabled={isSaving || (isGroupsLoading && Boolean(studentId) && groupOptions.length === 0)}
+          disabled={submitDisabled}
         >
           {isSaving ? t("addPayment.saving") : isEditing ? t("addPayment.updateSubmit") : t("addPayment.submit")}
         </button>

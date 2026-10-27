@@ -47,7 +47,7 @@ import {
 import type { Reason, ReasonStatus } from "../../../app/api/reasonsApi/types";
 import type { RootState } from "../../../app/store";
 import { useToast } from "../../../Context/ToastContext";
-import { extractApiError } from "../../../utils";
+import { extractApiError, submitOnEnter } from "../../../utils";
 import { usePersistedState } from "../../../hooks/usePersistedState";
 
 const PAGE_SIZE = 10;
@@ -436,7 +436,7 @@ export const ReasonsArchiving = () => {
       </Box>
 
       {/* Add / edit drawer */}
-      <Drawer anchor="right" open={open} onClose={closeDrawer}>
+      <Drawer anchor="right" open={open} onClose={closeDrawer} onKeyDown={submitOnEnter(handleSave, isSaving || isLoadingForEdit)}>
         <Box sx={{ width: 400, maxWidth: "100vw", height: "100%", backgroundColor: "var(--color-surface)" }}>
           <Box
             sx={{
@@ -467,7 +467,6 @@ export const ReasonsArchiving = () => {
                 error={!!errors.name}
                 helperText={errors.name}
                 disabled={isLoadingForEdit}
-                onKeyDown={(e) => e.key === "Enter" && handleSave()}
               />
             </Box>
 
@@ -480,7 +479,6 @@ export const ReasonsArchiving = () => {
                 value={form.type}
                 onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
                 disabled={isLoadingForEdit}
-                onKeyDown={(e) => e.key === "Enter" && handleSave()}
               />
             </Box>
 

@@ -8,3 +8,4 @@ export * from "./groupDays";
 export * from "./downloadExcel";
 export * from "./decimal";
 export * from "./localDate";
+export * from "./submitOnEnter";

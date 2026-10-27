@@ -27,6 +27,7 @@ import {
 import { useState, useRef } from "react";
 import { Calendar } from "../SingleGroup/Calendar";
 import { PortalPopover } from "../../components/common/PortalPopover";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 
 // ─── Mock teachers ────────────────────────────────────────────────────────────
 const TEACHERS = [
@@ -543,6 +544,7 @@ export const Reminders = () => {
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
+        onKeyDown={submitOnEnter(handleCreate)}
         PaperProps={{
           sx: { borderRadius: "10px", width: 460, maxWidth: "95vw", p: "4px" },
         }}

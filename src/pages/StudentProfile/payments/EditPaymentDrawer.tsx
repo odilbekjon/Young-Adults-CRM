@@ -10,6 +10,7 @@ import { DatePickerField } from "../../SingleGroup/DatePickerField";
 import { inputStyle, labelStyle, paymentSubmitBtn } from "../../SingleGroup/styles/styles";
 import { extractApiError } from "../../../utils/extractApiError";
 import { getProviderFromMethodName } from "../../../utils/paymentProvider";
+import { submitOnEnter } from "../../../utils/submitOnEnter";
 import type { PaymentTx } from "./buildTransactions";
 
 const day = (iso: string | null | undefined) => (iso ?? "").slice(0, 10);
@@ -107,7 +108,13 @@ export const EditPaymentDrawer = ({
   };
 
   return (
-    <RightDrawer open={open} onClose={onClose} title={t("addPayment.editTitle", "Edit payment")} width={420}>
+    <RightDrawer
+      open={open}
+      onClose={onClose}
+      title={t("addPayment.editTitle", "Edit payment")}
+      width={420}
+      onKeyDown={submitOnEnter(handleSubmit, isLoading)}
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div>
           <label style={labelStyle}>{t("addPayment.methodPay", "Method pay")}</label>

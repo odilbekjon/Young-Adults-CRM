@@ -11,6 +11,7 @@ import {
 import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
 import type { PaymentMethod } from "../../app/api/financeApi/types";
 import type { RootState } from "../../app/store";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 
 interface PaymentMethodPickerProps {
   value: string;
@@ -182,6 +183,9 @@ export const PaymentMethodPicker = ({ value, onChange, loadingLabel, errorLabel,
           <div
             style={{ background: "var(--color-surface)", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.2)", width: 320, maxWidth: "calc(100vw - 24px)", padding: 20 }}
             onClick={(e) => e.stopPropagation()}
+            // This popup lives inside the payment drawer's DOM, so Enter has to stop here
+            // instead of reaching the drawer's own submit.
+            onKeyDown={submitOnEnter(handleCreate, isSaving)}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)" }}>

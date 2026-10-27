@@ -47,6 +47,7 @@ import { useToast } from "../../Context/ToastContext";
 import { extractApiError } from "../../utils/extractApiError";
 import { downloadExcelBlob } from "../../utils/downloadExcel";
 import { compressImage } from "../../utils/compressImage";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 import {
   useAllTeachersQuery,
   useCreateTeacherMutation,
@@ -397,7 +398,7 @@ export const Teachers = () => {
       {/* ══════════════════════════════════════════════════════
           DRAWER
       ══════════════════════════════════════════════════════ */}
-      <Drawer anchor="right" open={open} onClose={() => setOpen(false)}
+      <Drawer anchor="right" open={open} onClose={() => setOpen(false)} onKeyDown={submitOnEnter(handleSubmit, isCreating || isUpdating)}
         PaperProps={{ sx: { width: 460, maxWidth: "100vw", display: "flex", flexDirection: "column", bgcolor: "var(--color-surface)" } }}>
 
         {/* header */}

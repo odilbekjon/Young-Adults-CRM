@@ -17,7 +17,7 @@ import type { DebtorRow } from "../../../../app/api/financeApi/types";
 import { useToast } from "../../../../Context/ToastContext";
 import { extractApiError } from "../../../../utils/extractApiError";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
-import { formatUZS } from "../../../../utils";
+import { formatUZS, submitOnEnter } from "../../../../utils";
 import { useStudentBalances } from "../../../../hooks/useStudentBalances";
 import type { RootState } from "../../../../app/store";
 import { useBranch } from "../../../../Context/BranchContext";
@@ -428,7 +428,7 @@ export const Debtors = () => {
       />
 
       {/* Edit debt (real: PATCH /finance/debt/{studentId}/{groupId}) */}
-      <Dialog open={!!debtEditTarget} onClose={closeDebtEdit} PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}>
+      <Dialog open={!!debtEditTarget} onClose={closeDebtEdit} onKeyDown={submitOnEnter(confirmDebtEdit, isSavingDebt)} PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}>
         <DialogTitle sx={{ fontWeight: 600 }}>{t("finance.debtors.editDebt.title")}</DialogTitle>
         <DialogContent>
           <div className="text-sm text-gray-600 dark:text-gray-300 mb-4">

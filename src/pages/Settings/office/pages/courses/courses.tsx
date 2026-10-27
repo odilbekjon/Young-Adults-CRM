@@ -32,7 +32,7 @@ import { useAllBranchesQuery } from "../../../../../app/api/branchesApi/branches
 import { useToast } from "../../../../../Context/ToastContext";
 import type { RootState } from "../../../../../app/store";
 import { CARD_COLORS } from "../../../../../constants/CardColors";
-import { extractApiError } from "../../../../../utils";
+import { extractApiError, submitOnEnter } from "../../../../../utils";
 
 export const BookIllustration = () => (
   <svg viewBox="0 0 160 100" width="100%" height="100%" style={{ position: "absolute", bottom: 0, left: 0 }}>
@@ -336,6 +336,7 @@ export const Courses = () => {
         anchor="right"
         open={drawerOpen}
         onClose={closeDrawer}
+        onKeyDown={submitOnEnter(handleSave, isCreating || isUpdating)}
         PaperProps={{ sx: { width: 400, maxWidth: "100vw", p: 0 } }}
       >
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 3, py: 2.5 }}>

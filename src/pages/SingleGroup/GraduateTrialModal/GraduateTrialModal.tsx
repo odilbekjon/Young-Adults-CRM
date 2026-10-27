@@ -10,6 +10,7 @@ import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { DatePickerField } from "../DatePickerField";
 import { todayLocalISO } from "../../../utils/localDate";
+import { submitOnEnter } from "../../../utils/submitOnEnter";
 
 const todayISO = todayLocalISO;
 
@@ -40,6 +41,7 @@ export const GraduateTrialModal = ({
     <Dialog
       open={open}
       onClose={onClose}
+      onKeyDown={submitOnEnter(handleSubmit, isSaving)}
       PaperProps={{ sx: { borderRadius: 3, width: 400, maxWidth: "95vw" } }}
     >
       <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pb: 1, pt: 2.5, px: 2.5 }}>

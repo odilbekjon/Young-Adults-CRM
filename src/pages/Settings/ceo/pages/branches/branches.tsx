@@ -31,7 +31,7 @@ import {
 import type { Branch } from "../../../../../app/api/branchesApi/types";
 import { useToast } from "../../../../../Context/ToastContext";
 import { useBranch } from "../../../../../Context/BranchContext";
-import { extractApiError } from "../../../../../utils";
+import { extractApiError, submitOnEnter } from "../../../../../utils";
 
 export const Branches = () => {
   const { t } = useTranslation();
@@ -354,6 +354,7 @@ export const Branches = () => {
         anchor="right"
         open={modalOpen}
         onClose={closeModal}
+        onKeyDown={submitOnEnter(handleSave, isSaving)}
         PaperProps={{
           sx: {
             width: { xs: "100%", sm: 420 },

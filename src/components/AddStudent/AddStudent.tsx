@@ -10,10 +10,11 @@ import { RightDrawer } from "../common/RightDrawer";
 import { useToast } from "../../Context/ToastContext";
 import { useCreateStudentMutation, useLazyAllStudentsQuery } from "../../app/api/studentsApi/studentsApi";
 import { extractApiError } from "../../utils/extractApiError";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 import type { StudentGender } from "../../app/api/studentsApi/types";
 import {
   useAllGroupsQuery,
-  useAddStudentToGroupMutation,
+  useAssignStudentsToGroupMutation,
   useFreezeStudentGroupMutation,
   useLazyStudentGroupsQuery,
 } from "../../app/api/groupsApi/groupsApi";
@@ -87,7 +88,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
     { page: 1, limit: 100 },
     { skip: !open }
   );
-  const [addStudentToGroup, { isLoading: isAssigning }] = useAddStudentToGroupMutation();
+  const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
   const [freezeStudentGroup] = useFreezeStudentGroupMutation();
   const [fetchNewMembership] = useLazyStudentGroupsQuery();
   const groups = groupsData?.data ?? [];
@@ -199,16 +200,17 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
 
       if (showGroupField && group) {
         try {
-          // POST /student-groups (not POST /groups/{id}/students/assign):
-          // confirmed live (see the same note in SingleGroup's
-          // handleAddStudentSubmit) that the assign endpoint never creates a
-          // /student-groups row, silently breaking freeze/unfreeze/
-          // status-change for every student added through it. Starts on
-          // PROBATION, then is immediately frozen — same "added → frozen,
-          // staff activates later" flow SingleGroup's own Add student modal
-          // uses, so a student added from here isn't treated as active
+          // POST /groups/{id}/students/assign, the one way a member is added.
+          // Starts on PROBATION, then is immediately frozen — same "added →
+          // frozen, staff activates later" flow SingleGroup's own Add student
+          // modal uses, so a student added from here isn't treated as active
           // (and billed) before anyone meant it to be.
-          await addStudentToGroup({ studentId: created.data.id, groupId: group, status: "PROBATION", joinedAt: joinedAt || todayLocalISO() }).unwrap();
+          await assignStudentsToGroup({
+            id: group,
+            studentIds: [created.data.id],
+            status: "PROBATION",
+            joinedAt: joinedAt || todayLocalISO(),
+          }).unwrap();
           try {
             const membership = await fetchNewMembership({ groupId: group, studentId: created.data.id, limit: 1 }).unwrap();
             const newMembershipId = membership.rows[0]?.id;
@@ -241,7 +243,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
   };
 
   return (
-    <RightDrawer open={open} onClose={handleClose} title={t("addStudent.title")}>
+    <RightDrawer open={open} onClose={handleClose} title={t("addStudent.title")} onKeyDown={submitOnEnter(handleSubmit, isSaving || isAssigning)}>
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
 
         {/* Phone */}

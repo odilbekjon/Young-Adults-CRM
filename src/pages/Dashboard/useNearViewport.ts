@@ -18,6 +18,10 @@ export const useNearViewport = (margin = 300) => {
 
   useEffect(() => {
     if (!element || near) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setNear(true);
+      return;
+    }
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setNear(true); },
       { root: scrollParentOf(element), rootMargin: `${margin}px 0px` },

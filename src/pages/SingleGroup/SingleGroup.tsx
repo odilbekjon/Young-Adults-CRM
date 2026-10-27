@@ -2,7 +2,7 @@
 
 import {
   Box, Chip, CircularProgress, Divider, IconButton, List, ListItem,
-  ListItemText, MenuItem, Paper, Select,
+  MenuItem, Paper, Select,
   Stack, Tab, Tabs, Typography, Button,
   Dialog, DialogTitle, DialogContent, DialogActions,
 } from "@mui/material";
@@ -22,7 +22,7 @@ import {
   useGroupByIdQuery,
   useLazyGroupForEditQuery,
   useGroupsSelectQuery,
-  useAddStudentToGroupMutation,
+  useAssignStudentsToGroupMutation,
   useTransferStudentMutation,
   useUpdateGroupMutation,
   useToggleGroupStatusMutation,
@@ -48,7 +48,7 @@ import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
 import { useTeachersSelectQuery } from "../../app/api/teachersApi";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
 import { useToast } from "../../Context/ToastContext";
-import { extractApiError, formatTrainingDate, downloadExcelBlob } from "../../utils";
+import { extractApiError, formatTrainingDate, formatPhone, downloadExcelBlob } from "../../utils";
 import { formatDate } from "../../constants/FlatStudents";
 
 import { AddStudentDrawer, type AddStudentPayload } from "./AddStudentDrawer/AddStudentDrawer";
@@ -65,6 +65,7 @@ import { Comments } from "./tabs/Comments";
 import { GroupStudent } from "./types";
 import { ActionIconBtn } from "./ActionIconBtn";
 import { StudentHoverCard } from "./StudentHoverCard";
+import { StudentStatusDot } from "./StudentStatusDot";
 import { StudentActionsMenu } from "./StudentActionsMenu";
 import { FreezeModal } from "./FreezeModal";
 import { useLazyStudentFreezesQuery } from "../../app/api/studentFreezesApi";
@@ -101,19 +102,6 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 const todayLocalISO = () => {
   const d = new Date();
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-};
-
-// POST /student-groups' response envelope isn't documented beyond a 200, so
-// the new membership's id is picked up defensively ({data: {id}} or {id}) and
-// ignored if the row obviously belongs to a different group.
-const membershipIdFromCreateResponse = (res: unknown, groupId: string): string | undefined => {
-  if (!res || typeof res !== "object") return undefined;
-  const container = res as Record<string, unknown>;
-  const row = (container.data && typeof container.data === "object" && !Array.isArray(container.data)
-    ? container.data
-    : container) as Record<string, unknown>;
-  if (typeof row.groupId === "string" && row.groupId !== groupId) return undefined;
-  return typeof row.id === "string" && row.id ? row.id : undefined;
 };
 
 const toLegacyGroup = (d: GroupDetail): LegacyGroup => ({
@@ -178,7 +166,6 @@ export const SingleGroup = () => {
   const toast = useToast();
   const [tabIndex, setTabIndex] = useState(0);
   const [sortBy, setSortBy] = useState("az");
-  const [showCoins, setShowCoins] = useState(false);
 
   const { data: groupDetailData, isLoading: groupLoading } = useGroupByIdQuery(id ?? "", { skip: !id });
   const [fetchGroupForEdit, { data: groupForEditData }] = useLazyGroupForEditQuery();
@@ -224,7 +211,7 @@ export const SingleGroup = () => {
   const { data: deletedStudentGroupsData } = useStudentGroupsQuery(
     { status: "DELETED", limit: 500 }, { skip: !id }
   );
-  const [addStudentToGroup, { isLoading: isAssigning }] = useAddStudentToGroupMutation();
+  const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
   const [fetchNewMembership] = useLazyStudentGroupsQuery();
   const [fetchStudentFreezes] = useLazyStudentFreezesQuery();
   const [transferStudent, { isLoading: isTransferring }] = useTransferStudentMutation();
@@ -275,12 +262,12 @@ export const SingleGroup = () => {
     [studentGroupsData, id]
   );
 
-  // GroupDetail.students is the legacy relation — POST /student-groups (how
-  // "Add student" now creates a member) isn't guaranteed to write to it, so a
-  // freshly added (frozen) student could otherwise be missing from the roster
-  // entirely. /student-groups is the authoritative roster (see the comment on
-  // studentGroupsData above), so any live membership the legacy relation
-  // doesn't list is added here.
+  // GroupDetail.students is the legacy relation — POST /groups/{id}/students/
+  // assign (how "Add student" creates a member) isn't guaranteed to write to
+  // it, so a freshly added (frozen) student could otherwise be missing from
+  // the roster entirely. /student-groups is the authoritative roster (see the
+  // comment on studentGroupsData above), so any live membership the legacy
+  // relation doesn't list is added here.
   const extraStudents = useMemo<RealGroupStudent[]>(() => {
     if (!groupDetailData) return [];
     const known = new Set(students.map((s) => s.realId));
@@ -881,23 +868,15 @@ export const SingleGroup = () => {
 
   const handleAddStudentSubmit = async ({ studentId, joinedAt, customPrice, discountReason }: AddStudentPayload) => {
     if (!id) return;
-    // POST /student-groups (not POST /groups/{id}/students/assign):
-    // confirmed live that the assign endpoint never creates a row in the
-    // /student-groups membership table, so a student added through it has
-    // no studentGroupId — silently breaking freeze/unfreeze/status-change
-    // (all keyed on that id) for every student added this way. Only the
-    // /student-groups resource itself creates the row those calls need.
-    // Body is multipart/form-data (see addStudentToGroup in groupsApi):
-    // studentId + groupId required; joinedAt ("since when"), customPrice and
-    // discountReason optional. Starts on PROBATION (never ACTIVE) with no
-    // paymentStartDate — going through ACTIVE, even briefly, would trigger
-    // PATCH .../status's documented "payment accounting starts" side effect
-    // before a staff member meant it to.
-    let created: unknown;
+    // POST /groups/{id}/students/assign (see assignStudentsToGroup in groupsApi)
+    // is the one way a member is added. joinedAt ("since when") is optional.
+    // Starts on PROBATION (never ACTIVE) with no paymentStartDate — going
+    // through ACTIVE, even briefly, would trigger PATCH .../status's
+    // documented "payment accounting starts" side effect before a staff
+    // member meant it to. The endpoint takes no price, so customPrice /
+    // discountReason are applied to the new membership below.
     try {
-      created = await addStudentToGroup({
-        studentId, groupId: id, status: "PROBATION", joinedAt, customPrice, discountReason,
-      }).unwrap();
+      await assignStudentsToGroup({ id, studentIds: [studentId], status: "PROBATION", joinedAt }).unwrap();
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("singleGroup.addStudentDrawer.toast.error");
@@ -913,34 +892,43 @@ export const SingleGroup = () => {
     // Business rule: a newly added student must NOT read as active — they
     // land FROZEN, and a staff member explicitly activates them afterwards
     // (StudentActionsMenu's "Activate" -> ActivateModal asks "since when" and
-    // unfreezes + sets the payment start date). Creation itself only
-    // documents PROBATION/ACTIVE as initial statuses, so the brand-new
-    // membership is frozen as an immediate follow-up through the one
-    // endpoint that IS documented for FROZEN (POST /student-groups/{id}/
-    // freeze, startDate required). Its id comes from the create response
-    // when present, otherwise it's looked up via GET /student-groups.
-    try {
-      let newMembershipId = membershipIdFromCreateResponse(created, id);
-      if (!newMembershipId) {
-        const found = await fetchNewMembership({ groupId: id, studentId, limit: 1 }).unwrap();
-        newMembershipId = found.rows[0]?.id;
-      }
-      if (!newMembershipId) throw new Error("new membership id not found");
-      await freezeStudentGroup({
-        id: newMembershipId,
-        startDate: joinedAt || todayLocalISO(),
-      }).unwrap();
-      toast.success(t("singleGroup.addStudentDrawer.toast.success"));
-    } catch (err) {
-      // The student WAS added — only the follow-up freeze failed — so this
-      // is a distinct, narrower warning rather than the generic add-failed
-      // error above. It used to swallow the reason entirely; now the
-      // backend's message + HTTP status are appended (and the failed request
-      // is in the console — see logStudentGroupAction in groupsApi).
+    // unfreezes + sets the payment start date). Assigning only documents
+    // PROBATION/ACTIVE as initial statuses, so the brand-new membership is
+    // frozen as an immediate follow-up through the one endpoint that IS
+    // documented for FROZEN (POST /student-groups/{id}/freeze, startDate
+    // required). The assign response names no membership, so its id is looked
+    // up via GET /student-groups.
+    //
+    // The student WAS added — only these follow-ups can fail — so each gets a
+    // distinct, narrower warning rather than the generic add-failed error
+    // above, carrying the backend's message + HTTP status (the failed request
+    // is also in the console — see logStudentGroupAction in groupsApi).
+    const warn = (generic: string, err: unknown) => {
       const detail = describeApiError(err);
-      toast.success(t("singleGroup.addStudentDrawer.toast.success"));
-      const generic = t("singleGroup.addStudentDrawer.toast.freezeError");
       toast.error(detail ? `${generic}: ${detail}` : generic);
+    };
+    toast.success(t("singleGroup.addStudentDrawer.toast.success"));
+    let newMembershipId: string | undefined;
+    try {
+      const found = await fetchNewMembership({ groupId: id, studentId, limit: 1 }).unwrap();
+      newMembershipId = found.rows[0]?.id;
+      if (!newMembershipId) throw new Error("new membership id not found");
+    } catch (err) {
+      if (customPrice !== undefined) warn(t("singleGroup.addStudentDrawer.toast.priceError"), err);
+      warn(t("singleGroup.addStudentDrawer.toast.freezeError"), err);
+      return;
+    }
+    if (customPrice !== undefined) {
+      try {
+        await updateStudentGroup({ id: newMembershipId, customPrice, discountReason }).unwrap();
+      } catch (err) {
+        warn(t("singleGroup.addStudentDrawer.toast.priceError"), err);
+      }
+    }
+    try {
+      await freezeStudentGroup({ id: newMembershipId, startDate: joinedAt || todayLocalISO() }).unwrap();
+    } catch (err) {
+      warn(t("singleGroup.addStudentDrawer.toast.freezeError"), err);
     }
   };
 
@@ -1069,7 +1057,7 @@ export const SingleGroup = () => {
 
       <Stack direction={{ xs: "column", md: "row" }} gap={2} px={3} pb={3} alignItems="flex-start">
         {/* ── LEFT PANEL ── */}
-        <Paper sx={{ width: { xs: "100%", md: 300 }, flexShrink: 0, borderRadius: 3, p: 2.5 }}>
+        <Paper sx={{ width: { xs: "100%", md: 340, lg: 380 }, flexShrink: 0, borderRadius: 3, p: 2.5 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
             <Box>
               <Typography fontSize={14}><b>{t("singleGroup.leftPanel.course")}:</b> {group.course}</Typography>
@@ -1185,13 +1173,14 @@ export const SingleGroup = () => {
             {sortedStudents.map((s, i) => {
               const isFrozen = !s.active && !s.archived;
               const isArchived = Boolean(s.archived);
-              const isDebtor = !isArchived && (s.balance ?? 0) < 0;
               return (
                 <ListItem
                   key={`${s.id}-${isArchived ? "arch" : "active"}`}
                   disablePadding
                   sx={{
-                    py: 0.6,
+                    gap: 1,
+                    py: 0.5,
+                    pl: 0.5,
                     borderRadius: 1.5,
                     cursor: "pointer",
                     transition: "background 0.15s",
@@ -1201,67 +1190,54 @@ export const SingleGroup = () => {
                   onMouseEnter={(e) => handleStudentMouseEnter(e, s)}
                   onMouseLeave={handleStudentMouseLeave}
                   onClick={() => handleGoToProfile(s.realId)}
-                  secondaryAction={
-                    <IconButton
-                      size="small"
-                      onClick={(e) => { e.stopPropagation(); handleOpenMenu(e, s); }}
-                    >
-                      <BsThreeDotsVertical />
-                    </IconButton>
-                  }
                 >
                   <Typography fontSize={12} color="text.secondary" sx={{ minWidth: 22, flexShrink: 0 }}>
                     {i + 1}
                   </Typography>
-                  {!isArchived && (s.active || isDebtor) ? (
-                    <Box sx={{
-                      width: 8, height: 8, borderRadius: "50%",
-                      bgcolor: isDebtor ? "#e53935" : "#43a047",
-                      mx: 1, flexShrink: 0,
-                    }} />
-                  ) : (
-                    <Box sx={{ width: 8, mx: 1, flexShrink: 0 }} />
-                  )}
-                  {isArchived && (
-                    <Box sx={{ width: 8, mx: 1, flexShrink: 0 }} />
-                  )}
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-                        <Typography
-                          component="span"
-                          fontSize={13}
-                          fontWeight={500}
-                          sx={{
-                            display: "inline-block",
-                            px: isFrozen ? 1 : 0,
-                            py: isFrozen ? 0.35 : 0,
-                            borderRadius: isFrozen ? "6px" : 0,
-                            backgroundColor: isFrozen ? "#bfe3fa" : "transparent",
-                            color: isArchived ? "dimgray" : "var(--color-text-primary)",
-                            textDecoration: isArchived ? "line-through" : "none",
-                          }}
-                        >
-                          {s.name}
-                        </Typography>
-                        {isArchived && (
-                          <Chip label={t("singleGroup.leftPanel.archivedChip")} size="small" sx={{ height: 20, fontSize: 10 }} />
-                        )}
-                      </Box>
-                    }
-                    secondary={
-                      <Typography
-                        fontSize={12}
-                        color="text.secondary"
-                        component="span"
-                        display="block"
-                        sx={{ textDecoration: isArchived ? "line-through" : "none" }}
-                      >
-                        {s.phone}
-                      </Typography>
-                    }
-                    sx={{ my: 0 }}
-                  />
+                  <StudentStatusDot active={s.active} archived={s.archived} balance={s.balance} />
+                  {/* Name and phone share one row: the name takes the remaining
+                      width and truncates, the phone always keeps its own. */}
+                  <Box sx={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography
+                      component="span"
+                      noWrap
+                      title={s.name}
+                      fontSize={13}
+                      fontWeight={500}
+                      sx={{
+                        px: isFrozen ? 1 : 0,
+                        py: isFrozen ? 0.35 : 0,
+                        borderRadius: isFrozen ? "6px" : 0,
+                        backgroundColor: isFrozen ? "#bfe3fa" : "transparent",
+                        color: isArchived ? "dimgray" : isFrozen ? "#1a2332" : "var(--color-text-primary)",
+                        textDecoration: isArchived ? "line-through" : "none",
+                      }}
+                    >
+                      {s.name}
+                    </Typography>
+                    {isArchived && (
+                      <Chip label={t("singleGroup.leftPanel.archivedChip")} size="small" sx={{ height: 20, fontSize: 10, flexShrink: 0 }} />
+                    )}
+                  </Box>
+                  <Typography
+                    component="span"
+                    fontSize={12}
+                    color="text.secondary"
+                    sx={{
+                      minWidth: 92,
+                      flexShrink: 0,
+                      fontVariantNumeric: "tabular-nums",
+                      textDecoration: isArchived ? "line-through" : "none",
+                    }}
+                  >
+                    {formatPhone(s.phone)}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => { e.stopPropagation(); handleOpenMenu(e, s); }}
+                  >
+                    <BsThreeDotsVertical />
+                  </IconButton>
                 </ListItem>
               );
             })}
@@ -1313,26 +1289,6 @@ export const SingleGroup = () => {
 
         {/* ── RIGHT PANEL ── */}
         <Box sx={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-          <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={1} mb={1}>
-            <Typography fontSize={13} color={showCoins ? "primary" : "text.secondary"}>{t("singleGroup.rightPanel.showCoins")}</Typography>
-            <Box
-              onClick={() => setShowCoins((p) => !p)}
-              sx={{
-                width: 40, height: 22, borderRadius: 11,
-                bgcolor: showCoins ? "primary.main" : "#ccc",
-                cursor: "pointer", position: "relative", transition: "0.2s",
-              }}
-            >
-              <Box sx={{
-                position: "absolute", top: 3,
-                left: showCoins ? 20 : 3,
-                width: 16, height: 16,
-                borderRadius: "50%", bgcolor: "var(--color-surface)", transition: "0.2s",
-              }} />
-            </Box>
-            <Typography fontSize={13} color={!showCoins ? "primary" : "text.secondary"}>{t("singleGroup.rightPanel.hideCoins")}</Typography>
-          </Stack>
-
           <Paper sx={{ borderRadius: 3, overflow: "visible" }}>
             <Tabs
               value={tabIndex}
@@ -1353,11 +1309,13 @@ export const SingleGroup = () => {
                   from the group (archived) shouldn't still be markable for
                   attendance/grades/discounts; this is the same filter the
                   roster panel itself already applies (plus its "show
-                  archived" toggle) so both stay consistent. */}
-              {tabIndex === 0 && <Attendance groupId={id ?? ""} students={visibleStudents} groupName={group.name} branchName={branchName} />}
-              {tabIndex === 1 && <Grade students={visibleStudents} />}
+                  archived" toggle) so both stay consistent. The tabs get
+                  the roster's sorted array so row N is the same student in
+                  every view. */}
+              {tabIndex === 0 && <Attendance groupId={id ?? ""} students={sortedStudents} groupName={group.name} branchName={branchName} />}
+              {tabIndex === 1 && <Grade students={sortedStudents} />}
               {tabIndex === 2 && <OnlineLessons />}
-              {tabIndex === 3 && <DiscountPrices groupId={id ?? ""} groupPrice={group?.price ?? 0} students={visibleStudents} />}
+              {tabIndex === 3 && <DiscountPrices groupId={id ?? ""} groupPrice={group?.price ?? 0} students={sortedStudents} />}
               {tabIndex === 4 && <Exams />}
               {tabIndex === 5 && (
                 <History

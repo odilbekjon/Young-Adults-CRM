@@ -39,6 +39,7 @@ import { useAllBranchesQuery } from "../../../../../app/api/branchesApi/branches
 import { useBranch } from "../../../../../Context/BranchContext";
 import { useToast } from "../../../../../Context/ToastContext";
 import type { RootState } from "../../../../../app/store";
+import { submitOnEnter } from "../../../../../utils/submitOnEnter";
 
 interface FormState {
   name: string;
@@ -407,6 +408,7 @@ export const Rooms = () => {
         anchor="right"
         open={drawerOpen}
         onClose={closeDrawer}
+        onKeyDown={submitOnEnter(handleSubmit, isSaving)}
         PaperProps={{ sx: { width: 380, p: 0 } }}
       >
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 3, py: 2.5 }}>

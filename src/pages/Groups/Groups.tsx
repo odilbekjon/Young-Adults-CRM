@@ -41,7 +41,7 @@ import { Calendar } from "../SingleGroup/Calendar";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { TimeSelectField } from "../SingleGroup/TimeSelectField";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
-import { extractApiError, formatTrainingDate, addMonthsToIsoDate, classifyDays, classifyDayList, DAYS_PRESETS, downloadExcelBlob } from "../../utils";
+import { extractApiError, formatTrainingDate, addMonthsToIsoDate, classifyDays, classifyDayList, DAYS_PRESETS, downloadExcelBlob, submitOnEnter } from "../../utils";
 
 /* ─── types ─────────────────────────────────────────────── */
 type SortKey = keyof GroupRow | "";
@@ -1149,6 +1149,7 @@ export const Groups = () => {
         anchor="right"
         open={open}
         onClose={() => setOpen(false)}
+        onKeyDown={submitOnEnter(handleSave, isCreating || isUpdating)}
         PaperProps={{ sx: { width: 420, maxWidth: "100vw", bgcolor: "var(--color-surface-alt)" } }}
       >
         {/* Header */}

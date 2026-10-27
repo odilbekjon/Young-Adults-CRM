@@ -78,8 +78,8 @@ export const useArchiveStudent = () => {
       return;
     }
     // No live membership: the student is listed only by the group's legacy
-    // student relation (a member added through POST /groups/{id}/students/
-    // assign never got a /student-groups row) or has already left. DELETE
+    // student relation (a legacy member with no /student-groups row) or has
+    // already left. DELETE
     // /groups/{id}/students/{studentId} clears the legacy row; its 404 means the
     // backend doesn't see the student in this group, which is the state asked for.
     try {

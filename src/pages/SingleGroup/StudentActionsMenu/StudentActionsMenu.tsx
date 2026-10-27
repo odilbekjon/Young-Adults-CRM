@@ -17,6 +17,7 @@ import { FiX } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../hooks/useAuth";
 import { DatePickerField } from "../DatePickerField";
+import { submitOnEnter } from "../../../utils/submitOnEnter";
 
 // Local calendar date (toISOString() is UTC, still "yesterday" just after
 // midnight in UTC+5).
@@ -105,7 +106,7 @@ const MoveToBranchModal = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
+    <Dialog open={open} onClose={handleClose} onKeyDown={submitOnEnter(handleSubmit)} PaperProps={{ sx: { width: 620, maxWidth: "95vw", borderRadius: 1 } }}>
       <DialogTitle sx={{ px: 3, py: 2, borderBottom: "1px solid var(--color-border)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-primary)" }}>

@@ -11,6 +11,7 @@ import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
 
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { todayLocalISO } from "../../utils/localDate";
+import { submitOnEnter } from "../../utils/submitOnEnter";
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -93,7 +94,13 @@ export const AddWithdrawal = ({ open, onClose }: { open: boolean; onClose: () =>
   };
 
   return (
-    <RightDrawer open={open} onClose={handleClose} title={t("addWithdrawal.title")} width={440}>
+    <RightDrawer
+      open={open}
+      onClose={handleClose}
+      title={t("addWithdrawal.title")}
+      width={440}
+      onKeyDown={submitOnEnter(handleSubmit, isSaving)}
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Recipient */}

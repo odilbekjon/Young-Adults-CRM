@@ -27,6 +27,7 @@ import { useReportLeftStudentsQuery } from "../../app/api/reportsApi";
 import { SCHEDULE_COLORS, DEFAULT_LESSON_DURATION, SCHEDULE_TIME_START, SCHEDULE_TIME_END } from "../../constants/DashboardData";
 import { STATS } from "../../constants/DashboardStats";
 import { useActiveStudentCount } from "../../hooks/useActiveStudentCount";
+import { useNearViewport } from "./useNearViewport";
 
 // "This month" as [firstOfMonth, today] in the plain YYYY-MM-DD format every
 // finance list endpoint expects (same format the date-range filters on the
@@ -223,27 +224,19 @@ export const Dashboard = () => {
   // reload or after the ~60s unused-cache window lapses — stale after any
   // student/payment/attendance/group action taken elsewhere and then
   // navigated back from.
+  //
+  // Requests start in the order the hooks are declared and baseApi caps how many
+  // run at once, so the cheap counts behind the stat tiles come first, the big
+  // lists behind "Active students" next, and the cards further down the page
+  // last — those only start once they are about to scroll into view.
   const refetchOnMount = { refetchOnMountOrArgChange: true };
   const { data: statsData } = useDashboardStatsQuery(undefined, refetchOnMount);
-  const { data: scheduleData, isLoading: scheduleLoading, isError: scheduleError } = useDashboardScheduleQuery(undefined, refetchOnMount);
-  // Enrichment source for the schedule cards below (real training dates, room
-  // capacity, current headcount) — GET /groups' own schedule endpoint
-  // (ScheduleItem) only carries group/course/room/time/teacher, nothing else.
-  const { data: scheduleGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 }, refetchOnMount);
-  // Same "legacy relation keeps listing removed students" workaround already
-  // used on the Groups list page — see realStudentCount's own comment.
-  const { data: inactiveMembershipsData } = useStudentGroupsQuery({ status: "INACTIVE", branchId, limit: 1000 });
-  const { data: deletedMembershipsData } = useStudentGroupsQuery({ status: "DELETED", branchId, limit: 1000 });
-  // "Active students": a group AND an ACTIVE status in it (see the hook).
-  const activeStudents = useActiveStudentCount(branchId);
-  const { data: attendanceData, isLoading: attendanceLoading, isError: attendanceError } = useDashboardAttendanceStatsQuery(undefined, refetchOnMount);
-  const { data: activitiesData, isLoading: activitiesLoading, isError: activitiesError } = useDashboardRecentActivitiesQuery(undefined, refetchOnMount);
-  const { data: teacherPerfData, isLoading: teacherPerfLoading, isError: teacherPerfError } = useDashboardTeacherPerformanceQuery(undefined, refetchOnMount);
 
   // "Active leads" — GET /leads?status=ACTIVE (leadsApi's own definition of
-  // an active lead, same enum the Leads Kanban board and Reports use).
+  // an active lead, same enum the Leads Kanban board and Reports use). Only the
+  // count is shown, so a one-row page is requested and meta.total is read.
   const { data: activeLeadsData, isFetching: activeLeadsLoading } =
-    useAllLeadsQuery({ status: "ACTIVE", page: 1, limit: 500, branchId });
+    useAllLeadsQuery({ status: "ACTIVE", page: 1, limit: 1, branchId });
 
   // "Left after trial period" — there's no dedicated backend flag for this,
   // but the lead pipeline itself models it: a lead only leaves leadsApi's
@@ -251,9 +244,10 @@ export const Dashboard = () => {
   // a real Student, tracked separately from here on via studentsApi/
   // groupsApi). A CANCELLED lead is therefore, by construction, someone who
   // never made it past the lead/trial stage — the closest real, non-invented
-  // proxy for "left after trial period" the API actually supports.
+  // proxy for "left after trial period" the API actually supports. Counted from
+  // meta.total of a one-row page, like the active leads above.
   const { data: cancelledLeadsData, isFetching: leftTrialLoading } =
-    useAllLeadsQuery({ status: "CANCELLED", page: 1, limit: 500, branchId });
+    useAllLeadsQuery({ status: "CANCELLED", page: 1, limit: 1, branchId });
 
   // "Debtors" — same GET /finance/debtors list the Debtors page itself reads
   // its count from (meta.total), not the separate /finance/debtors/total
@@ -287,6 +281,33 @@ export const Dashboard = () => {
   const { data: chartMonths, isLoading: chartLoading, isError: chartIsError } =
     useFinanceChartQuery({ year: currentYear, branchId });
 
+  // "Active students": a group AND an ACTIVE status in it (see the hook).
+  const activeStudents = useActiveStudentCount(branchId);
+
+  // Attendance / Recent activity / Teacher performance cards.
+  const [summaryRef, summaryNear] = useNearViewport();
+  const summaryOptions = { ...refetchOnMount, skip: !summaryNear };
+  const { data: attendanceData, isLoading: attendanceQueryLoading, isError: attendanceError } = useDashboardAttendanceStatsQuery(undefined, summaryOptions);
+  const { data: activitiesData, isLoading: activitiesQueryLoading, isError: activitiesError } = useDashboardRecentActivitiesQuery(undefined, summaryOptions);
+  const { data: teacherPerfData, isLoading: teacherPerfQueryLoading, isError: teacherPerfError } = useDashboardTeacherPerformanceQuery(undefined, summaryOptions);
+  // A card that hasn't been asked for yet shows its spinner like a loading one.
+  const attendanceLoading = !summaryNear || attendanceQueryLoading;
+  const activitiesLoading = !summaryNear || activitiesQueryLoading;
+  const teacherPerfLoading = !summaryNear || teacherPerfQueryLoading;
+
+  // Schedule card and the data its cards are enriched with.
+  const [scheduleRef, scheduleNear] = useNearViewport();
+  const { data: scheduleData, isLoading: scheduleQueryLoading, isError: scheduleError } = useDashboardScheduleQuery(undefined, { ...refetchOnMount, skip: !scheduleNear });
+  const scheduleLoading = !scheduleNear || scheduleQueryLoading;
+  // Enrichment source for the schedule cards below (real training dates, room
+  // capacity, current headcount) — GET /groups' own schedule endpoint
+  // (ScheduleItem) only carries group/course/room/time/teacher, nothing else.
+  const { data: scheduleGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 }, { ...refetchOnMount, skip: !scheduleNear });
+  // Same "legacy relation keeps listing removed students" workaround already
+  // used on the Groups list page — see realStudentCount's own comment.
+  const { data: inactiveMembershipsData } = useStudentGroupsQuery({ status: "INACTIVE", branchId, limit: 1000 }, { skip: !scheduleNear });
+  const { data: deletedMembershipsData } = useStudentGroupsQuery({ status: "DELETED", branchId, limit: 1000 }, { skip: !scheduleNear });
+
   const peakPoint = useMemo(() => {
     if (!chartMonths || chartMonths.length === 0) return null;
     return chartMonths.reduce((max, point) => (point.totalPayments > max.totalPayments ? point : max), chartMonths[0]);
@@ -300,14 +321,14 @@ export const Dashboard = () => {
       : { value: statsData?.data.activeStudentsCount ?? 0, loading: activeStudents.isLoading && !statsData };
 
   const liveStatValues: Record<string, { value: number; loading: boolean }> = {
-    leads:      { value: activeLeadsData?.meta?.total ?? activeLeadsData?.data.length ?? 0, loading: activeLeadsLoading },
+    leads:      { value: activeLeadsData?.meta?.total ?? 0, loading: activeLeadsLoading },
     students:   activeStudentsStat,
     groups:     { value: statsData?.data.activeGroupsCount ?? 0, loading: !statsData },
     debtors:    { value: debtorsData?.meta.total ?? 0, loading: debtorsLoading },
     trial:      { value: trialGroupsData?.meta.total ?? 0, loading: trialLoading },
     paid:       { value: paymentsThisMonthData?.meta.total ?? 0, loading: paidLoading },
     leftActive: { value: leftStudentsData?.total ?? 0, loading: leftActiveLoading },
-    leftTrial:  { value: cancelledLeadsData?.meta?.total ?? cancelledLeadsData?.data.length ?? 0, loading: leftTrialLoading },
+    leftTrial:  { value: cancelledLeadsData?.meta?.total ?? 0, loading: leftTrialLoading },
   };
 
   const attendance = attendanceData?.data;
@@ -496,7 +517,7 @@ export const Dashboard = () => {
       {/* ═══════════════════════════════════════════════════════════════
           SUMMARY PANELS — Attendance / Recent activity / Teacher performance
       ════════════════════════════════════════════════════════════════ */}
-      <Box sx={{
+      <Box ref={summaryRef} sx={{
         display: "grid",
         gridTemplateColumns: "repeat(3, 1fr)",
         gap: 1.5, mb: 3,
@@ -587,7 +608,7 @@ export const Dashboard = () => {
       {/* ═══════════════════════════════════════════════════════════════
           SCHEDULE
       ════════════════════════════════════════════════════════════════ */}
-      <Paper elevation={0} sx={{
+      <Paper ref={scheduleRef} elevation={0} sx={{
         borderRadius: "16px", border: "1px solid var(--color-border)",
         background: "var(--color-surface)", overflow: "hidden",
       }}>

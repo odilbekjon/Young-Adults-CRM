@@ -439,8 +439,11 @@ export const Groups = () => {
     });
     return set;
   }, [inactiveStudentGroupsData, deletedStudentGroupsData]);
-  const { data: coursesData } = useAllCoursesQuery();
-  const { data: roomsData } = useAllRoomsQuery();
+  // Declared ahead of the queries below: only the create/edit drawer needs the
+  // full course and room lists, so they are fetched once it is opened.
+  const [open, setOpen] = useState(false);
+  const { data: coursesData } = useAllCoursesQuery(undefined, { skip: !open });
+  const { data: roomsData } = useAllRoomsQuery(undefined, { skip: !open });
   const { data: branchesData } = useAllBranchesQuery();
   // GET /teachers/select — the dropdown-specific endpoint for group create/
   // edit's teacher picker (requires branchId; "all" when no branch is
@@ -563,7 +566,6 @@ export const Groups = () => {
     { value: "Other",        label: t("groups.options.days.other") },
   ];
 
-  const [open,              setOpen]              = useState(false);
   const [editingId,         setEditingId]         = useState<string | null>(null);
   const [form,              setForm]              = useState<FormState>(EMPTY_FORM);
   const [daysMode,          setDaysMode]          = useState<string>("");

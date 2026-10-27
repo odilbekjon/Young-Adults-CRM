@@ -14,6 +14,7 @@ import {
   useDeleteLeadColumnMutation,
 } from "../../app/api/leadColumnsApi";
 import { useToast } from "../../Context/ToastContext";
+import { withApiDetail } from "./withApiDetail";
 
 interface Props {
   open: boolean;
@@ -59,8 +60,8 @@ export const ManageLeadColumnsDialog = ({ open, onClose }: Props) => {
       await createLeadColumn({ name: newName.trim() }).unwrap();
       toast.success(t("leadsPage.columns.toast.created"));
       setNewName("");
-    } catch {
-      toast.error(t("leadsPage.columns.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.columns.toast.error"), err));
     }
   };
 
@@ -70,8 +71,8 @@ export const ManageLeadColumnsDialog = ({ open, onClose }: Props) => {
       await updateLeadColumn({ id: editingId, name: editName.trim() }).unwrap();
       toast.success(t("leadsPage.columns.toast.updated"));
       setEditingId(null);
-    } catch {
-      toast.error(t("leadsPage.columns.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.columns.toast.error"), err));
     }
   };
 
@@ -80,8 +81,8 @@ export const ManageLeadColumnsDialog = ({ open, onClose }: Props) => {
       await deleteLeadColumn(id).unwrap();
       toast.success(t("leadsPage.columns.toast.deleted"));
       setConfirmDeleteId(null);
-    } catch {
-      toast.error(t("leadsPage.columns.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.columns.toast.error"), err));
     }
   };
 

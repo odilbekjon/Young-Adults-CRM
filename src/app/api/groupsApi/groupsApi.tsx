@@ -152,7 +152,7 @@ const HISTORY_NESTED_KEYS = ["data", "meta", "metadata", "payload", "extra", "in
 // The rows may be the payload itself or sit under one of several wrapper keys,
 // possibly one level deeper ({data: {rows: [...], meta}}).
 const HISTORY_LIST_KEYS = ["history", "events", "logs", "rows", "items", "results", "records", "data"];
-const extractHistoryList = (raw: unknown, depth = 0): unknown[] => {
+export const extractHistoryList = (raw: unknown, depth = 0): unknown[] => {
     if (Array.isArray(raw)) return raw;
     if (!raw || typeof raw !== "object" || depth > 2) return [];
     const container = raw as Record<string, unknown>;
@@ -612,7 +612,10 @@ export const groupsApi = baseApi.injectEndpoints({
                 url: `${PATHS.GROUPS}/${id}/students/${studentId}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["group", "studentGroup"],
+            // Also invalidated when the call fails (RTK Query does that for HTTP
+            // errors): a 404 means the student is not in the group, so the
+            // rosters have to refetch to show that.
+            invalidatesTags: ["group", "studentGroup", "student"],
         }),
         transferStudent: builder.mutation<TransferStudentResponse, TransferStudentRequest>({
             // reason is required by the live backend (confirmed: omitting it

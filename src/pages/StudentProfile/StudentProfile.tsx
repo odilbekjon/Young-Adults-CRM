@@ -26,11 +26,8 @@ import {
   useStudentGroupMembershipsQuery,
   useUpdateStudentMutation,
   useTransferStudentBranchMutation,
-  useUpdateStudentStatusMutation,
-  useDeleteStudentMutation,
   useStudentCommentsQuery,
   useCreateStudentCommentMutation,
-  useStudentHistoryQuery,
   useStudentSmsHistoryQuery,
 } from "../../app/api/studentsApi";
 import type {
@@ -38,7 +35,7 @@ import type {
 } from "../../app/api/studentsApi/types";
 import {
   useAllGroupsQuery, useAddStudentToGroupMutation, useStudentGroupsQuery,
-  useFreezeStudentGroupMutation, useUnfreezeStudentGroupMutation, useUpdateStudentGroupStatusMutation,
+  useFreezeStudentGroupMutation, useUnfreezeStudentGroupMutation,
   useUpdateStudentGroupMutation, useGraduateTrialStudentGroupMutation, useLazyStudentGroupsQuery,
 } from "../../app/api/groupsApi";
 import type { Group, StudentGroupRecord } from "../../app/api/groupsApi/types";
@@ -62,7 +59,7 @@ import { FreezeModal } from "../SingleGroup/FreezeModal";
 import { ActivateModal } from "../SingleGroup/ActivateModal";
 import { GraduateTrialModal } from "../SingleGroup/GraduateTrialModal";
 import { AttendanceTab } from "./attendance";
-import { HistoryEntryRow } from "../SingleGroup/tabs/History";
+import { StudentHistoryTab } from "./history/StudentHistoryTab";
 
 const isLiveMembershipStatus = (status: string) => status !== "INACTIVE" && status !== "DELETED";
 
@@ -1388,18 +1385,15 @@ export const StudentProfile = () => {
   );
 
   const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
-  const { archiveStudent: archiveStudentFlow, deleteStudent: deleteStudentFlow } = useArchiveStudent();
+  const { leaveGroup, archiveStudent: archiveStudentFlow, deleteStudent: deleteStudentFlow } = useArchiveStudent();
   const [isArchivingStudent, setIsArchivingStudent] = useState(false);
   const { data: archiveReasonOptions } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 });
   const [addStudentToGroup, { isLoading: isAddingToGroup }] = useAddStudentToGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [freezeStudentGroup, { isLoading: isFreezingGroup }] = useFreezeStudentGroupMutation();
   const [unfreezeStudentGroup, { isLoading: isUnfreezingGroup }] = useUnfreezeStudentGroupMutation();
-  const [updateStudentGroupStatus, { isLoading: isArchivingGroup }] = useUpdateStudentGroupStatusMutation();
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
   const [graduateTrialStudentGroup, { isLoading: isGraduatingTrial }] = useGraduateTrialStudentGroupMutation();
-  const [updateStudentStatus] = useUpdateStudentStatusMutation();
-  const [deleteStudent] = useDeleteStudentMutation();
   const [fetchMemberships] = useLazyStudentGroupsQuery();
   const [fetchStudentFreezes] = useLazyStudentFreezesQuery();
 
@@ -1494,9 +1488,6 @@ export const StudentProfile = () => {
   const [commentDraft, setCommentDraft] = useState("");
   const { data: smsData, isFetching: isSmsLoading, isError: isSmsError } = useStudentSmsHistoryQuery(
     { id: student?.uid ?? "", page: 1, limit: 50 }, { skip: !student || activeTab !== 3 }
-  );
-  const { data: historyData, isFetching: isHistoryLoading, isError: isHistoryError } = useStudentHistoryQuery(
-    student?.uid ?? "", { skip: !student || activeTab !== 4, refetchOnMountOrArgChange: true }
   );
 
   if (isLoading) {
@@ -1790,43 +1781,27 @@ export const StudentProfile = () => {
     setRemoveDeleteMode(false);
   };
 
-  // Same two steps as SingleGroup's handleRemoveStudent: PATCH
-  // /student-groups/{id}/status INACTIVE (reasonId, reason, isAllGroup only
-  // when true), then - only when every group is ended - POST
-  // /students/{id}/status INACTIVE archives the account, and for the "Delete
-  // student" switch DELETE /students/{id} follows.
+  // Same flow as SingleGroup's handleRemoveStudent (see useArchiveStudent):
+  // "Current group" ends just this membership, "All groups" and the "Delete
+  // student" switch archive (and delete) the whole account.
   const handleRemoveFromGroupConfirm = async () => {
     const target = archiveGroupTarget;
-    if (!target) return;
-    const studentGroupId = await resolveLiveMembershipId(target.id);
-    if (!studentGroupId) {
-      toast.error("Failed to remove from the group: membership not found");
-      return;
-    }
-    const effectiveScope = removeDeleteMode ? "all" : removeScope;
+    if (!target || isArchivingStudent) return;
+    const args = { studentId: student.uid, reasonId: removeReasonId || undefined, comment: removeComment };
+    const cached = membershipRowByGroupId.get(target.id);
+    setIsArchivingStudent(true);
     try {
-      await updateStudentGroupStatus({
-        id: studentGroupId,
-        status: "INACTIVE",
-        reasonId: removeReasonId || undefined,
-        reason: removeComment.trim() || undefined,
-        isAllGroup: effectiveScope === "all" ? true : undefined,
-      }).unwrap();
-      if (effectiveScope === "all") {
-        await updateStudentStatus({
-          id: student.uid,
-          status: "INACTIVE",
-          reasonId: removeReasonId || undefined,
-          reason: removeComment.trim() || undefined,
-        }).unwrap();
-        if (removeDeleteMode) await deleteStudent(student.uid).unwrap();
-      }
+      if (removeDeleteMode) await deleteStudentFlow(args);
+      else if (removeScope === "all") await archiveStudentFlow(args);
+      else await leaveGroup({ ...args, groupId: target.id, studentGroupId: cached && isLiveMembershipStatus(cached.status) ? cached.id : undefined });
       toast.success(removeDeleteMode ? "Student deleted" : "Removed from the group");
       closeRemoveDialog();
       if (removeDeleteMode) navigate(-1);
     } catch (err) {
       const detail = extractApiError(err);
       toast.error(detail ? `Failed to remove from the group: ${detail}` : "Failed to remove from the group");
+    } finally {
+      setIsArchivingStudent(false);
     }
   };
 
@@ -1978,19 +1953,7 @@ export const StudentProfile = () => {
                   items={(smsData ?? []).map((s) => ({ id: s.id, primary: s.text, secondary: s.status, date: s.createdAt }))}
                 />
               ) : activeTab === 4 ? (
-                isHistoryLoading ? (
-                  <div style={{ padding: 32, textAlign: "center", color: "var(--color-text-muted)", fontSize: 14 }}>Loading...</div>
-                ) : isHistoryError ? (
-                  <div style={{ padding: 32, textAlign: "center", color: "#ef4444", fontSize: 14 }}>Failed to load</div>
-                ) : (historyData ?? []).length === 0 ? (
-                  <div style={{ padding: 32, textAlign: "center", color: "var(--color-text-muted)", fontSize: 14 }}>No history yet</div>
-                ) : (
-                  <div>
-                    {(historyData ?? []).map((entry) => (
-                      <HistoryEntryRow key={entry.id} entry={entry} groupId="" groupName="" hideStudent />
-                    ))}
-                  </div>
-                )
+                <StudentHistoryTab studentId={student.uid} />
               ) : (
                 <div
                   style={{
@@ -2188,7 +2151,7 @@ export const StudentProfile = () => {
         onRecalculateChange={() => {}}
         scope={removeScope}
         onScopeChange={setRemoveScope}
-        loading={isArchivingGroup}
+        loading={isArchivingStudent}
       />
     </div>
   );

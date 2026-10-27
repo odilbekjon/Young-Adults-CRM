@@ -35,12 +35,11 @@ interface RemoveStudentDialogProps {
   // group" — not accurate for a caller with no group context.
   archiveLabel?: string;
   // Shows the "Remove from group | Delete student" toggle from the reference
-  // design. "Delete student" never hard-deletes: permanent deletion is
-  // deliberately only reachable from the Archive page (see commit 6b20273),
-  // so this side ARCHIVES the student's whole account (the caller decides
-  // how — SingleGroup ends every membership, then POST /students/{id}/status
-  // INACTIVE with the reason). Without `onDeleteModeChange` the switch stays
-  // rendered locked on the "Remove from group" side (previous behaviour).
+  // design. "Delete student" deletes the whole account: the callers run the
+  // shared useArchiveStudent flow (every membership ended and the reason
+  // recorded via POST /students/{id}/status INACTIVE, then DELETE
+  // /students/{id}). Without `onDeleteModeChange` the switch stays rendered
+  // locked on the "Remove from group" side (previous behaviour).
   showDeleteToggle?: boolean;
   deleteMode?: boolean;
   onDeleteModeChange?: (v: boolean) => void;

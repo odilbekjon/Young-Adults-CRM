@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Typography,
@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import { FiList, FiPlus, FiEdit2, FiTrash2, FiX } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
 import {
   useLeadsKanbanQuery,
   useLeadColumnForEditQuery,
@@ -19,8 +20,18 @@ import {
   useDeleteLeadColumnMutation,
 } from "../../app/api/leadColumnsApi";
 import { useCreateLeadSectionMutation } from "../../app/api/leadSectionsApi";
+import { useAllLeadsQuery } from "../../app/api/leadsApi";
+import type { RootState } from "../../app/store";
 import { useToast } from "../../Context/ToastContext";
+import { hasActiveLeadFilters, type LeadFilters } from "../FromWhere/leadFilters";
 import { LeadSectionBlock } from "./LeadSectionBlock";
+import { withApiDetail } from "./withApiDetail";
+
+// GET /lead-columns/kanban takes no filters, so while any filter is set the
+// matching leads are looked up through GET /leads (which does) and the board
+// shows only those. One page is asked for: the board can't page.
+const FILTERED_LEADS_LIMIT = 500;
+const SEARCH_DEBOUNCE_MS = 350;
 
 /* ── per-column edit/delete popover ── */
 const ColumnMenu = ({
@@ -53,8 +64,8 @@ const ColumnMenu = ({
       await updateLeadColumn({ id: columnId, name: name.trim() }).unwrap();
       toast.success(t("leadsPage.columns.toast.updated"));
       onClose();
-    } catch {
-      toast.error(t("leadsPage.columns.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.columns.toast.error"), err));
     }
   };
 
@@ -63,8 +74,8 @@ const ColumnMenu = ({
       await deleteLeadColumn(columnId).unwrap();
       toast.success(t("leadsPage.columns.toast.deleted"));
       onClose();
-    } catch {
-      toast.error(t("leadsPage.columns.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.columns.toast.error"), err));
     }
   };
 
@@ -124,8 +135,8 @@ const AddColumnTile = () => {
       toast.success(t("leadsPage.columns.toast.created"));
       setName("");
       setAdding(false);
-    } catch {
-      toast.error(t("leadsPage.columns.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.columns.toast.error"), err));
     }
   };
 
@@ -175,8 +186,8 @@ const AddSectionRow = ({ columnId }: { columnId: string }) => {
       toast.success(t("leadsPage.sections.toast.created"));
       setName("");
       setAdding(false);
-    } catch {
-      toast.error(t("leadsPage.sections.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.sections.toast.error"), err));
     }
   };
 
@@ -210,11 +221,58 @@ const AddSectionRow = ({ columnId }: { columnId: string }) => {
   );
 };
 
-export const Sections = () => {
+interface SectionsProps {
+  filters: LeadFilters;
+}
+
+export const Sections = ({ filters }: SectionsProps) => {
   const { t } = useTranslation();
-  const { data: columns, isLoading, isError } = useLeadsKanbanQuery();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
+  const { data: kanban, isLoading, isError } = useLeadsKanbanQuery();
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [menuColumnId, setMenuColumnId] = useState<string | null>(null);
+
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.search.trim());
+  useEffect(() => {
+    const handle = setTimeout(() => setDebouncedSearch(filters.search.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [filters.search]);
+
+  const appliedFilters = { ...filters, search: debouncedSearch };
+  const filtering = hasActiveLeadFilters(appliedFilters);
+  const { data: matched, isError: isMatchError } = useAllLeadsQuery(
+    {
+      page: 1,
+      limit: FILTERED_LEADS_LIMIT,
+      search: appliedFilters.search,
+      sectionId: appliedFilters.sectionId,
+      sourceId: appliedFilters.sourceId,
+      courseId: appliedFilters.courseId,
+      status: appliedFilters.status,
+      startDate: appliedFilters.startDate,
+      endDate: appliedFilters.endDate,
+      branchId: selectedBranchId ?? undefined,
+    },
+    { skip: !filtering },
+  );
+
+  const matchedIds = useMemo(
+    () => (filtering && matched ? new Set(matched.data.map((lead) => lead.id)) : null),
+    [filtering, matched],
+  );
+  const columns = useMemo(
+    () =>
+      matchedIds
+        ? (kanban ?? []).map((column) => ({
+            ...column,
+            sections: column.sections.map((section) => ({
+              ...section,
+              leads: section.leads.filter((lead) => matchedIds.has(lead.id)),
+            })),
+          }))
+        : kanban ?? [],
+    [kanban, matchedIds],
+  );
 
   const openColumnMenu = (e: React.MouseEvent<HTMLElement>, columnId: string) => {
     setMenuAnchor(e.currentTarget);
@@ -222,11 +280,14 @@ export const Sections = () => {
   };
   const closeColumnMenu = () => { setMenuAnchor(null); setMenuColumnId(null); };
 
-  if (isLoading) {
+  if (isLoading || (filtering && !matched && !isMatchError)) {
     return <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress /></Box>;
   }
   if (isError) {
     return <Typography sx={{ color: "#e53935", fontSize: 14, textAlign: "center", py: 6 }}>{t("leadsPage.board.loadError")}</Typography>;
+  }
+  if (isMatchError) {
+    return <Typography sx={{ color: "#e53935", fontSize: 14, textAlign: "center", py: 6 }}>{t("leadsPage.filters.loadError")}</Typography>;
   }
 
   return (
@@ -243,12 +304,16 @@ export const Sections = () => {
           flex: 1,
         }}
       >
-        {(columns ?? []).length === 0 ? (
+        {columns.length === 0 ? (
           <Box sx={{ p: 4, width: "100%", textAlign: "center" }}>
             <Typography sx={{ color: "var(--color-text-muted)", fontSize: 14 }}>{t("leadsPage.board.emptyState")}</Typography>
           </Box>
+        ) : matchedIds?.size === 0 ? (
+          <Box sx={{ p: 4, width: "100%", textAlign: "center" }}>
+            <Typography sx={{ color: "var(--color-text-muted)", fontSize: 14 }}>{t("leadsPage.board.noMatches")}</Typography>
+          </Box>
         ) : (
-          (columns ?? []).map((column, i) => {
+          columns.map((column, i) => {
             const totalLeads = column.sections.reduce((sum, s) => sum + s.leads.length, 0);
             return (
               <Box
@@ -256,7 +321,7 @@ export const Sections = () => {
                 sx={{
                   flex: 1,
                   minWidth: 240,
-                  borderRight: i < (columns?.length ?? 0) - 1 ? "0.5px solid" : "none",
+                  borderRight: i < columns.length - 1 ? "0.5px solid" : "none",
                   borderColor: "divider",
                   display: "flex",
                   flexDirection: "column",

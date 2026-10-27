@@ -3,6 +3,10 @@ import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../app/store";
 import { studentsApi } from "../app/api/studentsApi";
 
+// The server rejects more than 3 parallel requests to one endpoint (429), so
+// balances are requested this many students at a time.
+const BALANCE_BATCH_SIZE = 3;
+
 // Student balance as the student profile shows it: GET /students/{id}.balance
 // — the single figure the profile badge, the Outstanding-balance card, the
 // Students list and the group roster are all keyed off. Other places that
@@ -28,8 +32,8 @@ export const useStudentBalances = (ids: string[], skip = false): Record<string, 
 
     const run = async () => {
       // Small batches so a 100-row page doesn't fire 100 requests at once.
-      for (let i = 0; i < pending.length; i += 4) {
-        const batch = pending.slice(i, i + 4);
+      for (let i = 0; i < pending.length; i += BALANCE_BATCH_SIZE) {
+        const batch = pending.slice(i, i + BALANCE_BATCH_SIZE);
         const results = await Promise.all(
           batch.map(async (id) => {
             const sub = dispatch(studentsApi.endpoints.studentById.initiate(id));

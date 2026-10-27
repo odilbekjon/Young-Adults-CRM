@@ -1,7 +1,7 @@
 // CreateForm.tsx — create/edit a dynamic form through the real /lead-forms API.
 // "Lead form" tab = type PUBLIC_LEAD (fixed name + phone fields, lead source),
 // "Simple form" tab = type INTERNAL_SURVEY (questions only).
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import {
   Box, Button, FormControl, FormControlLabel,
@@ -217,7 +217,7 @@ function FormEditor({
         />
         <TextField
           fullWidth size="small" multiline minRows={2} value={description} onChange={(e) => setDescription(e.target.value)}
-          placeholder={t("settings.forms.createForm.placeholders.description", { defaultValue: "Description (optional)" })} sx={inputSx}
+          placeholder={t("settings.forms.createForm.placeholders.description")} sx={inputSx}
         />
 
         {/* Branch can only be chosen when the form is created (PATCH can't change it). */}
@@ -246,7 +246,7 @@ function FormEditor({
 
         <TextField
           fullWidth size="small" value={successMessage} onChange={(e) => setSuccessMessage(e.target.value)}
-          placeholder={t("settings.forms.createForm.placeholders.successMessage", { defaultValue: "Message shown after submitting (optional)" })}
+          placeholder={t("settings.forms.createForm.placeholders.successMessage")}
           sx={{ ...inputSx, mb: 2 }}
         />
 
@@ -270,7 +270,7 @@ function FormEditor({
               <FormControlLabel
                 sx={{ m: 0 }}
                 control={<input type="checkbox" checked={block.isRequired} onChange={(e) => updateBlock(block.id, { isRequired: e.target.checked })} />}
-                label={<Typography sx={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", ml: 0.5 }}>{t("settings.forms.createForm.required", { defaultValue: "Required" })}</Typography>}
+                label={<Typography sx={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", ml: 0.5 }}>{t("settings.forms.createForm.required")}</Typography>}
               />
               <Box sx={{ flex: 1 }} />
               <IconButton size="small" onClick={() => onMoveBlock(idx, -1)} disabled={idx === 0} sx={{ color: "var(--color-text-muted)" }}>
@@ -377,7 +377,7 @@ export const CreateForm = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   const { data: formForEditData, isLoading: formLoading } = useLeadFormForEditQuery(id ?? "", { skip: !id });
-  const { data: fieldsData, isLoading: fieldsLoading } = useLeadFormFieldsQuery(id ?? "", { skip: !id });
+  const { data: fieldsData, isLoading: fieldsLoading, isError: fieldsError } = useLeadFormFieldsQuery(id ?? "", { skip: !id });
 
   const [createLeadForm] = useCreateLeadFormMutation();
   const [updateLeadForm] = useUpdateLeadFormMutation();
@@ -385,8 +385,15 @@ export const CreateForm = () => {
   const [updateLeadFormField] = useUpdateLeadFormFieldMutation();
   const [deleteLeadFormField] = useDeleteLeadFormFieldMutation();
 
+  // The editor takes the server's copy once. Every save step invalidates the
+  // form's queries, and a refetch landing mid-save must not overwrite what the
+  // user is editing (or what a failed save left behind to retry).
+  const hydratedForm = useRef<string | undefined>(undefined);
+  const hydratedFields = useRef<string | undefined>(undefined);
+
   useEffect(() => {
-    if (!formForEditData) return;
+    if (!formForEditData || hydratedForm.current === id) return;
+    hydratedForm.current = id;
     const f = formForEditData.data;
     setTitle(f.title);
     setDescription(f.description ?? "");
@@ -394,13 +401,14 @@ export const CreateForm = () => {
     setBranch(f.branchId ?? "");
     setSourceId(f.sourceId ?? "");
     setTab(f.type === "INTERNAL_SURVEY" ? 0 : 1);
-  }, [formForEditData]);
+  }, [id, formForEditData]);
 
   useEffect(() => {
     // /fields is preferred; the embedded list of GET /lead-forms/{id}/for-edit
-    // is the fallback.
-    const fields = fieldsData?.data ?? formForEditData?.data.fields;
-    if (!fields) return;
+    // is the fallback when that request fails.
+    const fields = fieldsData?.data ?? (fieldsError ? formForEditData?.data.fields : undefined);
+    if (!fields || hydratedFields.current === id) return;
+    hydratedFields.current = id;
     const fixed = fields.filter((f) => f.mapsTo && FIXED_MAPS_TO.includes(f.mapsTo));
     const rest = fields.filter((f) => !fixed.includes(f));
     setExistingFixedCount(fixed.length);
@@ -415,7 +423,7 @@ export const CreateForm = () => {
       }))
     );
     setOriginalFieldIds(rest.map((f) => f.id));
-  }, [fieldsData, formForEditData]);
+  }, [id, fieldsData, fieldsError, formForEditData]);
 
   const moveBlock = (index: number, direction: -1 | 1) => {
     setBlocks((prev) => {

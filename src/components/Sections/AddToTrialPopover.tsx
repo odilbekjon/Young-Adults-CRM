@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Popover, Typography, TextField, MenuItem, Button, CircularProgress, Box } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { useAllGroupsQuery } from "../../app/api/groupsApi";
+import { useGroupsSelectQuery } from "../../app/api/groupsApi";
 import { useAddLeadToTrialMutation } from "../../app/api/leadsApi";
 import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
+import { withApiDetail } from "./withApiDetail";
 
 interface Props {
   leadId: string;
@@ -16,13 +17,13 @@ export const AddToTrialPopover = ({ leadId, anchorEl, onClose }: Props) => {
   const { t } = useTranslation();
   const toast = useToast();
   const open = Boolean(anchorEl);
-  const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
+  // Every lead card mounts a popover, so the group list is only fetched once
+  // one is opened (and GET /groups/select isn't capped like a paged list).
+  const { data: groups = [] } = useGroupsSelectQuery(undefined, { skip: !open });
   const [addLeadToTrial, { isLoading }] = useAddLeadToTrialMutation();
   const [groupId, setGroupId] = useState("");
   const [trialDate, setTrialDate] = useState("");
   const [notes, setNotes] = useState("");
-
-  const groups = groupsData?.data ?? [];
 
   const reset = () => {
     setGroupId("");
@@ -42,8 +43,8 @@ export const AddToTrialPopover = ({ leadId, anchorEl, onClose }: Props) => {
       toast.success(t("leadsPage.addToTrial.toast.success"));
       reset();
       onClose();
-    } catch {
-      toast.error(t("leadsPage.addToTrial.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.addToTrial.toast.error"), err));
     }
   };
 
@@ -60,7 +61,7 @@ export const AddToTrialPopover = ({ leadId, anchorEl, onClose }: Props) => {
       <TextField
         size="small" select fullWidth value={groupId}
         onChange={(e) => setGroupId(e.target.value)}
-        placeholder={t("leadsPage.addToTrial.selectGroup")}
+        label={t("leadsPage.addToTrial.selectGroup")}
         sx={{ mb: 1 }}
       >
         {groups.map((g) => (

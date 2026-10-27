@@ -32,7 +32,6 @@ import {
   useFreezeStudentGroupMutation,
   useUnfreezeStudentGroupMutation,
   useUpdateStudentGroupStatusMutation,
-  useRemoveStudentFromGroupMutation,
   useUpdateStudentGroupMutation,
   useGraduateTrialStudentGroupMutation,
 } from "../../app/api/groupsApi";
@@ -41,8 +40,6 @@ import {
   useAllStudentsQuery,
   useTransferStudentBranchMutation,
   useLazyStudentByIdQuery,
-  useUpdateStudentStatusMutation,
-  useDeleteStudentMutation,
 } from "../../app/api/studentsApi";
 import type { StudentDetail } from "../../app/api/studentsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
@@ -82,6 +79,7 @@ import { MoveStudentDialog } from "./MoveStudentDialog";
 import { RemoveStudentDialog } from "./RemoveStudentDialog";
 import { decimalToNumber } from "../../utils/decimal";
 import { useStudentBalances } from "../../hooks/useStudentBalances";
+import { useArchiveStudent } from "../../hooks/useArchiveStudent";
 
 const TAB_KEYS = [
   "attendance", "grade", "onlineLessons",
@@ -184,13 +182,18 @@ export const SingleGroup = () => {
 
   const { data: groupDetailData, isLoading: groupLoading } = useGroupByIdQuery(id ?? "", { skip: !id });
   const [fetchGroupForEdit, { data: groupForEditData }] = useLazyGroupForEditQuery();
-  const { data: groupsSelectData } = useGroupsSelectQuery();
+  // Declared this early because the pickers below are only needed once their
+  // drawer/dialog is open, so they are fetched then instead of on every visit.
+  const [editOpen, setEditOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const { data: groupsSelectData } = useGroupsSelectQuery(undefined, { skip: !moveOpen });
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { data: allStudentsData } = useAllStudentsQuery({ page: 1, limit: 100, branchId: selectedBranchId ?? undefined });
   const { data: allCoursesData } = useAllCoursesQuery();
-  const { data: allRoomsData } = useAllRoomsQuery();
+  const { data: allRoomsData } = useAllRoomsQuery(undefined, { skip: !editOpen });
   const { data: allBranchesData } = useAllBranchesQuery();
-  const { data: teacherSelectData } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" });
+  const { data: teacherSelectData } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" }, { skip: !editOpen });
   // GET /reasons/select — only ACTIVE reasons (the branch comes from the
   // x-branch-id header baseApi already sends), first 200 so a branch with
   // more than the backend's default page size doesn't lose options. The ids
@@ -199,7 +202,7 @@ export const SingleGroup = () => {
     data: reasonOptions,
     isLoading: reasonsLoading,
     isError: reasonsError,
-  } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 });
+  } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 }, { skip: !removeOpen });
   // Full membership roster for this group — the authoritative source for
   // each student's real status and their /student-groups row id (see
   // combinedStudents). Confirmed live that omitting `status` does NOT
@@ -230,12 +233,10 @@ export const SingleGroup = () => {
   const [freezeStudentGroup, { isLoading: isFreezing }] = useFreezeStudentGroupMutation();
   const [unfreezeStudentGroup, { isLoading: isUnfreezing }] = useUnfreezeStudentGroupMutation();
   const [updateStudentGroupStatus, { isLoading: isChangingMembershipStatus }] = useUpdateStudentGroupStatusMutation();
-  const [removeStudentFromGroup] = useRemoveStudentFromGroupMutation();
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
   const [graduateTrialStudentGroup] = useGraduateTrialStudentGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
-  const [updateStudentStatus, { isLoading: isArchivingStudent }] = useUpdateStudentStatusMutation();
-  const [deleteStudent] = useDeleteStudentMutation();
+  const { leaveGroup, archiveStudent: archiveStudentFlow, deleteStudent: deleteStudentFlow } = useArchiveStudent();
   const [fetchStudentDetail] = useLazyStudentByIdQuery();
   const [fetchGroupExcel, { isFetching: isExportingExcel }] = useLazyGroupExcelQuery();
 
@@ -254,6 +255,11 @@ export const SingleGroup = () => {
   // GroupDetail.students relation is stale, as live ones. Their old groups
   // belong on the Student Profile page only, not on a group's member list.
   const [branchMovedIds, setBranchMovedIds] = useState<Set<string>>(() => new Set());
+  // Students just removed from this group. One that has no /student-groups row
+  // at all (listed only by the legacy GroupDetail.students relation) can't be
+  // shown as archived from a membership, so it is marked here instead — see
+  // combinedStudents.
+  const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set());
   useEffect(() => {
     if (groupDetailData) setStudents(toRealStudents(groupDetailData.data));
   }, [groupDetailData]);
@@ -411,10 +417,11 @@ export const SingleGroup = () => {
           // to the end of the month rather than from whenever staff click.
           joinedAt: membership.joinedAt ? membership.joinedAt.slice(0, 10) : undefined,
         }),
+        ...(!membership && removedIds.has(s.realId) && { active: false, archived: true }),
         ...(realBalance !== undefined && { balance: realBalance }),
       };
     });
-  }, [students, extraStudents, archivedStudents, membershipByStudentId, balanceByStudentId, branchMovedIds]);
+  }, [students, extraStudents, archivedStudents, membershipByStudentId, balanceByStudentId, branchMovedIds, removedIds]);
 
   // The Add student modal searches the whole student list itself (GET
   // /students?search=) — this only tells it who is already in this group so
@@ -472,7 +479,6 @@ export const SingleGroup = () => {
   const hoverRequestId = useRef<string | null>(null);
 
   // Drawers
-  const [editOpen, setEditOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -482,17 +488,16 @@ export const SingleGroup = () => {
   const [activateOpen, setActivateOpen] = useState(false);
   const [graduateTrialOpen, setGraduateTrialOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [moveOpen, setMoveOpen] = useState(false);
-  const [removeOpen, setRemoveOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
   const [removeReasonId, setRemoveReasonId] = useState<string>("");
   const [removeComment, setRemoveComment] = useState("");
   const [removeRecalculate, setRemoveRecalculate] = useState(false);
   const [removeScope, setRemoveScope] = useState<"current" | "all">("current");
-  // "Delete student" side of the dialog's toggle — archives the whole account
-  // (never a hard delete, that only exists on the Archive page).
+  // "Delete student" side of the dialog's toggle — ends every membership,
+  // archives the account and then deletes it (DELETE /students/{id}).
   const [removeDeleteMode, setRemoveDeleteMode] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   if (groupLoading) {
     return (
@@ -843,70 +848,34 @@ export const SingleGroup = () => {
   };
 
   const handleRemoveStudent = async () => {
-    if (!selectedStudent) return;
+    if (!selectedStudent || !id || isRemoving) return;
     const studentId = selectedStudent.realId;
-    const studentGroupId = await resolveLiveMembershipId(selectedStudent);
-    if (!studentGroupId && !id) {
-      toast.error(t("singleGroup.removeStudentDialog.toast.error"));
-      return;
-    }
-    // "Delete student" = remove from ALL groups, archive the account, then
-    // delete it, so it takes the "all" path below regardless of what the
-    // scope radios (locked to "all" in this mode) last held.
-    const effectiveScope = removeDeleteMode ? "all" : removeScope;
+    const args = { studentId, reasonId: removeReasonId || undefined, comment: removeComment };
+    setIsRemoving(true);
     try {
-      // Step 1 — PATCH /student-groups/{id}/status: ends this membership (or,
-      // with isAllGroup, every membership this student has) so it stops
-      // showing as active in whichever group(s) it covers. Swagger: status
-      // required; reason/reasonId/isAllGroup optional.
-      if (studentGroupId) {
-        await updateStudentGroupStatus({
-          id: studentGroupId,
-          status: "INACTIVE",
-          reasonId: removeReasonId || undefined,
-          reason: removeComment.trim() || undefined,
-          // Only ever sent when true — multipart carries booleans as strings and
-          // this backend's validator rejects/mis-coerces a literal "false"
-          // (same story as PaymentMethod.isDefault), so "current group" simply
-          // omits the flag and lets it default to false.
-          isAllGroup: effectiveScope === "all" ? true : undefined,
-        }).unwrap();
-      } else if (id) {
-        // The student is listed only by the group's legacy student relation —
-        // GET /student-groups has no live membership for them (a member added
-        // through POST /groups/{id}/students/assign never got one), so there
-        // is nothing to end. DELETE /groups/{id}/students/{studentId} is the
-        // endpoint that clears that legacy row.
-        await removeStudentFromGroup({ id, studentId }).unwrap();
-      }
+      // "All groups" and "Delete student" are account-level: the flow shared
+      // with Students and StudentProfile (see useArchiveStudent) ends every live
+      // membership the student has — this group's included, whether or not it is
+      // in the cached roster rows — archives the account and, for "Delete
+      // student", deletes it. "Delete student" locks the scope radios to "all".
+      if (removeDeleteMode) await deleteStudentFlow(args);
+      else if (removeScope === "all") await archiveStudentFlow(args);
+      // "Current group" ends just this group's membership; the cached live row
+      // saves a lookup (see leaveGroup for a member that has none).
+      else await leaveGroup({ ...args, groupId: id, studentGroupId: liveMembershipRows.find((r) => r.studentId === studentId)?.id });
 
-      // Step 2 — archive the student's whole account (POST
-      // /students/{id}/status INACTIVE with the reasonId + comment, which
-      // also records the reason to their history) only when they were
-      // removed from EVERY group — removing them from just the current group
-      // must leave their account-wide status and other memberships
-      // untouched. Step 3 (DELETE /students/{id}) runs only for the
-      // "Delete student" switch, once nothing live is left for the backend
-      // to reject it over.
-      if (effectiveScope === "all") {
-        await updateStudentStatus({
-          id: studentId,
-          status: "INACTIVE",
-          reasonId: removeReasonId || undefined,
-          reason: removeComment.trim() || undefined,
-        }).unwrap();
-        if (removeDeleteMode) await deleteStudent(studentId).unwrap();
-      }
-
+      setRemovedIds((prev) => new Set(prev).add(studentId));
       toast.success(t(removeDeleteMode
         ? "singleGroup.removeStudentDialog.toast.deleted"
         : "singleGroup.removeStudentDialog.toast.removed"));
       setRemoveOpen(false);
       resetRemoveState();
     } catch (err) {
-      const detail = extractApiError(err);
+      const detail = describeApiError(err);
       const generic = t("singleGroup.removeStudentDialog.toast.error");
       toast.error(detail ? `${generic}: ${detail}` : generic);
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -1535,7 +1504,7 @@ export const SingleGroup = () => {
         onRecalculateChange={setRemoveRecalculate}
         scope={removeScope}
         onScopeChange={setRemoveScope}
-        loading={isChangingMembershipStatus || isArchivingStudent}
+        loading={isRemoving}
       />
 
       {/* ══ DELETE GROUP CONFIRM ══ */}

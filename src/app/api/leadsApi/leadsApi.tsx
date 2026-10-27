@@ -123,7 +123,10 @@ export const leadsApi = baseApi.injectEndpoints({
                     body: formData,
                 };
             },
-            invalidatesTags: ["lead", "group"],
+            // Adding to a trial moves the lead to IN_TRIAL and puts a student
+            // account into the chosen group, so the board, the students and the
+            // group rosters all have to refetch.
+            invalidatesTags: ["lead", "leadColumn", "leadSection", "group", "student", "studentGroup"],
         }),
         moveLeadSection: builder.mutation<MoveLeadSectionResponse, MoveLeadSectionRequest>({
             query: ({ id, targetSectionId }) => {
@@ -142,6 +145,7 @@ export const leadsApi = baseApi.injectEndpoints({
 
 export const {
     useAllLeadsQuery,
+    useLazyAllLeadsQuery,
     useLeadByIdQuery,
     useLeadForEditQuery,
     useCreateLeadMutation,

@@ -79,6 +79,10 @@ export interface StudentDetail extends StudentExtraFields {
 // below — without it the endpoint only returns ACTIVE students, so an
 // archived (INACTIVE, via toggleStudentStatus) student silently disappears
 // from every list request unless this is explicitly set to "INACTIVE".
+//
+// Every other field is a server-side filter of the Students page (Swagger):
+// courseId / teacherId, startDate / endDate (created from / to, YYYY-MM-DD),
+// financeStatus and groupsCount (exact number of groups, 0 = none).
 export interface studentsRequest {
   page?: number;
   limit?: number;
@@ -86,25 +90,23 @@ export interface studentsRequest {
   branchId?: string;
   status?: StudentExcelStatus;
   tagId?: string;
+  courseId?: string;
+  teacherId?: string;
+  startDate?: string;
+  endDate?: string;
+  financeStatus?: StudentFinanceStatus;
+  groupsCount?: number;
 }
+
+export type StudentFinanceStatus = "DEBTOR" | "DEBT_FREE" | "DISCOUNTED" | "POSITIVE_BALANCE" | "PAID_THIS_MONTH";
 
 // GET /students/excel query params — confirmed against Swagger: search,
-// status (ACTIVE/INACTIVE), page, limit, branchId. `status` isn't part of
-// studentsRequest above since GET /students itself doesn't document it, but
-// the excel endpoint does, so it's its own type rather than reusing/widening
-// studentsRequest.
+// status (ACTIVE/INACTIVE), page, limit, branchId; the remaining filters are
+// the same ones GET /students takes, forwarded so the file matches what the
+// page shows.
 export type StudentExcelStatus = "ACTIVE" | "INACTIVE";
 
-export interface StudentsExcelQueryArgs {
-  page?: number;
-  limit?: number;
-  search?: string;
-  status?: StudentExcelStatus;
-  branchId?: string;
-  // Same tag filter GET /students accepts — forwarded so the file matches
-  // the Tags filter applied on the page.
-  tagId?: string;
-}
+export type StudentsExcelQueryArgs = studentsRequest;
 
 // Backend `data` ni to'g'ridan-to'g'ri massiv qilib qaytaradi (RoomsResponse/CoursesResponse
 // bilan bir xil shakl); sahifalash meta'si hozircha kelmayapti, shu sabab optional.
@@ -303,8 +305,14 @@ export interface CreateStudentCommentResponse {
 // defensively the same way groupsApi's normalizeHistory is.
 // Same normalized shape as a group's history row (see groupsApi's
 // normalizeHistory) — status moves, reasons, group names, field changes — so
-// the student timeline can show everything the backend records.
-export type StudentHistoryEntry = import("../groupsApi/types").GroupHistoryEntry;
+// the student timeline can show everything the backend records. Rows also
+// carry the raw `type` ("ACTION") and `category` ("SYSTEM") classifiers, and
+// `title` is the backend's own sentence (`action`), empty when the row has none.
+export type StudentHistoryEntry = import("../groupsApi/types").GroupHistoryEntry & {
+  title: string;
+  kind: string;
+  category: string;
+};
 
 // GET /students/{id}/sms-history — "Bitta talabaga yuborilgan barcha SMS
 // xabarlar tarixini olish". Envelope/fields aren't documented beyond a bare

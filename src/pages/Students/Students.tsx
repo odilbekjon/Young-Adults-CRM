@@ -58,13 +58,15 @@ import {
   useStudentForEditQuery,
   useLazyStudentsExcelQuery,
 } from "../../app/api/studentsApi";
-import type { StudentGender } from "../../app/api/studentsApi/types";
+import type { StudentFinanceStatus, StudentGender, studentsRequest } from "../../app/api/studentsApi/types";
 import { StudentContactFields, EMPTY_CONTACTS, type ContactValues } from "../../components/StudentContactFields/StudentContactFields";
 import { toPhoneInput, fromPhoneInput } from "../../utils/formatPhone";
 import { runLimited, runLimitedSettled } from "../../utils/runLimited";
 
-// Bulk actions send at most this many requests at once.
-const BULK_CONCURRENCY = 3;
+// Bulk actions send at most this many requests at once. The server rejects
+// more than 3 parallel requests to one endpoint (429) and a worker starts its
+// next call the instant the previous answer arrives, so 2 leaves headroom.
+const BULK_CONCURRENCY = 2;
 import {
   useAllGroupsQuery,
   useAddStudentToGroupMutation,
@@ -72,10 +74,9 @@ import {
   useLazyStudentGroupsQuery,
   useFreezeStudentGroupMutation,
 } from "../../app/api/groupsApi";
-import type { StudentGroupRecord } from "../../app/api/groupsApi/types";
+import type { StudentGroupStatus } from "../../app/api/groupsApi/types";
 import { useCoursesSelectQuery } from "../../app/api/coursesApi";
 import { useTeachersSelectQuery } from "../../app/api/teachersApi";
-import { usePaymentsListQuery, isCompletedPaymentStatus } from "../../app/api/financeApi";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
 import { useTagsSelectQuery } from "../../app/api/tagsApi";
 import { useToast } from "../../Context/ToastContext";
@@ -87,7 +88,6 @@ import { useBranch } from "../../Context/BranchContext";
 import type { RootState } from "../../app/store";
 
 import { SendSmsModal } from "../../components/SendSmsModal";
-import { decimalToNumber } from "../../utils/decimal";
 
 /* ─── TYPES ─────────────────────────────────────────── */
 type SortDir = "asc" | "desc";
@@ -114,12 +114,28 @@ const STATUS_OPTION_KEYS = [
 ] as const;
 const STATUS_FILTER_KEYS = STATUS_OPTION_KEYS;
 const FINANCIAL_FILTER_KEYS = ["debt", "discount", "no_debt", "positive", "paid_month"] as const;
-// Status values that need student-group memberships (GET /student-groups).
-const MEMBERSHIP_STATUS_KEYS: string[] = [
-  "signed_offer", "trial", "active", "frozen", "without_group", "left_after_trial", "left_active",
-];
-// Status values resolved client-side (so the full roster must be fetched).
-const CLIENT_STATUS_KEYS = ["added_this_month", ...MEMBERSHIP_STATUS_KEYS] as const;
+// GET /students `financeStatus` value of each Financial-situation option.
+const FINANCE_STATUS_PARAM: Record<string, StudentFinanceStatus> = {
+  debt: "DEBTOR", discount: "DISCOUNTED", no_debt: "DEBT_FREE", positive: "POSITIVE_BALANCE", paid_month: "PAID_THIS_MONTH",
+};
+// Every other filter is a query param of GET /students (server-side search,
+// filtering and pagination). The exceptions are the Status options below that
+// depend on a student's group memberships — the backend can't filter by
+// those, so for them the (already server-narrowed) roster is fetched in full
+// and matched against GET /student-groups client-side. Value = the
+// membership statuses each option is derived from.
+const ALL_MEMBERSHIP_STATUSES: StudentGroupStatus[] = ["PROBATION", "ACTIVE", "FROZEN", "INACTIVE", "DELETED"];
+const MEMBERSHIP_STATUSES_OF: Record<string, StudentGroupStatus[]> = {
+  trial: ["PROBATION"],
+  active: ["ACTIVE"],
+  frozen: ["FROZEN"],
+  signed_offer: ["ACTIVE", "FROZEN", "INACTIVE", "DELETED"],
+  left_after_trial: ALL_MEMBERSHIP_STATUSES,
+  left_active: ALL_MEMBERSHIP_STATUSES,
+};
+const ROSTER_LIMIT = 3000;
+const MEMBERSHIP_LIMIT = 1000;
+const SEARCH_DEBOUNCE_MS = 350;
 
 /* ─── STYLES ─────────────────────────────────────────── */
 const inputSx = {
@@ -586,7 +602,7 @@ export const Students = () => {
   const { data: teacherOptions } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" });
   // GET /groups is paginated (100 per page): pages 2-3 are only requested when
   // the previous page came back full. The group list serves the Add-to-group
-  // picker, the discount price lookup and the group -> course map below.
+  // picker and the course / lesson time shown in the Groups column.
   const GROUPS_PAGE = 100;
   const { data: groupsPage1 } = useAllGroupsQuery({ page: 1, limit: GROUPS_PAGE });
   const { data: groupsPage2 } = useAllGroupsQuery({ page: 2, limit: GROUPS_PAGE }, { skip: (groupsPage1?.data.length ?? 0) < GROUPS_PAGE });
@@ -598,7 +614,6 @@ export const Students = () => {
   const [addStudentToGroup] = useAddStudentToGroupMutation();
   const [isAddingToGroup, setIsAddingToGroup] = useState(false);
 
-  const [students, setStudents] = useState<FlatStudent[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const [selected,          setSelected]          = useState<string[]>([]);
@@ -641,120 +656,110 @@ export const Students = () => {
   );
   const [advancedAnchor, setAdvancedAnchor] = useState<null | HTMLElement>(null);
 
-  // Status / Financial filters that have no backend query param on GET
-  // /students (confirmed: studentsRequest carries only status ACTIVE/INACTIVE,
-  // tagId, search, branchId) are computed client-side from real data — the
-  // students' own balance/createdAt, plus student-group memberships
-  // (GET /student-groups) and this month's payments (GET /finance/payments).
-  // Filtering that against only the current page's 20 rows would silently
-  // miss matching students on other pages. So while such a filter is active,
-  // this fetches a large batch instead of the normal page (covers the
-  // branch's full roster with headroom) and filters/paginates it client-side
-  // — a real filter over the real data, not a page-scoped approximation.
-  // Outside those filters, normal server-side pagination is unchanged.
-  const FULL_FETCH_LIMIT = 3000;
-  const MEMBERSHIP_LIMIT = 1000;
-  const hasFinancialFilter = Boolean(filters.financial);
-  const needsMemberships = MEMBERSHIP_STATUS_KEYS.includes(filters.status) || filters.financial === "discount";
-  const needsPayments = filters.financial === "paid_month";
+  // Search, course, teacher, tag, finance status, groups count and the created
+  // date range are query params of GET /students, so the backend filters and
+  // paginates: the table is always one page of one request, and the total
+  // comes from the response's `meta`. "Added this month" is a created-date
+  // range and "Without group" is groupsCount=0.
+  //
+  // The only filters the backend can't apply are the Status options in
+  // MEMBERSHIP_STATUSES_OF (they depend on student-group memberships). For
+  // those the roster — already narrowed by every filter above — is fetched in
+  // full and matched against GET /student-groups client-side ("roster mode"),
+  // so the result is still the real set, not a page-scoped approximation.
+  const membershipStatuses = MEMBERSHIP_STATUSES_OF[filters.status];
+  const rosterMode = Boolean(membershipStatuses);
   // Students who left a group are usually archived (INACTIVE), and GET
   // /students hides those unless `status=INACTIVE` is sent — so the "left"
-  // filters also pull the INACTIVE list and merge it in.
+  // options also pull the INACTIVE list and merge it in.
   const includeArchived = filters.status === "left_after_trial" || filters.status === "left_active";
-  // Search / teacher / course / group-count / created-date have no query param
-  // on GET /students either (only the current 20-row page would be searched),
-  // so they use the same "fetch the full roster, filter + paginate client-side"
-  // mode as the status/financial filters above.
-  const hasLocalFieldFilter = Boolean(
-    filters.search.trim() || filters.teacher || filters.course || filters.groupCount.trim() ||
-    filters.fromCreated || filters.toCreatedDate,
-  );
-  const hasClientFilter =
-    hasFinancialFilter || hasLocalFieldFilter || (CLIENT_STATUS_KEYS as readonly string[]).includes(filters.status);
 
-  // Current month range (used by "Added this month" and "Paid during the month").
+  // Current month so far (the "Added this month" option).
   const monthRange = useMemo(() => {
     const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const ym = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
-    return { start: `${ym}-01`, end: `${ym}-${pad(now.getDate())}`, ym };
+    const ym = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
+    return { start: `${ym}-01`, end: `${ym}-${pad2(now.getDate())}` };
   }, []);
+  const addedThisMonth = filters.status === "added_this_month";
+  const startDate = addedThisMonth && monthRange.start > filters.fromCreated ? monthRange.start : filters.fromCreated;
+  const endDate = addedThisMonth && (!filters.toCreatedDate || monthRange.end < filters.toCreatedDate) ? monthRange.end : filters.toCreatedDate;
+  const groupsCount = filters.groupCount.trim() ? Number(filters.groupCount) : filters.status === "without_group" ? 0 : undefined;
 
-  // GET /students only returns ACTIVE students unless `status` is sent
-  // explicitly (Swagger: status query param, ACTIVE/INACTIVE) — an archived
-  // student (toggleStudentStatus -> INACTIVE) otherwise disappears from every
-  // list request, filtered or not. The Status filter below is the only UI
-  // that can ask for INACTIVE, so it's sent straight through to the query
-  // instead of being applied client-side (list rows carry no status field to
-  // filter by locally in the first place).
-  const { data: studentsData, currentData: studentsCurrent, isLoading: studentsLoading } = useAllStudentsQuery({
-    page: hasClientFilter ? 1 : page,
-    limit: hasClientFilter ? FULL_FETCH_LIMIT : limit,
+  // The search box is sent debounced (one request per pause, not per
+  // keystroke); the page goes back to 1 in the same update as the new term.
+  const [searchTerm, setSearchTerm] = useState(filters.search.trim());
+  useEffect(() => {
+    const term = filters.search.trim();
+    if (term === searchTerm) return;
+    const handle = setTimeout(() => { setSearchTerm(term); setPage(1); }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [filters.search, searchTerm, setPage]);
+
+  // Also what the Excel export sends, so the file matches the table.
+  const listFilters: studentsRequest = {
     branchId: selectedBranchId ?? undefined,
+    search: searchTerm || undefined,
+    // GET /students only returns ACTIVE students unless `status` is sent
+    // explicitly (Swagger: status query param, ACTIVE/INACTIVE) — an archived
+    // student (toggleStudentStatus -> INACTIVE) otherwise disappears from every
+    // list request, filtered or not.
     status: filters.status === "active" ? "ACTIVE" : filters.status === "inactive" ? "INACTIVE" : undefined,
     tagId: filters.tags || undefined,
-  });
-  const { data: archivedStudentsData, isLoading: archivedLoading } = useAllStudentsQuery(
-    {
-      page: 1, limit: FULL_FETCH_LIMIT,
-      branchId: selectedBranchId ?? undefined,
-      status: "INACTIVE",
-      tagId: filters.tags || undefined,
-    },
+    courseId: filters.course || undefined,
+    teacherId: filters.teacher || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    financeStatus: FINANCE_STATUS_PARAM[filters.financial],
+    groupsCount,
+  };
+
+  // RTK keeps returning the previous args' `data` while a new query loads, so
+  // the current page stays on screen until the next one arrives. The page and
+  // the roster are separate queries so one never shows the other's rows.
+  const { data: pageData, isLoading: pageLoading, isFetching: pageFetching } = useAllStudentsQuery(
+    { ...listFilters, page, limit },
+    { skip: rosterMode },
+  );
+  const { data: rosterData, isLoading: rosterLoading, isFetching: rosterFetching } = useAllStudentsQuery(
+    { ...listFilters, page: 1, limit: ROSTER_LIMIT },
+    { skip: !rosterMode },
+  );
+  const { data: archivedRosterData, isLoading: archivedLoading } = useAllStudentsQuery(
+    { ...listFilters, status: "INACTIVE", page: 1, limit: ROSTER_LIMIT },
     { skip: !includeArchived },
   );
 
   // Student-group memberships by status — GET /student-groups accepts a
   // `status` filter (same calls Dashboard uses), one request per status so
-  // each stays within its own row cap. Only fetched while a filter needs them.
+  // each stays within its own row cap. Only the statuses the chosen option is
+  // derived from are fetched.
   const branchArg = selectedBranchId ?? undefined;
   const membershipArgs = { branchId: branchArg, limit: MEMBERSHIP_LIMIT };
-  const membershipOpts = { skip: !needsMemberships };
-  const { data: probationMs, isLoading: probationLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "PROBATION" }, membershipOpts);
-  const { data: activeMs, isLoading: activeLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "ACTIVE" }, membershipOpts);
-  const { data: frozenMs, isLoading: frozenLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "FROZEN" }, membershipOpts);
-  const { data: inactiveMs, isLoading: inactiveLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "INACTIVE" }, membershipOpts);
-  const { data: deletedMs, isLoading: deletedLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "DELETED" }, membershipOpts);
+  const skipMembership = (status: StudentGroupStatus) => ({ skip: !membershipStatuses?.includes(status) });
+  const { data: probationMs, isLoading: probationLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "PROBATION" }, skipMembership("PROBATION"));
+  const { data: activeMs, isLoading: activeLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "ACTIVE" }, skipMembership("ACTIVE"));
+  const { data: frozenMs, isLoading: frozenLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "FROZEN" }, skipMembership("FROZEN"));
+  const { data: inactiveMs, isLoading: inactiveLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "INACTIVE" }, skipMembership("INACTIVE"));
+  const { data: deletedMs, isLoading: deletedLoading } = useStudentGroupsQuery({ ...membershipArgs, status: "DELETED" }, skipMembership("DELETED"));
 
-  // GET /finance/payments for the current month (same call Dashboard's
-  // "Paid during the month" card uses) — rows carry the paying student's id.
-  const { data: monthPaymentsData, isLoading: paymentsLoading } = usePaymentsListQuery(
-    { startDate: monthRange.start, endDate: monthRange.end, page: 1, limit: MEMBERSHIP_LIMIT, branchId: branchArg },
-    { skip: !needsPayments },
-  );
-
-  // RTK keeps returning the previous args' `data` while a new query loads. When
-  // switching between the 20-row page and the full-roster batch that stale data
-  // would flash (a partly-filtered page, or thousands of rows un-paginated), so
-  // treat the list as loading until the current args' own result has arrived.
-  const rosterModeStale =
-    studentsData !== undefined && studentsCurrent === undefined &&
-    (hasClientFilter || studentsData.data.length > limit);
-
-  const filterDataLoading =
-    rosterModeStale ||
-    (needsMemberships && (probationLoading || activeLoading || frozenLoading || inactiveLoading || deletedLoading)) ||
-    (needsPayments && paymentsLoading) ||
+  // Membership-backed options need their data before they can say anything
+  // meaningful — show nothing (the table shows "Loading") until it arrives
+  // instead of briefly listing everyone.
+  const rosterPending =
+    rosterLoading || probationLoading || activeLoading || frozenLoading || inactiveLoading || deletedLoading ||
     (includeArchived && archivedLoading);
+  const hasData = rosterMode ? !rosterPending : pageData !== undefined;
+  const isListLoading = rosterMode ? rosterPending : pageLoading;
+  const isListRefreshing = hasData && (rosterMode ? rosterFetching : pageFetching);
 
-  useEffect(() => {
-    if (!studentsData) return;
-    const seen = new Set(studentsData.data.map((s) => s.id));
-    const archived = includeArchived ? (archivedStudentsData?.data ?? []).filter((s) => !seen.has(s.id)) : [];
-    setStudents([...studentsData.data, ...archived].map(mapApiStudentToFlat));
-  }, [studentsData, archivedStudentsData, includeArchived]);
-
-  // Student-id sets derived from the memberships above.
+  // Student-id sets derived from the memberships above, by Status option.
   //  - trial / active / frozen: has a PROBATION / ACTIVE / FROZEN membership.
-  //  - live: any of those three (i.e. currently in at least one group).
-  //  - activated ("signed offer" proxy): has ever had billing start — an
+  //  - signed_offer ("signed offer" proxy): has ever had billing start — an
   //    ACTIVE/FROZEN membership, or an ended one that still carries a
   //    paymentStartDate (trial memberships never get one).
-  //  - leftActive: all memberships ended, at least one of them had been
+  //  - left_active: all memberships ended, at least one of them had been
   //    activated (paymentStartDate set).
-  //  - leftTrial: all memberships ended and none was ever activated.
-  //  - discount: a live membership with a discountReason or a customPrice
-  //    below the group's course price.
+  //  - left_after_trial: all memberships ended and none was ever activated.
   const membershipSets = useMemo(() => {
     const trial = new Set<string>();
     const active = new Set<string>();
@@ -762,87 +767,120 @@ export const Students = () => {
     const activated = new Set<string>();
     const endedActivated = new Set<string>();
     const endedTrial = new Set<string>();
-    const discount = new Set<string>();
 
-    const coursePriceOf = (groupId: string): number | null => {
-      const raw = allGroupRows.find((g) => g.id === groupId)?.course?.price as unknown;
-      return decimalToNumber(raw);
-    };
-    const markDiscount = (m: StudentGroupRecord) => {
-      const base = m.customPrice != null ? coursePriceOf(m.groupId) : null;
-      if ((m.discountReason ?? "").trim() || (m.customPrice != null && base != null && m.customPrice < base)) discount.add(m.studentId);
-    };
-
-    (probationMs?.rows ?? []).forEach((m) => { trial.add(m.studentId); markDiscount(m); });
-    (activeMs?.rows ?? []).forEach((m) => { active.add(m.studentId); activated.add(m.studentId); markDiscount(m); });
-    (frozenMs?.rows ?? []).forEach((m) => { frozen.add(m.studentId); activated.add(m.studentId); markDiscount(m); });
+    (probationMs?.rows ?? []).forEach((m) => { trial.add(m.studentId); });
+    (activeMs?.rows ?? []).forEach((m) => { active.add(m.studentId); activated.add(m.studentId); });
+    (frozenMs?.rows ?? []).forEach((m) => { frozen.add(m.studentId); activated.add(m.studentId); });
     [...(inactiveMs?.rows ?? []), ...(deletedMs?.rows ?? [])].forEach((m) => {
       if (m.paymentStartDate) { endedActivated.add(m.studentId); activated.add(m.studentId); }
       else endedTrial.add(m.studentId);
     });
 
     const live = new Set<string>([...trial, ...active, ...frozen]);
-    const leftActive = new Set([...endedActivated].filter((id) => !live.has(id)));
-    const leftTrial = new Set([...endedTrial].filter((id) => !live.has(id) && !activated.has(id)));
-    return { trial, active, frozen, live, activated, leftActive, leftTrial, discount };
-  }, [probationMs, activeMs, frozenMs, inactiveMs, deletedMs, allGroupRows]);
+    const sets: Record<string, Set<string>> = {
+      trial, active, frozen,
+      signed_offer: activated,
+      left_active: new Set([...endedActivated].filter((id) => !live.has(id))),
+      left_after_trial: new Set([...endedTrial].filter((id) => !live.has(id) && !activated.has(id))),
+    };
+    return sets;
+  }, [probationMs, activeMs, frozenMs, inactiveMs, deletedMs]);
 
-  const paidThisMonth = useMemo(() => {
-    const ids = new Set<string>();
-    (monthPaymentsData?.rows ?? []).forEach((p) => {
-      if (p.studentId && isCompletedPaymentStatus(p.status)) ids.add(p.studentId);
+  // Roster mode: the students whose memberships match the chosen option.
+  const rosterMatches = useMemo(() => {
+    if (!rosterMode || rosterPending) return [];
+    const base = rosterData?.data ?? [];
+    const seen = new Set(base.map((s) => s.id));
+    const archived = includeArchived ? (archivedRosterData?.data ?? []).filter((s) => !seen.has(s.id)) : [];
+    return [...base, ...archived].filter((s) => membershipSets[filters.status].has(s.id));
+  }, [rosterMode, rosterPending, rosterData, archivedRosterData, includeArchived, membershipSets, filters.status]);
+
+  // Rows the table works with: the current server page, or the whole roster
+  // match (paginated below).
+  const rawRows = useMemo(() => (rosterMode ? rosterMatches : pageData?.data ?? []), [rosterMode, rosterMatches, pageData]);
+  const rawById = useMemo(() => new Map(rawRows.map((s) => [s.id, s])), [rawRows]);
+
+  // Sorting only reorders the rows in hand (the page, or the roster match) —
+  // the backend has no sort param.
+  const sortedRows = useMemo(() => {
+    const flat = rawRows.map(mapApiStudentToFlat);
+    if (!sortKey) return flat;
+    return flat.sort((a, b) => {
+      const av = String(a[sortKey as keyof FlatStudent] ?? "");
+      const bv = String(b[sortKey as keyof FlatStudent] ?? "");
+      return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
     });
-    return ids;
-  }, [monthPaymentsData]);
+  }, [rawRows, sortKey, sortDir]);
 
-  // Changing the status/financial filter or the globally-selected branch
-  // re-queries the backend with a different result set (see above) — reset
-  // to page 1 so the user isn't stranded on a page number that no longer
-  // exists for the new filter/branch.
-  // Compared against the previous value (not run on mount) so the page
-  // restored after a refresh isn't thrown back to 1.
-  const resetKey = [
-    filters.status, filters.tags, filters.financial, filters.search, filters.teacher, filters.course,
-    filters.groupCount, filters.fromCreated, filters.toCreatedDate, selectedBranchId,
-  ].join("|");
-  const prevResetKey = useRef(resetKey);
+  // Backend hozircha sahifalash meta'sini qaytarmasligi mumkin; shu sababli
+  // joriy sahifa hajmidan taxminiy meta hosil qilamiz, chunki bu maydon kelib
+  // qolsa (pageData.meta) to'g'ridan-to'g'ri ishlatiladi. In roster mode the
+  // total/totalPages describe the client-side-paginated match instead.
+  const pageMeta = useMemo(() => {
+    if (rosterMode) {
+      return {
+        total: sortedRows.length,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(sortedRows.length / limit)),
+      };
+    }
+    if (pageData?.meta) return pageData.meta;
+    const count = pageData?.data.length ?? 0;
+    return {
+      total: count,
+      page,
+      limit,
+      totalPages: count < limit ? page : page + 1,
+    };
+  }, [rosterMode, sortedRows, pageData, page, limit]);
+
+  // Server mode: `sortedRows` already is the page. Roster mode: sliced to the
+  // current page, so "select all" only selects what's visible.
+  const pageRows = useMemo(
+    () => (rosterMode ? sortedRows.slice((page - 1) * limit, page * limit) : sortedRows),
+    [rosterMode, sortedRows, page, limit]
+  );
+
+  // A page saved before a refresh, or the last row of the last page being
+  // archived, can leave `page` past the end.
   useEffect(() => {
-    if (prevResetKey.current === resetKey) return;
-    prevResetKey.current = resetKey;
+    const lastPage = Math.max(1, pageMeta.totalPages);
+    if (hasData && page > lastPage) setPage(lastPage);
+  }, [hasData, page, pageMeta.totalPages, setPage]);
+
+  // The checkboxes only cover the rows on screen: another page, filter set or
+  // branch drops them.
+  const queryKey = JSON.stringify([listFilters, filters.status]);
+  useEffect(() => {
+    setSelected((p) => (p.length > 0 ? [] : p));
+  }, [page, queryKey]);
+
+  // The globally-selected branch re-queries the backend with a different
+  // result set — back to page 1. Compared against the previous value (not run
+  // on mount) so the page restored after a refresh isn't thrown back to 1.
+  const prevBranchId = useRef(selectedBranchId);
+  useEffect(() => {
+    if (prevBranchId.current === selectedBranchId) return;
+    prevBranchId.current = selectedBranchId;
     setPage(1);
-  }, [resetKey, setPage]);
+  }, [selectedBranchId, setPage]);
 
-  const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) =>
+  // A changed filter starts over from page 1. (The search box is the
+  // exception: it resets the page once the debounced term is applied.)
+  const setFilter = <K extends keyof Filters>(key: K, val: Filters[K]) => {
     setFilters((p) => ({ ...p, [key]: val }));
+    setPage(1);
+  };
+  const setSearch = (value: string) => setFilters((p) => ({ ...p, search: value }));
 
-  const clearAll = () => setFilters(EMPTY_FILTERS);
+  const clearAll = () => {
+    setFilters(EMPTY_FILTERS);
+    setSearchTerm("");
+    setPage(1);
+  };
 
   const hasFilters = Object.values(filters).some(Boolean);
-
-  // Course / teacher of each listed student, resolved by ID (never by name):
-  //  - teachers: GET /students rows carry `teachers: [{id, name}]`.
-  //  - courses: rows only carry `groups: [{id, name}]` (no course reference),
-  //    so a student's courses are the courseId of each of their groups, looked
-  //    up in the GET /groups list. (The old filter matched the *name of the
-  //    student's first group* against a list built from the current page.)
-  const groupCourseId = useMemo(() => {
-    const m = new Map<string, string>();
-    allGroupRows.forEach((g) => { if (g.courseId) m.set(g.id, g.courseId); });
-    return m;
-  }, [allGroupRows]);
-  const groupById = useMemo(() => new Map(allGroupRows.map((g) => [g.id, g])), [allGroupRows]);
-  const studentRefs = useMemo(() => {
-    const m = new Map<string, { teacherIds: Set<string>; courseIds: Set<string>; firstGroupId?: string }>();
-    const rows = [...(studentsData?.data ?? []), ...(includeArchived ? archivedStudentsData?.data ?? [] : [])];
-    rows.forEach((s) => {
-      m.set(s.id, {
-        teacherIds: new Set((s.teachers ?? []).map((tch) => tch.id)),
-        courseIds: new Set((s.groups ?? []).map((g) => groupCourseId.get(g.id)).filter((x): x is string => Boolean(x))),
-        firstGroupId: s.groups?.[0]?.id,
-      });
-    });
-    return m;
-  }, [studentsData, archivedStudentsData, includeArchived, groupCourseId]);
 
   const TEACHERS_LIST = useMemo(
     () => (teacherOptions ?? []).map((tch) => ({ value: tch.id, label: tch.name })),
@@ -860,96 +898,7 @@ export const Students = () => {
     () => allGroupRows.map((g) => ({ id: g.id, name: g.name })),
     [allGroupRows]
   );
-
-  const filtered = useMemo(() => {
-    // Membership/payment-backed filters need their data before they can say
-    // anything meaningful — show nothing (the table shows "Loading") until
-    // it arrives instead of briefly listing everyone.
-    if (filterDataLoading) return [];
-    return students
-      .filter((s) => {
-        const search = filters.search.trim().toLowerCase();
-        const balance = s.balance ?? 0;
-        const financialMatch =
-          !filters.financial ||
-          (filters.financial === "debt" && balance < 0) ||
-          (filters.financial === "no_debt" && balance >= 0) ||
-          (filters.financial === "positive" && balance > 0) ||
-          (filters.financial === "discount" && membershipSets.discount.has(s.uid)) ||
-          (filters.financial === "paid_month" && paidThisMonth.has(s.uid));
-        const createdAt = s.createdAt ? s.createdAt.slice(0, 10) : "";
-        // The legacy active/inactive values are applied server-side (see
-        // useAllStudentsQuery above — list rows carry no reliable status
-        // field: mapApiStudentToFlat defaults `active` to true for every
-        // list item). "active" additionally requires an ACTIVE membership,
-        // so it lines up with the trial/frozen options; every other new
-        // option is computed here from the memberships/createdAt.
-        let statusMatch = true;
-        switch (filters.status) {
-          case "added_this_month": statusMatch = createdAt.startsWith(monthRange.ym); break;
-          case "signed_offer": statusMatch = membershipSets.activated.has(s.uid); break;
-          case "trial": statusMatch = membershipSets.trial.has(s.uid); break;
-          case "active": statusMatch = membershipSets.active.has(s.uid); break;
-          case "frozen": statusMatch = membershipSets.frozen.has(s.uid); break;
-          case "without_group": statusMatch = (s.groupsCount ?? 0) === 0 || !membershipSets.live.has(s.uid); break;
-          case "left_after_trial": statusMatch = membershipSets.leftTrial.has(s.uid); break;
-          case "left_active": statusMatch = membershipSets.leftActive.has(s.uid); break;
-        }
-        const groupCountMatch =
-          !filters.groupCount || String(s.groupsCount ?? 0) === filters.groupCount.trim();
-        const fromMatch = !filters.fromCreated || (createdAt && createdAt >= filters.fromCreated);
-        const toMatch = !filters.toCreatedDate || (createdAt && createdAt <= filters.toCreatedDate);
-        return (
-          (!search || s.name.toLowerCase().includes(search) || s.phone.includes(search)) &&
-          (!filters.teacher || studentRefs.get(s.uid)?.teacherIds.has(filters.teacher)) &&
-          (!filters.course || studentRefs.get(s.uid)?.courseIds.has(filters.course)) &&
-          financialMatch && statusMatch && groupCountMatch && fromMatch && toMatch
-        );
-      })
-      .sort((a, b) => {
-        if (!sortKey) return 0;
-        const av = String(a[sortKey as keyof FlatStudent] ?? "");
-        const bv = String(b[sortKey as keyof FlatStudent] ?? "");
-        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-      });
-  }, [students, filters, sortKey, sortDir, filterDataLoading, membershipSets, paidThisMonth, monthRange, studentRefs]);
-
-  // Backend hozircha sahifalash meta'sini qaytarmaydi; shu sababli joriy
-  // sahifa hajmidan taxminiy meta hosil qilamiz, chunki bu maydon kelib
-  // qolsa (studentsData.meta) to'g'ridan-to'g'ri ishlatiladi.
-  //
-  // In financial-filter mode the "page" fetched from the backend is really
-  // the whole batch (see FULL_FETCH_LIMIT above) — total/totalPages need to
-  // describe the client-side-paginated `filtered` result instead of that
-  // batch's own (irrelevant) size.
-  const pageMeta = useMemo(() => {
-    if (hasClientFilter) {
-      return {
-        total: filtered.length,
-        page,
-        limit,
-        totalPages: Math.max(1, Math.ceil(filtered.length / limit)),
-      };
-    }
-    if (studentsData?.meta) return studentsData.meta;
-    const count = studentsData?.data.length ?? 0;
-    return {
-      total: count,
-      page,
-      limit,
-      totalPages: count < limit ? page : page + 1,
-    };
-  }, [studentsData, page, limit, hasClientFilter, filtered]);
-
-  // Outside financial-filter mode `filtered` is already just the current
-  // server-fetched page (≤ limit rows), same as before. In financial-filter
-  // mode `filtered` can be the whole matching set, so it's sliced down to
-  // one page here for display/selection — "select all" then only selects
-  // what's visible, not every matching row across the full result.
-  const pageRows = useMemo(
-    () => (hasClientFilter ? filtered.slice((page - 1) * limit, page * limit) : filtered),
-    [filtered, hasClientFilter, page, limit]
-  );
+  const groupById = useMemo(() => new Map(allGroupRows.map((g) => [g.id, g])), [allGroupRows]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -1057,7 +1006,7 @@ export const Students = () => {
     // qo'shishga ruxsat bermasligi mumkin — shu sabab tanlanganlar orasidan
     // bu guruhda allaqachon bor bo'lganlarni oldindan chiqarib tashlaymiz.
     const eligibleUids = selected.filter((uid) => {
-      const raw = studentsData?.data.find((s) => s.id === uid);
+      const raw = rawById.get(uid);
       return !(raw?.groups ?? []).some((g) => g.id === groupId);
     });
     if (eligibleUids.length === 0) {
@@ -1070,59 +1019,90 @@ export const Students = () => {
     // paymentStartDate) with joinedAt, then POST /student-groups/{id}/freeze
     // (startDate = joinedAt) so the student lands FROZEN. Staff activate them
     // later ("since when" is asked then).
-    const addOne = async (studentId: string): Promise<"ok" | "notFrozen"> => {
-      const created = await addStudentToGroup({ studentId, groupId, status: "PROBATION", joinedAt }).unwrap();
+    //
+    // A couple of students at a time, each going straight from create to
+    // freeze, so the requests never pile up on one endpoint and the cache
+    // refetches (every mutation invalidates group/student lists) happen once
+    // the whole batch is done instead of between its steps.
+    const freeze = async (membershipId: string): Promise<boolean> => {
       try {
-        let membershipId = membershipIdFromCreateResponse(created, groupId);
-        if (!membershipId) {
-          const found = await fetchMemberships({ groupId, studentId, limit: 20 }).unwrap();
-          membershipId = found.rows
-            .filter((r) => r.status !== "INACTIVE" && r.status !== "DELETED")
-            .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))[0]?.id;
-        }
-        if (!membershipId) throw new Error("new membership id not found");
         await freezeStudentGroup({ id: membershipId, startDate: joinedAt }).unwrap();
-        return "ok";
+        return true;
       } catch {
         // The student WAS added — only the follow-up freeze failed.
-        return "notFrozen";
+        return false;
       }
     };
-    const results = await runLimited(eligibleUids, BULK_CONCURRENCY, async (uid) => {
-      try {
-        return { uid, outcome: await addOne(uid), error: null as unknown };
-      } catch (err) {
-        return { uid, outcome: "failed" as const, error: err };
-      }
+    const created = await runLimitedSettled(eligibleUids, BULK_CONCURRENCY, async (studentId) => {
+      const res = await addStudentToGroup({ studentId, groupId, status: "PROBATION", joinedAt }).unwrap();
+      const membershipId = membershipIdFromCreateResponse(res, groupId);
+      if (!membershipId) return "unknownMembership" as const;
+      return (await freeze(membershipId)) ? ("frozen" as const) : ("notFrozen" as const);
     });
+
+    const failed: { uid: string; error: unknown }[] = [];
+    const added: string[] = [];
+    const unknownMembership: string[] = [];
+    let notFrozen = 0;
+    created.forEach((res, i) => {
+      const uid = eligibleUids[i];
+      if (res.status === "rejected") {
+        failed.push({ uid, error: res.reason });
+        return;
+      }
+      added.push(uid);
+      if (res.value === "notFrozen") notFrozen += 1;
+      if (res.value === "unknownMembership") unknownMembership.push(uid);
+    });
+
+    // When the create response doesn't name the new membership, one look-up
+    // of the group's trial memberships finds it for all those students.
+    if (unknownMembership.length > 0) {
+      const newest = new Map<string, string>();
+      try {
+        const found = await fetchMemberships({ groupId, status: "PROBATION", limit: MEMBERSHIP_LIMIT }).unwrap();
+        // Oldest first, so a student's newest membership is the one kept.
+        [...found.rows]
+          .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""))
+          .forEach((m) => newest.set(m.studentId, m.id));
+      } catch {
+        // Those students just count as not frozen below.
+      }
+      const frozen = await runLimited(unknownMembership, BULK_CONCURRENCY, async (uid) => {
+        const membershipId = newest.get(uid);
+        return membershipId ? freeze(membershipId) : false;
+      });
+      notFrozen += frozen.filter((ok) => !ok).length;
+    }
     setIsAddingToGroup(false);
 
-    const failed = results.filter((r) => r.outcome === "failed");
-    const notFrozen = results.filter((r) => r.outcome === "notFrozen");
-    const done = results.length - failed.length;
-    if (done > 0) setSelected((p) => p.filter((uid) => failed.some((f) => f.uid === uid) || !eligibleUids.includes(uid)));
+    if (added.length > 0) setSelected((p) => p.filter((uid) => !added.includes(uid)));
 
     if (failed.length === 0) {
       toast.success(t("students.addToGroup.toast.success"));
-      if (notFrozen.length > 0) toast.error(t("students.addToGroup.toast.freezeError"));
+      if (notFrozen > 0) toast.error(t("students.addToGroup.toast.freezeError"));
       setAddToGroupOpen(false);
       return true;
     }
     const detail = extractApiError(failed[0].error);
-    const base = done > 0
-      ? t("students.addToGroup.toast.partialError", { done, total: results.length })
+    const base = added.length > 0
+      ? t("students.addToGroup.toast.partialError", { done: added.length, total: eligibleUids.length })
       : t("students.addToGroup.toast.error");
-    toast.error(detail ? `${base}: ${detail}` : base);
-    if (notFrozen.length > 0) toast.error(t("students.addToGroup.toast.freezeError"));
+    // Who is left selected for another try, and what the server said.
+    const names = failed.map((f) => rawById.get(f.uid)?.name).filter(Boolean);
+    const shown = names.slice(0, 3).join(", ") + (names.length > 3 ? ` +${names.length - 3}` : "");
+    const message = detail ? `${base}: ${detail}` : base;
+    toast.error(shown ? `${message}. ${t("students.addToGroup.toast.failedStudents", { names: shown })}` : message);
+    if (notFrozen > 0) toast.error(t("students.addToGroup.toast.freezeError"));
     return false;
   };
 
   const handleExportExcel = async () => {
     try {
+      // The same server filters as the table (the membership-based Status
+      // options are the one thing the backend can't filter by).
       const blob = await fetchStudentsExcel({
-        search: filters.search || undefined,
-        status: filters.status === "active" ? "ACTIVE" : filters.status === "inactive" ? "INACTIVE" : undefined,
-        branchId: selectedBranchId ?? undefined,
+        ...listFilters,
         page: 1,
         // Backend doesn't reliably return pagination meta for GET /students,
         // so `pageMeta.total` can be capped at the on-screen page size. Use a
@@ -1137,7 +1117,7 @@ export const Students = () => {
 
   const openActionMenu = (e: React.MouseEvent<HTMLButtonElement>, uid: string) => {
     e.stopPropagation();
-    const student = students.find((s) => s.uid === uid) || null;
+    const student = pageRows.find((s) => s.uid === uid) || null;
     setActiveStudent(student);
     setActionMenu(actionMenu?.uid === uid ? null : { el: e.currentTarget, uid });
   };
@@ -1163,7 +1143,7 @@ export const Students = () => {
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
         <Stack direction="row" alignItems="baseline" gap={1.5}>
           <Typography variant="h5" fontWeight={700} fontSize={26} color="var(--color-text-primary)">{t("students.header.title")}</Typography>
-          <Typography fontSize={14} color="var(--color-text-secondary)">{t("students.header.quantity", { count: studentsData ? pageMeta.total : filtered.length })}</Typography>
+          <Typography fontSize={14} color="var(--color-text-secondary)">{t("students.header.quantity", { count: hasData ? pageMeta.total : 0 })}</Typography>
         </Stack>
         <Stack direction="row" alignItems="center" gap={1}>
           <Button
@@ -1203,11 +1183,11 @@ export const Students = () => {
             <input
               placeholder={t("students.filters.searchPlaceholder")}
               value={filters.search}
-              onChange={(e) => setFilter("search", e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               style={{ border: "none", outline: "none", fontSize: 13, color: "var(--color-text-secondary)", background: "transparent", width: "100%", minWidth: 0 }}
             />
             {filters.search && (
-              <IoClose size={13} color="var(--color-text-muted)" style={{ cursor: "pointer", flexShrink: 0 }} onClick={() => setFilter("search", "")} />
+              <IoClose size={13} color="var(--color-text-muted)" style={{ cursor: "pointer", flexShrink: 0 }} onClick={() => setSearch("")} />
             )}
           </Box>
         </Box>
@@ -1347,7 +1327,7 @@ export const Students = () => {
 
       {/* TABLE */}
       <Paper sx={{ borderRadius: "12px", overflow: "hidden", boxShadow: "0 1px 4px var(--color-shadow)", border: "1px solid var(--color-border)" }}>
-        <TableContainer>
+        <TableContainer sx={{ opacity: isListRefreshing ? 0.6 : 1, transition: "opacity 0.15s" }}>
           <Table>
             <TableHead>
               <TableRow
@@ -1407,7 +1387,7 @@ export const Students = () => {
                 const badge      = BADGE_COLORS[s.groupBadgeColor] ?? BADGE_COLORS.blue;
                 const isSelected = selected.includes(s.uid);
                 // List rows only carry the group's name — course and lesson time come from GET /groups.
-                const rowGroup  = groupById.get(studentRefs.get(s.uid)?.firstGroupId ?? "");
+                const rowGroup  = groupById.get(rawById.get(s.uid)?.groups?.[0]?.id ?? "");
                 return (
                   <TableRow
                     key={s.uid}
@@ -1521,14 +1501,14 @@ export const Students = () => {
                 );
               })}
 
-              {!studentsLoading && !filterDataLoading && filtered.length === 0 && (
+              {!isListLoading && pageRows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={12} align="center" sx={{ py: 6, color: "var(--color-text-muted)" }}>
                     {t("students.table.noStudentsFound")}
                   </TableCell>
                 </TableRow>
               )}
-              {(studentsLoading || filterDataLoading) && (
+              {isListLoading && (
                 <TableRow>
                   <TableCell colSpan={12} align="center" sx={{ py: 6, color: "var(--color-text-muted)" }}>
                     {t("students.table.loading")}
@@ -1542,7 +1522,7 @@ export const Students = () => {
         {/* PAGINATION */}
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 3, py: 1.5, borderTop: "1px solid var(--color-border)" }}>
           <Typography fontSize={13} color="text.secondary">
-            {studentsData
+            {hasData
               ? t("students.pagination.range", {
                   from: pageMeta.total === 0 ? 0 : (pageMeta.page - 1) * pageMeta.limit + 1,
                   to: Math.min(pageMeta.page * pageMeta.limit, pageMeta.total),
@@ -1561,8 +1541,8 @@ export const Students = () => {
             </Button>
             <Button
               size="small" variant="outlined"
-              disabled={!studentsData || page >= pageMeta.totalPages}
-              onClick={() => setPage((p) => (studentsData && p < pageMeta.totalPages ? p + 1 : p))}
+              disabled={!hasData || page >= pageMeta.totalPages}
+              onClick={() => setPage((p) => (hasData && p < pageMeta.totalPages ? p + 1 : p))}
               sx={{ minWidth: 32, px: 1, borderColor: "var(--color-border)", color: "var(--color-text-secondary)", borderRadius: "6px", fontSize: 13 }}
             >
               {">"}

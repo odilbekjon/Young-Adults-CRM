@@ -37,7 +37,7 @@ import {
     StudentAttendanceReportGroup,
 } from "./types";
 import type { PaymentRow } from "../financeApi/types";
-import { normalizeHistory } from "../groupsApi/groupsApi";
+import { extractHistoryList, normalizeHistory } from "../groupsApi/groupsApi";
 
 const asString = (raw: unknown): string | null => {
     if (raw === undefined || raw === null) return null;
@@ -107,8 +107,30 @@ const normalizeStudentComments = (raw: unknown): StudentComment[] =>
 
 // GET /students/{id}/history — run through the same normalizer as a group's
 // history (status transitions with reason/comment, group, field changes,
-// actor, full timestamp) so every recorded event reaches the UI.
-const normalizeStudentHistory = (raw: unknown): StudentHistoryEntry[] => normalizeHistory(raw);
+// actor, full timestamp) so every recorded event reaches the UI. Confirmed
+// live: a row is {action: "Talaba X tomonidan yaratildi (holati: ACTIVE)",
+// type: "ACTION", category: "SYSTEM", date, user: {name}, device: {deviceName}}
+// - `action` is the backend's own sentence while `type`/`category` are mere
+// classifiers, so the generic normalizer (which treats a present `type` as the
+// event name) would reduce every row to a bare "Action". The sentence becomes
+// the title here, and the rows come back newest first.
+const normalizeStudentHistory = (raw: unknown): StudentHistoryEntry[] => {
+    const rows = extractHistoryList(raw).filter((row): row is Record<string, unknown> => !!row && typeof row === "object");
+    const stamp = (entry: StudentHistoryEntry) => new Date(entry.createdAt).getTime() || 0;
+    return normalizeHistory(rows)
+        .map((entry, i): StudentHistoryEntry => {
+            const { type, action, category } = rows[i];
+            return {
+                ...entry,
+                title: typeof action === "string" ? action.trim() : "",
+                kind: typeof type === "string" ? type : "",
+                category: typeof category === "string" ? category : "",
+                // The category has its own chip, not a "Category: SYSTEM" field row.
+                changes: entry.changes.filter((change) => change.key !== "category"),
+            };
+        })
+        .sort((a, b) => stamp(b) - stamp(a));
+};
 
 const normalizeStudentSmsHistory = (raw: unknown): StudentSmsEntry[] => {
     const container = (raw ?? {}) as Record<string, unknown>;
@@ -407,17 +429,32 @@ const appendStudentFormData = (formData: FormData, data: Partial<CreateStudentRe
     if (tagIds) tagIds.forEach((id) => formData.append("tagIds", id));
 };
 
+// The Students page's server-side filters. GET /students and GET
+// /students/excel take the same ones, so the file matches what the page shows.
+const appendStudentListFilters = (
+    params: URLSearchParams,
+    { courseId, teacherId, startDate, endDate, financeStatus, groupsCount }: studentsRequest
+) => {
+    if (courseId) params.set("courseId", courseId);
+    if (teacherId) params.set("teacherId", teacherId);
+    // Created-at range, YYYY-MM-DD.
+    if (startDate) params.set("startDate", startDate);
+    if (endDate) params.set("endDate", endDate);
+    if (financeStatus) params.set("financeStatus", financeStatus);
+    // 0 is a real value ("students without a group"), so only undefined is skipped.
+    if (groupsCount !== undefined) params.set("groupsCount", String(groupsCount));
+};
+
 export const studentsApi = baseApi.injectEndpoints({
     endpoints: (builder) =>  ({
         allStudents: builder.query<studentsResponse, studentsRequest>({
-            query: ({ page = 1, limit = 10, search, branchId, status, tagId }) => {
+            query: ({ page = 1, limit = 10, search, branchId, status, tagId, ...filters }) => {
                 const params = new URLSearchParams();
                 params.set("page", String(page));
                 params.set("limit", String(limit));
-                // teachersApi/leadsApi/financeApi'da ishlatilgan bir xil "search"
-                // convention — students endpointi buni qo'llab-quvvatlamasa ham,
-                // natija Header qidiruvida client-side filter bilan qo'shimcha
-                // tekshiriladi (Header.tsx'dagi StudentSearchBar).
+                // Swagger: free-text `search` (name or phone). The Students page
+                // relies on it server-side; the header/pickers still re-check
+                // their few results client-side (Header.tsx'dagi StudentSearchBar).
                 if (search) params.set("search", search);
                 // x-branch-id header hamma so'rovga avtomatik qo'shiladi, lekin
                 // teachersApi kabi bu yerda ham branchId'ni query param sifatida
@@ -434,6 +471,7 @@ export const studentsApi = baseApi.injectEndpoints({
                 // GET /tags/select's own filter-by-id convention (tagId), reused
                 // here to narrow students by an assigned tag from the Tags filter.
                 if (tagId) params.set("tagId", tagId);
+                appendStudentListFilters(params, filters);
                 return {
                     url: `${PATHS.STUDENTS}?${params.toString()}`,
                     method: "GET"
@@ -447,7 +485,7 @@ export const studentsApi = baseApi.injectEndpoints({
         // endpoints — query params confirmed against Swagger (search,
         // status, page, limit, branchId).
         studentsExcel: builder.query<Blob, StudentsExcelQueryArgs | void>({
-            query: ({ page, limit, search, status, branchId, tagId } = {}) => {
+            query: ({ page, limit, search, status, branchId, tagId, ...filters } = {}) => {
                 const params = new URLSearchParams();
                 if (page) params.set("page", String(page));
                 if (limit) params.set("limit", String(limit));
@@ -455,6 +493,7 @@ export const studentsApi = baseApi.injectEndpoints({
                 if (status) params.set("status", status);
                 if (branchId) params.set("branchId", branchId);
                 if (tagId) params.set("tagId", tagId);
+                appendStudentListFilters(params, filters);
                 return {
                     url: `${PATHS.STUDENTS}/excel?${params.toString()}`,
                     method: "GET",
@@ -526,8 +565,9 @@ export const studentsApi = baseApi.injectEndpoints({
                 method: "DELETE",
             }),
             // Also drops the student out of the Archive page (GET /archives)
-            // whenever a permanent delete is issued directly from there.
-            invalidatesTags: ["student", "archive"],
+            // whenever a permanent delete is issued directly from there, and
+            // out of every group roster / membership list that still showed them.
+            invalidatesTags: ["student", "archive", "group", "studentGroup"],
         }),
         toggleStudentStatus: builder.mutation<ToggleStudentStatusResponse, string>({
             query: (id) => ({
@@ -622,7 +662,9 @@ export const studentsApi = baseApi.injectEndpoints({
                 method: "GET",
             }),
             transformResponse: (response: unknown) => normalizeStudentHistory((response as { data?: unknown })?.data ?? response),
-            providesTags: ["student"],
+            // The timeline records group joins/removals too, so a membership
+            // change refreshes it like a profile change does.
+            providesTags: ["student", "studentGroup"],
         }),
         studentSmsHistory: builder.query<StudentSmsEntry[], StudentSmsHistoryRequest>({
             query: ({ id, ...args }) => {

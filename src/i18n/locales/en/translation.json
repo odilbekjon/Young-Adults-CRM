@@ -468,7 +468,8 @@
         "error": "Failed to add student(s) to the group",
         "alreadyInGroup": "Selected student(s) are already in this group",
         "freezeError": "Student(s) added, but couldn't be set to frozen — check their status manually",
-        "partialError": "Added {{done}} of {{total}} student(s), the rest failed"
+        "partialError": "Added {{done}} of {{total}} student(s), the rest failed",
+        "failedStudents": "Not added: {{names}}"
       }
     },
     "editDrawer": {
@@ -586,6 +587,20 @@
       "error": "Failed to complete the action. Please try again."
     }
   },
+  "studentHistory": {
+    "loadError": "Failed to load history. Please try again.",
+    "emptyState": "No history yet",
+    "type": "Type",
+    "category": "Category",
+    "performedBy": "Performed by",
+    "device": "Device",
+    "types": {
+      "ACTION": "Action"
+    },
+    "categories": {
+      "SYSTEM": "System"
+    }
+  },
   "teacherProfile": {
     "history": {
       "loadError": "Failed to load history. Please try again.",
@@ -601,7 +616,40 @@
     "board": {
       "loadError": "Failed to load the kanban board. Please try again.",
       "emptyState": "No columns yet",
-      "noSections": "No sections"
+      "noSections": "No sections",
+      "noMatches": "No leads match the filters"
+    },
+    "filters": {
+      "search": "Search",
+      "all": "All",
+      "section": "Section",
+      "source": "Source",
+      "course": "Course",
+      "status": "Status",
+      "statuses": {
+        "ACTIVE": "Active",
+        "IN_TRIAL": "In trial",
+        "CONVERTED": "Converted",
+        "CANCELLED": "Cancelled"
+      },
+      "dateRange": "Date from – Date to",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "clear": "Clear",
+      "apply": "OK",
+      "presets": {
+        "week": "Last week",
+        "month": "Last month",
+        "quarter": "Last 3 months"
+      },
+      "reset": "Reset filters",
+      "loadError": "Failed to apply the filters. Please try again.",
+      "menu": {
+        "export": "Export leads",
+        "columns": "Column settings",
+        "sources": "Lead sources",
+        "forms": "Forms"
+      }
     },
     "columns": {
       "title": "Manage Columns",
@@ -669,6 +717,13 @@
       "email": "Email",
       "source": "Source",
       "noSource": "None",
+      "course": "Course",
+      "noCourse": "None",
+      "phoneInvalid": "Enter the 9 digits after +998",
+      "duplicatePhone": "A lead with this phone number already exists: {{names}}. You can still save it.",
+      "saveAnyway": "Save anyway",
+      "deleteTitle": "Delete lead",
+      "deleteMessage": "Delete {{name}}? This cannot be undone.",
       "comment": "Comment",
       "save": "Save",
       "cancel": "Cancel",
@@ -2675,7 +2730,8 @@
       "createForm": {
         "tabs": { "simpleForm": "Simple form", "leadForm": "Lead form" },
         "actions": { "save": "Save", "update": "Update", "submit": "Submit", "addAnswer": "Add answer", "addBlock": "Add block" },
-        "placeholders": { "formName": "Enter form name", "selectBranch": "Select branch:", "selectSection": "input", "leadsSources": "Leads Sources" },
+        "placeholders": { "formName": "Enter form name", "selectBranch": "Select branch:", "selectSection": "input", "leadsSources": "Leads Sources", "description": "Description (optional)", "successMessage": "Message shown after submitting (optional)" },
+        "required": "Required",
         "fixedFields": { "fullName": "Full name and surname?", "phoneNumber": "Your phone number?" },
         "blockTypes": { "oneOfList": "One of the list", "shortAnswer": "Short answer", "longAnswer": "Long answer" },
         "defaultQuestion": "Choose of the Answers",
@@ -2690,11 +2746,13 @@
       "lists": {
         "title": "Forms",
         "actions": { "addNew": "Add new" },
-        "table": { "id": "id", "name": "Name", "type": "type", "actions": "Actions" },
+        "allTypes": "All types",
+        "table": { "id": "id", "name": "Name", "type": "type", "views": "Views", "submissions": "Submissions", "status": "Status", "actions": "Actions" },
         "tooltips": { "info": "Info", "edit": "Edit", "delete": "Delete", "copyLink": "Copy link" },
         "loadError": "Failed to load forms. Please try again.",
         "emptyState": "No forms yet",
-        "toast": { "deleted": "Form deleted", "error": "Failed to delete form. Please try again." }
+        "deleteConfirm": { "title": "Delete form", "cancel": "Cancel", "message": "Delete the form \"{{name}}\"? This cannot be undone." },
+        "toast": { "deleted": "Form deleted", "error": "Failed to delete form. Please try again.", "statusError": "Failed to change the form status.", "noSlug": "This form has no link yet.", "linkCopied": "Link copied", "copyError": "Couldn't copy the link." }
       }
     },
     "blog": {

@@ -13,6 +13,7 @@ import {
   useDeleteLeadSourceMutation,
 } from "../../app/api/leadSourcesApi";
 import { useToast } from "../../Context/ToastContext";
+import { withApiDetail } from "./withApiDetail";
 
 interface Props {
   open: boolean;
@@ -55,8 +56,8 @@ export const ManageLeadSourcesDialog = ({ open, onClose }: Props) => {
       await createLeadSource({ name: newName.trim() }).unwrap();
       toast.success(t("leadsPage.sources.toast.created"));
       setNewName("");
-    } catch {
-      toast.error(t("leadsPage.sources.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.sources.toast.error"), err));
     }
   };
 
@@ -66,8 +67,8 @@ export const ManageLeadSourcesDialog = ({ open, onClose }: Props) => {
       await updateLeadSource({ id: editingId, name: editName.trim() }).unwrap();
       toast.success(t("leadsPage.sources.toast.updated"));
       setEditingId(null);
-    } catch {
-      toast.error(t("leadsPage.sources.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.sources.toast.error"), err));
     }
   };
 
@@ -76,8 +77,8 @@ export const ManageLeadSourcesDialog = ({ open, onClose }: Props) => {
       await deleteLeadSource(id).unwrap();
       toast.success(t("leadsPage.sources.toast.deleted"));
       setConfirmDeleteId(null);
-    } catch {
-      toast.error(t("leadsPage.sources.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.sources.toast.error"), err));
     }
   };
 

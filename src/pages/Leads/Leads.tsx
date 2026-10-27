@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Box } from "@mui/material";
 import { FromWhere } from "../../components/FromWhere/FromWhere";
+import { EMPTY_LEAD_FILTERS, type LeadFilters } from "../../components/FromWhere/leadFilters";
 import { Sections } from "../../components/Sections/Sections";
 import { ManageLeadColumnsDialog } from "../../components/Sections/ManageLeadColumnsDialog";
 import { ManageLeadSourcesDialog } from "../../components/Sections/ManageLeadSourcesDialog";
 
 export const Leads = () => {
+  const [filters, setFilters] = useState<LeadFilters>(EMPTY_LEAD_FILTERS);
   const [columnsDialogOpen, setColumnsDialogOpen] = useState(false);
   const [sourcesDialogOpen, setSourcesDialogOpen] = useState(false);
 
@@ -19,13 +21,15 @@ export const Leads = () => {
     >
       {/* FILTER BAR */}
       <FromWhere
+        filters={filters}
+        onChange={setFilters}
         onOpenColumnSettings={() => setColumnsDialogOpen(true)}
         onOpenSourceSettings={() => setSourcesDialogOpen(true)}
       />
 
       {/* KANBAN BOARD */}
       <Box sx={{ flex: 1, p: 0, mt: 2, ml: 2 }}>
-        <Sections />
+        <Sections filters={filters} />
       </Box>
 
       <ManageLeadColumnsDialog open={columnsDialogOpen} onClose={() => setColumnsDialogOpen(false)} />

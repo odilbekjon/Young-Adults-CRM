@@ -14,120 +14,48 @@ import {
 } from "@mui/material";
 import {
   FiSearch,
-  FiFilter,
   FiRefreshCw,
   FiMoreHorizontal,
   FiChevronLeft,
   FiChevronRight,
   FiChevronsLeft,
   FiChevronsRight,
-  FiArchive,
-  FiUpload,
   FiDownload,
   FiColumns,
-  FiTag,
   FiFileText,
-  FiXCircle,
   FiShare2,
 } from "react-icons/fi";
 import { MdOutlineDateRange } from "react-icons/md";
-import { useState} from "react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { useAllLeadSectionsQuery } from "../../app/api/leadSectionsApi";
+import { useAllLeadSourcesQuery } from "../../app/api/leadSourcesApi";
+import { useCoursesSelectQuery } from "../../app/api/coursesApi";
+import { useLazyReportLeadsExcelQuery } from "../../app/api/reportsApi";
+import type { LeadStatus } from "../../app/api/leadsApi/types";
+import type { RootState } from "../../app/store";
+import { useBranch } from "../../Context/BranchContext";
+import { useToast } from "../../Context/ToastContext";
+import { downloadExcelBlob } from "../../utils/downloadExcel";
+import { toLocalISODate } from "../../utils/localDate";
+import { withApiDetail } from "../Sections/withApiDetail";
+import { EMPTY_LEAD_FILTERS, type LeadFilters } from "./leadFilters";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface FilterConfig {
-  key: string;
+  key: "sectionId" | "sourceId" | "courseId" | "status";
   label: string;
   options: { value: string; label: string }[];
 }
 
-type FilterState = Record<string, string>;
-
-// ─── Filter Config ────────────────────────────────────────────────────────────
-
-const FILTERS: FilterConfig[] = [
-  {
-    key: "section",
-    label: "Section",
-    options: [
-      { value: "input", label: "Input" },
-      { value: "output", label: "Output" },
-    ],
-  },
-  {
-    key: "course",
-    label: "Course",
-    options: [
-      { value: "english", label: "English" },
-      { value: "math", label: "Math" },
-      { value: "science", label: "Science" },
-      { value: "it", label: "IT" },
-    ],
-  },
-  {
-    key: "tags",
-    label: "Tags",
-    options: [
-      { value: "vip", label: "VIP" },
-      { value: "new", label: "New" },
-      { value: "hot", label: "Hot" },
-      { value: "cold", label: "Cold" },
-    ],
-  },
-  {
-    key: "lead",
-    label: "Lead",
-    options: [
-      { value: "new", label: "New" },
-      { value: "in_progress", label: "In progress" },
-      { value: "converted", label: "Converted" },
-      { value: "lost", label: "Lost" },
-    ],
-  },
-  {
-    key: "student",
-    label: "By student",
-    options: [
-      { value: "active", label: "Active" },
-      { value: "inactive", label: "Inactive" },
-      { value: "trial", label: "Trial" },
-      { value: "graduated", label: "Graduated" },
-    ],
-  },
-  {
-    key: "task",
-    label: "Task",
-    options: [
-      { value: "overdue", label: "Overdue" },
-      { value: "today", label: "Today" },
-      { value: "future", label: "Future" },
-      { value: "no_task", label: "No task" },
-    ],
-  },
-];
-
-// ─── More Menu items ──────────────────────────────────────────────────────────
-
-const MORE_MENU_ITEMS = [
-  { key: "archive", label: "Archive leads", icon: <FiArchive size={15} /> },
-  { key: "import", label: "Import leads", icon: <FiUpload size={15} /> },
-  { key: "export", label: "Export leads", icon: <FiDownload size={15} /> },
-  { key: "divider" },
-  { key: "columns", label: "Column settings", icon: <FiColumns size={15} /> },
-  { key: "sources", label: "Lead sources", icon: <FiShare2 size={15} /> },
-  { key: "tags", label: "Tags", icon: <FiTag size={15} /> },
-  { key: "forms", label: "Forms", icon: <FiFileText size={15} /> },
-  { key: "divider2" },
-  { key: "remove", label: "Reason for remove", icon: <FiXCircle size={15} />, danger: true },
-];
+const LEAD_STATUSES: LeadStatus[] = ["ACTIVE", "IN_TRIAL", "CONVERTED", "CANCELLED"];
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+const fromIsoDate = (iso: string): Date | null => (iso ? new Date(`${iso}T00:00:00`) : null);
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
@@ -156,18 +84,17 @@ function formatDate(d: Date | null) {
     .padStart(2, "0")}.${d.getFullYear()}`;
 }
 
-function formatTime(d: Date | null) {
-  if (!d) return "";
-  return `${d.getHours().toString().padStart(2, "0")}:${d
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
-}
+// Month and weekday names come from Intl so the calendar follows the app
+// language; 2024-01-07 is a Sunday.
+const monthName = (locale: string, year: number, month: number) =>
+  new Date(year, month, 1).toLocaleDateString(locale, { month: "long" });
+const weekdayName = (locale: string, weekday: number) =>
+  new Date(2024, 0, 7 + weekday).toLocaleDateString(locale, { weekday: "short" });
 
 const PRESETS = [
-  { label: "Last week", days: 7 },
-  { label: "Last month", days: 30 },
-  { label: "Last 3 months", days: 90 },
+  { labelKey: "leadsPage.filters.presets.week", days: 7 },
+  { labelKey: "leadsPage.filters.presets.month", days: 30 },
+  { labelKey: "leadsPage.filters.presets.quarter", days: 90 },
 ];
 
 // ─── Calendar Grid ────────────────────────────────────────────────────────────
@@ -186,6 +113,7 @@ interface CalendarProps {
 const CalendarGrid = ({
   year, month, startDate, endDate, hoverDate, today, onSelect, onHover,
 }: CalendarProps) => {
+  const { i18n } = useTranslation();
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDay(year, month);
   const prevDays = getDaysInMonth(year, month - 1);
@@ -211,17 +139,17 @@ const CalendarGrid = ({
         align="center"
         sx={{ fontSize: 14, fontWeight: 500, mb: 1.5, color: "text.primary" }}
       >
-        {year} {MONTHS[month]}
+        {year} {monthName(i18n.language, year, month)}
       </Typography>
 
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", mb: 0.5 }}>
-        {DAYS.map((d) => (
+        {[0, 1, 2, 3, 4, 5, 6].map((d) => (
           <Typography
             key={d}
             align="center"
             sx={{ fontSize: 12, color: "text.disabled", py: 0.5, fontWeight: 500 }}
           >
-            {d}
+            {weekdayName(i18n.language, d)}
           </Typography>
         ))}
       </Box>
@@ -302,6 +230,7 @@ interface DateRangePickerProps {
 }
 
 const DateRangePicker = ({ anchorEl, onClose, startDate, endDate, onApply }: DateRangePickerProps) => {
+  const { t } = useTranslation();
   const today = new Date();
   const [localStart, setLocalStart] = useState<Date | null>(startDate);
   const [localEnd, setLocalEnd] = useState<Date | null>(endDate);
@@ -354,13 +283,11 @@ const DateRangePicker = ({ anchorEl, onClose, startDate, endDate, onApply }: Dat
       transformOrigin={{ vertical: "top", horizontal: "left" }}
       PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", overflow: "hidden", minWidth: 640 } }}
     >
-      {/* Top: date/time inputs */}
+      {/* Top: date inputs (GET /leads filters by whole days, so no time) */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 1.5, borderBottom: "0.5px solid", borderColor: "divider" }}>
-        <TextField size="small" placeholder="Start Date" value={formatDate(localStart)} InputProps={{ readOnly: true }} sx={{ flex: 1, "& input": { fontSize: 13 } }} />
-        <TextField size="small" placeholder="Start Time" value={formatTime(localStart)} InputProps={{ readOnly: true }} sx={{ flex: 1, "& input": { fontSize: 13 } }} />
+        <TextField size="small" placeholder={t("leadsPage.filters.startDate")} value={formatDate(localStart)} InputProps={{ readOnly: true }} sx={{ flex: 1, "& input": { fontSize: 13 } }} />
         <Box sx={{ color: "text.disabled", fontSize: 18, px: 0.5 }}>›</Box>
-        <TextField size="small" placeholder="End Date" value={formatDate(localEnd)} InputProps={{ readOnly: true }} sx={{ flex: 1, "& input": { fontSize: 13 } }} />
-        <TextField size="small" placeholder="End Time" value={formatTime(localEnd)} InputProps={{ readOnly: true }} sx={{ flex: 1, "& input": { fontSize: 13 } }} />
+        <TextField size="small" placeholder={t("leadsPage.filters.endDate")} value={formatDate(localEnd)} InputProps={{ readOnly: true }} sx={{ flex: 1, "& input": { fontSize: 13 } }} />
       </Box>
 
       {/* Body */}
@@ -369,14 +296,14 @@ const DateRangePicker = ({ anchorEl, onClose, startDate, endDate, onApply }: Dat
         <Box sx={{ width: 130, borderRight: "0.5px solid", borderColor: "divider", py: 1 }}>
           {PRESETS.map((p) => (
             <Box
-              key={p.label}
+              key={p.labelKey}
               onClick={() => applyPreset(p.days)}
               sx={{
                 px: 2, py: 1, fontSize: 13, cursor: "pointer", color: "text.primary",
                 "&:hover": { backgroundColor: "action.hover" },
               }}
             >
-              {p.label}
+              {t(p.labelKey)}
             </Box>
           ))}
         </Box>
@@ -418,10 +345,10 @@ const DateRangePicker = ({ anchorEl, onClose, startDate, endDate, onApply }: Dat
       <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, px: 2, py: 1, borderTop: "0.5px solid", borderColor: "divider" }}>
         <Button
           size="small"
-          onClick={() => { setLocalStart(null); setLocalEnd(null); }}
+          onClick={() => { setLocalStart(null); setLocalEnd(null); onApply(null, null); onClose(); }}
           sx={{ fontSize: 13, color: "#1976d2", fontWeight: 400 }}
         >
-          Clear
+          {t("leadsPage.filters.clear")}
         </Button>
         <Button
           size="small"
@@ -429,7 +356,7 @@ const DateRangePicker = ({ anchorEl, onClose, startDate, endDate, onApply }: Dat
           sx={{ fontSize: 13, color: "text.disabled", fontWeight: 400 }}
           disabled={!localStart}
         >
-          OK
+          {t("leadsPage.filters.apply")}
         </Button>
       </Box>
     </Popover>
@@ -439,38 +366,82 @@ const DateRangePicker = ({ anchorEl, onClose, startDate, endDate, onApply }: Dat
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface FromWhereProps {
+  filters: LeadFilters;
+  onChange: (filters: LeadFilters) => void;
   onOpenColumnSettings?: () => void;
   onOpenSourceSettings?: () => void;
 }
 
-export const FromWhere = ({ onOpenColumnSettings, onOpenSourceSettings }: FromWhereProps = {}) => {
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<FilterState>(
-    Object.fromEntries(FILTERS.map((f) => [f.key, ""]))
-  );
+export const FromWhere = ({ filters, onChange, onOpenColumnSettings, onOpenSourceSettings }: FromWhereProps) => {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const { branchLabel } = useBranch();
+  const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
-  // Date range
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const { data: sectionsData } = useAllLeadSectionsQuery();
+  const { data: sourcesData } = useAllLeadSourcesQuery();
+  const { data: courses } = useCoursesSelectQuery();
+  const [fetchExcel] = useLazyReportLeadsExcelQuery();
+
   const [dateAnchor, setDateAnchor] = useState<HTMLElement | null>(null);
-
-  // More menu
   const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
 
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+  const startDate = fromIsoDate(filters.startDate);
+  const endDate = fromIsoDate(filters.endDate);
+
+  const filterConfigs: FilterConfig[] = [
+    {
+      key: "sectionId",
+      label: t("leadsPage.filters.section"),
+      options: (sectionsData?.data ?? []).map((s) => ({ value: s.id, label: s.name })),
+    },
+    {
+      key: "sourceId",
+      label: t("leadsPage.filters.source"),
+      options: (sourcesData?.data ?? []).map((s) => ({ value: s.id, label: s.name })),
+    },
+    {
+      key: "courseId",
+      label: t("leadsPage.filters.course"),
+      options: (courses ?? []).map((c) => ({ value: c.id, label: c.name })),
+    },
+    {
+      key: "status",
+      label: t("leadsPage.filters.status"),
+      options: LEAD_STATUSES.map((s) => ({ value: s, label: t(`leadsPage.filters.statuses.${s}`) })),
+    },
+  ];
+
+  const handleReset = () => onChange(EMPTY_LEAD_FILTERS);
+
+  // There is no GET /leads/excel in the API — the leads report's export is the
+  // only lead export, so it honours just the date range, status and branch.
+  const handleExport = async () => {
+    try {
+      const blob = await fetchExcel({
+        startDate: filters.startDate || undefined,
+        endDate: filters.endDate || undefined,
+        status: filters.status || undefined,
+        branchId: selectedBranchId ?? undefined,
+      }).unwrap();
+      downloadExcelBlob(blob, "leads", branchLabel);
+    } catch (err) {
+      toast.error(withApiDetail(t("reports.common.exportError"), err));
+    }
   };
 
-  const handleReset = () => {
-    setSearch("");
-    setFilters(Object.fromEntries(FILTERS.map((f) => [f.key, ""])));
-    setStartDate(null);
-    setEndDate(null);
-  };
+  const moreMenuItems = [
+    { key: "export", label: t("leadsPage.filters.menu.export"), icon: <FiDownload size={15} />, onClick: handleExport },
+    { key: "divider" },
+    { key: "columns", label: t("leadsPage.filters.menu.columns"), icon: <FiColumns size={15} />, onClick: onOpenColumnSettings },
+    { key: "sources", label: t("leadsPage.filters.menu.sources"), icon: <FiShare2 size={15} />, onClick: onOpenSourceSettings },
+    { key: "forms", label: t("leadsPage.filters.menu.forms"), icon: <FiFileText size={15} />, onClick: () => navigate("/settings/forms/list") },
+  ];
 
   const dateLabel = startDate
     ? `${formatDate(startDate)} – ${endDate ? formatDate(endDate) : "..."}`
-    : "Date from – Date to";
+    : t("leadsPage.filters.dateRange");
 
   return (
     <Box sx={{ backgroundColor: "background.paper", borderBottom: "0.5px solid", borderColor: "divider" }}>
@@ -479,9 +450,9 @@ export const FromWhere = ({ onOpenColumnSettings, onOpenSourceSettings }: FromWh
         {/* Search */}
         <TextField
           size="small"
-          placeholder="Search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("leadsPage.filters.search")}
+          value={filters.search}
+          onChange={(e) => onChange({ ...filters, search: e.target.value })}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -494,13 +465,13 @@ export const FromWhere = ({ onOpenColumnSettings, onOpenSourceSettings }: FromWh
         />
 
         {/* Filter dropdowns */}
-        {FILTERS.map((filter) => (
+        {filterConfigs.map((filter) => (
           <TextField
             key={filter.key}
             size="small"
             select
             value={filters[filter.key]}
-            onChange={(e) => handleFilterChange(filter.key, e.target.value)}
+            onChange={(e) => onChange({ ...filters, [filter.key]: e.target.value })}
             sx={{ "& .MuiInputBase-root": { height: 32, fontSize: 13, minWidth: 90 } }}
             SelectProps={{
               displayEmpty: true,
@@ -513,7 +484,7 @@ export const FromWhere = ({ onOpenColumnSettings, onOpenSourceSettings }: FromWh
               },
             }}
           >
-            <MenuItem value=""><em>All</em></MenuItem>
+            <MenuItem value=""><em>{t("leadsPage.filters.all")}</em></MenuItem>
             {filter.options.map((opt) => (
               <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
             ))}
@@ -549,27 +520,25 @@ export const FromWhere = ({ onOpenColumnSettings, onOpenSourceSettings }: FromWh
 
         {/* Date Range Picker */}
         <DateRangePicker
+          // Remounts when the applied range changes (e.g. on Reset) so the
+          // picker's own draft selection never shows a stale range.
+          key={`${filters.startDate}|${filters.endDate}`}
           anchorEl={dateAnchor}
           onClose={() => setDateAnchor(null)}
           startDate={startDate}
           endDate={endDate}
-          onApply={(s, e) => { setStartDate(s); setEndDate(e); }}
+          onApply={(s, e) => onChange({
+            ...filters,
+            startDate: s ? toLocalISODate(s) : "",
+            endDate: e ? toLocalISODate(e) : "",
+          })}
         />
-
-        {/* Filters btn */}
-        <Button
-          size="small"
-          startIcon={<FiFilter size={13} />}
-          sx={{ fontSize: 13, height: 32, px: 1.5, color: "text.secondary", border: "0.5px solid", borderColor: "divider", borderRadius: 1, minWidth: 0 }}
-        >
-          Filters
-        </Button>
 
         {/* Reset */}
         <Button
           size="small"
           onClick={handleReset}
-          title="Reset filters"
+          title={t("leadsPage.filters.reset")}
           sx={{ minWidth: 32, width: 32, height: 32, p: 0, border: "0.5px solid", borderColor: "divider", borderRadius: 1, color: "text.secondary" }}
         >
           <FiRefreshCw size={13} />
@@ -594,8 +563,8 @@ export const FromWhere = ({ onOpenColumnSettings, onOpenSourceSettings }: FromWh
           PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 4px 20px rgba(0,0,0,0.10)", minWidth: 200, py: 0.5 } }}
         >
           <MenuList dense sx={{ py: 0.5 }}>
-            {MORE_MENU_ITEMS.map((item) => {
-              if (item.key === "divider" || item.key === "divider2") {
+            {moreMenuItems.map((item) => {
+              if (item.key === "divider") {
                 return <Divider key={item.key} sx={{ my: 0.5 }} />;
               }
               return (
@@ -603,18 +572,17 @@ export const FromWhere = ({ onOpenColumnSettings, onOpenSourceSettings }: FromWh
                   key={item.key}
                   onClick={() => {
                     setMoreAnchor(null);
-                    if (item.key === "columns") onOpenColumnSettings?.();
-                    if (item.key === "sources") onOpenSourceSettings?.();
+                    item.onClick?.();
                   }}
                   sx={{
                     fontSize: 13,
                     px: 2,
                     py: 0.75,
-                    color: item.danger ? "error.main" : "text.primary",
-                    "&:hover": { backgroundColor: item.danger ? "error.50" : "action.hover" },
+                    color: "text.primary",
+                    "&:hover": { backgroundColor: "action.hover" },
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: 28, color: item.danger ? "error.main" : "text.secondary" }}>
+                  <ListItemIcon sx={{ minWidth: 28, color: "text.secondary" }}>
                     {item.icon}
                   </ListItemIcon>
                   <ListItemText primaryTypographyProps={{ fontSize: 13 }}>

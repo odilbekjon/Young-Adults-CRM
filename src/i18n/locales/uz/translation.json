@@ -468,7 +468,8 @@
         "error": "O'quvchi(lar)ni guruhga qo'shib bo'lmadi",
         "alreadyInGroup": "Tanlangan o'quvchi(lar) bu guruhda allaqachon bor",
         "freezeError": "O'quvchi(lar) qo'shildi, lekin muzlatib bo'lmadi — holatini qo'lda tekshiring",
-        "partialError": "{{total}} tadan {{done}} tasi qo'shildi, qolganlari xato berdi"
+        "partialError": "{{total}} tadan {{done}} tasi qo'shildi, qolganlari xato berdi",
+        "failedStudents": "Qo'shilmadi: {{names}}"
       }
     },
     "editDrawer": {
@@ -586,6 +587,20 @@
       "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."
     }
   },
+  "studentHistory": {
+    "loadError": "Tarixni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
+    "emptyState": "Hozircha tarix yo'q",
+    "type": "Turi",
+    "category": "Kategoriya",
+    "performedBy": "Bajargan",
+    "device": "Qurilma",
+    "types": {
+      "ACTION": "Harakat"
+    },
+    "categories": {
+      "SYSTEM": "Tizim"
+    }
+  },
   "teacherProfile": {
     "history": {
       "loadError": "Tarixni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
@@ -601,7 +616,40 @@
     "board": {
       "loadError": "Kanban doskasini yuklab bo'lmadi. Qaytadan urinib ko'ring.",
       "emptyState": "Hozircha ustunlar mavjud emas",
-      "noSections": "Bo'limlar yo'q"
+      "noSections": "Bo'limlar yo'q",
+      "noMatches": "Filtrlarga mos lidlar topilmadi"
+    },
+    "filters": {
+      "search": "Qidirish",
+      "all": "Barchasi",
+      "section": "Bo'lim",
+      "source": "Manba",
+      "course": "Kurs",
+      "status": "Holat",
+      "statuses": {
+        "ACTIVE": "Faol",
+        "IN_TRIAL": "Sinov darsida",
+        "CONVERTED": "O'quvchiga aylangan",
+        "CANCELLED": "Bekor qilingan"
+      },
+      "dateRange": "Sanadan – Sanagacha",
+      "startDate": "Boshlanish sanasi",
+      "endDate": "Tugash sanasi",
+      "clear": "Tozalash",
+      "apply": "OK",
+      "presets": {
+        "week": "So'nggi hafta",
+        "month": "So'nggi oy",
+        "quarter": "So'nggi 3 oy"
+      },
+      "reset": "Filtrlarni tiklash",
+      "loadError": "Filtrlarni qo'llab bo'lmadi. Qaytadan urinib ko'ring.",
+      "menu": {
+        "export": "Lidlarni eksport qilish",
+        "columns": "Ustun sozlamalari",
+        "sources": "Lid manbalari",
+        "forms": "Formalar"
+      }
     },
     "columns": {
       "title": "Ustunlarni boshqarish",
@@ -669,6 +717,13 @@
       "email": "Email",
       "source": "Manba",
       "noSource": "Tanlanmagan",
+      "course": "Kurs",
+      "noCourse": "Tanlanmagan",
+      "phoneInvalid": "+998 dan keyin 9 ta raqam kiriting",
+      "duplicatePhone": "Bu telefon raqamli lid allaqachon mavjud: {{names}}. Baribir saqlashingiz mumkin.",
+      "saveAnyway": "Baribir saqlash",
+      "deleteTitle": "Lidni o'chirish",
+      "deleteMessage": "{{name}} o'chirilsinmi? Bu amalni bekor qilib bo'lmaydi.",
       "comment": "Izoh",
       "save": "Saqlash",
       "cancel": "Bekor qilish",
@@ -2675,7 +2730,8 @@
       "createForm": {
         "tabs": { "simpleForm": "Oddiy shakl", "leadForm": "Lid shakli" },
         "actions": { "save": "Saqlash", "update": "Yangilash", "submit": "Yuborish", "addAnswer": "Javob qo'shish", "addBlock": "Blok qo'shish" },
-        "placeholders": { "formName": "Shakl nomini kiriting", "selectBranch": "Filialni tanlang:", "selectSection": "kiritish", "leadsSources": "Lidlar manbalari" },
+        "placeholders": { "formName": "Shakl nomini kiriting", "selectBranch": "Filialni tanlang:", "selectSection": "kiritish", "leadsSources": "Lidlar manbalari", "description": "Tavsif (ixtiyoriy)", "successMessage": "Yuborilgandan keyin ko'rsatiladigan xabar (ixtiyoriy)" },
+        "required": "Majburiy",
         "fixedFields": { "fullName": "To'liq ism familiyangiz?", "phoneNumber": "Telefon raqamingiz?" },
         "blockTypes": { "oneOfList": "Ro'yxatdan biri", "shortAnswer": "Qisqa javob", "longAnswer": "Batafsil javob" },
         "defaultQuestion": "Javoblardan birini tanlang",
@@ -2690,11 +2746,13 @@
       "lists": {
         "title": "Formalar",
         "actions": { "addNew": "Qo'shish" },
-        "table": { "id": "id", "name": "Nomi", "type": "turi", "actions": "Amallar" },
+        "allTypes": "Barcha turlar",
+        "table": { "id": "id", "name": "Nomi", "type": "turi", "views": "Ko'rishlar", "submissions": "Arizalar", "status": "Holati", "actions": "Amallar" },
         "tooltips": { "info": "Ma'lumot", "edit": "Tahrirlash", "delete": "O'chirish", "copyLink": "Havolani nusxalash" },
         "loadError": "Formalarni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
         "emptyState": "Hozircha formalar yo'q",
-        "toast": { "deleted": "Forma o'chirildi", "error": "Formani o'chirib bo'lmadi. Qaytadan urinib ko'ring." }
+        "deleteConfirm": { "title": "Formani o'chirish", "cancel": "Bekor qilish", "message": "\"{{name}}\" formasi o'chirilsinmi? Bu amalni bekor qilib bo'lmaydi." },
+        "toast": { "deleted": "Forma o'chirildi", "error": "Formani o'chirib bo'lmadi. Qaytadan urinib ko'ring.", "statusError": "Forma holatini o'zgartirib bo'lmadi.", "noSlug": "Bu formada hozircha havola yo'q.", "linkCopied": "Havola nusxalandi", "copyError": "Havolani nusxalab bo'lmadi." }
       }
     },
     "blog": {

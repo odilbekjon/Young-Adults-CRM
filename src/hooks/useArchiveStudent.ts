@@ -1,5 +1,6 @@
 import {
   useLazyStudentGroupsQuery,
+  useRemoveStudentFromGroupMutation,
   useUpdateStudentGroupStatusMutation,
 } from "../app/api/groupsApi/groupsApi";
 import { useDeleteStudentMutation, useUpdateStudentStatusMutation } from "../app/api/studentsApi";
@@ -11,11 +12,21 @@ export interface ArchiveStudentArgs {
   comment?: string;
 }
 
+export interface LeaveGroupArgs extends ArchiveStudentArgs {
+  groupId: string;
+  // The live membership's id when the caller already has it from its cached
+  // GET /student-groups rows; looked up here otherwise.
+  studentGroupId?: string;
+}
+
 const LIVE_STATUSES = ["PROBATION", "ACTIVE", "FROZEN"] as const;
 
-// The one "delete student" (= archive) flow shared by Students, StudentProfile
-// and SingleGroup:
+// The one "remove / archive / delete student" flow shared by Students,
+// StudentProfile and SingleGroup.
 //
+// leaveGroup is the "Current group" outcome: only this group's membership ends.
+//
+// archiveStudent is the "All groups" outcome:
 //  1. PATCH /student-groups/{id}/status INACTIVE with reasonId + reason (the
 //     comment) + isAllGroup ends every live group membership; any live
 //     membership left over is ended one by one.
@@ -31,6 +42,7 @@ const LIVE_STATUSES = ["PROBATION", "ACTIVE", "FROZEN"] as const;
 export const useArchiveStudent = () => {
   const [fetchMemberships] = useLazyStudentGroupsQuery();
   const [updateStudentGroupStatus] = useUpdateStudentGroupStatusMutation();
+  const [removeStudentFromGroup] = useRemoveStudentFromGroupMutation();
   const [updateStudentStatus] = useUpdateStudentStatusMutation();
   const [deleteStudentRequest] = useDeleteStudentMutation();
 
@@ -41,6 +53,40 @@ export const useArchiveStudent = () => {
     return lists
       .flatMap((r) => r.rows)
       .filter((m) => m.status !== "INACTIVE" && m.status !== "DELETED" && (!m.studentId || m.studentId === studentId));
+  };
+
+  // Newest live membership of the student in one group, straight from the
+  // backend. A failed lookup throws, so "could not check" is never mistaken for
+  // "not a member".
+  const findLiveMembershipId = async (groupId: string, studentId: string): Promise<string | undefined> => {
+    const { rows } = await fetchMemberships({ groupId, studentId, limit: 20 }).unwrap();
+    return rows
+      .filter((m) => m.status !== "INACTIVE" && m.status !== "DELETED"
+        && (!m.groupId || m.groupId === groupId) && (!m.studentId || m.studentId === studentId))
+      .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))[0]?.id;
+  };
+
+  const leaveGroup = async ({ groupId, studentId, studentGroupId, reasonId, comment }: LeaveGroupArgs) => {
+    const membershipId = studentGroupId ?? (await findLiveMembershipId(groupId, studentId));
+    if (membershipId) {
+      await updateStudentGroupStatus({
+        id: membershipId,
+        status: "INACTIVE",
+        reasonId: reasonId || undefined,
+        reason: comment?.trim() || undefined,
+      }).unwrap();
+      return;
+    }
+    // No live membership: the student is listed only by the group's legacy
+    // student relation (a member added through POST /groups/{id}/students/
+    // assign never got a /student-groups row) or has already left. DELETE
+    // /groups/{id}/students/{studentId} clears the legacy row; its 404 means the
+    // backend doesn't see the student in this group, which is the state asked for.
+    try {
+      await removeStudentFromGroup({ id: groupId, studentId }).unwrap();
+    } catch (err) {
+      if ((err as { status?: unknown }).status !== 404) throw err;
+    }
   };
 
   const archiveStudent = async ({ studentId, reasonId, comment }: ArchiveStudentArgs) => {
@@ -78,5 +124,5 @@ export const useArchiveStudent = () => {
     await deleteStudentRequest(args.studentId).unwrap();
   };
 
-  return { archiveStudent, deleteStudent };
+  return { leaveGroup, archiveStudent, deleteStudent };
 };

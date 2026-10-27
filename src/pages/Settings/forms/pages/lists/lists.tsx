@@ -4,6 +4,11 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   IconButton,
   MenuItem,
   Paper,
@@ -30,7 +35,7 @@ import {
   useDeleteLeadFormMutation,
   useToggleLeadFormStatusMutation,
 } from "../../../../../app/api/leadFormsApi";
-import type { LeadFormType } from "../../../../../app/api/leadFormsApi/types";
+import type { LeadForm, LeadFormType } from "../../../../../app/api/leadFormsApi/types";
 import { useToast } from "../../../../../Context/ToastContext";
 import { extractApiError } from "../../../../../utils";
 import type { RootState } from "../../../../../app/store";
@@ -51,6 +56,7 @@ export const Lists = () => {
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const [typeFilter, setTypeFilter] = useState<"" | LeadFormType>("");
+  const [deleteTarget, setDeleteTarget] = useState<LeadForm | null>(null);
 
   // GET /lead-forms — branchId and type are its two documented query params
   // (the active branch also goes out as the x-branch-id header).
@@ -63,14 +69,17 @@ export const Lists = () => {
 
   const forms = formsData?.data ?? [];
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteLeadForm(id).unwrap();
+      await deleteLeadForm(deleteTarget.id).unwrap();
       toast.success(t("settings.forms.lists.toast.deleted"));
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("settings.forms.lists.toast.error");
       toast.error(detail ? `${generic}: ${detail}` : generic);
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -80,7 +89,7 @@ export const Lists = () => {
       await toggleStatus(id).unwrap();
     } catch (err) {
       const detail = extractApiError(err);
-      const generic = t("settings.forms.lists.toast.statusError", { defaultValue: "Failed to change the form status." });
+      const generic = t("settings.forms.lists.toast.statusError");
       toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
@@ -89,14 +98,14 @@ export const Lists = () => {
   // this app yet, so the copied link is the slug-based path on this origin.
   const handleCopyLink = async (slug: string | null) => {
     if (!slug) {
-      toast.error(t("settings.forms.lists.toast.noSlug", { defaultValue: "This form has no link yet." }));
+      toast.error(t("settings.forms.lists.toast.noSlug"));
       return;
     }
     try {
       await navigator.clipboard.writeText(`${window.location.origin}/forms/${slug}`);
-      toast.success(t("settings.forms.lists.toast.linkCopied", { defaultValue: "Link copied" }));
+      toast.success(t("settings.forms.lists.toast.linkCopied"));
     } catch {
-      toast.error(t("settings.forms.lists.toast.copyError", { defaultValue: "Couldn't copy the link." }));
+      toast.error(t("settings.forms.lists.toast.copyError"));
     }
   };
 
@@ -128,7 +137,7 @@ export const Lists = () => {
               onChange={(e) => setTypeFilter(e.target.value as "" | LeadFormType)}
               sx={{ minWidth: 150, fontSize: "0.85rem", borderRadius: "50px" }}
             >
-              <MenuItem value="">{t("settings.forms.lists.allTypes", { defaultValue: "All types" })}</MenuItem>
+              <MenuItem value="">{t("settings.forms.lists.allTypes")}</MenuItem>
               <MenuItem value="PUBLIC_LEAD">{t("settings.forms.createForm.tabs.leadForm")}</MenuItem>
               <MenuItem value="INTERNAL_SURVEY">{t("settings.forms.createForm.tabs.simpleForm")}</MenuItem>
             </Select>
@@ -174,9 +183,9 @@ export const Lists = () => {
                 <TableRow>
                   <TableCell sx={headCellSx}>{t("settings.forms.lists.table.name")}</TableCell>
                   <TableCell sx={headCellSx}>{t("settings.forms.lists.table.type")}</TableCell>
-                  <TableCell align="right" sx={headCellSx}>{t("settings.forms.lists.table.views", { defaultValue: "Views" })}</TableCell>
-                  <TableCell align="right" sx={headCellSx}>{t("settings.forms.lists.table.submissions", { defaultValue: "Submissions" })}</TableCell>
-                  <TableCell align="center" sx={headCellSx}>{t("settings.forms.lists.table.status", { defaultValue: "Status" })}</TableCell>
+                  <TableCell align="right" sx={headCellSx}>{t("settings.forms.lists.table.views")}</TableCell>
+                  <TableCell align="right" sx={headCellSx}>{t("settings.forms.lists.table.submissions")}</TableCell>
+                  <TableCell align="center" sx={headCellSx}>{t("settings.forms.lists.table.status")}</TableCell>
                   <TableCell align="right" sx={{ ...headCellSx, width: 150 }}>{t("settings.forms.lists.table.actions")}</TableCell>
                 </TableRow>
               </TableHead>
@@ -227,7 +236,7 @@ export const Lists = () => {
                           <Tooltip title={t("settings.forms.lists.tooltips.delete")}>
                             <IconButton
                               size="small"
-                              onClick={() => handleDelete(form.id)}
+                              onClick={() => setDeleteTarget(form)}
                               disabled={isDeleting}
                               sx={{ color: "#ef5350", "&:hover": { backgroundColor: "#ffebee" } }}
                             >
@@ -254,6 +263,35 @@ export const Lists = () => {
           </TableContainer>
         )}
       </Paper>
+
+      <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}>
+        <DialogTitle sx={{ fontWeight: 600 }}>{t("settings.forms.lists.deleteConfirm.title")}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t("settings.forms.lists.deleteConfirm.message", { name: deleteTarget?.title ?? "" })}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setDeleteTarget(null)}
+            variant="outlined"
+            disabled={isDeleting}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.forms.lists.deleteConfirm.cancel")}
+          </Button>
+          <Button
+            onClick={handleDelete}
+            variant="contained"
+            color="error"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
+          >
+            {t("settings.forms.lists.tooltips.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

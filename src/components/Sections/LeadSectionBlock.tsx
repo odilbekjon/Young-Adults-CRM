@@ -13,6 +13,7 @@ import { useMoveLeadSectionMutation } from "../../app/api/leadsApi";
 import { useToast } from "../../Context/ToastContext";
 import { LeadCard } from "./LeadCard";
 import { LeadFormDialog } from "./LeadFormDialog";
+import { withApiDetail } from "./withApiDetail";
 
 interface Props {
   section: KanbanSection;
@@ -46,8 +47,8 @@ export const LeadSectionBlock = ({ section }: Props) => {
       await updateLeadSection({ id: section.id, name: name.trim() }).unwrap();
       toast.success(t("leadsPage.sections.toast.updated"));
       setRenaming(false);
-    } catch {
-      toast.error(t("leadsPage.sections.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.sections.toast.error"), err));
     }
   };
 
@@ -55,8 +56,8 @@ export const LeadSectionBlock = ({ section }: Props) => {
     try {
       await deleteLeadSection(section.id).unwrap();
       toast.success(t("leadsPage.sections.toast.deleted"));
-    } catch {
-      toast.error(t("leadsPage.sections.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.sections.toast.error"), err));
     } finally {
       setConfirmDelete(false);
       setMenuAnchor(null);
@@ -67,8 +68,8 @@ export const LeadSectionBlock = ({ section }: Props) => {
     try {
       await createGroupFromSection({ id: section.id }).unwrap();
       toast.success(t("leadsPage.sections.toast.groupCreated"));
-    } catch {
-      toast.error(t("leadsPage.sections.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.sections.toast.error"), err));
     }
     setMenuAnchor(null);
   };
@@ -77,11 +78,12 @@ export const LeadSectionBlock = ({ section }: Props) => {
     e.preventDefault();
     setDragOver(false);
     const leadId = e.dataTransfer.getData("text/plain");
-    if (!leadId) return;
+    // Dropping a card back onto its own section moves nothing.
+    if (!leadId || section.leads.some((lead) => lead.id === leadId)) return;
     try {
       await moveLeadSection({ id: leadId, targetSectionId: section.id }).unwrap();
-    } catch {
-      toast.error(t("leadsPage.leadForm.toast.error"));
+    } catch (err) {
+      toast.error(withApiDetail(t("leadsPage.leadForm.toast.error"), err));
     }
   };
 
@@ -100,7 +102,14 @@ export const LeadSectionBlock = ({ section }: Props) => {
       <Box sx={{ display: "flex", alignItems: "center", mb: 0.75, gap: 0.5 }}>
         {renaming ? (
           <>
-            <TextField size="small" value={name} onChange={(e) => setName(e.target.value)} autoFocus sx={{ flex: 1, "& input": { fontSize: 12 } }} />
+            <TextField
+              size="small" value={name} onChange={(e) => setName(e.target.value)} autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRename();
+                if (e.key === "Escape") { setName(section.name); setRenaming(false); }
+              }}
+              sx={{ flex: 1, "& input": { fontSize: 12 } }}
+            />
             <IconButton size="small" onClick={handleRename} disabled={isUpdating}>
               {isUpdating ? <CircularProgress size={12} /> : <Typography sx={{ fontSize: 11 }}>{t("leadsPage.sections.save")}</Typography>}
             </IconButton>

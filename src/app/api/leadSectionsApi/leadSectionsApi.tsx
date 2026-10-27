@@ -65,7 +65,8 @@ export const leadSectionsApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: ["leadSection", "leadColumn", "group"],
+            // The section's leads become members of the new group.
+            invalidatesTags: ["leadSection", "leadColumn", "lead", "group", "student", "studentGroup"],
         }),
         updateLeadSection: builder.mutation<LeadSectionResponse, UpdateLeadSectionRequest>({
             query: ({ id, ...data }) => ({

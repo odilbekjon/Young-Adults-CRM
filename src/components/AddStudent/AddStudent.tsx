@@ -158,13 +158,12 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
 
     if (fullPhone && duplicateNames.length === 0) {
       try {
-        // GET /students' `search` isn't confirmed to be honored server-side
-        // (see StudentSearchField), so the branch's roster is read and
-        // compared by the phone's last 9 digits instead — same full-roster
-        // read the Students page already does for its client-side filters.
-        const roster = await fetchStudents({ page: 1, limit: 3000, branchId: selectedBranchId }).unwrap();
+        // Server-side search by the phone's last 9 digits (no country code /
+        // formatting), then an exact compare of those digits on the few hits
+        // — instead of reading the branch's whole roster on every create.
         const key = fullPhone.replace(/\D/g, "").slice(-9);
-        const same = roster.data.filter((s) => (s.phone ?? "").replace(/\D/g, "").slice(-9) === key);
+        const found = await fetchStudents({ page: 1, limit: 20, search: key, branchId: selectedBranchId }).unwrap();
+        const same = found.data.filter((s) => (s.phone ?? "").replace(/\D/g, "").slice(-9) === key);
         if (same.length > 0) {
           setDuplicateNames(same.map((s) => s.name));
           return;

@@ -44,7 +44,8 @@ const fetchQuery = fetchBaseQuery({
   
     const state = getState() as { branch?: { selectedBranchId?: string | null } };
     const branchId = state.branch?.selectedBranchId;
-    if (branchId && !isCoursesRead(arg)) {
+    // A request that names its own branch keeps it (see coursesApi's branchHeader).
+    if (branchId && !headers.has("x-branch-id") && !isCoursesRead(arg)) {
       headers.set("x-branch-id", branchId);
     }
     headers.set("x-lang", i18n.language);

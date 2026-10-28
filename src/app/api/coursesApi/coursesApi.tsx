@@ -21,6 +21,15 @@ const normalizeList = <T,>(data: unknown): T[] => {
     return [];
 };
 
+// Swagger (POST /courses): the course's branch "is taken from the branch
+// selector or the token" — i.e. from x-branch-id, with the body's branchId
+// required alongside. The form can pick any branch, not the one selected in the
+// header (or none at all on "All branches"), so a write is scoped to the
+// course's own branch. Otherwise the backend works with the wrong branch, e.g.
+// answering "a course with this name already exists in this branch" because the
+// name is taken in the selector's/token's branch.
+const branchHeader = (branchId: string) => ({ "x-branch-id": branchId });
+
 export const coursesApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         // Courses are shared by all branches, so the list is never scoped to the
@@ -64,6 +73,7 @@ export const coursesApi = baseApi.injectEndpoints({
                     url: PATHS.COURSES,
                     method: "POST",
                     body: formData,
+                    headers: branchHeader(branchId),
                 };
             },
             invalidatesTags: ["course"],
@@ -83,6 +93,7 @@ export const coursesApi = baseApi.injectEndpoints({
                     url: `${PATHS.COURSES}/${id}`,
                     method: "PATCH",
                     body: formData,
+                    headers: branchId ? branchHeader(branchId) : undefined,
                 };
             },
             invalidatesTags: ["course"],

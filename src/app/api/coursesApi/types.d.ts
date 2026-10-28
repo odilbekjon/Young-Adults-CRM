@@ -102,3 +102,23 @@ export interface ToggleCourseStatusResponse {
   message: string;
   data?: Course;
 }
+
+// POST /courses/bulk-delete (Swagger, JSON): hard-deletes the given courses
+// as long as none of them has active groups.
+export interface BulkDeleteCoursesRequest {
+  ids: string[];
+}
+
+// PATCH /courses/bulk-toggle-status (Swagger, JSON): flips ACTIVE <-> INACTIVE,
+// or sets `status` on every id when given; `reason` / `reasonId` document why.
+export interface BulkToggleCourseStatusRequest {
+  ids: string[];
+  status?: "ACTIVE" | "INACTIVE";
+  reason?: string;
+  reasonId?: string;
+}
+
+export interface BulkCoursesResponse {
+  success: boolean;
+  message?: string;
+}

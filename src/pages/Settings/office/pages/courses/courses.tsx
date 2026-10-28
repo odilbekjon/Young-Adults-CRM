@@ -12,6 +12,7 @@ import {
   IconButton,
   Divider,
   Paper,
+  Checkbox,
   CircularProgress,
   Dialog,
   DialogTitle,
@@ -27,6 +28,8 @@ import {
   useUpdateCourseMutation,
   useToggleCourseStatusMutation,
   useDeleteCourseMutation,
+  useBulkToggleCourseStatusMutation,
+  useBulkDeleteCoursesMutation,
 } from "../../../../../app/api/coursesApi/coursesApi";
 import type { Course } from "../../../../../app/api/coursesApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi/branchesApi";
@@ -68,6 +71,8 @@ const defaultForm: FormState = {
 
 const LESSON_DURATION_OPTIONS = [45, 60, 90, 120, 150];
 
+type BulkAction = "archive" | "restore" | "delete";
+
 export const Courses = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -80,6 +85,8 @@ export const Courses = () => {
   const [updateCourse, { isLoading: isUpdating }] = useUpdateCourseMutation();
   const [toggleCourseStatus, { isLoading: isToggling }] = useToggleCourseStatusMutation();
   const [deleteCourse, { isLoading: isDeleting }] = useDeleteCourseMutation();
+  const [bulkToggleStatus, { isLoading: isBulkToggling }] = useBulkToggleCourseStatusMutation();
+  const [bulkDelete, { isLoading: isBulkDeleting }] = useBulkDeleteCoursesMutation();
 
   const [tab, setTab] = useState<"faol" | "arxiv">("faol");
 
@@ -103,6 +110,17 @@ export const Courses = () => {
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [restoreTarget, setRestoreTarget] = useState<Course | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+
+  // Checkbox selection for the bulk actions: the ids stay selected only while
+  // their course is still in the current tab's list.
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState<BulkAction>("archive");
+  const [bulkReason, setBulkReason] = useState("");
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const selected = selectedIds.filter((id) => courses.some((c) => c.id === id));
+  const allSelected = courses.length > 0 && selected.length === courses.length;
+  const isBulkBusy = isBulkToggling || isBulkDeleting;
 
   const openAddDrawer = () => {
     setEditingCourse(null);
@@ -210,6 +228,54 @@ export const Courses = () => {
     }
   };
 
+  const toggleSelected = (id: string) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const toggleSelectAll = () => setSelectedIds(allSelected ? [] : courses.map((c) => c.id));
+
+  const switchTab = (next: "faol" | "arxiv") => {
+    setTab(next);
+    setSelectedIds([]);
+  };
+
+  const openBulkConfirm = (action: BulkAction) => {
+    setBulkError(null);
+    setBulkReason("");
+    setBulkAction(action);
+    setBulkOpen(true);
+  };
+
+  const closeBulkConfirm = () => {
+    if (isBulkBusy) return;
+    setBulkOpen(false);
+  };
+
+  // One request for the whole selection (bulk-toggle-status archives/restores,
+  // bulk-delete removes for good). A failure keeps the selection for a retry.
+  const confirmBulk = async () => {
+    if (selected.length === 0) return;
+    try {
+      if (bulkAction === "delete") {
+        await bulkDelete({ ids: selected }).unwrap();
+      } else {
+        await bulkToggleStatus({
+          ids: selected,
+          status: bulkAction === "archive" ? "INACTIVE" : "ACTIVE",
+          reason: bulkAction === "archive" ? bulkReason.trim() || undefined : undefined,
+        }).unwrap();
+      }
+      toast.success(t(`settings.office.courses.bulk.${bulkAction}.toast`));
+      setSelectedIds([]);
+      setBulkOpen(false);
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t(`settings.office.courses.bulk.${bulkAction}.error`);
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setBulkError(message);
+      toast.error(message);
+    }
+  };
+
   // The same name in the same branch is refused by the backend even when the
   // earlier course is archived (and so not on the Active tab) — say that up
   // front instead of surfacing a bare "already exists".
@@ -309,7 +375,7 @@ export const Courses = () => {
             key={key}
             component="button"
             type="button"
-            onClick={() => setTab(key)}
+            onClick={() => switchTab(key)}
             sx={{
               border: "none", cursor: "pointer", borderRadius: "8px", px: 2, py: 0.7, fontSize: 13, fontWeight: 600,
               bgcolor: tab === key ? "var(--color-surface)" : "transparent",
@@ -321,6 +387,55 @@ export const Courses = () => {
           </Box>
         ))}
       </Box>
+
+      {/* Bulk actions */}
+      {!isLoading && !isError && courses.length > 0 && (
+        <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1.5, mb: 2 }}>
+          <Box component="label" sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer", fontSize: 13 }}>
+            <Checkbox
+              size="small"
+              checked={allSelected}
+              indeterminate={selected.length > 0 && !allSelected}
+              onChange={toggleSelectAll}
+              sx={{ p: 0.5 }}
+            />
+            {t("settings.office.courses.bulk.selectAll")}
+          </Box>
+          {selected.length > 0 && (
+            <>
+              <Typography fontSize={13} color="var(--color-text-muted)">
+                {t("settings.office.courses.bulk.selected", { count: selected.length })}
+              </Typography>
+              {tab === "faol" ? (
+                <Button
+                  size="small" variant="outlined" startIcon={<MdArchive size={16} />}
+                  onClick={() => openBulkConfirm("archive")}
+                  sx={{ textTransform: "none", borderRadius: "10px", color: "#b98900", borderColor: "#b98900" }}
+                >
+                  {t("settings.office.courses.bulk.archive.action")}
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    size="small" variant="outlined" startIcon={<MdUnarchive size={16} />}
+                    onClick={() => openBulkConfirm("restore")}
+                    sx={{ textTransform: "none", borderRadius: "10px", color: "#2e7d32", borderColor: "#2e7d32" }}
+                  >
+                    {t("settings.office.courses.bulk.restore.action")}
+                  </Button>
+                  <Button
+                    size="small" variant="outlined" color="error" startIcon={<MdDeleteOutline size={16} />}
+                    onClick={() => openBulkConfirm("delete")}
+                    sx={{ textTransform: "none", borderRadius: "10px" }}
+                  >
+                    {t("settings.office.courses.bulk.delete.action")}
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+        </Box>
+      )}
 
       {/* Loading state */}
       {isLoading && (
@@ -365,6 +480,16 @@ export const Courses = () => {
                   justifyContent: "center",
                 }}
               >
+                <Checkbox
+                  size="small"
+                  checked={selected.includes(course.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => toggleSelected(course.id)}
+                  sx={{
+                    position: "absolute", top: 8, left: 8, zIndex: 2, p: 0.25, borderRadius: "6px",
+                    bgcolor: "rgba(255,255,255,0.85)", "&:hover": { bgcolor: "var(--color-surface)" },
+                  }}
+                />
                 <Box sx={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 0.5, zIndex: 2 }}>
                   <IconButton
                     size="small"
@@ -681,6 +806,58 @@ export const Courses = () => {
             sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none" }}
           >
             {t("settings.office.courses.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk action confirmation */}
+      <Dialog
+        open={bulkOpen}
+        onClose={closeBulkConfirm}
+        PaperProps={{ sx: { borderRadius: "14px", width: 400 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {t(`settings.office.courses.bulk.${bulkAction}.title`)}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t(`settings.office.courses.bulk.${bulkAction}.message`, { count: selected.length })}
+          </DialogContentText>
+          {bulkAction === "archive" && (
+            <TextField
+              fullWidth
+              size="small"
+              sx={{ mt: 2 }}
+              label={t("settings.office.courses.bulk.archive.reason")}
+              value={bulkReason}
+              onChange={(e) => setBulkReason(e.target.value)}
+            />
+          )}
+          {bulkError && (
+            <Typography fontSize={13} color="error" mt={1.5}>{bulkError}</Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={closeBulkConfirm}
+            variant="outlined"
+            disabled={isBulkBusy}
+            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
+          >
+            {t("settings.office.courses.form.cancel")}
+          </Button>
+          <Button
+            onClick={confirmBulk}
+            variant="contained"
+            color={bulkAction === "delete" ? "error" : "primary"}
+            disabled={isBulkBusy}
+            startIcon={isBulkBusy ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{
+              textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none",
+              ...(bulkAction !== "delete" && { bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" } }),
+            }}
+          >
+            {t(`settings.office.courses.bulk.${bulkAction}.action`)}
           </Button>
         </DialogActions>
       </Dialog>

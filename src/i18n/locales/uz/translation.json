@@ -2589,6 +2589,32 @@
         "durationOptions": { "min45": "45 daqiqa", "min60": "60 daqiqa", "min90": "90 daqiqa", "min120": "120 daqiqa", "min150": "150 daqiqa" },
         "tabs": { "active": "Faol", "archived": "Arxiv" },
         "emptyArchived": "Arxivlangan kurslar yo'q",
+        "bulk": {
+          "selectAll": "Barchasini tanlash",
+          "selected": "{{count}} ta tanlandi",
+          "archive": {
+            "action": "Arxivga o'tkazish",
+            "title": "Kurslarni arxivga o'tkazish",
+            "message": "{{count}} ta kursni arxivga o'tkazishni xohlaysizmi?",
+            "reason": "Sabab (ixtiyoriy)",
+            "toast": "Tanlangan kurslar arxivga o'tkazildi",
+            "error": "Kurslarni arxivga o'tkazib bo'lmadi"
+          },
+          "restore": {
+            "action": "Tiklash",
+            "title": "Kurslarni tiklash",
+            "message": "{{count}} ta kursni tiklab, faol ro'yxatga qaytarishni xohlaysizmi?",
+            "toast": "Tanlangan kurslar tiklandi",
+            "error": "Kurslarni tiklab bo'lmadi"
+          },
+          "delete": {
+            "action": "O'chirish",
+            "title": "Kurslarni o'chirish",
+            "message": "{{count}} ta kursni butunlay o'chirishga ishonchingiz komilmi? Faol guruhi bor kurslarni o'chirib bo'lmaydi. Bu amalni ortga qaytarib bo'lmaydi.",
+            "toast": "Tanlangan kurslar o'chirildi",
+            "error": "Kurslarni o'chirib bo'lmadi"
+          }
+        },
         "archive": "Arxivlash",
         "restore": "Tiklash",
         "deleteConfirm": {

@@ -7,6 +7,9 @@ import {
     UpdateCourseRequest,
     DeleteCourseResponse,
     ToggleCourseStatusResponse,
+    BulkDeleteCoursesRequest,
+    BulkToggleCourseStatusRequest,
+    BulkCoursesResponse,
     CourseSelectOption,
     CoursesSelectRequest,
 } from "./types";
@@ -119,6 +122,29 @@ export const coursesApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ["course"],
         }),
+        // PATCH /courses/bulk-toggle-status — one request for the whole selection.
+        // The ids may belong to different branches, so it isn't scoped to the
+        // branch selected in the header.
+        bulkToggleCourseStatus: builder.mutation<BulkCoursesResponse, BulkToggleCourseStatusRequest>({
+            query: (body) => ({
+                url: `${PATHS.COURSES}/bulk-toggle-status`,
+                method: "PATCH",
+                body,
+                headers: branchHeader("all"),
+            }),
+            invalidatesTags: ["course"],
+        }),
+        // POST /courses/bulk-delete — hard delete of the given courses (the
+        // backend refuses those that still have active groups).
+        bulkDeleteCourses: builder.mutation<BulkCoursesResponse, BulkDeleteCoursesRequest>({
+            query: (body) => ({
+                url: `${PATHS.COURSES}/bulk-delete`,
+                method: "POST",
+                body,
+                headers: branchHeader("all"),
+            }),
+            invalidatesTags: ["course"],
+        }),
     })
 })
 
@@ -129,4 +155,6 @@ export const {
     useUpdateCourseMutation,
     useToggleCourseStatusMutation,
     useDeleteCourseMutation,
+    useBulkToggleCourseStatusMutation,
+    useBulkDeleteCoursesMutation,
 } = coursesApi;

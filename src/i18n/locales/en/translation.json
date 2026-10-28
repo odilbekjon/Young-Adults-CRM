@@ -2589,6 +2589,32 @@
         "durationOptions": { "min45": "45 minutes", "min60": "60 minutes", "min90": "90 minutes", "min120": "120 minutes", "min150": "150 minutes" },
         "tabs": { "active": "Active", "archived": "Archived" },
         "emptyArchived": "No archived courses",
+        "bulk": {
+          "selectAll": "Select all",
+          "selected": "{{count}} selected",
+          "archive": {
+            "action": "Archive",
+            "title": "Archive courses",
+            "message": "Move the {{count}} selected courses to the archive?",
+            "reason": "Reason (optional)",
+            "toast": "Selected courses moved to the archive",
+            "error": "Failed to archive the courses"
+          },
+          "restore": {
+            "action": "Restore",
+            "title": "Restore courses",
+            "message": "Restore the {{count}} selected courses and move them back to the active list?",
+            "toast": "Selected courses restored",
+            "error": "Failed to restore the courses"
+          },
+          "delete": {
+            "action": "Delete",
+            "title": "Delete courses",
+            "message": "Permanently delete the {{count}} selected courses? Courses with active groups cannot be deleted. This action cannot be undone.",
+            "toast": "Selected courses deleted",
+            "error": "Failed to delete the courses"
+          }
+        },
         "archive": "Archive",
         "restore": "Restore",
         "deleteConfirm": {

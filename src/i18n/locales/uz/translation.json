@@ -2581,6 +2581,7 @@
           "cancel": "Bekor qilish",
           "errors": {
             "name": "Kurs nomini kiriting",
+            "archivedDuplicate": "Bu nomdagi kurs shu filialda arxivda turibdi. Yangisini yaratish o'rniga Arxiv tabidan tiklang.",
             "branch": "Filialni tanlang",
             "save": "Nimadir xato ketdi. Qaytadan urinib ko'ring."
           }

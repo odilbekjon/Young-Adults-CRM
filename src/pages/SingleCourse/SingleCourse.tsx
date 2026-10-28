@@ -25,7 +25,7 @@ import { useGroupsByCourseQuery } from "../../app/api/groupsApi/groupsApi";
 import type { CourseGroup } from "../../app/api/groupsApi/types";
 import { useToast } from "../../Context/ToastContext";
 import { CARD_COLORS } from "../../constants/CardColors";
-import { classifyDayList, classifyDays, formatTrainingDate } from "../../utils";
+import { classifyDayList, classifyDays, decimalToNumber, formatTrainingDate } from "../../utils";
 
 const fmt = (n: number) =>
   n.toLocaleString("ru-RU").replace(/,/g, " ") + " UZS";
@@ -242,7 +242,7 @@ export const SingleCourse = () => {
 
             {/* Info fields */}
             <Box sx={{ p: 2.5 }}>
-              <InfoRow label="Price" value={fmt(course.price?.d?.[0] ?? 0)} />
+              <InfoRow label="Price" value={fmt(decimalToNumber(course.price) ?? 0)} />
               {!!course.months && (
                 <InfoRow
                   label={t("settings.office.courses.form.courseDuration")}

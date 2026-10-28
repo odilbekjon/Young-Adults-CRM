@@ -2581,6 +2581,7 @@
           "cancel": "Cancel",
           "errors": {
             "name": "Enter the course name",
+            "archivedDuplicate": "A course with this name is archived in this branch. Restore it from the Archived tab instead of creating a new one.",
             "branch": "Select a branch",
             "save": "Something went wrong. Please try again."
           }

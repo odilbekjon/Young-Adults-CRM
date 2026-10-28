@@ -2589,6 +2589,10 @@
         "durationOptions": { "min45": "45 daqiqa", "min60": "60 daqiqa", "min90": "90 daqiqa", "min120": "120 daqiqa", "min150": "150 daqiqa" },
         "tabs": { "active": "Faol", "archived": "Arxiv" },
         "emptyArchived": "Arxivlangan kurslar yo'q",
+        "groups": {
+          "empty": "Hozircha bu kursda guruhlar ochilmagan",
+          "loadError": "Kurs guruhlarini yuklab bo'lmadi."
+        },
         "bulk": {
           "selectAll": "Barchasini tanlash",
           "selected": "{{count}} ta tanlandi",
@@ -2750,7 +2754,8 @@
     "forms": {
       "createForm": {
         "tabs": { "simpleForm": "Oddiy shakl", "leadForm": "Lid shakli" },
-        "actions": { "save": "Saqlash", "update": "Yangilash", "submit": "Yuborish", "addAnswer": "Javob qo'shish", "addBlock": "Blok qo'shish" },
+        "actions": { "save": "Saqlash", "update": "Yangilash", "submit": "Yuborish", "addAnswer": "Javob qo'shish", "addBlock": "Blok qo'shish", "back": "Formalarga qaytish" },
+        "loadError": "Formani yuklab bo'lmadi. Qaytadan urinib ko'ring.",
         "placeholders": { "formName": "Shakl nomini kiriting", "selectBranch": "Filialni tanlang:", "selectSection": "kiritish", "leadsSources": "Lidlar manbalari", "description": "Tavsif (ixtiyoriy)", "successMessage": "Yuborilgandan keyin ko'rsatiladigan xabar (ixtiyoriy)" },
         "required": "Majburiy",
         "fixedFields": { "fullName": "To'liq ism familiyangiz?", "phoneNumber": "Telefon raqamingiz?" },
@@ -2768,10 +2773,14 @@
         "title": "Formalar",
         "actions": { "addNew": "Qo'shish" },
         "allTypes": "Barcha turlar",
-        "table": { "id": "id", "name": "Nomi", "type": "turi", "views": "Ko'rishlar", "submissions": "Arizalar", "status": "Holati", "actions": "Amallar" },
+        "allStatuses": "Barcha holatlar",
+        "statuses": { "active": "Faol", "inactive": "Nofaol" },
+        "searchPlaceholder": "Formalarni qidirish",
+        "table": { "id": "id", "name": "Nomi", "type": "turi", "branch": "Filial", "source": "Manba", "fields": "Savollar", "views": "Ko'rishlar", "submissions": "Arizalar", "status": "Holati", "actions": "Amallar" },
         "tooltips": { "info": "Ma'lumot", "edit": "Tahrirlash", "delete": "O'chirish", "copyLink": "Havolani nusxalash" },
         "loadError": "Formalarni yuklab bo'lmadi. Qaytadan urinib ko'ring.",
         "emptyState": "Hozircha formalar yo'q",
+        "noResults": "Filtrlarga mos forma topilmadi",
         "deleteConfirm": { "title": "Formani o'chirish", "cancel": "Bekor qilish", "message": "\"{{name}}\" formasi o'chirilsinmi? Bu amalni bekor qilib bo'lmaydi." },
         "toast": { "deleted": "Forma o'chirildi", "error": "Formani o'chirib bo'lmadi. Qaytadan urinib ko'ring.", "statusError": "Forma holatini o'zgartirib bo'lmadi.", "noSlug": "Bu formada hozircha havola yo'q.", "linkCopied": "Havola nusxalandi", "copyError": "Havolani nusxalab bo'lmadi." }
       }

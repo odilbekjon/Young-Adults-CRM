@@ -2589,6 +2589,10 @@
         "durationOptions": { "min45": "45 minutes", "min60": "60 minutes", "min90": "90 minutes", "min120": "120 minutes", "min150": "150 minutes" },
         "tabs": { "active": "Active", "archived": "Archived" },
         "emptyArchived": "No archived courses",
+        "groups": {
+          "empty": "No groups have been opened in this course yet",
+          "loadError": "Failed to load the groups of this course."
+        },
         "bulk": {
           "selectAll": "Select all",
           "selected": "{{count}} selected",
@@ -2750,7 +2754,8 @@
     "forms": {
       "createForm": {
         "tabs": { "simpleForm": "Simple form", "leadForm": "Lead form" },
-        "actions": { "save": "Save", "update": "Update", "submit": "Submit", "addAnswer": "Add answer", "addBlock": "Add block" },
+        "actions": { "save": "Save", "update": "Update", "submit": "Submit", "addAnswer": "Add answer", "addBlock": "Add block", "back": "Back to forms" },
+        "loadError": "Failed to load the form. Please try again.",
         "placeholders": { "formName": "Enter form name", "selectBranch": "Select branch:", "selectSection": "input", "leadsSources": "Leads Sources", "description": "Description (optional)", "successMessage": "Message shown after submitting (optional)" },
         "required": "Required",
         "fixedFields": { "fullName": "Full name and surname?", "phoneNumber": "Your phone number?" },
@@ -2768,10 +2773,14 @@
         "title": "Forms",
         "actions": { "addNew": "Add new" },
         "allTypes": "All types",
-        "table": { "id": "id", "name": "Name", "type": "type", "views": "Views", "submissions": "Submissions", "status": "Status", "actions": "Actions" },
+        "allStatuses": "All statuses",
+        "statuses": { "active": "Active", "inactive": "Inactive" },
+        "searchPlaceholder": "Search forms",
+        "table": { "id": "id", "name": "Name", "type": "type", "branch": "Branch", "source": "Source", "fields": "Questions", "views": "Views", "submissions": "Submissions", "status": "Status", "actions": "Actions" },
         "tooltips": { "info": "Info", "edit": "Edit", "delete": "Delete", "copyLink": "Copy link" },
         "loadError": "Failed to load forms. Please try again.",
         "emptyState": "No forms yet",
+        "noResults": "No forms match your filters",
         "deleteConfirm": { "title": "Delete form", "cancel": "Cancel", "message": "Delete the form \"{{name}}\"? This cannot be undone." },
         "toast": { "deleted": "Form deleted", "error": "Failed to delete form. Please try again.", "statusError": "Failed to change the form status.", "noSlug": "This form has no link yet.", "linkCopied": "Link copied", "copyError": "Couldn't copy the link." }
       }

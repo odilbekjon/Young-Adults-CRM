@@ -13,19 +13,21 @@ import { FiPlus, FiChevronUp, FiChevronDown } from "react-icons/fi";
 import { MdClose } from "react-icons/md";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  useLeadFormForEditQuery,
+  useLeadFormByIdQuery,
   useLeadFormFieldsQuery,
   useCreateLeadFormMutation,
   useUpdateLeadFormMutation,
   useCreateLeadFormFieldMutation,
   useUpdateLeadFormFieldMutation,
+  useReorderLeadFormFieldsMutation,
   useDeleteLeadFormFieldMutation,
 } from "../../../../../app/api/leadFormsApi";
-import type { LeadFormType } from "../../../../../app/api/leadFormsApi/types";
+import type { CreateLeadFormFieldRequest, LeadFormField, LeadFormType } from "../../../../../app/api/leadFormsApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi";
 import { useAllLeadSourcesQuery } from "../../../../../app/api/leadSourcesApi";
 import { useToast } from "../../../../../Context/ToastContext";
 import { extractApiError } from "../../../../../utils";
+import { runLimited } from "../../../../../utils/runLimited";
 import type { RootState } from "../../../../../app/store";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -45,10 +47,10 @@ const TEAL_DARK = "#1a4d6e";
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
-// Swagger documents only "TEXT" as a field type sample. The other two values
-// are best guesses — if the backend wants different ones it answers 400 with
-// the allowed list (shown in the save toast) and this map is the one place to
-// change.
+// "TEXT" and "SELECT" are confirmed (GET /lead-forms/{formId}/fields returns
+// them); "TEXTAREA" is a best guess — if the backend wants a different one it
+// answers 400 with the allowed list (shown in the save toast) and this map is
+// the one place to change.
 const FIELD_TYPE: Record<BlockType, string> = {
   "One of the list": "SELECT",
   "Short answer": "TEXT",
@@ -67,6 +69,30 @@ const FIXED_FIELDS = [
   { key: "phoneNumber", mapsTo: "phone" },
 ] as const;
 const FIXED_MAPS_TO: string[] = FIXED_FIELDS.map((f) => f.mapsTo);
+const isFixedField = (f: LeadFormField): boolean => Boolean(f.mapsTo && FIXED_MAPS_TO.includes(f.mapsTo));
+
+// The backend answers 429 to more than 3 parallel requests on one endpoint;
+// field writes go out two at a time.
+const FIELD_WRITES = 2;
+
+// What a block sends to POST/PATCH /lead-forms/{formId}/fields.
+const blockContent = (b: Block) => ({
+  label: b.question,
+  type: FIELD_TYPE[b.type],
+  options: b.type === "One of the list" ? b.answers.map((a) => a.label) : undefined,
+  isRequired: b.isRequired,
+});
+
+// Whether a block's content no longer matches the field the server holds.
+const blockDiffers = (b: Block, f: LeadFormField): boolean =>
+  b.question !== f.label ||
+  b.isRequired !== f.isRequired ||
+  b.type !== blockTypeFromApi(f.type) ||
+  (b.type === "One of the list" && JSON.stringify(b.answers.map((a) => a.label)) !== JSON.stringify(f.options));
+
+// A question of the form in its final position; `draft` is what gets created
+// when it has no `id` yet.
+interface FieldSlot { id?: string; blockId?: number; draft: Omit<CreateLeadFormFieldRequest, "formId">; }
 
 const kindToType = (kind: Kind): LeadFormType => (kind === "lead" ? "PUBLIC_LEAD" : "INTERNAL_SURVEY");
 
@@ -367,22 +393,23 @@ export const CreateForm = () => {
   const [branch, setBranch] = useState(isEdit || headerBranchId === "all" ? "" : headerBranchId ?? "");
   const [sourceId, setSourceId] = useState("");
   const [blocks, setBlocks] = useState<Block[]>(() => (isEdit ? [] : [defaultBlock(t)]));
-  const [originalFieldIds, setOriginalFieldIds] = useState<string[]>([]);
-  // Fixed name/phone fields that already exist on the form being edited.
-  const [existingFixedCount, setExistingFixedCount] = useState(0);
+  // The form's fields as the server holds them (fixed ones included, in order);
+  // kept current after every successful write so that the diff on the next
+  // save — or on a retry after a failed one — only sends what is still missing.
+  const [serverFields, setServerFields] = useState<LeadFormField[]>([]);
   // After the form row is created but a later step fails, a retry must update
   // that row instead of creating a duplicate.
   const [savedId, setSavedId] = useState<string | undefined>(undefined);
-  const [fixedCreated, setFixedCreated] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const { data: formForEditData, isLoading: formLoading } = useLeadFormForEditQuery(id ?? "", { skip: !id });
+  const { data: formData, isLoading: formLoading, isError: formError } = useLeadFormByIdQuery(id ?? "", { skip: !id });
   const { data: fieldsData, isLoading: fieldsLoading, isError: fieldsError } = useLeadFormFieldsQuery(id ?? "", { skip: !id });
 
   const [createLeadForm] = useCreateLeadFormMutation();
   const [updateLeadForm] = useUpdateLeadFormMutation();
   const [createLeadFormField] = useCreateLeadFormFieldMutation();
   const [updateLeadFormField] = useUpdateLeadFormFieldMutation();
+  const [reorderLeadFormFields] = useReorderLeadFormFieldsMutation();
   const [deleteLeadFormField] = useDeleteLeadFormFieldMutation();
 
   // The editor takes the server's copy once. Every save step invalidates the
@@ -391,29 +418,27 @@ export const CreateForm = () => {
   const hydratedForm = useRef<string | undefined>(undefined);
   const hydratedFields = useRef<string | undefined>(undefined);
 
+  // GET /lead-forms/{id} supplies the form's own settings, GET
+  // /lead-forms/{formId}/fields its questions (already sorted by `order`).
   useEffect(() => {
-    if (!formForEditData || hydratedForm.current === id) return;
+    if (!formData || hydratedForm.current === id) return;
     hydratedForm.current = id;
-    const f = formForEditData.data;
+    const f = formData.data;
     setTitle(f.title);
     setDescription(f.description ?? "");
     setSuccessMessage(f.successMessage ?? "");
     setBranch(f.branchId ?? "");
     setSourceId(f.sourceId ?? "");
     setTab(f.type === "INTERNAL_SURVEY" ? 0 : 1);
-  }, [id, formForEditData]);
+  }, [id, formData]);
 
   useEffect(() => {
-    // /fields is preferred; the embedded list of GET /lead-forms/{id}/for-edit
-    // is the fallback when that request fails.
-    const fields = fieldsData?.data ?? (fieldsError ? formForEditData?.data.fields : undefined);
-    if (!fields || hydratedFields.current === id) return;
+    if (!fieldsData || hydratedFields.current === id) return;
     hydratedFields.current = id;
-    const fixed = fields.filter((f) => f.mapsTo && FIXED_MAPS_TO.includes(f.mapsTo));
-    const rest = fields.filter((f) => !fixed.includes(f));
-    setExistingFixedCount(fixed.length);
+    const fields = fieldsData.data;
+    setServerFields(fields);
     setBlocks(
-      rest.map((f, i) => ({
+      fields.filter((f) => !isFixedField(f)).map((f, i) => ({
         id: Date.now() + i,
         fieldId: f.id,
         type: blockTypeFromApi(f.type),
@@ -422,8 +447,7 @@ export const CreateForm = () => {
         isRequired: f.isRequired,
       }))
     );
-    setOriginalFieldIds(rest.map((f) => f.id));
-  }, [id, fieldsData, fieldsError, formForEditData]);
+  }, [id, fieldsData]);
 
   const moveBlock = (index: number, direction: -1 | 1) => {
     setBlocks((prev) => {
@@ -433,6 +457,55 @@ export const CreateForm = () => {
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
+  };
+
+  // Brings the form's fields in line with the editor, sending only what
+  // changed: removed questions are deleted, edited ones patched, new ones
+  // created, and the order is sent once when the sequence differs.
+  const syncFields = async (formId: string, isLead: boolean) => {
+    const fixed = serverFields.filter(isFixedField);
+    // The two fixed lead fields are only created together with the form.
+    const newFixed: ReadonlyArray<(typeof FIXED_FIELDS)[number]> = isLead && !isEdit && fixed.length === 0 ? FIXED_FIELDS : [];
+    const fixedCount = fixed.length + newFixed.length;
+
+    const slots: FieldSlot[] = [
+      ...newFixed.map((f, i) => ({
+        draft: { label: t(`settings.forms.createForm.fixedFields.${f.key}`), type: "TEXT", isRequired: true, order: i, mapsTo: f.mapsTo },
+      })),
+      ...blocks.map((b, i) => ({ id: b.fieldId, blockId: b.id, draft: { ...blockContent(b), order: fixedCount + i } })),
+    ];
+    const removed = serverFields.filter((f) => !isFixedField(f) && !blocks.some((b) => b.fieldId === f.id));
+    const edited = blocks.flatMap((block) => {
+      const field = serverFields.find((f) => f.id === block.fieldId);
+      return field && blockDiffers(block, field) ? [{ block, field }] : [];
+    });
+
+    await runLimited(removed, FIELD_WRITES, async (field) => {
+      await deleteLeadFormField({ formId, fieldId: field.id }).unwrap();
+      setServerFields((prev) => prev.filter((f) => f.id !== field.id));
+    });
+
+    await runLimited(edited, FIELD_WRITES, async ({ block, field }) => {
+      const content = blockContent(block);
+      await updateLeadFormField({ formId, fieldId: field.id, ...content }).unwrap();
+      setServerFields((prev) => prev.map((f) => (f.id === field.id ? { ...f, ...content, options: content.options ?? f.options } : f)));
+    });
+
+    await runLimited(slots.filter((s) => !s.id), FIELD_WRITES, async (slot) => {
+      const created = await createLeadFormField({ formId, ...slot.draft }).unwrap();
+      slot.id = created.data.id;
+      setServerFields((prev) => [...prev, created.data]);
+      // Remember the new id so a retry after a later failure updates the
+      // field instead of creating it twice.
+      setBlocks((prev) => prev.map((b) => (b.id === slot.blockId ? { ...b, fieldId: created.data.id } : b)));
+    });
+
+    // Fields created into an empty form already carry the right `order`.
+    const fieldIds = [...fixed.map((f) => f.id), ...slots.flatMap((s) => (s.id ? [s.id] : []))];
+    if (serverFields.length > 0 && fieldIds.join() !== serverFields.map((f) => f.id).join()) {
+      await reorderLeadFormFields({ formId, fieldIds }).unwrap();
+      setServerFields((prev) => fieldIds.flatMap((fid) => prev.find((f) => f.id === fid) ?? []));
+    }
   };
 
   const handleSave = async () => {
@@ -469,51 +542,7 @@ export const CreateForm = () => {
         setSavedId(formId);
       }
 
-      // The two fixed lead fields are only created together with the form.
-      let fixedCount = isEdit ? existingFixedCount : 0;
-      if (isLead && !isEdit && !fixedCreated) {
-        for (const [i, f] of FIXED_FIELDS.entries()) {
-          await createLeadFormField({
-            formId,
-            label: t(`settings.forms.createForm.fixedFields.${f.key}`),
-            type: "TEXT",
-            isRequired: true,
-            order: i,
-            mapsTo: f.mapsTo,
-          }).unwrap();
-        }
-        setFixedCreated(true);
-      }
-      if (isLead && !isEdit) fixedCount = FIXED_FIELDS.length;
-
-      const currentFieldIds = new Set(blocks.filter((b) => b.fieldId).map((b) => b.fieldId as string));
-      for (const existingId of originalFieldIds) {
-        if (!currentFieldIds.has(existingId)) {
-          await deleteLeadFormField({ formId, fieldId: existingId }).unwrap();
-        }
-      }
-      setOriginalFieldIds((prev) => prev.filter((fid) => currentFieldIds.has(fid)));
-
-      // Order comes from `order` on each field (the reorder endpoint's body
-      // isn't documented): fixed fields first, then the blocks as arranged.
-      for (const [idx, block] of blocks.entries()) {
-        const payload = {
-          label: block.question,
-          type: FIELD_TYPE[block.type],
-          options: block.type === "One of the list" ? block.answers.map((a) => a.label) : undefined,
-          isRequired: block.isRequired,
-          order: fixedCount + idx,
-        };
-        if (block.fieldId) {
-          await updateLeadFormField({ formId, fieldId: block.fieldId, ...payload }).unwrap();
-        } else {
-          const created = await createLeadFormField({ formId, ...payload }).unwrap();
-          // Remember the new id so a retry after a later failure updates the
-          // field instead of creating it twice.
-          setBlocks((prev) => prev.map((b) => (b.id === block.id ? { ...b, fieldId: created.data.id } : b)));
-          setOriginalFieldIds((prev) => [...prev, created.data.id]);
-        }
-      }
+      await syncFields(formId, isLead);
 
       toast.success(isEdit ? t("settings.forms.createForm.toast.updated") : t("settings.forms.createForm.toast.created"));
       navigate("/settings/forms/list");
@@ -539,7 +568,8 @@ export const CreateForm = () => {
     transition: "all 0.15s",
   };
 
-  const isLoadingExisting = isEdit && (formLoading || fieldsLoading || tab === -1);
+  const loadFailed = isEdit && (formError || fieldsError);
+  const isLoadingExisting = isEdit && !loadFailed && (formLoading || fieldsLoading || tab === -1);
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "var(--color-surface-alt)", p: 3, fontFamily: "'DM Sans', sans-serif" }}>
@@ -580,14 +610,21 @@ export const CreateForm = () => {
         <Button
           variant="contained"
           onClick={handleSave}
-          disabled={isSaving || isLoadingExisting}
+          disabled={isSaving || isLoadingExisting || loadFailed}
           sx={{ backgroundColor: TEAL_DARK, borderRadius: "50px", textTransform: "none", fontWeight: 600, px: 4, py: 1.2, boxShadow: "none", whiteSpace: "nowrap", fontSize: "0.9rem", "&:hover": { backgroundColor: TEAL, boxShadow: "none" } }}
         >
           {isSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : (isEdit ? t("settings.forms.createForm.actions.update") : t("settings.forms.createForm.actions.save"))}
         </Button>
       </Box>
 
-      {isLoadingExisting ? (
+      {loadFailed ? (
+        <Box sx={{ textAlign: "center", py: 8 }}>
+          <Typography sx={{ color: "#e53935", fontSize: 14, mb: 2 }}>{t("settings.forms.createForm.loadError")}</Typography>
+          <Button onClick={() => navigate("/settings/forms/list")} sx={{ textTransform: "none" }}>
+            {t("settings.forms.createForm.actions.back")}
+          </Button>
+        </Box>
+      ) : isLoadingExisting ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}><CircularProgress /></Box>
       ) : (
         <FormEditor

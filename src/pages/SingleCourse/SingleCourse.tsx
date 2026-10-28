@@ -303,9 +303,9 @@ export const SingleCourse = () => {
             groupsLoading ? (
               <CircularProgress size={22} />
             ) : groupsError ? (
-              <Typography fontSize={13} color="error">Failed to load groups.</Typography>
+              <Typography fontSize={13} color="error">{t("settings.office.courses.groups.loadError")}</Typography>
             ) : groups.length === 0 ? (
-              <Typography fontSize={13} color="var(--color-text-muted)">No groups yet.</Typography>
+              <Typography fontSize={13} color="var(--color-text-muted)">{t("settings.office.courses.groups.empty")}</Typography>
             ) : (
               <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 420px), 1fr))", gap: 2 }}>
                 {groups.map((g) => (

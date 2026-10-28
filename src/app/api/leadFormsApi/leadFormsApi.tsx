@@ -7,8 +7,9 @@ import {
     LeadFormResponse,
     LeadFormDetail,
     LeadFormDetailResponse,
-    LeadFormForEditResponse,
     LeadFormField,
+    LeadFormRef,
+    LeadFormsMeta,
     LeadFormSelectOption,
     CreateLeadFormRequest,
     UpdateLeadFormRequest,
@@ -59,6 +60,13 @@ const normalizeField = (raw: unknown, i = 0): LeadFormField => {
     };
 };
 
+// The embedded {id, name} objects of a form row (`branch`, `source`).
+const normalizeRef = (raw: unknown): LeadFormRef | null => {
+    const r = (raw ?? {}) as Record<string, unknown>;
+    const id = str(r.id);
+    return id ? { id, name: String(r.name ?? "") } : null;
+};
+
 const normalizeForm = (raw: unknown): LeadForm => {
     const r = (raw ?? {}) as Record<string, unknown>;
     const title = String(r.title ?? r.name ?? "");
@@ -74,11 +82,40 @@ const normalizeForm = (raw: unknown): LeadForm => {
         sourceId: str(r.sourceId) ?? str((r.source as Record<string, unknown> | undefined)?.id),
         successMessage: str(r.successMessage),
         status: String(r.status ?? "ACTIVE"),
-        viewsCount: num(r.viewsCount),
-        submissionsCount: num(r.submissionsCount),
+        viewCount: num(r.viewCount),
+        submissionCount: num(r.submissionCount),
+        branch: normalizeRef(r.branch),
+        source: normalizeRef(r.source),
+        fieldsCount: num((r._count as Record<string, unknown> | undefined)?.fields),
         createdAt: str(r.createdAt) ?? undefined,
         updatedAt: str(r.updatedAt) ?? undefined,
     };
+};
+
+// GET /lead-forms paginates (page/limit query params); when the backend leaves
+// out a meta value it is derived from the rows and the requested limit.
+const normalizeMeta = (raw: unknown, rows: number, limit: number): LeadFormsMeta => {
+    const m = (raw ?? {}) as Record<string, unknown>;
+    const total = Number(m.total) || rows;
+    return {
+        total,
+        page: Number(m.page) || 1,
+        limit: Number(m.limit) || limit,
+        totalPages: Number(m.totalPages) || Math.max(1, Math.ceil(total / limit)),
+    };
+};
+
+// GET /lead-forms and GET /lead-forms/select share the same filters.
+const listUrl = (path: string, args?: LeadFormsRequest | void): string => {
+    const params = new URLSearchParams();
+    if (args?.search) params.set("search", args.search);
+    if (args?.status) params.set("status", args.status);
+    if (args?.page) params.set("page", String(args.page));
+    if (args?.limit) params.set("limit", String(args.limit));
+    if (args?.branchId) params.set("branchId", args.branchId);
+    if (args?.type) params.set("type", args.type);
+    const qs = params.toString();
+    return qs ? `${path}?${qs}` : path;
 };
 
 const normalizeDetail = (raw: unknown): LeadFormDetail => {
@@ -90,25 +127,19 @@ const normalizeDetail = (raw: unknown): LeadFormDetail => {
 
 export const leadFormsApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        // GET /lead-forms — optional branchId / type query params; the active
-        // branch also travels in the x-branch-id header.
+        // GET /lead-forms — search / status / type / branchId filters with
+        // page + limit; the active branch also travels in the x-branch-id header.
         allLeadForms: builder.query<LeadFormsResponse, LeadFormsRequest | void>({
-            query: (args) => {
-                const params = new URLSearchParams();
-                if (args?.branchId) params.set("branchId", args.branchId);
-                if (args?.type) params.set("type", args.type);
-                const qs = params.toString();
-                return { url: qs ? `${PATHS.LEAD_FORMS}?${qs}` : PATHS.LEAD_FORMS, method: "GET" };
+            query: (args) => ({ url: listUrl(PATHS.LEAD_FORMS, args), method: "GET" }),
+            transformResponse: (response: LeadFormsResponse, _meta, args) => {
+                const rows = normalizeList<unknown>(response.data).map(normalizeForm);
+                return { ...response, data: rows, meta: normalizeMeta(response.meta, rows.length, args?.limit ?? 10) };
             },
-            transformResponse: (response: LeadFormsResponse) => ({
-                ...response,
-                data: normalizeList<unknown>(response.data).map(normalizeForm),
-            }),
             providesTags: ["leadForm"],
         }),
-        // GET /lead-forms/select — "Formalarni tanlash uchun olish".
-        leadFormsSelect: builder.query<LeadFormSelectOption[], void>({
-            query: () => ({ url: `${PATHS.LEAD_FORMS}/select`, method: "GET" }),
+        // GET /lead-forms/select — "Formalarni tanlash uchun olish", same filters.
+        leadFormsSelect: builder.query<LeadFormSelectOption[], LeadFormsRequest | void>({
+            query: (args) => ({ url: listUrl(`${PATHS.LEAD_FORMS}/select`, args), method: "GET" }),
             transformResponse: (response: { data: unknown }) =>
                 normalizeList<Record<string, unknown>>(response?.data).map((r) => ({
                     id: String(r.id ?? ""),
@@ -116,6 +147,7 @@ export const leadFormsApi = baseApi.injectEndpoints({
                 })),
             providesTags: ["leadForm"],
         }),
+        // GET /lead-forms/{id} — the form with its fields (the editor's source).
         leadFormById: builder.query<LeadFormDetailResponse, string>({
             query: (id) => ({ url: `${PATHS.LEAD_FORMS}/${id}`, method: "GET" }),
             transformResponse: (response: { success: boolean; message?: string; data: unknown }) => ({
@@ -124,16 +156,16 @@ export const leadFormsApi = baseApi.injectEndpoints({
             }),
             providesTags: ["leadForm"],
         }),
-        leadFormForEdit: builder.query<LeadFormForEditResponse, string>({
-            query: (id) => ({ url: `${PATHS.LEAD_FORMS}/${id}/for-edit`, method: "GET" }),
-            transformResponse: (response: { success: boolean; message?: string; data: unknown }) => ({
-                ...response,
-                data: normalizeDetail(response.data),
-            }),
-            providesTags: ["leadForm"],
-        }),
+        // The form is created in the branch picked in the editor, which can
+        // differ from the header's (or be "All branches"), so that branch is
+        // also sent as x-branch-id — same as POST /courses.
         createLeadForm: builder.mutation<LeadFormResponse, CreateLeadFormRequest>({
-            query: (data) => ({ url: PATHS.LEAD_FORMS, method: "POST", body: data }),
+            query: (data) => ({
+                url: PATHS.LEAD_FORMS,
+                method: "POST",
+                body: data,
+                headers: data.branchId ? { "x-branch-id": data.branchId } : undefined,
+            }),
             transformResponse: (response: { success: boolean; message?: string; data: unknown }) => ({
                 ...response,
                 data: normalizeForm(response.data),
@@ -203,7 +235,6 @@ export const {
     useAllLeadFormsQuery,
     useLeadFormsSelectQuery,
     useLeadFormByIdQuery,
-    useLeadFormForEditQuery,
     useCreateLeadFormMutation,
     useUpdateLeadFormMutation,
     useToggleLeadFormStatusMutation,

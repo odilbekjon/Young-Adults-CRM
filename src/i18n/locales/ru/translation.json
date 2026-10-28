@@ -2591,6 +2591,10 @@
         "durationOptions": { "min45": "45 минут", "min60": "60 минут", "min90": "90 минут", "min120": "120 минут", "min150": "150 минут" },
         "tabs": { "active": "Активные", "archived": "В архиве" },
         "emptyArchived": "Нет архивных курсов",
+        "groups": {
+          "empty": "В этом курсе пока не открыто ни одной группы",
+          "loadError": "Не удалось загрузить группы курса."
+        },
         "bulk": {
           "selectAll": "Выбрать все",
           "selected": "Выбрано: {{count}}",
@@ -2752,7 +2756,8 @@
     "forms": {
       "createForm": {
         "tabs": { "simpleForm": "Простая форма", "leadForm": "Форма лида" },
-        "actions": { "save": "Сохранить", "update": "Обновить", "submit": "Отправить", "addAnswer": "Добавить ответ", "addBlock": "Добавить блок" },
+        "actions": { "save": "Сохранить", "update": "Обновить", "submit": "Отправить", "addAnswer": "Добавить ответ", "addBlock": "Добавить блок", "back": "Назад к формам" },
+        "loadError": "Не удалось загрузить форму. Попробуйте снова.",
         "placeholders": { "formName": "Введите название формы", "selectBranch": "Выберите филиал:", "selectSection": "ввод", "leadsSources": "Источники лидов", "description": "Описание (необязательно)", "successMessage": "Сообщение после отправки (необязательно)" },
         "required": "Обязательно",
         "fixedFields": { "fullName": "Ваше полное имя и фамилия?", "phoneNumber": "Ваш номер телефона?" },
@@ -2770,10 +2775,14 @@
         "title": "Формы",
         "actions": { "addNew": "Добавить" },
         "allTypes": "Все типы",
-        "table": { "id": "id", "name": "Название", "type": "тип", "views": "Просмотры", "submissions": "Заявки", "status": "Статус", "actions": "Действия" },
+        "allStatuses": "Все статусы",
+        "statuses": { "active": "Активные", "inactive": "Неактивные" },
+        "searchPlaceholder": "Поиск форм",
+        "table": { "id": "id", "name": "Название", "type": "тип", "branch": "Филиал", "source": "Источник", "fields": "Вопросы", "views": "Просмотры", "submissions": "Заявки", "status": "Статус", "actions": "Действия" },
         "tooltips": { "info": "Инфо", "edit": "Редактировать", "delete": "Удалить", "copyLink": "Скопировать ссылку" },
         "loadError": "Не удалось загрузить формы. Попробуйте снова.",
         "emptyState": "Пока нет форм",
+        "noResults": "Формы по фильтрам не найдены",
         "deleteConfirm": { "title": "Удалить форму", "cancel": "Отмена", "message": "Удалить форму «{{name}}»? Это действие нельзя отменить." },
         "toast": { "deleted": "Форма удалена", "error": "Не удалось удалить форму. Попробуйте снова.", "statusError": "Не удалось изменить статус формы.", "noSlug": "У этой формы пока нет ссылки.", "linkCopied": "Ссылка скопирована", "copyError": "Не удалось скопировать ссылку." }
       }

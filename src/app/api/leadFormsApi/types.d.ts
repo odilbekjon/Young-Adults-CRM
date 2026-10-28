@@ -1,6 +1,6 @@
 // Contract taken from the user's Swagger screenshots (2026-10): the dynamic
-// "Lead Forms" module — GET/POST /lead-forms, GET /lead-forms/{id}, /for-edit,
-// /select, PATCH /{id}, PATCH /{id}/toggle-status, DELETE /{id} and the
+// "Lead Forms" module — GET/POST /lead-forms, GET /lead-forms/{id}, /select,
+// PATCH /{id}, PATCH /{id}/toggle-status, DELETE /{id} and the
 // /lead-forms/{formId}/fields[/{fieldId}|/reorder] sub-resource. Request bodies
 // are application/json.
 
@@ -11,6 +11,15 @@ export type LeadFormType = "PUBLIC_LEAD" | "INTERNAL_SURVEY";
 // POST /lead-forms sample shows targetAudience "ALL"; other values aren't
 // documented, so any string is tolerated on read.
 export type LeadFormTargetAudience = "ALL" | string;
+
+// GET /lead-forms `status` filter ("ACTIVE/INACTIVE").
+export type LeadFormStatus = "ACTIVE" | "INACTIVE";
+
+// The `branch` / `source` objects a GET /lead-forms row embeds.
+export interface LeadFormRef {
+  id: string;
+  name: string;
+}
 
 export interface LeadForm {
   id: string;
@@ -25,23 +34,35 @@ export interface LeadForm {
   sourceId: string | null;
   successMessage: string | null;
   status: string;
-  // GET /lead-forms: "Ko'rishlar soni (viewsCount) va topshirilgan arizalar
-  // soni (submissionsCount)".
-  viewsCount: number;
-  submissionsCount: number;
+  // GET /lead-forms: "Ko'rishlar soni (viewCount) va topshirilgan arizalar
+  // soni (submissionCount)".
+  viewCount: number;
+  submissionCount: number;
+  branch: LeadFormRef | null;
+  source: LeadFormRef | null;
+  // `_count.fields` of a GET /lead-forms row.
+  fieldsCount: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface LeadFormsMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface LeadFormsResponse {
   success: boolean;
   message: string;
   data: LeadForm[];
+  meta: LeadFormsMeta;
 }
 
-// Swagger only shows `"type": "TEXT"` as the sample value for a field — the
-// other accepted values aren't documented. TEXT is the only confirmed one; the
-// rest are our best guesses (single place to adjust: FIELD_TYPE in
+// The accepted values aren't listed in the Swagger. TEXT and SELECT are
+// confirmed (they come back from GET /lead-forms/{formId}/fields); TEXTAREA is
+// our best guess (single place to adjust: FIELD_TYPE in
 // pages/Settings/forms/pages/createForm). A wrong value comes back as a 400
 // whose message lists the allowed values, which the editor shows in its toast.
 export type LeadFormFieldType = "TEXT" | "TEXTAREA" | "SELECT" | string;
@@ -71,10 +92,13 @@ export interface LeadFormDetailResponse {
   data: LeadFormDetail;
 }
 
-export type LeadFormForEditResponse = LeadFormDetailResponse;
-
-// GET /lead-forms query: branchId ("Filial ID si") and type.
+// GET /lead-forms and GET /lead-forms/select query (page defaults to 1, limit
+// to 10; branchId "all" or empty means every branch).
 export interface LeadFormsRequest {
+  search?: string;
+  status?: LeadFormStatus;
+  page?: number;
+  limit?: number;
   branchId?: string;
   type?: LeadFormType;
 }
@@ -86,7 +110,8 @@ export interface LeadFormSelectOption {
 
 // POST /lead-forms. `fields` exists in the body too, but its item shape isn't
 // shown (Swagger renders it as string[]), so fields are added one by one
-// through POST /lead-forms/{formId}/fields instead.
+// through POST /lead-forms/{formId}/fields instead — that path is confirmed
+// live. `branchId` also goes out as the x-branch-id header (see leadFormsApi).
 export interface CreateLeadFormRequest {
   title: string;
   description?: string;
@@ -156,9 +181,8 @@ export interface DeleteLeadFormFieldResponse {
   message?: string;
 }
 
-// PATCH /lead-forms/{formId}/fields/reorder — "Drag & Drop"; its body isn't
-// shown in the screenshots. The editor orders fields through `order` on
-// create/update instead, so this is only kept for completeness.
+// PATCH /lead-forms/{formId}/fields/reorder — "Drag & Drop": `fieldIds` is every
+// field's id in the new order, the backend renumbers `order` from it.
 export interface ReorderLeadFormFieldsRequest {
   formId: string;
   fieldIds: string[];

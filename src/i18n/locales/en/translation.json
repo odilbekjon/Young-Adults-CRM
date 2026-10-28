@@ -2759,6 +2759,12 @@
         "placeholders": { "formName": "Enter form name", "selectBranch": "Select branch:", "selectSection": "input", "leadsSources": "Leads Sources", "description": "Description (optional)", "successMessage": "Message shown after submitting (optional)" },
         "required": "Required",
         "fixedFields": { "fullName": "Full name and surname?", "phoneNumber": "Your phone number?" },
+        "preview": {
+          "requiredError": "This field is required",
+          "phoneInvalid": "Enter the full phone number (9 digits)",
+          "defaultSuccess": "Your application has been received! We will contact you soon.",
+          "fillAgain": "Fill in again"
+        },
         "blockTypes": { "oneOfList": "One of the list", "shortAnswer": "Short answer", "longAnswer": "Long answer" },
         "defaultQuestion": "Choose of the Answers",
         "answerLabel": "Answer {{number}}",

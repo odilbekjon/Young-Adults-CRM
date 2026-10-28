@@ -2761,6 +2761,12 @@
         "placeholders": { "formName": "Введите название формы", "selectBranch": "Выберите филиал:", "selectSection": "ввод", "leadsSources": "Источники лидов", "description": "Описание (необязательно)", "successMessage": "Сообщение после отправки (необязательно)" },
         "required": "Обязательно",
         "fixedFields": { "fullName": "Ваше полное имя и фамилия?", "phoneNumber": "Ваш номер телефона?" },
+        "preview": {
+          "requiredError": "Обязательное поле",
+          "phoneInvalid": "Введите номер полностью (9 цифр)",
+          "defaultSuccess": "Ваша заявка принята! Мы скоро свяжемся с вами.",
+          "fillAgain": "Заполнить заново"
+        },
         "blockTypes": { "oneOfList": "Один из списка", "shortAnswer": "Короткий ответ", "longAnswer": "Развёрнутый ответ" },
         "defaultQuestion": "Выберите из ответов",
         "answerLabel": "Ответ {{number}}",

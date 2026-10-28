@@ -2759,6 +2759,12 @@
         "placeholders": { "formName": "Shakl nomini kiriting", "selectBranch": "Filialni tanlang:", "selectSection": "kiritish", "leadsSources": "Lidlar manbalari", "description": "Tavsif (ixtiyoriy)", "successMessage": "Yuborilgandan keyin ko'rsatiladigan xabar (ixtiyoriy)" },
         "required": "Majburiy",
         "fixedFields": { "fullName": "To'liq ism familiyangiz?", "phoneNumber": "Telefon raqamingiz?" },
+        "preview": {
+          "requiredError": "Bu maydon majburiy",
+          "phoneInvalid": "Telefon raqamini to'liq kiriting (9 ta raqam)",
+          "defaultSuccess": "Arizangiz muvaffaqiyatli qabul qilindi! Tez orada siz bilan bog'lanamiz.",
+          "fillAgain": "Qaytadan to'ldirish"
+        },
         "blockTypes": { "oneOfList": "Ro'yxatdan biri", "shortAnswer": "Qisqa javob", "longAnswer": "Batafsil javob" },
         "defaultQuestion": "Javoblardan birini tanlang",
         "answerLabel": "{{number}}-javob",

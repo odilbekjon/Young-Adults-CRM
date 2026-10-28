@@ -4,8 +4,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import {
-  Box, Button, FormControl, FormControlLabel,
-  MenuItem, Radio, Select, TextField, Typography,
+  Box, Button, FormControl, FormControlLabel, InputAdornment,
+  MenuItem, Radio, RadioGroup, Select, TextField, Typography,
   Paper, IconButton, CircularProgress,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -126,6 +126,136 @@ const FixedFieldCard = ({ index, label }: { index: number; label: string }) => (
   </Paper>
 );
 
+// ─── Live preview ─────────────────────────────────────────────────────────────
+// The form as a visitor fills it in: every input takes input, the required ones
+// are checked on "Submit" and the form's success message then replaces the form.
+// Nothing is sent anywhere. Kept at module level — declared inside FormEditor it
+// would be a new component on every render, and each keystroke would drop the focus.
+interface FormPreviewProps {
+  isLead: boolean;
+  title: string;
+  description: string;
+  successMessage: string;
+  blocks: Block[];
+}
+
+const NAME_KEY = "name";
+const PHONE_KEY = "phone";
+const blockKey = (b: Block) => `block-${b.id}`;
+
+const FormPreview = ({ isLead, title, description, successMessage, blocks }: FormPreviewProps) => {
+  const { t } = useTranslation();
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [showErrors, setShowErrors] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const setValue = (key: string, value: string) => setValues((prev) => ({ ...prev, [key]: value }));
+  const isInvalid = (key: string) =>
+    key === PHONE_KEY ? (values[key] ?? "").replace(/\D/g, "").length !== 9 : !(values[key] ?? "").trim();
+  const requiredKeys = [...(isLead ? [NAME_KEY, PHONE_KEY] : []), ...blocks.filter((b) => b.isRequired).map(blockKey)];
+  const errorOf = (key: string): string | undefined => {
+    if (!showErrors || !requiredKeys.includes(key) || !isInvalid(key)) return undefined;
+    return t(key === PHONE_KEY ? "settings.forms.createForm.preview.phoneInvalid" : "settings.forms.createForm.preview.requiredError");
+  };
+
+  const submit = () => {
+    setShowErrors(true);
+    if (requiredKeys.every((key) => !isInvalid(key))) setSent(true);
+  };
+  const reset = () => {
+    setValues({});
+    setShowErrors(false);
+    setSent(false);
+  };
+
+  const question = (text: string, required: boolean) => (
+    <Typography sx={{ mb: 0.8, fontSize: "0.85rem", color: "var(--color-text-primary)" }}>
+      {text}{required && <span style={{ color: "red", marginLeft: 4 }}>*</span>}
+    </Typography>
+  );
+  const inputSx = { "& .MuiOutlinedInput-root": { borderRadius: 1 } };
+
+  return (
+    <Paper elevation={0} sx={{ p: 4, borderRadius: 3, backgroundColor: "var(--color-surface)", border: "1px solid var(--color-border-subtle)" }}>
+      <Typography variant="h6" sx={{ mb: description ? 1 : 3, color: title ? "var(--color-text-primary)" : "var(--color-text-muted)", fontWeight: 600, fontSize: "1.1rem" }}>
+        {title || t("settings.forms.createForm.placeholders.formName")}
+      </Typography>
+      {description && <Typography sx={{ mb: 3, fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>{description}</Typography>}
+
+      {sent ? (
+        <Box sx={{ textAlign: "center", py: 3 }}>
+          <Typography sx={{ mb: 2, fontSize: "0.95rem", color: "var(--color-text-primary)" }}>
+            {successMessage.trim() || t("settings.forms.createForm.preview.defaultSuccess")}
+          </Typography>
+          <Button onClick={reset} sx={{ textTransform: "none" }}>{t("settings.forms.createForm.preview.fillAgain")}</Button>
+        </Box>
+      ) : (
+        <>
+          {isLead && (
+            <>
+              <Box sx={{ mb: 2.5 }}>
+                {question(t("settings.forms.createForm.fixedFields.fullName"), true)}
+                <TextField
+                  fullWidth size="small" value={values[NAME_KEY] ?? ""} onChange={(e) => setValue(NAME_KEY, e.target.value)}
+                  error={!!errorOf(NAME_KEY)} helperText={errorOf(NAME_KEY)} sx={inputSx}
+                />
+              </Box>
+              <Box sx={{ mb: 2.5 }}>
+                {question(t("settings.forms.createForm.fixedFields.phoneNumber"), true)}
+                <TextField
+                  fullWidth size="small" type="tel" placeholder="90 123 45 67"
+                  value={values[PHONE_KEY] ?? ""} onChange={(e) => setValue(PHONE_KEY, e.target.value)}
+                  error={!!errorOf(PHONE_KEY)} helperText={errorOf(PHONE_KEY)}
+                  InputProps={{ startAdornment: <InputAdornment position="start">+998</InputAdornment> }}
+                  sx={inputSx}
+                />
+              </Box>
+            </>
+          )}
+
+          {blocks.map((block) => {
+            const key = blockKey(block);
+            const error = errorOf(key);
+            return (
+              <Box key={block.id} sx={{ mb: 2.5 }}>
+                {question(block.question, block.isRequired)}
+                {block.type === "One of the list" ? (
+                  <>
+                    <RadioGroup row value={values[key] ?? ""} onChange={(e) => setValue(key, e.target.value)} sx={{ gap: 1 }}>
+                      {block.answers.map((a) => (
+                        <FormControlLabel
+                          key={a.id}
+                          value={a.label}
+                          control={<Radio size="small" sx={{ p: 0.5 }} />}
+                          label={<Typography sx={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>{a.label}</Typography>}
+                        />
+                      ))}
+                    </RadioGroup>
+                    {error && <Typography sx={{ mt: 0.5, fontSize: "0.75rem", color: "error.main" }}>{error}</Typography>}
+                  </>
+                ) : (
+                  <TextField
+                    fullWidth size="small" multiline={block.type === "Long answer"} rows={block.type === "Long answer" ? 3 : undefined}
+                    value={values[key] ?? ""} onChange={(e) => setValue(key, e.target.value)}
+                    error={!!error} helperText={error} sx={inputSx}
+                  />
+                )}
+              </Box>
+            );
+          })}
+
+          <Button
+            variant="contained" onClick={submit}
+            sx={{ mt: 1, backgroundColor: TEAL, borderRadius: "50px", px: 3, textTransform: "none", fontSize: "0.85rem", boxShadow: "none", "&:hover": { backgroundColor: TEAL_DARK, boxShadow: "none" } }}
+          >
+            {t("settings.forms.createForm.actions.submit")}
+          </Button>
+        </>
+      )}
+    </Paper>
+  );
+};
+
 // ─── Form editor (controlled — state is owned by CreateForm) ──────────────────
 interface FormEditorProps {
   kind: Kind;
@@ -185,53 +315,6 @@ function FormEditor({
     "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--color-border)" },
   };
   const inputSx = { mb: 1.5, backgroundColor: "var(--color-surface)", borderRadius: 1.5, "& .MuiOutlinedInput-root": { borderRadius: 1.5 } };
-
-  const Preview = () => (
-    <Paper elevation={0} sx={{ p: 4, borderRadius: 3, backgroundColor: "var(--color-surface)", border: "1px solid var(--color-border-subtle)" }}>
-      <Typography variant="h6" sx={{ mb: description ? 1 : 3, color: title ? "var(--color-text-primary)" : "var(--color-text-muted)", fontWeight: 600, fontSize: "1.1rem" }}>
-        {title || t("settings.forms.createForm.placeholders.formName")}
-      </Typography>
-      {description && <Typography sx={{ mb: 3, fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>{description}</Typography>}
-
-      {isLead && fixedLabels.map((label, i) => (
-        <Box key={label} sx={{ mb: 2.5 }}>
-          <Typography sx={{ mb: 0.8, fontSize: "0.85rem", color: "var(--color-text-primary)" }}>
-            {label}<span style={{ color: "red", marginLeft: 4 }}>*</span>
-          </Typography>
-          <TextField fullWidth size="small" variant="outlined" disabled defaultValue={i === 1 ? "+998" : ""} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1 } }} />
-        </Box>
-      ))}
-
-      {blocks.map((block) => (
-        <Box key={block.id} sx={{ mb: 2.5 }}>
-          <Typography sx={{ mb: 1, fontSize: "0.85rem", color: "var(--color-text-primary)" }}>
-            {block.question}{block.isRequired && <span style={{ color: "red", marginLeft: 4 }}>*</span>}
-          </Typography>
-          {block.type === "One of the list" && (
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-              {block.answers.map((a) => (
-                <FormControlLabel
-                  key={a.id}
-                  value={a.label}
-                  control={<Radio size="small" sx={{ color: "var(--color-text-muted)", p: 0.5 }} />}
-                  label={<Typography sx={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>{a.label}</Typography>}
-                />
-              ))}
-            </Box>
-          )}
-          {block.type === "Short answer" && <TextField size="small" fullWidth variant="outlined" disabled />}
-          {block.type === "Long answer" && <TextField size="small" fullWidth multiline rows={3} variant="outlined" disabled />}
-        </Box>
-      ))}
-
-      <Button
-        variant="contained"
-        sx={{ mt: 1, backgroundColor: TEAL, borderRadius: "50px", px: 3, textTransform: "none", fontSize: "0.85rem", boxShadow: "none", "&:hover": { backgroundColor: TEAL_DARK, boxShadow: "none" } }}
-      >
-        {t("settings.forms.createForm.actions.submit")}
-      </Button>
-    </Paper>
-  );
 
   return (
     <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: 3, alignItems: { xs: "stretch", lg: "flex-start" } }}>
@@ -364,7 +447,7 @@ function FormEditor({
 
       {/* ── Right preview ── */}
       <Box sx={{ width: { xs: "100%", lg: 560 }, flexShrink: 0 }}>
-        <Preview />
+        <FormPreview isLead={isLead} title={title} description={description} successMessage={successMessage} blocks={blocks} />
       </Box>
     </Box>
   );

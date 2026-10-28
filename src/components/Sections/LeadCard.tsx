@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import {
   Box, Typography, Paper, Avatar, IconButton, Menu, MenuItem, CircularProgress,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button,
@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import type { KanbanLead } from "../../app/api/leadColumnsApi/types";
 import { useDeleteLeadMutation } from "../../app/api/leadsApi";
 import { useToast } from "../../Context/ToastContext";
+import { useHasOpened } from "../../hooks/useHasOpened";
 import { formatPhone } from "../../utils/formatPhone";
 import { AddToTrialPopover } from "./AddToTrialPopover";
 import { withApiDetail } from "./withApiDetail";
@@ -22,16 +23,22 @@ function getInitials(name: string) {
 interface Props {
   lead: KanbanLead;
   index: number;
-  onEdit: () => void;
+  onEdit: (leadId: string) => void;
 }
 
-export const LeadCard = ({ lead, index, onEdit }: Props) => {
+// Memoised: the board holds hundreds of cards and a card only needs to render again when its own lead changes.
+export const LeadCard = memo(({ lead, index, onEdit }: Props) => {
   const { t } = useTranslation();
   const toast = useToast();
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [trialAnchor, setTrialAnchor] = useState<null | HTMLElement>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteLead, { isLoading: isDeleting }] = useDeleteLeadMutation();
+  // The board holds hundreds of cards, so a card builds its menu, delete dialog
+  // and trial popover only once one of them is first opened.
+  const menuMounted = useHasOpened(Boolean(menuAnchor));
+  const deleteDialogMounted = useHasOpened(confirmDelete);
+  const trialMounted = useHasOpened(Boolean(trialAnchor));
 
   const handleDelete = async () => {
     try {
@@ -69,34 +76,38 @@ export const LeadCard = ({ lead, index, onEdit }: Props) => {
         </Box>
       )}
 
-      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
-        <MenuItem onClick={() => { setMenuAnchor(null); onEdit(); }}>
-          <FiEdit2 size={13} style={{ marginRight: 8 }} /> {t("leadsPage.leadForm.edit")}
-        </MenuItem>
-        <MenuItem onClick={(e) => { setTrialAnchor(e.currentTarget); setMenuAnchor(null); }}>
-          <FiUserPlus size={13} style={{ marginRight: 8 }} /> {t("leadsPage.addToTrial.menuLabel")}
-        </MenuItem>
-        <MenuItem onClick={() => { setMenuAnchor(null); setConfirmDelete(true); }} sx={{ color: "error.main" }} disabled={isDeleting}>
-          {isDeleting ? <CircularProgress size={13} sx={{ mr: 1 }} /> : <FiTrash2 size={13} style={{ marginRight: 8 }} />} {t("leadsPage.leadForm.delete")}
-        </MenuItem>
-      </Menu>
+      {menuMounted && (
+        <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+          <MenuItem onClick={() => { setMenuAnchor(null); onEdit(lead.id); }}>
+            <FiEdit2 size={13} style={{ marginRight: 8 }} /> {t("leadsPage.leadForm.edit")}
+          </MenuItem>
+          <MenuItem onClick={(e) => { setTrialAnchor(e.currentTarget); setMenuAnchor(null); }}>
+            <FiUserPlus size={13} style={{ marginRight: 8 }} /> {t("leadsPage.addToTrial.menuLabel")}
+          </MenuItem>
+          <MenuItem onClick={() => { setMenuAnchor(null); setConfirmDelete(true); }} sx={{ color: "error.main" }} disabled={isDeleting}>
+            {isDeleting ? <CircularProgress size={13} sx={{ mr: 1 }} /> : <FiTrash2 size={13} style={{ marginRight: 8 }} />} {t("leadsPage.leadForm.delete")}
+          </MenuItem>
+        </Menu>
+      )}
 
-      <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} PaperProps={{ sx: { borderRadius: 2 } }}>
-        <DialogTitle sx={{ fontSize: 16, fontWeight: 600 }}>{t("leadsPage.leadForm.deleteTitle")}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>{t("leadsPage.leadForm.deleteMessage", { name: lead.name })}</DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDelete(false)} disabled={isDeleting} sx={{ textTransform: "none" }}>{t("leadsPage.leadForm.cancel")}</Button>
-          <Button color="error" variant="contained" onClick={handleDelete} disabled={isDeleting} sx={{ textTransform: "none" }}>
-            {isDeleting ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : t("leadsPage.leadForm.delete")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {deleteDialogMounted && (
+        <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} PaperProps={{ sx: { borderRadius: 2 } }}>
+          <DialogTitle sx={{ fontSize: 16, fontWeight: 600 }}>{t("leadsPage.leadForm.deleteTitle")}</DialogTitle>
+          <DialogContent>
+            <DialogContentText>{t("leadsPage.leadForm.deleteMessage", { name: lead.name })}</DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmDelete(false)} disabled={isDeleting} sx={{ textTransform: "none" }}>{t("leadsPage.leadForm.cancel")}</Button>
+            <Button color="error" variant="contained" onClick={handleDelete} disabled={isDeleting} sx={{ textTransform: "none" }}>
+              {isDeleting ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : t("leadsPage.leadForm.delete")}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
-      <AddToTrialPopover leadId={lead.id} anchorEl={trialAnchor} onClose={() => setTrialAnchor(null)} />
+      {trialMounted && <AddToTrialPopover leadId={lead.id} anchorEl={trialAnchor} onClose={() => setTrialAnchor(null)} />}
     </Paper>
   );
-};
+});
 
 export default LeadCard;

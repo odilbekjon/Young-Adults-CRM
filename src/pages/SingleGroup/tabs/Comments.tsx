@@ -1,4 +1,5 @@
 import { Box, CircularProgress, Paper, Typography } from "@mui/material";
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useGroupCommentsQuery } from "../../../app/api/groupsApi";
 
@@ -6,7 +7,7 @@ interface Props {
   groupId: string;
 }
 
-export const Comments = ({ groupId }: Props) => {
+export const Comments = memo(function Comments({ groupId }: Props) {
   const { t } = useTranslation();
   const { data: comments, isLoading, isError } = useGroupCommentsQuery(groupId, { skip: !groupId });
 
@@ -44,4 +45,4 @@ export const Comments = ({ groupId }: Props) => {
       )}
     </Box>
   );
-};
+});

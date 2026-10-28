@@ -15,7 +15,7 @@ import { PiMicrosoftExcelLogoFill }      from "react-icons/pi";
 import { IoClose }                       from "react-icons/io5";
 import { TbAdjustmentsHorizontal, TbColumns3, TbCalendar } from "react-icons/tb";
 import { HiChevronDown }                 from "react-icons/hi";
-import { useMemo, useRef, useState }     from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate }                   from "react-router-dom";
 import { useTranslation }                from "react-i18next";
 import { useSelector }                   from "react-redux";
@@ -400,6 +400,106 @@ const DateFilter = ({ label, value, onChange, onClear }: DateFilterProps) => {
   );
 };
 
+/* ─── GroupTableRow ──────────────────────────────────────── */
+// Memoised so a filter, sort or drawer change re-renders only the rows whose own props changed.
+interface GroupTableRowProps {
+  group: GroupRow;
+  index: number;
+  visibleCols: string[];
+  menuAnchor: HTMLElement | null;
+  smsLoading: boolean;
+  onOpen: (id: string) => void;
+  onMenuToggle: (e: React.MouseEvent<HTMLElement>, id: string) => void;
+  onMenuClose: () => void;
+  onEdit: (group: GroupRow) => void;
+  onSms: (id: string) => void;
+  onArchiveOrActivate: (group: GroupRow) => void;
+}
+
+const GroupTableRow = memo(({
+  group: g, index, visibleCols, menuAnchor, smsLoading,
+  onOpen, onMenuToggle, onMenuClose, onEdit, onSms, onArchiveOrActivate,
+}: GroupTableRowProps) => {
+  const { t } = useTranslation();
+  const col = (key: string) => visibleCols.includes(key);
+
+  return (
+    <TableRow
+      hover
+      onClick={() => onOpen(g.id)}
+      sx={{
+        cursor: "pointer",
+        bgcolor: isArchivedGroup(g) ? ARCHIVED_ROW_BG : "var(--color-surface)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+        "& td": { border: "none", py: 1.8, fontSize: 13 },
+        "& td:first-of-type": { borderTopLeftRadius: 12, borderBottomLeftRadius: 12 },
+        "& td:last-of-type": { borderTopRightRadius: 12, borderBottomRightRadius: 12 },
+        "&:hover": { bgcolor: isArchivedGroup(g) ? ARCHIVED_ROW_BG_HOVER : "var(--color-surface-alt)" },
+      }}
+    >
+      <TableCell sx={{ color: "var(--color-text-muted)", fontSize: 12 }}>{index + 1}.</TableCell>
+      <TableCell sx={{ fontWeight: 500, color: "var(--color-text-primary)" }}>{g.name}</TableCell>
+      {col("course")       && <TableCell>{g.course}</TableCell>}
+      {col("teacher")      && <TableCell>{g.teacher}</TableCell>}
+      {col("days")         && (
+        <TableCell>
+          <Box>{g.days}</Box>
+          <Box sx={{ color: "var(--color-text-muted)", fontSize: 12 }}>{g.lessonStartTime}</Box>
+        </TableCell>
+      )}
+      {col("training")     && (
+        <TableCell>
+          <Box>{formatTrainingDate(g.startDate)} —</Box>
+          <Box>{formatTrainingDate(g.endDate)}</Box>
+        </TableCell>
+      )}
+      {col("week")         && <TableCell>{g.weekOfStudy || "—"}</TableCell>}
+      {col("room")         && <TableCell>{g.room}</TableCell>}
+      {col("studentCount") && <TableCell sx={{ fontWeight: 500 }}>{g.studentCount}</TableCell>}
+
+      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+        <IconButton
+          size="small"
+          onClick={(e) => onMenuToggle(e, g.id)}
+          sx={{ color: "var(--color-text-secondary)" }}
+        >
+          <BsThreeDotsVertical size={15} />
+        </IconButton>
+        <Menu
+          anchorEl={menuAnchor}
+          open={menuAnchor !== null}
+          onClose={onMenuClose}
+          PaperProps={{
+            sx: { borderRadius: 2, minWidth: 130, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" },
+          }}
+          transformOrigin={{ horizontal: "right", vertical: "top" }}
+          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        >
+          <MenuItem onClick={() => onEdit(g)} sx={{ fontSize: 13, gap: 1 }}>
+            <MdEdit size={15} /> {t("groups.actions.edit")}
+          </MenuItem>
+          <MenuItem
+            onClick={() => onSms(g.id)}
+            disabled={smsLoading}
+            sx={{ fontSize: 13, gap: 1 }}
+          >
+            <MdSms size={15} /> {t("groups.actions.sms")}
+          </MenuItem>
+          <Divider sx={{ my: 0.5 }} />
+          <MenuItem
+            onClick={() => onArchiveOrActivate(g)}
+            sx={{ fontSize: 13, gap: 1, color: g.status === "ACTIVE" ? "#d32f2f" : undefined }}
+          >
+            {g.status === "ACTIVE"
+              ? <><MdDelete size={15} /> {t("groups.deleteDialog.confirm")}</>
+              : <><MdUnarchive size={15} /> {t("groups.actions.activate")}</>}
+          </MenuItem>
+        </Menu>
+      </TableCell>
+    </TableRow>
+  );
+});
+
 /* ─── Groups ─────────────────────────────────────────────── */
 export const Groups = () => {
   const { t } = useTranslation();
@@ -484,7 +584,7 @@ export const Groups = () => {
   // POST /sms/send/students needs — fetched on demand right before the SMS
   // drawer opens (same unscoped-list convention SingleGroup's own roster
   // fetch uses: no status filter excludes INACTIVE/DELETED memberships).
-  const handleOpenGroupSms = async (groupId: string) => {
+  const handleOpenGroupSms = useCallback(async (groupId: string) => {
     setActionMenuAnchor(null);
     try {
       const result = await fetchGroupRoster({ groupId, limit: 500 }).unwrap();
@@ -493,7 +593,7 @@ export const Groups = () => {
     } catch (err) {
       toast.error(extractApiError(err) || t("groups.sms.rosterError"));
     }
-  };
+  }, [fetchGroupRoster, toast, t]);
 
   const WEEKDAY_LABELS: Record<GroupDay, string> = {
     MONDAY:    t("groups.weekdays.monday"),
@@ -681,7 +781,7 @@ export const Groups = () => {
     setOpen(true);
   };
 
-  const handleOpenEdit = (group: GroupRow) => {
+  const handleOpenEdit = useCallback((group: GroupRow) => {
     setEditingId(group.id);
     setForm({
       name: group.name,
@@ -699,7 +799,7 @@ export const Groups = () => {
     setSaveError(null);
     setOpen(true);
     setActionMenuAnchor(null);
-  };
+  }, []);
 
   const validate = () => {
     const errs: { name?: string; course?: string } = {};
@@ -749,7 +849,7 @@ export const Groups = () => {
   // /groups/{id} is not exposed from here — the backend rejects it outright
   // while any of those still reference the group, which is true for nearly
   // every real group.
-  const handleToggleStatus = async (id: string) => {
+  const handleToggleStatus = useCallback(async (id: string) => {
     setActionMenuAnchor(null);
     try {
       await toggleGroupStatus(id).unwrap();
@@ -759,7 +859,23 @@ export const Groups = () => {
       const message = detail ? `${t("groups.toast.statusToggleError")}: ${detail}` : t("groups.toast.statusToggleError");
       toast.error(message);
     }
-  };
+  }, [toggleGroupStatus, toast, t]);
+
+  // The row callbacks keep their identity between renders (see GroupTableRow).
+  const openGroup = useCallback((id: string) => navigate(`/groups/${id}`), [navigate]);
+  const toggleRowMenu = useCallback((e: React.MouseEvent<HTMLElement>, id: string) => {
+    const el = e.currentTarget;
+    setActionMenuAnchor((prev) => (prev?.id === id ? null : { el, id }));
+  }, []);
+  const closeRowMenu = useCallback(() => setActionMenuAnchor(null), []);
+  const archiveOrActivate = useCallback((g: GroupRow) => {
+    if (g.status === "ACTIVE") {
+      setDeleteConfirmId(g.id);
+      setActionMenuAnchor(null);
+    } else {
+      handleToggleStatus(g.id);
+    }
+  }, [handleToggleStatus]);
 
   const col = (key: string) => visibleCols.includes(key);
 
@@ -1024,93 +1140,20 @@ export const Groups = () => {
 
             <TableBody>
               {filteredGroups.map((g, i) => (
-                <TableRow
+                <GroupTableRow
                   key={g.id}
-                  hover
-                  onClick={() => navigate(`/groups/${g.id}`)}
-                  sx={{
-                    cursor: "pointer",
-                    bgcolor: isArchivedGroup(g) ? ARCHIVED_ROW_BG : "var(--color-surface)",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                    "& td": { border: "none", py: 1.8, fontSize: 13 },
-                    "& td:first-of-type": { borderTopLeftRadius: 12, borderBottomLeftRadius: 12 },
-                    "& td:last-of-type": { borderTopRightRadius: 12, borderBottomRightRadius: 12 },
-                    "&:hover": { bgcolor: isArchivedGroup(g) ? ARCHIVED_ROW_BG_HOVER : "var(--color-surface-alt)" },
-                  }}
-                >
-                  <TableCell sx={{ color: "var(--color-text-muted)", fontSize: 12 }}>{i + 1}.</TableCell>
-                  <TableCell sx={{ fontWeight: 500, color: "var(--color-text-primary)" }}>{g.name}</TableCell>
-                  {col("course")       && <TableCell>{g.course}</TableCell>}
-                  {col("teacher")      && <TableCell>{g.teacher}</TableCell>}
-                  {col("days")         && (
-                    <TableCell>
-                      <Box>{g.days}</Box>
-                      <Box sx={{ color: "var(--color-text-muted)", fontSize: 12 }}>{g.lessonStartTime}</Box>
-                    </TableCell>
-                  )}
-                  {col("training")     && (
-                    <TableCell>
-                      <Box>{formatTrainingDate(g.startDate)} —</Box>
-                      <Box>{formatTrainingDate(g.endDate)}</Box>
-                    </TableCell>
-                  )}
-                  {col("week")         && <TableCell>{g.weekOfStudy || "—"}</TableCell>}
-                  {col("room")         && <TableCell>{g.room}</TableCell>}
-                  {col("studentCount") && <TableCell sx={{ fontWeight: 500 }}>{g.studentCount}</TableCell>}
-
-                  <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                    <IconButton
-                      size="small"
-                      onClick={(e) =>
-                        setActionMenuAnchor(
-                          actionMenuAnchor?.id === g.id
-                            ? null
-                            : { el: e.currentTarget, id: g.id }
-                        )
-                      }
-                      sx={{ color: "var(--color-text-secondary)" }}
-                    >
-                      <BsThreeDotsVertical size={15} />
-                    </IconButton>
-                    <Menu
-                      anchorEl={actionMenuAnchor?.id === g.id ? actionMenuAnchor.el : null}
-                      open={actionMenuAnchor?.id === g.id}
-                      onClose={() => setActionMenuAnchor(null)}
-                      PaperProps={{
-                        sx: { borderRadius: 2, minWidth: 130, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" },
-                      }}
-                      transformOrigin={{ horizontal: "right", vertical: "top" }}
-                      anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-                    >
-                      <MenuItem onClick={() => handleOpenEdit(g)} sx={{ fontSize: 13, gap: 1 }}>
-                        <MdEdit size={15} /> {t("groups.actions.edit")}
-                      </MenuItem>
-                      <MenuItem
-                        onClick={() => handleOpenGroupSms(g.id)}
-                        disabled={isLoadingSmsRoster}
-                        sx={{ fontSize: 13, gap: 1 }}
-                      >
-                        <MdSms size={15} /> {t("groups.actions.sms")}
-                      </MenuItem>
-                      <Divider sx={{ my: 0.5 }} />
-                      <MenuItem
-                        onClick={() => {
-                          if (g.status === "ACTIVE") {
-                            setDeleteConfirmId(g.id);
-                            setActionMenuAnchor(null);
-                          } else {
-                            handleToggleStatus(g.id);
-                          }
-                        }}
-                        sx={{ fontSize: 13, gap: 1, color: g.status === "ACTIVE" ? "#d32f2f" : undefined }}
-                      >
-                        {g.status === "ACTIVE"
-                          ? <><MdDelete size={15} /> {t("groups.deleteDialog.confirm")}</>
-                          : <><MdUnarchive size={15} /> {t("groups.actions.activate")}</>}
-                      </MenuItem>
-                    </Menu>
-                  </TableCell>
-                </TableRow>
+                  group={g}
+                  index={i}
+                  visibleCols={visibleCols}
+                  menuAnchor={actionMenuAnchor?.id === g.id ? actionMenuAnchor.el : null}
+                  smsLoading={isLoadingSmsRoster}
+                  onOpen={openGroup}
+                  onMenuToggle={toggleRowMenu}
+                  onMenuClose={closeRowMenu}
+                  onEdit={handleOpenEdit}
+                  onSms={handleOpenGroupSms}
+                  onArchiveOrActivate={archiveOrActivate}
+                />
               ))}
               {filteredGroups.length === 0 && (
                 <TableRow>

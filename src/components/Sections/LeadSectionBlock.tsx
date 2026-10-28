@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Box, Typography, Button, IconButton, TextField, Menu, MenuItem, CircularProgress } from "@mui/material";
 import { FiMoreHorizontal, FiPlus } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
@@ -19,7 +19,8 @@ interface Props {
   section: KanbanSection;
 }
 
-export const LeadSectionBlock = ({ section }: Props) => {
+// Memoised: typing in the filter bar re-renders the board, but a section only needs to render again when its own leads change.
+export const LeadSectionBlock = memo(({ section }: Props) => {
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -40,6 +41,8 @@ export const LeadSectionBlock = ({ section }: Props) => {
   useEffect(() => {
     if (editData) setName(editData.data.name);
   }, [editData]);
+
+  const editLead = useCallback((leadId: string) => { setEditingLeadId(leadId); setLeadDialogOpen(true); }, []);
 
   const handleRename = async () => {
     if (!name.trim()) return;
@@ -128,7 +131,7 @@ export const LeadSectionBlock = ({ section }: Props) => {
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
         {section.leads.map((lead, idx) => (
-          <LeadCard key={lead.id} lead={lead} index={idx} onEdit={() => { setEditingLeadId(lead.id); setLeadDialogOpen(true); }} />
+          <LeadCard key={lead.id} lead={lead} index={idx} onEdit={editLead} />
         ))}
       </Box>
 
@@ -162,6 +165,6 @@ export const LeadSectionBlock = ({ section }: Props) => {
       />
     </Box>
   );
-};
+});
 
 export default LeadSectionBlock;

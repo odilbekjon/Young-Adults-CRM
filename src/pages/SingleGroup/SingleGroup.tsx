@@ -204,12 +204,14 @@ export const SingleGroup = () => {
   // matching row exists (the two filters don't appear to compose on this
   // backend) — so these two are fetched unscoped (branch-wide, same as
   // `studentId`+`status` does work) and filtered to this group client-side
-  // instead of via the `groupId` param. Every page of them is read: a removed
-  // student's row beyond the first page would leave them on the roster after a
-  // reload.
+  // instead of via the `groupId` param. Their first page settles nearly every
+  // member; the rest of the pages are read only while a member is still
+  // unaccounted for (see hasUnaccountedMember) — a removed student's row beyond
+  // the first page would otherwise leave them on the roster after a reload.
   const { data: studentGroupsData } = useStudentGroupsQuery({ groupId: id ?? "", limit: 500 }, { skip: !id });
-  const inactiveRows = useAllStudentGroups("INACTIVE", 500, !id);
-  const deletedRows = useAllStudentGroups("DELETED", 500, !id);
+  const [readAllPages, setReadAllPages] = useState(false);
+  const { rows: inactiveRows, isLoading: inactiveLoading } = useAllStudentGroups("INACTIVE", 500, !id, readAllPages);
+  const { rows: deletedRows, isLoading: deletedLoading } = useAllStudentGroups("DELETED", 500, !id, readAllPages);
   const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
   const [fetchNewMembership] = useLazyStudentGroupsQuery();
   const [fetchStudentFreezes] = useLazyStudentFreezesQuery();
@@ -346,6 +348,19 @@ export const SingleGroup = () => {
     return map;
   }, [studentGroupsData, archivedRowsForThisGroup, id]);
 
+  // A member of the group's own student list that neither a live nor an archived
+  // membership row accounts for — judged once the first page of each list is in.
+  // Only then is it worth reading the later pages of the INACTIVE/DELETED lists
+  // (the missing row may sit there); otherwise they cost requests for nothing.
+  const membershipsReady = Boolean(studentGroupsData) && !inactiveLoading && !deletedLoading;
+  const hasUnaccountedMember = useMemo(
+    () => membershipsReady && students.some((s) => !membershipByStudentId.has(s.realId) && !branchMovedIds.has(s.realId)),
+    [membershipsReady, students, membershipByStudentId, branchMovedIds]
+  );
+  useEffect(() => {
+    if (hasUnaccountedMember) setReadAllPages(true);
+  }, [hasUnaccountedMember]);
+
   // GroupDetail.students has no balance field (see toRealStudents above,
   // which defaults everyone to 0) — GET /students does carry the real
   // balance, and allStudentsData is already fetched (first 100 of the branch)
@@ -414,6 +429,29 @@ export const SingleGroup = () => {
     combinedStudents.forEach((s) => { map[s.realId] = s.archived ? "archived" : "active"; });
     return map;
   }, [combinedStudents]);
+
+  const visibleStudents = useMemo(
+    () => combinedStudents.filter((s) => showArchived || !s.archived),
+    [combinedStudents, showArchived]
+  );
+
+  // "Newest"/"Oldest" sort by when the student joined THIS group (their
+  // /student-groups membership joinedAt, falling back to that row's
+  // createdAt) — the closest real signal to "when were they added". Memoised
+  // so the tabs below, which are handed this array, only re-render when the
+  // roster itself changes and not on every hover or dialog toggle.
+  const sortedStudents = useMemo(() => {
+    const joinedTimeOf = (uid: string): string => {
+      const m = membershipByStudentId.get(uid);
+      return m?.joinedAt ?? m?.createdAt ?? "";
+    };
+    return [...visibleStudents].sort((a, b) => {
+      if (sortBy === "za") return b.name.localeCompare(a.name);
+      if (sortBy === "newest") return joinedTimeOf(b.realId).localeCompare(joinedTimeOf(a.realId));
+      if (sortBy === "oldest") return joinedTimeOf(a.realId).localeCompare(joinedTimeOf(b.realId));
+      return a.name.localeCompare(b.name);
+    });
+  }, [visibleStudents, sortBy, membershipByStudentId]);
 
   const otherGroups = useMemo(
     () => (groupsSelectData ?? []).filter((g) => g.id !== id),
@@ -493,23 +531,6 @@ export const SingleGroup = () => {
       <Box p={4}><Typography>{t("singleGroup.notFound")}</Typography></Box>
     );
   }
-
-  const visibleStudents = combinedStudents.filter((s) => showArchived || !s.archived);
-
-  // "Newest"/"Oldest" sort by when the student joined THIS group (their
-  // /student-groups membership joinedAt, falling back to that row's
-  // createdAt) — the closest real signal to "when were they added".
-  const joinedTimeOf = (uid: string): string => {
-    const m = membershipByStudentId.get(uid);
-    return m?.joinedAt ?? m?.createdAt ?? "";
-  };
-
-  const sortedStudents = [...visibleStudents].sort((a, b) => {
-    if (sortBy === "za") return b.name.localeCompare(a.name);
-    if (sortBy === "newest") return joinedTimeOf(b.realId).localeCompare(joinedTimeOf(a.realId));
-    if (sortBy === "oldest") return joinedTimeOf(a.realId).localeCompare(joinedTimeOf(b.realId));
-    return a.name.localeCompare(b.name);
-  });
 
   // The group's branch isn't in GroupDetail directly — it's derived from its
   // course, which does carry a nested branch object (Course.branch.name).

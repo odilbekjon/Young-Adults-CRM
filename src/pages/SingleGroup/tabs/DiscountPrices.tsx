@@ -21,7 +21,7 @@ import {
   Typography,
 } from "@mui/material";
 import { MdClose, MdOutlineLocalOffer } from "react-icons/md";
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Student } from "../../../types/group";
 import {
@@ -105,7 +105,7 @@ const latestDiscountsByStudent = (records: StudentDiscountRecord[]) => {
   return latest;
 };
 
-export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
+export const DiscountPrices = memo(function DiscountPrices({ groupId, groupPrice, students }: Props) {
   const { t } = useTranslation();
   const toast = useToast();
   const { data: records = [], isLoading, isError } = useStudentDiscountsByGroupQuery(groupId, { skip: !groupId });
@@ -456,4 +456,4 @@ export const DiscountPrices = ({ groupId, groupPrice, students }: Props) => {
       </Dialog>
     </Box>
   );
-};
+});

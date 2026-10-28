@@ -1,5 +1,5 @@
 // src/pages/Students.tsx
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { memo, useCallback, useState, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useAuth } from "../../hooks/useAuth";
@@ -75,7 +75,7 @@ import {
   useLazyStudentGroupsQuery,
   useFreezeStudentGroupMutation,
 } from "../../app/api/groupsApi";
-import type { StudentGroupStatus } from "../../app/api/groupsApi/types";
+import type { Group, StudentGroupStatus } from "../../app/api/groupsApi/types";
 import { useCoursesSelectQuery } from "../../app/api/coursesApi";
 import { useTeachersSelectQuery } from "../../app/api/teachersApi";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
@@ -565,6 +565,146 @@ const EditStudentDrawer = ({
 };
 
 
+/* ─── TABLE ROW ──────────────────────────────────────── */
+// Memoised so typing in the search box, ticking another checkbox or opening a
+// dialog re-renders only the rows whose own props changed, not all of them.
+interface StudentRowProps {
+  student: FlatStudent;
+  index: number;
+  selected: boolean;
+  group: Group | undefined;
+  visibleCols: string[];
+  menuAnchor: HTMLElement | null;
+  canAddPayment: boolean;
+  onOpen: (uid: string) => void;
+  onToggle: (uid: string) => void;
+  onMenuOpen: (e: React.MouseEvent<HTMLButtonElement>, student: FlatStudent) => void;
+  onMenuClose: () => void;
+  onEdit: () => void;
+  onAddPayment: () => void;
+  onArchive: (uid: string) => void;
+}
+
+const StudentRow = memo(({
+  student: s, index, selected, group, visibleCols, menuAnchor, canAddPayment,
+  onOpen, onToggle, onMenuOpen, onMenuClose, onEdit, onAddPayment, onArchive,
+}: StudentRowProps) => {
+  const { t } = useTranslation();
+  const badge = BADGE_COLORS[s.groupBadgeColor] ?? BADGE_COLORS.blue;
+  const col = (key: string) => visibleCols.includes(key);
+
+  return (
+    <TableRow
+      hover
+      onClick={() => onOpen(s.uid)}
+      sx={{
+        "& td": { borderBottom: "1px solid var(--color-border)", py: 1.4, fontSize: 13 },
+        "&:last-child td": { borderBottom: "none" },
+        bgcolor: selected ? "var(--color-primary-surface)" : "var(--color-surface)",
+        "&:hover": { bgcolor: selected ? "var(--color-primary-surface)" : "var(--color-surface-hover)", cursor: "pointer" },
+      }}
+    >
+      <TableCell sx={{ color: "var(--color-text-muted)", fontSize: 12, pr: 0, width: 32 }}>{index + 1}.</TableCell>
+      <TableCell sx={{ pl: 0, width: 32 }} onClick={(e) => e.stopPropagation()}>
+        <Checkbox size="small" checked={selected} onChange={() => onToggle(s.uid)} sx={{ p: 0 }} />
+      </TableCell>
+
+      {col("photo") && (
+        <TableCell>
+          <Avatar sx={{ width: 34, height: 34, fontSize: 13, fontWeight: 700, bgcolor: "var(--color-surface-hover)", color: "var(--color-text-secondary)" }}>
+            <FiUser size={16} />
+          </Avatar>
+        </TableCell>
+      )}
+      {col("name") && (
+        <TableCell sx={{ fontWeight: 500, color: "var(--color-text-primary)", minWidth: 160 }}>{s.name}</TableCell>
+      )}
+      {col("phone") && (
+        <TableCell><Typography fontSize={13} color="#5c7fa3">{s.phone}</Typography></TableCell>
+      )}
+      {col("groups") && (
+        <TableCell sx={{ minWidth: 220 }}>
+          <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
+            {group?.course?.name && (
+              <Chip
+                label={group.course.name} size="small"
+                sx={{ fontSize: 10, height: 20, fontWeight: 600, bgcolor: badge.bg, color: badge.color, borderRadius: "4px" }}
+              />
+            )}
+            <Typography fontSize={13} color="var(--color-text-secondary)">{s.groupName}</Typography>
+            {group?.time && <Typography fontSize={12} color="var(--color-text-muted)">({group.time})</Typography>}
+          </Stack>
+        </TableCell>
+      )}
+      {col("teachers") && (
+        <TableCell sx={{ minWidth: 140, color: "var(--color-text-secondary)" }}>{s.teacher}</TableCell>
+      )}
+      {col("training") && (
+        <TableCell sx={{ minWidth: 120 }}>
+          <Typography fontSize={13} color="var(--color-text-muted)">{formatDate(s.startDate)} —</Typography>
+          <Typography fontSize={13} color="var(--color-text-muted)">{formatDate(s.endDate)}</Typography>
+        </TableCell>
+      )}
+      {col("balance") && (
+        <TableCell>
+          <Typography fontSize={13} fontWeight={500} color={(s.balance ?? 0) < 0 ? "var(--color-danger)" : "var(--color-success)"}>
+            {(s.balance ?? 0).toLocaleString("ru-RU")}
+          </Typography>
+        </TableCell>
+      )}
+      {col("comment") && (
+        <TableCell sx={{ minWidth: 160, maxWidth: 260 }}>
+          {s.comment ? (
+            <Tooltip title={<span style={{ whiteSpace: "pre-wrap" }}>{s.comment}</span>} arrow placement="top">
+              <Typography
+                fontSize={13}
+                color="var(--color-text-secondary)"
+                sx={{
+                  display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                  overflow: "hidden", wordBreak: "break-word", whiteSpace: "pre-wrap",
+                }}
+              >
+                {s.comment}
+              </Typography>
+            </Tooltip>
+          ) : null}
+        </TableCell>
+      )}
+
+      {/* ACTIONS */}
+      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+        <IconButton size="small" onClick={(e) => onMenuOpen(e, s)} sx={{ color: "var(--color-text-secondary)" }}>
+          <BsThreeDotsVertical size={15} />
+        </IconButton>
+        <Menu
+          anchorEl={menuAnchor}
+          open={menuAnchor !== null}
+          onClose={onMenuClose}
+          PaperProps={{ sx: { borderRadius: 2, minWidth: 170, boxShadow: "0 4px 20px var(--color-shadow)", border: "1px solid var(--color-border)" } }}
+          transformOrigin={{ horizontal: "right", vertical: "top" }}
+          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        >
+          <MenuItem onClick={onEdit} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-text-secondary)" }}>
+            <MdEdit size={16} color="var(--color-text-secondary)" /> {t("students.actions.editStudent")}
+          </MenuItem>
+          {canAddPayment && (
+            <>
+              <Divider sx={{ my: 0.5 }} />
+              <MenuItem onClick={onAddPayment} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-success)" }}>
+                <MdPayment size={16} color="var(--color-success)" /> {t("students.actions.addPayment")}
+              </MenuItem>
+            </>
+          )}
+          <Divider sx={{ my: 0.5 }} />
+          <MenuItem onClick={() => onArchive(s.uid)} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-danger)" }}>
+            <MdDelete size={16} /> {t("students.actions.archive")}
+          </MenuItem>
+        </Menu>
+      </TableCell>
+    </TableRow>
+  );
+});
+
 /* ─── MAIN COMPONENT ─────────────────────────────────── */
 export const Students = () => {
   const { t } = useTranslation();
@@ -906,8 +1046,10 @@ export const Students = () => {
 
   const allSelected = pageRows.length > 0 && pageRows.every((s) => selected.includes(s.uid));
   const toggleAll   = () => setSelected(allSelected ? [] : pageRows.map((s) => s.uid));
-  const toggleOne   = (uid: string) =>
-    setSelected((p) => p.includes(uid) ? p.filter((x) => x !== uid) : [...p, uid]);
+  // The row callbacks below keep their identity between renders (see StudentRow).
+  const toggleOne = useCallback((uid: string) =>
+    setSelected((p) => p.includes(uid) ? p.filter((x) => x !== uid) : [...p, uid]), []);
+  const openStudent = useCallback((uid: string) => navigate(`/students/${uid}`), [navigate]);
 
   const resetArchiveState = () => {
     setArchiveUid(null);
@@ -1091,12 +1233,19 @@ export const Students = () => {
     }
   };
 
-  const openActionMenu = (e: React.MouseEvent<HTMLButtonElement>, uid: string) => {
+  const openActionMenu = useCallback((e: React.MouseEvent<HTMLButtonElement>, student: FlatStudent) => {
     e.stopPropagation();
-    const student = pageRows.find((s) => s.uid === uid) || null;
+    const el = e.currentTarget;
     setActiveStudent(student);
-    setActionMenu(actionMenu?.uid === uid ? null : { el: e.currentTarget, uid });
-  };
+    setActionMenu((prev) => (prev?.uid === student.uid ? null : { el, uid: student.uid }));
+  }, []);
+  const closeActionMenu = useCallback(() => setActionMenu(null), []);
+  const editFromMenu = useCallback(() => { setActionMenu(null); setEditDrawerOpen(true); }, []);
+  const addPaymentFromMenu = useCallback(() => { setActionMenu(null); setAddPaymentOpen(true); }, []);
+  const archiveFromMenu = useCallback((uid: string) => {
+    setActionMenu(null); setActionError(null); setArchiveReasonId(""); setArchiveComment(""); setArchiveUid(uid);
+  }, []);
+  const canAddPayment = hasPermission("PAYMENTS", "CREATE");
 
   const col = (key: string) => visibleCols.includes(key);
 
@@ -1359,123 +1508,26 @@ export const Students = () => {
             </TableHead>
 
             <TableBody>
-              {pageRows.map((s, i) => {
-                const badge      = BADGE_COLORS[s.groupBadgeColor] ?? BADGE_COLORS.blue;
-                const isSelected = selected.includes(s.uid);
-                // List rows only carry the group's name — course and lesson time come from GET /groups.
-                const rowGroup  = groupById.get(rawById.get(s.uid)?.groups?.[0]?.id ?? "");
-                return (
-                  <TableRow
-                    key={s.uid}
-                    hover
-                    onClick={() => navigate(`/students/${s.uid}`)}
-                    sx={{
-                      "& td": { borderBottom: "1px solid var(--color-border)", py: 1.4, fontSize: 13 },
-                      "&:last-child td": { borderBottom: "none" },
-                      bgcolor: isSelected ? "var(--color-primary-surface)" : "var(--color-surface)",
-                      "&:hover": { bgcolor: isSelected ? "var(--color-primary-surface)" : "var(--color-surface-hover)", cursor: "pointer" },
-                    }}
-                  >
-                    <TableCell sx={{ color: "var(--color-text-muted)", fontSize: 12, pr: 0, width: 32 }}>{i + 1}.</TableCell>
-                    <TableCell sx={{ pl: 0, width: 32 }} onClick={(e) => e.stopPropagation()}>
-                      <Checkbox size="small" checked={isSelected} onChange={() => toggleOne(s.uid)} sx={{ p: 0 }} />
-                    </TableCell>
-
-                    {col("photo") && (
-                      <TableCell>
-                        <Avatar sx={{ width: 34, height: 34, fontSize: 13, fontWeight: 700, bgcolor: "var(--color-surface-hover)", color: "var(--color-text-secondary)" }}>
-                          <FiUser size={16} />
-                        </Avatar>
-                      </TableCell>
-                    )}
-                    {col("name") && (
-                      <TableCell sx={{ fontWeight: 500, color: "var(--color-text-primary)", minWidth: 160 }}>{s.name}</TableCell>
-                    )}
-                    {col("phone") && (
-                      <TableCell><Typography fontSize={13} color="#5c7fa3">{s.phone}</Typography></TableCell>
-                    )}
-                    {col("groups") && (
-                      <TableCell sx={{ minWidth: 220 }}>
-                        <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
-                          {rowGroup?.course?.name && (
-                            <Chip
-                              label={rowGroup.course.name} size="small"
-                              sx={{ fontSize: 10, height: 20, fontWeight: 600, bgcolor: badge.bg, color: badge.color, borderRadius: "4px" }}
-                            />
-                          )}
-                          <Typography fontSize={13} color="var(--color-text-secondary)">{s.groupName}</Typography>
-                          {rowGroup?.time && <Typography fontSize={12} color="var(--color-text-muted)">({rowGroup.time})</Typography>}
-                        </Stack>
-                      </TableCell>
-                    )}
-                    {col("teachers") && (
-                      <TableCell sx={{ minWidth: 140, color: "var(--color-text-secondary)" }}>{s.teacher}</TableCell>
-                    )}
-                    {col("training") && (
-                      <TableCell sx={{ minWidth: 120 }}>
-                        <Typography fontSize={13} color="var(--color-text-muted)">{formatDate(s.startDate)} —</Typography>
-                        <Typography fontSize={13} color="var(--color-text-muted)">{formatDate(s.endDate)}</Typography>
-                      </TableCell>
-                    )}
-                    {col("balance") && (
-                      <TableCell>
-                        <Typography fontSize={13} fontWeight={500} color={(s.balance ?? 0) < 0 ? "var(--color-danger)" : "var(--color-success)"}>
-                          {(s.balance ?? 0).toLocaleString("ru-RU")}
-                        </Typography>
-                      </TableCell>
-                    )}
-                    {col("comment") && (
-                      <TableCell sx={{ minWidth: 160, maxWidth: 260 }}>
-                        {s.comment ? (
-                          <Tooltip title={<span style={{ whiteSpace: "pre-wrap" }}>{s.comment}</span>} arrow placement="top">
-                            <Typography
-                              fontSize={13}
-                              color="var(--color-text-secondary)"
-                              sx={{
-                                display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-                                overflow: "hidden", wordBreak: "break-word", whiteSpace: "pre-wrap",
-                              }}
-                            >
-                              {s.comment}
-                            </Typography>
-                          </Tooltip>
-                        ) : null}
-                      </TableCell>
-                    )}
-
-                    {/* ACTIONS */}
-                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      <IconButton size="small" onClick={(e) => openActionMenu(e, s.uid)} sx={{ color: "var(--color-text-secondary)" }}>
-                        <BsThreeDotsVertical size={15} />
-                      </IconButton>
-                      <Menu
-                        anchorEl={actionMenu?.uid === s.uid ? actionMenu.el : null}
-                        open={actionMenu?.uid === s.uid}
-                        onClose={() => setActionMenu(null)}
-                        PaperProps={{ sx: { borderRadius: 2, minWidth: 170, boxShadow: "0 4px 20px var(--color-shadow)", border: "1px solid var(--color-border)" } }}
-                        transformOrigin={{ horizontal: "right", vertical: "top" }}
-                        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-                      >
-                        <MenuItem onClick={() => { setActionMenu(null); setEditDrawerOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-text-secondary)" }}>
-                          <MdEdit size={16} color="var(--color-text-secondary)" /> {t("students.actions.editStudent")}
-                        </MenuItem>
-                        {hasPermission("PAYMENTS", "CREATE") && (
-                          <>
-                            <Divider sx={{ my: 0.5 }} />
-                            <MenuItem onClick={() => { setActionMenu(null); setAddPaymentOpen(true); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-success)" }}>
-                              <MdPayment size={16} color="var(--color-success)" /> {t("students.actions.addPayment")}
-                            </MenuItem>
-                          </>
-                        )}
-                        <Divider sx={{ my: 0.5 }} />
-                        <MenuItem onClick={() => { setActionMenu(null); setActionError(null); setArchiveReasonId(""); setArchiveComment(""); setArchiveUid(s.uid); }} sx={{ fontSize: 13, gap: 1.2, py: 1.2, color: "var(--color-danger)" }}>
-                          <MdDelete size={16} /> {t("students.actions.archive")}
-                        </MenuItem>
-                      </Menu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {pageRows.map((s, i) => (
+                <StudentRow
+                  key={s.uid}
+                  student={s}
+                  index={i}
+                  selected={selected.includes(s.uid)}
+                  // List rows only carry the group's name — course and lesson time come from GET /groups.
+                  group={groupById.get(rawById.get(s.uid)?.groups?.[0]?.id ?? "")}
+                  visibleCols={visibleCols}
+                  menuAnchor={actionMenu?.uid === s.uid ? actionMenu.el : null}
+                  canAddPayment={canAddPayment}
+                  onOpen={openStudent}
+                  onToggle={toggleOne}
+                  onMenuOpen={openActionMenu}
+                  onMenuClose={closeActionMenu}
+                  onEdit={editFromMenu}
+                  onAddPayment={addPaymentFromMenu}
+                  onArchive={archiveFromMenu}
+                />
+              ))}
 
               {!isListLoading && pageRows.length === 0 && (
                 <TableRow>

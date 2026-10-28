@@ -3,13 +3,13 @@ import {
   TableCell, TableContainer, TableHead, TableRow,
   Typography, TextField
 } from "@mui/material";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Student } from "../../../types/group";
 
 interface Props { students: Student[] }
 
-export const Grade = ({ students }: Props) => {
+export const Grade = memo(function Grade({ students }: Props) {
   const { t } = useTranslation();
   const [grades, setGrades] = useState<Record<number, string>>({});
 
@@ -76,4 +76,4 @@ export const Grade = ({ students }: Props) => {
       </TableContainer>
     </Box>
   );
-};
+});

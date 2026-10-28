@@ -2,6 +2,7 @@ import { Box, Chip, CircularProgress, Stack, Typography } from "@mui/material";
 import { MdOutlineComputer, MdOutlinePerson } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
+import { ChunkedList } from "../../../components/ChunkedList";
 import { useStudentHistoryQuery } from "../../../app/api/studentsApi";
 import type { StudentHistoryEntry } from "../../../app/api/studentsApi/types";
 
@@ -184,9 +185,9 @@ export const StudentHistoryTab = ({ studentId }: { studentId: string }) => {
 
   return (
     <Stack spacing={1.25}>
-      {entries.map((entry) => (
-        <HistoryItem key={entry.id} entry={entry} />
-      ))}
+      <ChunkedList items={entries}>
+        {(entry) => <HistoryItem key={entry.id} entry={entry} />}
+      </ChunkedList>
     </Stack>
   );
 };

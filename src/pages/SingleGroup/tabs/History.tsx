@@ -1,7 +1,9 @@
 import { Box, CircularProgress, Stack, Typography } from "@mui/material";
+import { memo } from "react";
 import { MdOutlinePerson } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
+import { ChunkedList } from "../../../components/ChunkedList";
 import { useGroupHistoryQuery } from "../../../app/api/groupsApi";
 import type { GroupHistoryEntry } from "../../../app/api/groupsApi/types";
 
@@ -179,7 +181,7 @@ export const HistoryEntryRow = ({
   );
 };
 
-export const History = ({ groupId, groupName }: Props) => {
+export const History = memo(function History({ groupId, groupName }: Props) {
   const { t } = useTranslation();
   const { data: entries, isLoading, isError } = useGroupHistoryQuery(groupId, { skip: !groupId });
 
@@ -203,11 +205,11 @@ export const History = ({ groupId, groupName }: Props) => {
         </Typography>
       ) : (
         <Box sx={{ bgcolor: "var(--color-surface)" }}>
-          {entries.map((entry) => (
-            <HistoryEntryRow key={entry.id} entry={entry} groupId={groupId} groupName={groupName} />
-          ))}
+          <ChunkedList items={entries}>
+            {(entry) => <HistoryEntryRow key={entry.id} entry={entry} groupId={groupId} groupName={groupName} />}
+          </ChunkedList>
         </Box>
       )}
     </Box>
   );
-};
+});

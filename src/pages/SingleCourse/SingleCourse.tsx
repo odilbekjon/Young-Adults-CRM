@@ -16,19 +16,24 @@ import {
   DialogActions,
   Button,
 } from "@mui/material";
-import { MdEdit, MdArchive, MdArrowBack } from "react-icons/md";
+import { MdEdit, MdArchive, MdUnarchive, MdDeleteOutline, MdArrowBack } from "react-icons/md";
 import {
   useAllCoursesQuery,
   useToggleCourseStatusMutation,
+  useDeleteCourseMutation,
 } from "../../app/api/coursesApi/coursesApi";
+import { CourseFormDrawer } from "../Settings/office/pages/courses/CourseFormDrawer";
 import { useGroupsByCourseQuery } from "../../app/api/groupsApi/groupsApi";
 import type { CourseGroup } from "../../app/api/groupsApi/types";
 import { useToast } from "../../Context/ToastContext";
 import { CARD_COLORS } from "../../constants/CardColors";
-import { classifyDayList, classifyDays, decimalToNumber, formatTrainingDate } from "../../utils";
+import { classifyDayList, classifyDays, decimalToNumber, extractApiError, formatTrainingDate } from "../../utils";
 
 const fmt = (n: number) =>
   n.toLocaleString("ru-RU").replace(/,/g, " ") + " UZS";
+
+type CourseAction = "archive" | "restore" | "delete";
+const COURSE_ACTION_TOAST: Record<CourseAction, string> = { archive: "archived", restore: "restored", delete: "deleted" };
 
 const colorForId = (id: string) => {
   const hash = [...id].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
@@ -98,11 +103,17 @@ export const SingleCourse = () => {
   const { t } = useTranslation();
   const toast = useToast();
   const [tab, setTab] = useState(0);
-  const [archiveOpen, setArchiveOpen] = useState(false);
-  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  // The confirm dialog serves all three status actions; the action stays set
+  // while the dialog fades out so its text doesn't flip.
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<CourseAction>("archive");
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const { data, isLoading } = useAllCoursesQuery();
   const [toggleCourseStatus, { isLoading: isToggling }] = useToggleCourseStatusMutation();
+  const [deleteCourse, { isLoading: isDeleting }] = useDeleteCourseMutation();
+  const isActing = isToggling || isDeleting;
 
   const course = data?.data.find((c) => c.id === id);
   const {
@@ -111,21 +122,31 @@ export const SingleCourse = () => {
     isError: groupsError,
   } = useGroupsByCourseQuery(id ?? "", { skip: !id });
 
-  // Archive (PATCH toggle-status -> INACTIVE), not a permanent delete — this
-  // page has no confirmation-free destructive action; permanent delete lives
-  // only in the Archived tab of the Courses list, matching that page's
-  // Active-vs-Archived split.
-  const handleArchive = async () => {
+  const openConfirm = (action: CourseAction) => {
+    setConfirmError(null);
+    setConfirmAction(action);
+    setConfirmOpen(true);
+  };
+
+  // Same actions as the Courses list: an active course is archived (PATCH
+  // toggle-status -> INACTIVE); an archived one is restored (the same toggle) or
+  // deleted for good (DELETE, which the backend refuses while it has groups).
+  // Archiving or deleting leaves this page, since the course is gone from its
+  // catalog; restoring keeps it open.
+  const handleConfirm = async () => {
     if (!course) return;
-    setArchiveError(null);
     try {
-      await toggleCourseStatus(course.id).unwrap();
-      toast.success(t("settings.office.courses.toast.archived"));
-      setArchiveOpen(false);
-      navigate("/settings/office/courses");
-    } catch {
-      setArchiveError(t("settings.office.courses.archiveConfirm.error"));
-      toast.error(t("settings.office.courses.archiveConfirm.error"));
+      if (confirmAction === "delete") await deleteCourse(course.id).unwrap();
+      else await toggleCourseStatus(course.id).unwrap();
+      toast.success(t(`settings.office.courses.toast.${COURSE_ACTION_TOAST[confirmAction]}`));
+      setConfirmOpen(false);
+      if (confirmAction !== "restore") navigate("/settings/office/courses");
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t(`settings.office.courses.${confirmAction}Confirm.error`);
+      const message = detail ? `${generic}: ${detail}` : generic;
+      setConfirmError(message);
+      toast.error(message);
     }
   };
 
@@ -192,41 +213,23 @@ export const SingleCourse = () => {
                   zIndex: 2,
                 }}
               >
-                <Box
-                  sx={{
-                    width: 34,
-                    height: 34,
-                    border: "1.5px solid rgba(255,255,255,0.8)",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    bgcolor: "rgba(255,255,255,0.15)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.3)" },
-                  }}
-                  onClick={() => navigate("/settings/office/courses")}
-                >
+                <BannerAction title={t("settings.office.courses.edit")} onClick={() => setEditOpen(true)}>
                   <MdEdit size={16} color="#fff" />
-                </Box>
-                <Box
-                  sx={{
-                    width: 34,
-                    height: 34,
-                    border: "1.5px solid rgba(255,255,255,0.8)",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    bgcolor: "rgba(255,255,255,0.15)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.3)" },
-                  }}
-                  onClick={() => { setArchiveError(null); setArchiveOpen(true); }}
-                  title={t("settings.office.courses.archive")}
-                >
-                  <MdArchive size={16} color="#fff" />
-                </Box>
+                </BannerAction>
+                {course.status === "ACTIVE" ? (
+                  <BannerAction title={t("settings.office.courses.archive")} onClick={() => openConfirm("archive")}>
+                    <MdArchive size={16} color="#fff" />
+                  </BannerAction>
+                ) : (
+                  <>
+                    <BannerAction title={t("settings.office.courses.restore")} onClick={() => openConfirm("restore")}>
+                      <MdUnarchive size={16} color="#fff" />
+                    </BannerAction>
+                    <BannerAction title={t("settings.office.courses.delete")} onClick={() => openConfirm("delete")}>
+                      <MdDeleteOutline size={16} color="#fff" />
+                    </BannerAction>
+                  </>
+                )}
               </Box>
 
               <Typography
@@ -327,45 +330,72 @@ export const SingleCourse = () => {
       </Box>
 
       {/* Archive confirmation */}
+      <CourseFormDrawer open={editOpen} course={course} courses={data?.data ?? []} onClose={() => setEditOpen(false)} />
+
       <Dialog
-        open={archiveOpen}
-        onClose={() => setArchiveOpen(false)}
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
         PaperProps={{ sx: { borderRadius: "14px", width: 380 } }}
       >
         <DialogTitle sx={{ fontWeight: 600 }}>
-          {t("settings.office.courses.archiveConfirm.title")}
+          {t(`settings.office.courses.${confirmAction}Confirm.title`)}
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {t("settings.office.courses.archiveConfirm.message", { name: course.name })}
+            {t(`settings.office.courses.${confirmAction}Confirm.message`, { name: course.name })}
           </DialogContentText>
-          {archiveError && (
-            <Typography fontSize={13} color="error" mt={1.5}>{archiveError}</Typography>
+          {confirmError && (
+            <Typography fontSize={13} color="error" mt={1.5}>{confirmError}</Typography>
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button
-            onClick={() => setArchiveOpen(false)}
+            onClick={() => setConfirmOpen(false)}
             variant="outlined"
-            disabled={isToggling}
+            disabled={isActing}
             sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px" }}
           >
             {t("settings.office.courses.form.cancel")}
           </Button>
           <Button
-            onClick={handleArchive}
+            onClick={handleConfirm}
             variant="contained"
-            disabled={isToggling}
-            startIcon={isToggling ? <CircularProgress size={16} color="inherit" /> : undefined}
-            sx={{ textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none", bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" } }}
+            color={confirmAction === "delete" ? "error" : "primary"}
+            disabled={isActing}
+            startIcon={isActing ? <CircularProgress size={16} color="inherit" /> : undefined}
+            sx={{
+              textTransform: "none", borderRadius: "10px", paddingX: "18px", fontWeight: 600, boxShadow: "none",
+              ...(confirmAction !== "delete" && { bgcolor: "#5c7fa3", "&:hover": { bgcolor: "#4a6a8a" } }),
+            }}
           >
-            {t("settings.office.courses.archive")}
+            {t(`settings.office.courses.${confirmAction}`)}
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
 };
+
+const BannerAction = ({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) => (
+  <Box
+    sx={{
+      width: 34,
+      height: 34,
+      border: "1.5px solid rgba(255,255,255,0.8)",
+      borderRadius: "50%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      bgcolor: "rgba(255,255,255,0.15)",
+      "&:hover": { bgcolor: "rgba(255,255,255,0.3)" },
+    }}
+    onClick={onClick}
+    title={title}
+  >
+    {children}
+  </Box>
+);
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <Box sx={{ mb: 1.5 }}>

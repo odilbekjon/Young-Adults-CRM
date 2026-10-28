@@ -583,7 +583,6 @@ export const Students = () => {
   const [fetchMemberships] = useLazyStudentGroupsQuery();
   const [freezeStudentGroup] = useFreezeStudentGroupMutation();
   const [isArchiving, setIsArchiving] = useState(false);
-  const { data: reasonOptions } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 });
   // GET /tags/select?type=STUDENT — real, admin-managed tags for the "Tags"
   // filter, replacing the disabled placeholder (students had no tags
   // relationship to filter by until this Tags feature existed).
@@ -621,6 +620,12 @@ export const Students = () => {
   const [archiveComment,    setArchiveComment]    = useState("");
   // Dialog switch: false = archive the student, true = delete the student.
   const [archiveDeleteMode, setArchiveDeleteMode] = useState(false);
+  // Only the archive dialog picks a reason, so they are fetched once it opens.
+  const {
+    data: reasonOptions,
+    isLoading: reasonsLoading,
+    isError: reasonsError,
+  } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 }, { skip: !archiveUid });
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
   const [editDrawerOpen,    setEditDrawerOpen]    = useState(false);
@@ -1571,6 +1576,8 @@ export const Students = () => {
         reasonId={archiveReasonId}
         onReasonIdChange={setArchiveReasonId}
         reasons={reasonOptions ?? []}
+        reasonsLoading={reasonsLoading}
+        reasonsError={reasonsError}
         comment={archiveComment}
         onCommentChange={setArchiveComment}
         recalculate={false}

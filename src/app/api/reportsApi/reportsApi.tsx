@@ -204,7 +204,9 @@ export const reportsApi = baseApi.injectEndpoints({
                 method: "GET",
             }),
             transformResponse: (response: unknown) => normalizeAttendanceRows(response),
-            providesTags: ["report"],
+            // Nothing invalidates "report" itself; the report is also refreshed by
+            // the changes to the data it is built from.
+            providesTags: ["report", "attendance"],
         }),
         // GET /reports/attendance/excel — same filters, file response. Modeled
         // as a lazy Blob query, the same approach financeApi/attendancesApi
@@ -235,7 +237,7 @@ export const reportsApi = baseApi.injectEndpoints({
                 method: "GET",
             }),
             transformResponse: (response: unknown) => normalizeConversion(response),
-            providesTags: ["report"],
+            providesTags: ["report", "lead"],
         }),
         reportConversionExcel: builder.query<Blob, ConversionReportRequest | void>({
             query: (args) => ({
@@ -262,7 +264,7 @@ export const reportsApi = baseApi.injectEndpoints({
                 method: "GET",
             }),
             transformResponse: (response: unknown) => normalizeLeadsReport(response),
-            providesTags: ["report"],
+            providesTags: ["report", "lead"],
         }),
         reportLeadsExcel: builder.query<Blob, LeadsReportRequest | void>({
             query: (args) => ({
@@ -288,7 +290,7 @@ export const reportsApi = baseApi.injectEndpoints({
                 method: "GET",
             }),
             transformResponse: (response: unknown) => normalizeLeftStudents(response),
-            providesTags: ["report"],
+            providesTags: ["report", "studentGroup"],
         }),
         reportLeftStudentsExcel: builder.query<Blob, LeftStudentsReportRequest | void>({
             query: (args) => ({

@@ -218,19 +218,16 @@ export const Dashboard = () => {
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const branchId = selectedBranchId ?? undefined;
 
-  // No mutation anywhere in the app invalidates the "dashboard" tag (these
-  // five queries are the only providers of it), so without forcing a
-  // refetch on mount, these numbers would only ever update on a full page
-  // reload or after the ~60s unused-cache window lapses — stale after any
-  // student/payment/attendance/group action taken elsewhere and then
-  // navigated back from.
+  // Coming back to the Dashboard within baseApi's cache window costs no
+  // requests: whatever the user changed in the meantime has already evicted the
+  // affected entries (the dashboard queries provide the tags of the data they
+  // are computed from, see dashboardApi).
   //
   // Requests start in the order the hooks are declared and baseApi caps how many
   // run at once, so the cheap counts behind the stat tiles come first, the big
   // lists behind "Active students" next, and the cards further down the page
   // last — those only start once they are about to scroll into view.
-  const refetchOnMount = { refetchOnMountOrArgChange: true };
-  const { data: statsData } = useDashboardStatsQuery(undefined, refetchOnMount);
+  const { data: statsData } = useDashboardStatsQuery();
 
   // "Active leads" — GET /leads?status=ACTIVE (leadsApi's own definition of
   // an active lead, same enum the Leads Kanban board and Reports use). Only the
@@ -286,7 +283,7 @@ export const Dashboard = () => {
 
   // Attendance / Recent activity / Teacher performance cards.
   const [summaryRef, summaryNear] = useNearViewport();
-  const summaryOptions = { ...refetchOnMount, skip: !summaryNear };
+  const summaryOptions = { skip: !summaryNear };
   const { data: attendanceData, isLoading: attendanceQueryLoading, isError: attendanceError } = useDashboardAttendanceStatsQuery(undefined, summaryOptions);
   const { data: activitiesData, isLoading: activitiesQueryLoading, isError: activitiesError } = useDashboardRecentActivitiesQuery(undefined, summaryOptions);
   const { data: teacherPerfData, isLoading: teacherPerfQueryLoading, isError: teacherPerfError } = useDashboardTeacherPerformanceQuery(undefined, summaryOptions);
@@ -297,12 +294,12 @@ export const Dashboard = () => {
 
   // Schedule card and the data its cards are enriched with.
   const [scheduleRef, scheduleNear] = useNearViewport();
-  const { data: scheduleData, isLoading: scheduleQueryLoading, isError: scheduleError } = useDashboardScheduleQuery(undefined, { ...refetchOnMount, skip: !scheduleNear });
+  const { data: scheduleData, isLoading: scheduleQueryLoading, isError: scheduleError } = useDashboardScheduleQuery(undefined, { skip: !scheduleNear });
   const scheduleLoading = !scheduleNear || scheduleQueryLoading;
   // Enrichment source for the schedule cards below (real training dates, room
   // capacity, current headcount) — GET /groups' own schedule endpoint
   // (ScheduleItem) only carries group/course/room/time/teacher, nothing else.
-  const { data: scheduleGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 }, { ...refetchOnMount, skip: !scheduleNear });
+  const { data: scheduleGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 }, { skip: !scheduleNear });
   // Same "legacy relation keeps listing removed students" workaround already
   // used on the Groups list page — see realStudentCount's own comment.
   const { data: inactiveMembershipsData } = useStudentGroupsQuery({ status: "INACTIVE", branchId, limit: 1000 }, { skip: !scheduleNear });

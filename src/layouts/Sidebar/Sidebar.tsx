@@ -589,7 +589,9 @@ const MobileSubMenuItem = ({ item, depth = 0 }: { item: SubMenuItem; depth?: num
 // Teachers, Students, Finance, Settings, Reports...) is admin/CEO territory,
 // matching ProtectedRoute's own teacher path allowlist.
 const useTeacherNavItems = (enabled: boolean): { items: NavEntry[]; isLoading: boolean } => {
-  const { data: groups, isLoading } = useTeacherPortalGroupsQuery(undefined, { skip: !enabled });
+  // The rail mounts again with every page; the pages that list the groups
+  // themselves refetch them when opened.
+  const { data: groups, isLoading } = useTeacherPortalGroupsQuery(undefined, { skip: !enabled, refetchOnMountOrArgChange: false });
 
   const items = useMemo<NavEntry[]>(() => {
     const groupItems: NavEntry[] = (groups ?? [])

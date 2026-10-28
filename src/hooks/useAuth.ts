@@ -41,9 +41,12 @@ export const useAuth = () => {
   const token = useSelector((state: RootState) => state.auth.token);
   const storedRole = useSelector((state: RootState) => state.auth.role);
 
-  // Skipped while logged out so these never fire on the login page.
-  const meQuery = useGetMeQuery(undefined, { skip: !token });
-  const sidebarQuery = useGetSidebarQuery(undefined, { skip: !token });
+  // Skipped while logged out so these never fire on the login page. Every page
+  // mounts this hook again (route guards, Header, Sidebar), so who the user is
+  // and what they may see is asked once per session (and again after the "user"
+  // tag is invalidated or the branch changes), not whenever the cache window ends.
+  const meQuery = useGetMeQuery(undefined, { skip: !token, refetchOnMountOrArgChange: false });
+  const sidebarQuery = useGetSidebarQuery(undefined, { skip: !token, refetchOnMountOrArgChange: false });
 
   const user = token ? meQuery.data?.data ?? null : null;
   const isMeLoading = meQuery.isLoading;

@@ -16,7 +16,6 @@ import { AddPayment } from "../../components/AddPayment/AddPayment";
 import { logout } from "../../app/store/authSlice";
 import { changeSelectedBranch } from "../../app/store/branchSlice";
 import type { AppDispatch, RootState } from "../../app/store";
-import { useGetMeQuery } from "../../app/api/authApi/authApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
 import { useAllStudentsQuery } from "../../app/api/studentsApi";
 import type { Student } from "../../app/api/studentsApi/types";
@@ -74,7 +73,9 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
   const ref = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch<AppDispatch>();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
-  const { data: branchesData, isLoading: branchesLoading } = useAllBranchesQuery();
+  // This dropdown mounts again with every page, so the list is not re-checked
+  // when the cache window ends; Settings > Branches invalidates it when it changes.
+  const { data: branchesData, isLoading: branchesLoading } = useAllBranchesQuery(undefined, { refetchOnMountOrArgChange: false });
   const { isCeo, branchIds } = useAuth();
 
   // Only SUPERADMIN / a CEO-position account sees every branch / the "All branches" shortcut —
@@ -593,14 +594,12 @@ export const Header = () => {
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
 
-  const { data: meData } = useGetMeQuery();
-  const currentUser = meData?.data;
   // A TEACHER session gets a stripped-down header (no branch picker, no "+"
   // quick-add menu, no student search, no Add-student/Add-payment drawers) —
   // those are admin actions, and the /students, /finance etc. endpoints behind
   // them aren't theirs to call. Language/theme/fullscreen/help/history/
   // notifications/account stay.
-  const { isTeacher } = useAuth();
+  const { isTeacher, user: currentUser } = useAuth();
   const displayName = currentUser?.name || currentUser?.email || t("header.account");
   const avatarInitial = displayName.charAt(0).toUpperCase();
 

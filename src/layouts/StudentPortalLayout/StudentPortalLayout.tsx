@@ -80,7 +80,9 @@ export const StudentPortalLayout = ({ children }: { children: ReactNode }) => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { mode, toggleMode } = useThemeMode();
-  const { data: profile } = useStudentPortalProfileQuery();
+  // The layout mounts again with every portal page, so the profile is not
+  // re-checked when the cache window ends; the Profile page itself does that.
+  const { data: profile } = useStudentPortalProfileQuery(undefined, { refetchOnMountOrArgChange: false });
   const isNarrow = useMediaQuery("(max-width:900px)");
 
   const [drawerOpen, setDrawerOpen] = useState(false);

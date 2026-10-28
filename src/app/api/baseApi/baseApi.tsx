@@ -291,6 +291,16 @@ export const baseApi = createApi({
   reducerPath: "baseApi",
   baseQuery: baseQueryWithReauth,
   endpoints: () => ({}),
+  // Moving between pages must not download again what was on screen a moment
+  // ago. Data stays cached for 5 minutes after its last user unmounts (RTK's
+  // default is 1 minute), and a page that mounts onto data older than 3 minutes
+  // shows it at once while it refreshes in the background; anything newer is
+  // used as it is. The user's own changes don't wait for that: a mutation
+  // invalidates the tags it affects. What other users change reaches the screen
+  // once the 3 minutes pass. Window focus never refetches (setupListeners is not
+  // set up).
+  keepUnusedDataFor: 300,
+  refetchOnMountOrArgChange: 180,
   tagTypes: ["user", "course", "branch", "room", "dashboard", "student", "group", "studentGroup", "attendance", "teacher", "leadColumn", "leadForm", "lead", "leadSection", "leadSource", "payment", "smsAutoSetting", "smsTemplate", "smsHistory", "smsConfig", "archive", "holiday", "reason", "report", "salary", "generalSettings", "studentFreeze", "studentPortal", "staff", "teacherPortal", "tag", "studentDiscount"],
 });
 export default baseApi;

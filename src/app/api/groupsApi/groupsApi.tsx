@@ -707,7 +707,7 @@ export const groupsApi = baseApi.injectEndpoints({
                     describeFormFields(appendStudentGroupFormData({ startDate, endDate, reason })),
                     queryFulfilled,
                 ),
-            invalidatesTags: ["studentGroup", "group", "student"],
+            invalidatesTags: ["studentGroup", "group", "student", "studentFreeze"],
         }),
         // POST /student-groups/{id}/unfreeze — Swagger: multipart/form-data
         // with `endDate` (YYYY-MM-DD, when the freeze ends). Accepts a bare
@@ -733,7 +733,7 @@ export const groupsApi = baseApi.injectEndpoints({
                     queryFulfilled,
                 );
             },
-            invalidatesTags: ["studentGroup", "group", "student"],
+            invalidatesTags: ["studentGroup", "group", "student", "studentFreeze"],
         }),
         // POST /student-groups/{id}/graduate-trial — PROBATION -> ACTIVE.
         graduateTrialStudentGroup: builder.mutation<StudentGroupActionResponse, string>({

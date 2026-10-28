@@ -16,7 +16,9 @@ const STUDENTS_LIMIT = 3000;
 // only lists ACTIVE accounts unless status=INACTIVE is sent) when that list
 // arrived in full.
 export const useActiveStudentCount = (branchId?: string) => {
-  const first = useStudentGroupsQuery({ status: "ACTIVE", branchId, page: 1, limit: PAGE_LIMIT });
+  // No `page`: page 1 is the default, and with the same arguments as the
+  // Students page's Active filter that page reads this very cached list.
+  const first = useStudentGroupsQuery({ status: "ACTIVE", branchId, limit: PAGE_LIMIT });
   const [fetchPage] = useLazyStudentGroupsQuery();
   const [more, setMore] = useState<{ key: string; ids: string[] } | null>(null);
 
@@ -30,7 +32,9 @@ export const useActiveStudentCount = (branchId?: string) => {
       const ids: string[] = [];
       for (let page = 2; page <= totalPages; page += 1) {
         try {
-          const res = await fetchPage({ status: "ACTIVE", branchId, page, limit: PAGE_LIMIT }).unwrap();
+          // A page that is already cached is used as it is: a lazy trigger would
+          // otherwise download it again on every visit.
+          const res = await fetchPage({ status: "ACTIVE", branchId, page, limit: PAGE_LIMIT }, true).unwrap();
           res.rows.forEach((r) => { if (r.studentId && r.groupId) ids.push(r.studentId); });
         } catch {
           return; // incomplete — `isComplete` below stays false

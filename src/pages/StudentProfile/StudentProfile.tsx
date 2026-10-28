@@ -1391,7 +1391,6 @@ export const StudentProfile = () => {
   const [updateStudent, { isLoading: isSavingStudent }] = useUpdateStudentMutation();
   const { leaveGroup, archiveStudent: archiveStudentFlow, deleteStudent: deleteStudentFlow } = useArchiveStudent();
   const [isArchivingStudent, setIsArchivingStudent] = useState(false);
-  const { data: archiveReasonOptions } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 });
   const [assignStudentsToGroup, { isLoading: isAddingToGroup }] = useAssignStudentsToGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [freezeStudentGroup, { isLoading: isFreezingGroup }] = useFreezeStudentGroupMutation();
@@ -1481,6 +1480,13 @@ export const StudentProfile = () => {
   const [removeComment, setRemoveComment] = useState("");
   const [removeScope, setRemoveScope] = useState<"current" | "all">("current");
   const [removeDeleteMode, setRemoveDeleteMode] = useState(false);
+  // Only the archive and remove-from-group dialogs pick a reason, so they are
+  // fetched once one of them opens.
+  const {
+    data: archiveReasonOptions,
+    isLoading: reasonsLoading,
+    isError: reasonsError,
+  } = useReasonsSelectQuery({ status: "ACTIVE", page: 1, limit: 200 }, { skip: !archiveOpen && !archiveGroupTarget });
 
   // Tab content for Comments/SMS/History is only fetched once its tab is
   // actually opened — no point firing three extra requests on every profile
@@ -1999,6 +2005,8 @@ export const StudentProfile = () => {
         reasonId={archiveReasonId}
         onReasonIdChange={setArchiveReasonId}
         reasons={archiveReasonOptions ?? []}
+        reasonsLoading={reasonsLoading}
+        reasonsError={reasonsError}
         comment={archiveComment}
         onCommentChange={setArchiveComment}
         recalculate={false}
@@ -2146,6 +2154,8 @@ export const StudentProfile = () => {
         reasonId={removeReasonId}
         onReasonIdChange={setRemoveReasonId}
         reasons={archiveReasonOptions ?? []}
+        reasonsLoading={reasonsLoading}
+        reasonsError={reasonsError}
         showDeleteToggle
         deleteMode={removeDeleteMode}
         onDeleteModeChange={setRemoveDeleteMode}

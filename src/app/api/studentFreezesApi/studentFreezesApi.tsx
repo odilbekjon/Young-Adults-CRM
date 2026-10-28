@@ -147,7 +147,7 @@ export const studentFreezesApi = baseApi.injectEndpoints({
             }),
             // Also invalidates "group" — freezing changes the student's active
             // status within that group's membership (SingleGroup reads this).
-            invalidatesTags: ["studentFreeze", "student", "group"],
+            invalidatesTags: ["studentFreeze", "student", "group", "studentGroup"],
         }),
         updateStudentFreeze: builder.mutation<StudentFreezeMutationResponse, UpdateStudentFreezeRequest>({
             query: ({ id, ...data }) => ({
@@ -157,7 +157,7 @@ export const studentFreezesApi = baseApi.injectEndpoints({
             }),
             // Changing the dates can flip the freeze's status (ACTIVE/EXPIRED)
             // and with it the student's status in the group.
-            invalidatesTags: ["studentFreeze", "student", "group"],
+            invalidatesTags: ["studentFreeze", "student", "group", "studentGroup"],
         }),
         // DELETE /student-freezes/{id} — "Muzlatishni o'chiradi va talabaning
         // statusini qayta aktiv holatga keltirishni ta'minlaydi", hence also
@@ -167,7 +167,7 @@ export const studentFreezesApi = baseApi.injectEndpoints({
                 url: `${PATHS.STUDENT_FREEZES}/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["studentFreeze", "student", "group"],
+            invalidatesTags: ["studentFreeze", "student", "group", "studentGroup"],
         }),
     }),
 });

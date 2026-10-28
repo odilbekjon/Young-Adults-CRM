@@ -81,6 +81,7 @@ import { RemoveStudentDialog } from "./RemoveStudentDialog";
 import { decimalToNumber } from "../../utils/decimal";
 import { useStudentBalances } from "../../hooks/useStudentBalances";
 import { useArchiveStudent } from "../../hooks/useArchiveStudent";
+import { useAllStudentGroups } from "../../hooks/useAllStudentGroups";
 
 const TAB_KEYS = [
   "attendance", "grade", "onlineLessons",
@@ -203,14 +204,12 @@ export const SingleGroup = () => {
   // matching row exists (the two filters don't appear to compose on this
   // backend) — so these two are fetched unscoped (branch-wide, same as
   // `studentId`+`status` does work) and filtered to this group client-side
-  // instead of via the `groupId` param.
+  // instead of via the `groupId` param. Every page of them is read: a removed
+  // student's row beyond the first page would leave them on the roster after a
+  // reload.
   const { data: studentGroupsData } = useStudentGroupsQuery({ groupId: id ?? "", limit: 500 }, { skip: !id });
-  const { data: inactiveStudentGroupsData } = useStudentGroupsQuery(
-    { status: "INACTIVE", limit: 500 }, { skip: !id }
-  );
-  const { data: deletedStudentGroupsData } = useStudentGroupsQuery(
-    { status: "DELETED", limit: 500 }, { skip: !id }
-  );
+  const inactiveRows = useAllStudentGroups("INACTIVE", 500, !id);
+  const deletedRows = useAllStudentGroups("DELETED", 500, !id);
   const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
   const [fetchNewMembership] = useLazyStudentGroupsQuery();
   const [fetchStudentFreezes] = useLazyStudentFreezesQuery();
@@ -299,11 +298,8 @@ export const SingleGroup = () => {
 
   // Branch-wide (see the fetch comment above) — narrowed to this group here.
   const archivedRowsForThisGroup = useMemo(
-    () => [
-      ...(inactiveStudentGroupsData?.rows ?? []),
-      ...(deletedStudentGroupsData?.rows ?? []),
-    ].filter((r) => r.groupId === id),
-    [inactiveStudentGroupsData, deletedStudentGroupsData, id]
+    () => [...inactiveRows, ...deletedRows].filter((r) => r.groupId === id),
+    [inactiveRows, deletedRows, id]
   );
 
   const archivedStudents = useMemo(() => {
@@ -847,9 +843,21 @@ export const SingleGroup = () => {
       // student", deletes it. "Delete student" locks the scope radios to "all".
       if (removeDeleteMode) await deleteStudentFlow(args);
       else if (removeScope === "all") await archiveStudentFlow(args);
-      // "Current group" ends just this group's membership; the cached live row
-      // saves a lookup (see leaveGroup for a member that has none).
-      else await leaveGroup({ ...args, groupId: id, studentGroupId: liveMembershipRows.find((r) => r.studentId === studentId)?.id });
+      // "Current group" ends just this group's membership(s); the cached live
+      // rows save a lookup (see leaveGroup for a member that has none).
+      else {
+        const left = await leaveGroup({
+          ...args,
+          groupId: id,
+          studentGroupIds: liveMembershipRows.filter((r) => r.studentId === studentId).map((r) => r.id),
+        });
+        // Nothing changed on the backend: say so instead of hiding the student
+        // until the next reload, when they would be back.
+        if (left === "not-found") {
+          toast.error(t("singleGroup.removeStudentDialog.toast.notFound"));
+          return;
+        }
+      }
 
       setRemovedIds((prev) => new Set(prev).add(studentId));
       toast.success(t(removeDeleteMode

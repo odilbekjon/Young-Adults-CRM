@@ -1844,6 +1844,7 @@
       "cancel": "Bekor qilish",
       "toast": {
         "removed": "O'quvchi guruhdan chiqarildi",
+        "notFound": "Serverda bu o'quvchining shu guruhdagi a'zolik yozuvi topilmadi, shuning uchun hech narsa o'chirilmadi. Buni backend jamoasiga ayting.",
         "archived": "O'quvchi arxivga o'tkazildi",
         "deleted": "O'quvchi o'chirildi",
         "error": "O'quvchini chiqarib bo'lmadi. Qaytadan urinib ko'ring."

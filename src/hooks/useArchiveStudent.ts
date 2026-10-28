@@ -5,6 +5,7 @@ import {
 } from "../app/api/groupsApi/groupsApi";
 import { useDeleteStudentMutation, useUpdateStudentStatusMutation } from "../app/api/studentsApi";
 import type { StudentGroupRecord } from "../app/api/groupsApi/types";
+import { runLimited } from "../utils/runLimited";
 
 export interface ArchiveStudentArgs {
   studentId: string;
@@ -14,10 +15,15 @@ export interface ArchiveStudentArgs {
 
 export interface LeaveGroupArgs extends ArchiveStudentArgs {
   groupId: string;
-  // The live membership's id when the caller already has it from its cached
-  // GET /student-groups rows; looked up here otherwise.
-  studentGroupId?: string;
+  // The student's live membership ids in this group when the caller already has
+  // them from its cached GET /student-groups rows; looked up here otherwise.
+  studentGroupIds?: string[];
 }
+
+// "left": the membership(s) ended. "not-found": the backend knows no membership
+// of the student in this group (and no legacy relation to clear), so nothing
+// was changed — the caller must not present that as a removal.
+export type LeaveGroupResult = "left" | "not-found";
 
 const LIVE_STATUSES = ["PROBATION", "ACTIVE", "FROZEN"] as const;
 
@@ -55,37 +61,41 @@ export const useArchiveStudent = () => {
       .filter((m) => m.status !== "INACTIVE" && m.status !== "DELETED" && (!m.studentId || m.studentId === studentId));
   };
 
-  // Newest live membership of the student in one group, straight from the
+  // Every live membership of the student in one group, straight from the
   // backend. A failed lookup throws, so "could not check" is never mistaken for
   // "not a member".
-  const findLiveMembershipId = async (groupId: string, studentId: string): Promise<string | undefined> => {
+  const findLiveMembershipIds = async (groupId: string, studentId: string): Promise<string[]> => {
     const { rows } = await fetchMemberships({ groupId, studentId, limit: 20 }).unwrap();
     return rows
       .filter((m) => m.status !== "INACTIVE" && m.status !== "DELETED"
         && (!m.groupId || m.groupId === groupId) && (!m.studentId || m.studentId === studentId))
-      .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))[0]?.id;
+      .map((m) => m.id);
   };
 
-  const leaveGroup = async ({ groupId, studentId, studentGroupId, reasonId, comment }: LeaveGroupArgs) => {
-    const membershipId = studentGroupId ?? (await findLiveMembershipId(groupId, studentId));
-    if (membershipId) {
-      await updateStudentGroupStatus({
-        id: membershipId,
-        status: "INACTIVE",
-        reasonId: reasonId || undefined,
-        reason: comment?.trim() || undefined,
-      }).unwrap();
-      return;
+  const leaveGroup = async ({ groupId, studentId, studentGroupIds, reasonId, comment }: LeaveGroupArgs): Promise<LeaveGroupResult> => {
+    const membershipIds = studentGroupIds?.length ? studentGroupIds : await findLiveMembershipIds(groupId, studentId);
+    if (membershipIds.length > 0) {
+      // A student can hold more than one live row in a group (added twice, say);
+      // every one has to end or the student stays on the roster.
+      await runLimited(membershipIds, 2, (id) =>
+        updateStudentGroupStatus({
+          id,
+          status: "INACTIVE",
+          reasonId: reasonId || undefined,
+          reason: comment?.trim() || undefined,
+        }).unwrap(),
+      );
+      return "left";
     }
-    // No live membership: the student is listed only by the group's legacy
-    // student relation (a legacy member with no /student-groups row) or has
-    // already left. DELETE
-    // /groups/{id}/students/{studentId} clears the legacy row; its 404 means the
-    // backend doesn't see the student in this group, which is the state asked for.
+    // No live membership: the student is listed only by the group's own student
+    // list. DELETE /groups/{id}/students/{studentId} is the older way to clear
+    // that; its 404 means the backend sees no such member, so nothing changed.
     try {
       await removeStudentFromGroup({ id: groupId, studentId }).unwrap();
+      return "left";
     } catch (err) {
       if ((err as { status?: unknown }).status !== 404) throw err;
+      return "not-found";
     }
   };
 

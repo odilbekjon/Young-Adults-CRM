@@ -1803,7 +1803,13 @@ export const StudentProfile = () => {
     try {
       if (removeDeleteMode) await deleteStudentFlow(args);
       else if (removeScope === "all") await archiveStudentFlow(args);
-      else await leaveGroup({ ...args, groupId: target.id, studentGroupId: cached && isLiveMembershipStatus(cached.status) ? cached.id : undefined });
+      else {
+        const left = await leaveGroup({ ...args, groupId: target.id, studentGroupIds: cached && isLiveMembershipStatus(cached.status) ? [cached.id] : undefined });
+        if (left === "not-found") {
+          toast.error("The server has no membership of this student in the group, so nothing was removed");
+          return;
+        }
+      }
       toast.success(removeDeleteMode ? "Student deleted" : "Removed from the group");
       closeRemoveDialog();
       if (removeDeleteMode) navigate(-1);

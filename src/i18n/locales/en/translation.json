@@ -1844,6 +1844,7 @@
       "cancel": "Cancel",
       "toast": {
         "removed": "Student removed from the group",
+        "notFound": "The server has no membership record of this student in the group, so nothing was removed. Let the backend team know.",
         "archived": "Student archived",
         "deleted": "Student deleted",
         "error": "Failed to remove student. Please try again."

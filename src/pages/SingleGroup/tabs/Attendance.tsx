@@ -90,6 +90,13 @@ const getDaysInMonth = (year: number, month: number) =>
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
+// Fixed column widths: a group with two lesson days in the month reads like one
+// with twenty — the name first, the days right after it — instead of the spare
+// width of the card being handed to the name and day columns. A trailing empty
+// column absorbs that spare width.
+const NAME_COL_WIDTH = 260;
+const DAY_COL_WIDTH = 72;
+
 type AttVal = "Was" | "Not" | null;
 
 export const Attendance = ({ groupId, students, restrictToToday, groupName, branchName }: Props) => {
@@ -348,14 +355,19 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
         <Table
           size="small"
           stickyHeader
-          sx={{ tableLayout: "auto", minWidth: "max-content" }}
+          sx={{
+            tableLayout: "fixed",
+            width: "100%",
+            minWidth: NAME_COL_WIDTH + days.length * DAY_COL_WIDTH,
+            "& th, & td": { boxSizing: "border-box" },
+          }}
         >
           <TableHead>
             <TableRow>
               {/* Sticky name column */}
               <TableCell
                 sx={{
-                  minWidth: 180,
+                  width: NAME_COL_WIDTH,
                   px: 1.5,
                   fontWeight: 600,
                   position: "sticky",
@@ -375,7 +387,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                     key={d}
                     align="center"
                     sx={{
-                      minWidth: 56,
+                      width: DAY_COL_WIDTH,
                       px: 0.5,
                       fontWeight: isToday ? 700 : 400,
                       color: isToday ? "primary.main" : "text.secondary",
@@ -394,6 +406,8 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                   </TableCell>
                 );
               })}
+              {/* Takes up the width the fixed columns leave, so the header band spans the card */}
+              <TableCell sx={{ p: 0, bgcolor: "var(--color-surface-alt)" }} />
             </TableRow>
           </TableHead>
 
@@ -414,7 +428,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                     borderRight: "1px solid var(--color-border)",
                   }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ width: 200 }}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
                     <Avatar sx={{ width: 28, height: 28, fontSize: 12, flexShrink: 0 }}>
                       {student.name[0]}
                     </Avatar>
@@ -602,6 +616,7 @@ export const Attendance = ({ groupId, students, restrictToToday, groupName, bran
                     </TableCell>
                   );
                 })}
+                <TableCell sx={{ p: 0 }} />
               </TableRow>
             ))}
           </TableBody>

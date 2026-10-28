@@ -166,6 +166,18 @@ const pause = (ms: number, signal: AbortSignal | undefined) =>
     signal?.addEventListener("abort", done);
   });
 
+// A request the server never answers would hold its slot for good, and six of
+// them stall every later request in the app. Past this long it is aborted and
+// reported as TIMEOUT_ERROR (rawBaseQuery below decides about retrying). Excel
+// exports are reads but slow, and uploads are writes, hence the generous limits.
+const READ_TIMEOUT_MS = 60_000;
+const WRITE_TIMEOUT_MS = 180_000;
+
+const withTimeout = (args: string | FetchArgs, isWrite: boolean): FetchArgs => ({
+  timeout: isWrite ? WRITE_TIMEOUT_MS : READ_TIMEOUT_MS,
+  ...(typeof args === "string" ? { url: args } : args),
+});
+
 // Resolves null when the request was cancelled before it was sent.
 const sendWithinLimits = async (
   args: string | FetchArgs,
@@ -175,11 +187,14 @@ const sendWithinLimits = async (
 ) => {
   const endpoint = endpointOf(args);
   for (let attempt = 1; ; attempt += 1) {
-    const sent = await withSlot(api.signal, endpoint, isWrite, async () => fetchQuery(args, api, extraOptions));
+    const sent = await withSlot(api.signal, endpoint, isWrite, async () => fetchQuery(withTimeout(args, isWrite), api, extraOptions));
     if (sent?.error?.status !== 429 || attempt > MAX_RATE_LIMIT_RETRIES) return sent;
     await pause(rateLimitDelayMs(sent.meta?.response, attempt), api.signal);
   }
 };
+
+const MAX_TRANSPORT_RETRIES = 12;
+const MAX_TIMEOUT_RETRIES = 1;
 
 const rawBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = retry(
   async (args, api, extraOptions) => {
@@ -202,7 +217,10 @@ const rawBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError
     return result;
   },
   {
-    maxRetries: 12,
+    // A timed-out read is tried once more, not a dozen times: each try waits out
+    // the whole timeout, which would be minutes of spinner.
+    retryCondition: (error, _args, { attempt }) =>
+      attempt <= ((error as FetchBaseQueryError).status === "TIMEOUT_ERROR" ? MAX_TIMEOUT_RETRIES : MAX_TRANSPORT_RETRIES),
     backoff: async (attempt) => {
       const delayMs = Math.min(2000 * attempt, 7000);
       await new Promise((resolve) => setTimeout(resolve, delayMs));

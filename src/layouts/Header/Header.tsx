@@ -76,19 +76,40 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
   // This dropdown mounts again with every page, so the list is not re-checked
   // when the cache window ends; Settings > Branches invalidates it when it changes.
   const { data: branchesData, isLoading: branchesLoading } = useAllBranchesQuery(undefined, { refetchOnMountOrArgChange: false });
-  const { isCeo, branchIds } = useAuth();
+  const { isCeo, user, branchIds } = useAuth();
 
   // Only SUPERADMIN / a CEO-position account sees every branch / the "All branches" shortcut —
-  // everyone else is scoped to the branches their own account was assigned
-  // (AUTH_ROLE_DOCS.md's branchIds), so they can't select their way into a
-  // branch's data they don't otherwise have access to.
+  // everyone else (staff and teachers alike) is scoped to the branches their own
+  // account was assigned (AUTH_ROLE_DOCS.md's branchIds), so they can't select
+  // their way into a branch's data they don't otherwise have access to. Those
+  // branches come with their names from GET /auth/me; GET /branches is only the
+  // fallback, since not every role may read it.
   const activeBranches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
-  const scopedBranches = isCeo ? activeBranches : activeBranches.filter((b) => branchIds.includes(b.id));
+  const ownBranches = (user?.branches ?? []).flatMap((r) => (r.branch?.status === "ACTIVE" ? [r.branch] : []));
+  const scopedBranches = isCeo
+    ? activeBranches
+    : ownBranches.length > 0 ? ownBranches : activeBranches.filter((b) => branchIds.includes(b.id));
+
+  const waitingForBranches = branchesLoading && (isCeo || ownBranches.length === 0);
 
   const options: { value: BranchId; label: string; id: string | null }[] = isCeo
     ? [{ value: "all", label: "All branches", id: null }, ...scopedBranches.map((b) => ({ value: b.name, label: b.name, id: b.id }))]
     : scopedBranches.map((b) => ({ value: b.name, label: b.name, id: b.id }));
   const current = options.find((o) => o.value === branch);
+
+  // Anyone but a CEO works inside one of their own branches: a missing selection
+  // (a fresh login) or one that isn't theirs (left over from an earlier session on
+  // this browser) is replaced by their first branch, so the header never reads
+  // "All branches" for them and their requests are scoped to it.
+  const firstOwnBranch = isCeo ? undefined : scopedBranches[0];
+  const firstOwnId = firstOwnBranch?.id;
+  const firstOwnName = firstOwnBranch?.name;
+  const ownsSelection = scopedBranches.some((b) => b.id === selectedBranchId);
+  useEffect(() => {
+    if (!firstOwnId || !firstOwnName || ownsSelection) return;
+    setBranch(firstOwnName);
+    dispatch(changeSelectedBranch(firstOwnId));
+  }, [firstOwnId, firstOwnName, ownsSelection, setBranch, dispatch]);
 
   // Restores the visible selection after a page reload: the real branch id
   // persists in Redux/localStorage, but the label state (`branch`) resets to
@@ -163,7 +184,7 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
           minWidth: 200, maxWidth: "calc(100vw - 16px)", animation: "dropDown 0.15s ease", overflow: "hidden",
         }}>
           <style>{`@keyframes dropDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-          {branchesLoading ? (
+          {waitingForBranches ? (
             <div style={{ padding: "10px 14px", fontSize: 13, color: "var(--color-text-muted)" }}>Loading…</div>
           ) : (
             options.map((opt) => (
@@ -669,7 +690,7 @@ export const Header = () => {
 
         {/* Main area — desktop */}
         <Box sx={{ flex: 1, minWidth: 0, display: { xs: "none", md: "flex" }, alignItems: "center", gap: { md: 1.5, lg: 2 }, px: { md: 2, lg: 3 }, height: "100%" }}>
-          {!isTeacher && <BranchDropdown branch={branch} setBranch={setBranch} />}
+          <BranchDropdown branch={branch} setBranch={setBranch} />
 
           {!isTeacher && (
             <QuickAddBtn
@@ -720,7 +741,7 @@ export const Header = () => {
 
         {/* Main area — mobile compact controls */}
         <Box sx={{ display: { xs: "flex", md: "none" }, alignItems: "center", gap: 0.5, pr: 1, height: "100%", flexShrink: 0 }}>
-          {!isTeacher && <BranchDropdown branch={branch} setBranch={setBranch} />}
+          <BranchDropdown branch={branch} setBranch={setBranch} />
           <LangToggle />
           <ThemeToggle />
           <NotificationBtn />

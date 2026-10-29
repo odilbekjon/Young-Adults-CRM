@@ -50,9 +50,9 @@ export const loginSuccess = (token: string, refreshToken?: string, role?: string
   // token), but x-branch-id is still attached to every request centrally
   // (baseApi), so a stale selection could otherwise scope their own data to
   // the wrong branch.
-  // Same for TEACHER: their header has no branch picker (see Header.tsx), so
-  // a branch left selected by an earlier admin session would silently keep
-  // scoping their requests with no way to change it.
+  // Same for TEACHER: a branch left selected by an earlier admin session would
+  // keep scoping their requests; the header's branch picker then selects one of
+  // the teacher's own branches (see Header.tsx).
   const normalizedRole = normalizeRole(role);
   if (normalizedRole === "STUDENT" || normalizedRole === "TEACHER") {
     dispatch(changeSelectedBranch(null));

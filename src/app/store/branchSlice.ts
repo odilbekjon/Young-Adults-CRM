@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { baseApi } from "../api/baseApi";
-import type { AppDispatch } from "./index";
+import type { AppDispatch, RootState } from "./index";
 
 const SELECTED_BRANCH_STORAGE_KEY = "selectedBranchId";
 
@@ -28,7 +28,10 @@ export const branchReducer = branchSlice.reducer;
 // Persists the active branch and resets the whole RTK Query cache so every
 // mounted page refetches its data scoped to the newly selected branch
 // instead of continuing to show the previous branch's cached results.
-export const changeSelectedBranch = (branchId: string | null) => (dispatch: AppDispatch) => {
+export const changeSelectedBranch = (branchId: string | null) => (dispatch: AppDispatch, getState: () => RootState) => {
+  // Choosing the branch that is already active changes nothing — don't throw the
+  // whole cache away (and refetch every page) for it.
+  if (getState().branch.selectedBranchId === branchId) return;
   if (branchId) {
     localStorage.setItem(SELECTED_BRANCH_STORAGE_KEY, branchId);
   } else {

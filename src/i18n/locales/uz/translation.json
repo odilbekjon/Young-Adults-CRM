@@ -814,6 +814,17 @@
       "days": "Kunlar",
       "trainingDates": "Dars sanalari",
       "weekOfStudy": "O'quv haftasi",
+      "notStarted": "Boshlanmagan",
+      "finished": "Tugagan",
+      "studyOf": "jami {{total}}",
+      "span": {
+        "month_one": "{{count}} oy",
+        "month_other": "{{count}} oy",
+        "week_one": "{{count}} hafta",
+        "week_other": "{{count}} hafta",
+        "day_one": "{{count}} kun",
+        "day_other": "{{count}} kun"
+      },
       "room": "Xona",
       "tags": "Teglar",
       "students": "O'quvchilar",

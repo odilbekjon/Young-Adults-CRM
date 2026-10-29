@@ -48,6 +48,8 @@ import { extractApiError } from "../../utils/extractApiError";
 import { downloadExcelBlob } from "../../utils/downloadExcel";
 import { compressImage } from "../../utils/compressImage";
 import { submitOnEnter } from "../../utils/submitOnEnter";
+import { formatPhoneSpaced } from "../../utils/formatPhone";
+import { todayLocalISO } from "../../utils/localDate";
 import {
   useAllTeachersQuery,
   useCreateTeacherMutation,
@@ -100,12 +102,17 @@ export const Teachers = () => {
 
   // Real teacher endpointi guruhlar sonini qaytarmaydi — bu son mavjud
   // groupsApi ma'lumotidan (har bir guruhning teachers[] massivi) hisoblanadi,
-  // yangi endpoint o'ylab topilmadi.
+  // yangi endpoint o'ylab topilmadi. Faqat hozir ishlayotgan guruhlar sanaladi
+  // (ACTIVE va tugash sanasi o'tmagan) — arxivga tushgan yoki o'chirilganlar
+  // emas; o'qituvchi profilidagi ro'yxat ham aynan shunday.
   const groupCountByTeacherId = useMemo(() => {
+    const today = todayLocalISO();
     const map = new Map<string, number>();
-    (allGroupsData?.data ?? []).forEach((g) => {
-      g.teachers.forEach((tch) => map.set(tch.id, (map.get(tch.id) ?? 0) + 1));
-    });
+    (allGroupsData?.data ?? [])
+      .filter((g) => g.status?.toUpperCase() === "ACTIVE" && !(g.trainingEnd && g.trainingEnd.slice(0, 10) < today))
+      .forEach((g) => {
+        g.teachers.forEach((tch) => map.set(tch.id, (map.get(tch.id) ?? 0) + 1));
+      });
     return map;
   }, [allGroupsData]);
 
@@ -338,7 +345,7 @@ export const Teachers = () => {
                       <Chip label={t("teachers.table.inactive")} size="small" sx={{ height: 18, fontSize: 10 }} />
                     )}
                   </TableCell>
-                  <TableCell sx={{ color: "var(--color-primary)", fontSize: 14, mr: 12 }}>{teacher.phone || teacher.email || "—"}</TableCell>
+                  <TableCell sx={{ color: "var(--color-primary)", fontSize: 14, mr: 12 }}>{formatPhoneSpaced(teacher.phone) || teacher.email || "—"}</TableCell>
                   <TableCell sx={{ fontSize: 14, color: "var(--color-text-muted)", minWidth: 90, textAlign: "center", py: 1.8 }}>{groupCountByTeacherId.get(teacher.id) ?? 0} {t("teachers.table.groupsCount")}</TableCell>
                   <TableCell align="center" sx={{ py: 1.8 }} onClick={(e) => e.stopPropagation()}>
                     <IconButton size="small" onClick={(e) => handleMenuOpen(e, teacher.id)}>

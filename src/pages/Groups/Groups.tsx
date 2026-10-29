@@ -42,6 +42,7 @@ import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { TimeSelectField } from "../SingleGroup/TimeSelectField";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
 import { extractApiError, formatTrainingDate, addMonthsToIsoDate, classifyDays, classifyDayList, DAYS_PRESETS, downloadExcelBlob, submitOnEnter } from "../../utils";
+import { StudyPeriodCell } from "./StudyPeriodCell";
 
 /* ─── types ─────────────────────────────────────────────── */
 type SortKey = keyof GroupRow | "";
@@ -453,7 +454,7 @@ const GroupTableRow = memo(({
           <Box>{formatTrainingDate(g.endDate)}</Box>
         </TableCell>
       )}
-      {col("week")         && <TableCell>{g.weekOfStudy || "—"}</TableCell>}
+      {col("week")         && <TableCell><StudyPeriodCell startDate={g.startDate} endDate={g.endDate} fallback={g.weekOfStudy} /></TableCell>}
       {col("room")         && <TableCell>{g.room}</TableCell>}
       {col("studentCount") && <TableCell sx={{ fontWeight: 500 }}>{g.studentCount}</TableCell>}
 

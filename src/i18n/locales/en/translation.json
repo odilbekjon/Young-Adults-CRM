@@ -814,6 +814,17 @@
       "days": "Days",
       "trainingDates": "Training dates",
       "weekOfStudy": "Week of study",
+      "notStarted": "Not started",
+      "finished": "Finished",
+      "studyOf": "of {{total}}",
+      "span": {
+        "month_one": "{{count}} month",
+        "month_other": "{{count}} months",
+        "week_one": "{{count}} week",
+        "week_other": "{{count}} weeks",
+        "day_one": "{{count}} day",
+        "day_other": "{{count}} days"
+      },
       "room": "Room",
       "tags": "Tags",
       "students": "Students",

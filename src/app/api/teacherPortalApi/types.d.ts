@@ -18,8 +18,9 @@ export interface TeacherPortalGroupStudent {
   id: string;
   name: string;
   phone: string | null;
-  // Membership/student status when the backend sends one (ACTIVE, FROZEN,
-  // PROBATION, ...) — empty string when it doesn't.
+  // The student's status in this group (PROBATION, ACTIVE, FROZEN, ...) when the
+  // backend sends one — empty string when it doesn't. INACTIVE/DELETED members
+  // never reach a teacher page (dropped in teacherPortalApi).
   status: string;
   // Hover-card extras — each is null when the roster endpoint leaves it out.
   balance: number | null;
@@ -33,6 +34,9 @@ export interface TeacherPortalGroupStudent {
 export interface TeacherPortalGroup {
   id: string;
   name: string;
+  // The group's own status (ACTIVE, ARCHIVE, ...) when the backend sends one —
+  // empty string when it doesn't.
+  status: string;
   courseName: string;
   // ODD / EVEN (or whatever the backend sends); derived from a weekday list
   // when only that is returned.

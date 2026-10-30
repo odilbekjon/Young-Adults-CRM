@@ -112,7 +112,10 @@ const normalizeGroupStudent = (raw: Row): TeacherPortalGroupStudent => {
         id: str(inner?.id, raw.studentId, r.id, r._id),
         name: str(r.name, r.fullName, raw.studentName),
         phone: strOrNull(r.phone, r.phoneNumber, raw.studentPhone),
-        status: str(raw.status, r.status).toUpperCase(),
+        // The student's status in THIS group (PROBATION/ACTIVE/FROZEN/INACTIVE/
+        // DELETED) wins over the plain `status`, which on a flat student row can
+        // be the account's own status (ACTIVE even while the trial lasts).
+        status: str(raw.studentGroupStatus, r.studentGroupStatus, raw.membershipStatus, raw.status, r.status).toUpperCase(),
         balance: [r.balance, raw.balance].map(decimalToNumber).find((n) => n !== null) ?? null,
         // Account creation date (the nested student's own createdAt wins over
         // the membership row's), then the date the student started in the group.
@@ -121,6 +124,20 @@ const normalizeGroupStudent = (raw: Row): TeacherPortalGroupStudent => {
         comment: strOrNull(r.comment, r.comments),
     };
 };
+
+// A member who left the group (INACTIVE/DELETED) is never shown to a teacher —
+// not in the roster, the attendance grid or a count.
+const isEndedMember = (s: { status: string }) => s.status === "INACTIVE" || s.status === "DELETED";
+
+// Groups a teacher no longer works with. Only these known statuses hide a
+// group: a group whose status is missing or unfamiliar stays visible rather
+// than vanishing on a field this app can't read.
+const ENDED_GROUP_STATUSES = ["ARCHIVE", "ARCHIVED", "INACTIVE", "DELETED", "COMPLETED", "FINISHED", "CLOSED"];
+export const isArchivedGroupStatus = (status?: string | null) => ENDED_GROUP_STATUSES.includes((status ?? "").toUpperCase());
+
+// A roster that arrives as a list counts only its live members.
+const liveRosterSize = (roster: unknown): unknown =>
+    Array.isArray(roster) ? roster.filter((m) => !isEndedMember(normalizeGroupStudent(m as Row))).length : roster;
 
 const ODD_DAYS = ["MONDAY", "WEDNESDAY", "FRIDAY"];
 const EVEN_DAYS = ["TUESDAY", "THURSDAY", "SATURDAY"];
@@ -148,10 +165,11 @@ const normalizeGroup = (raw: Row): TeacherPortalGroup => {
     return {
         id: str(r.id, r._id, r.groupId),
         name: str(r.name, r.groupName),
+        status: str(r.status, r.groupStatus).toUpperCase(),
         courseName: str(r.courseName, r.course, r.courseTitle),
         daysType: normalizeDaysType(r),
         time: strOrNull(r.time, r.startTime, r.lessonTime, r.lessonStartTime),
-        studentsCount: countOrNull(r.studentsCount, r.totalStudents, r.activeStudentsCount, r.students) ?? 0,
+        studentsCount: countOrNull(r.studentsCount, r.totalStudents, r.activeStudentsCount, liveRosterSize(r.students)) ?? 0,
         roomName: strOrNull(r.roomName, room.name, typeof r.room === "string" ? r.room : null),
         roomCapacity: numOrNull(r.roomCapacity, room.capacity),
         // Course price: plain number/string or a serialized decimal.js object.
@@ -163,7 +181,7 @@ const normalizeGroup = (raw: Row): TeacherPortalGroup => {
 
 const normalizeGroupDetail = (r: Row): TeacherPortalGroupDetail => ({
     ...normalizeGroup(r),
-    students: pickList(r.students, "students").map(normalizeGroupStudent),
+    students: pickList(r.students, "students").map(normalizeGroupStudent).filter((s) => !isEndedMember(s)),
 });
 
 const normalizeGender = (value: unknown): TeacherPortalGender | null => {
@@ -254,10 +272,12 @@ export const teacherPortalApi = baseApi.injectEndpoints({
             providesTags: ["teacherPortal"],
         }),
         // GET /teacher-portal/groups — "O'zining guruhlari". Also feeds the
-        // TEACHER sidebar's group list.
+        // TEACHER sidebar's group list. Archived groups are dropped here, so no
+        // teacher page (list, sidebar, schedule, profile) ever shows one.
         teacherPortalGroups: builder.query<TeacherPortalGroup[], void>({
             query: () => ({ url: PATHS.GROUPS, method: "GET" }),
-            transformResponse: (response: unknown) => pickList(response, "groups").map(normalizeGroup),
+            transformResponse: (response: unknown) =>
+                pickList(response, "groups").map(normalizeGroup).filter((g) => !isArchivedGroupStatus(g.status)),
             providesTags: ["teacherPortal"],
         }),
         // GET /teacher-portal/groups/{id} — "Guruh ma'lumotlari"
@@ -269,7 +289,8 @@ export const teacherPortalApi = baseApi.injectEndpoints({
         // GET /teacher-portal/groups/{id}/students — "Guruhdagi o'quvchilar ro'yxati"
         teacherPortalGroupStudents: builder.query<TeacherPortalGroupStudent[], string>({
             query: (id) => ({ url: `${PATHS.GROUPS}/${id}/students`, method: "GET" }),
-            transformResponse: (response: unknown) => pickList(response, "students").map(normalizeGroupStudent),
+            transformResponse: (response: unknown) =>
+                pickList(response, "students").map(normalizeGroupStudent).filter((s) => !isEndedMember(s)),
             providesTags: ["teacherPortal"],
         }),
         // GET /teacher-portal/profile — "Shaxsiy profil"
@@ -294,7 +315,11 @@ export const teacherPortalApi = baseApi.injectEndpoints({
         // GET /teacher-portal/schedule — "O'zining dars jadvali"
         teacherPortalSchedule: builder.query<TeacherPortalScheduleItem[], void>({
             query: () => ({ url: PATHS.SCHEDULE, method: "GET" }),
-            transformResponse: (response: unknown) => pickList(response, "schedule", "items").map(normalizeScheduleItem),
+            // A lesson of an archived group is dropped when the row says so.
+            transformResponse: (response: unknown) =>
+                pickList(response, "schedule", "items")
+                    .filter((r) => !isArchivedGroupStatus(str(r.groupStatus, (r.group as Row | undefined)?.status)))
+                    .map(normalizeScheduleItem),
             providesTags: ["teacherPortal"],
         }),
     }),

@@ -20,6 +20,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { IoArrowBack } from "react-icons/io5";
 import { MdCalendarToday } from "react-icons/md";
 import {
+  isArchivedGroupStatus,
   useTeacherPortalGroupByIdQuery,
   useTeacherPortalGroupsQuery,
   useTeacherPortalGroupStudentsQuery,
@@ -27,6 +28,7 @@ import {
 } from "../../app/api/teacherPortalApi";
 import { formatTrainingDate } from "../../utils/formatTrainingDate";
 import { useAuth } from "../../hooks/useAuth";
+import { StudentStatusDot, GROUP_STATUS_STYLE, toGroupStatus } from "../SingleGroup/StudentStatusDot";
 import { Attendance } from "../SingleGroup/tabs/Attendance";
 import { Grade } from "../SingleGroup/tabs/Grade";
 import { OnlineLessons } from "../SingleGroup/tabs/OnlineLessons";
@@ -68,19 +70,23 @@ export const TeacherGroupDetail = () => {
 
   // The roster endpoint is the source of truth; the student list embedded in
   // the group payload (if any) is only used when that request itself failed.
+  // Members who left the group (INACTIVE/DELETED) are already dropped by the
+  // API layer, so neither the roster nor the attendance grid ever lists them.
   const students = useMemo(
     () => (rosterData ?? (rosterError ? group?.students : undefined) ?? []).filter((s) => s.id && s.name),
     [rosterData, rosterError, group],
   );
-  // Students who already left the group (INACTIVE/DELETED) stay out of the
-  // attendance grid — same as the admin group page, which hides archived
-  // members — so a mark is never attempted for someone the backend no longer
-  // counts as a member (it rejects those).
+  // The status dot is green only for a member who is billed (ACTIVE, or no
+  // status sent); a trial lesson and a freeze show as the tinted name instead.
   const attendanceStudents = useMemo(
     () =>
-      students
-        .filter((s) => s.status !== "INACTIVE" && s.status !== "DELETED")
-        .map((s, i) => ({ id: i + 1, realId: s.id, name: s.name, phone: s.phone ?? "", active: true })),
+      students.map((s, i) => {
+        const groupStatus = toGroupStatus(s.status);
+        return {
+          id: i + 1, realId: s.id, name: s.name, phone: s.phone ?? "",
+          active: !groupStatus || groupStatus === "ACTIVE", groupStatus,
+        };
+      }),
     [students],
   );
 
@@ -88,7 +94,8 @@ export const TeacherGroupDetail = () => {
     return <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}><CircularProgress /></Box>;
   }
 
-  if (notMine || isError || !group) {
+  // An archived group is not shown even when its id is typed into the address bar.
+  if (notMine || isError || !group || isArchivedGroupStatus(group.status)) {
     return (
       <Box sx={{ p: 4 }}>
         <Typography color="error" mb={2}>{t("teacherGroups.notFound")}</Typography>
@@ -192,26 +199,31 @@ export const TeacherGroupDetail = () => {
           ) : (
             <List dense disablePadding>
               {students.map((s, i) => {
-                const isArchived = s.status === "INACTIVE" || s.status === "DELETED";
-                const isFrozen = s.status === "FROZEN";
+                // Same colours as the admin roster (see GROUP_STATUS_STYLE): a
+                // trial lesson is light sky-blue, a freeze dark blue; hovering the
+                // name names the status.
+                const groupStatus = toGroupStatus(s.status);
+                const pill = groupStatus === "PROBATION" || groupStatus === "FROZEN" ? GROUP_STATUS_STYLE[groupStatus] : undefined;
                 return (
-                  <ListItem key={s.id} disablePadding sx={{ py: 0.6, opacity: isArchived ? 0.75 : 1 }}>
+                  <ListItem key={s.id} disablePadding sx={{ py: 0.6 }}>
                     <Typography fontSize={12} color="text.secondary" sx={{ minWidth: 22, flexShrink: 0 }}>{i + 1}</Typography>
-                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: isArchived ? "#bdbdbd" : "#43a047", mx: 1, flexShrink: 0 }} />
+                    <Box sx={{ mx: 1, display: "flex" }}>
+                      <StudentStatusDot active={!groupStatus || groupStatus === "ACTIVE"} />
+                    </Box>
                     <ListItemText
                       primary={
                         <Typography
                           component="span"
                           fontSize={13}
                           fontWeight={500}
+                          title={groupStatus ? t(GROUP_STATUS_STYLE[groupStatus].labelKey) : undefined}
                           sx={{
                             display: "inline-block",
-                            px: isFrozen ? 1 : 0,
-                            py: isFrozen ? 0.35 : 0,
-                            borderRadius: isFrozen ? "6px" : 0,
-                            backgroundColor: isFrozen ? "#bfe3fa" : "transparent",
-                            color: isArchived ? "dimgray" : "var(--color-text-primary)",
-                            textDecoration: isArchived ? "line-through" : "none",
+                            px: pill ? 1 : 0,
+                            py: pill ? 0.35 : 0,
+                            borderRadius: pill ? "6px" : 0,
+                            backgroundColor: pill ? pill.background : "transparent",
+                            color: pill ? pill.color : "var(--color-text-primary)",
                           }}
                         >
                           {s.name}

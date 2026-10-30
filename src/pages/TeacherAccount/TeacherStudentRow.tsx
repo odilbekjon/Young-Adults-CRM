@@ -13,6 +13,7 @@ import { Box, Typography } from "@mui/material";
 import type { TeacherPortalGroupStudent } from "../../app/api/teacherPortalApi/types";
 import { useStudentByIdQuery, useStudentGroupMembershipsQuery } from "../../app/api/studentsApi";
 import { BALANCE_STATUS_COLOR, classifyBalance, formatPhone, formatTrainingDate } from "../../utils";
+import { GROUP_STATUS_STYLE, toGroupStatus } from "../SingleGroup/StudentStatusDot";
 
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 420; // conservative estimate, only used to keep the card on screen
@@ -46,12 +47,18 @@ const StudentHoverCard = ({
   const activatedAt = membership?.paymentStartDate ?? student.activatedAt ?? null;
   const comment = student.comment ?? detail?.description ?? detail?.comment ?? null;
   const isDebtor = balance !== null && balance < 0;
-  const knownStatus = student.status || detail?.status;
-  const statusLabel = !knownStatus
+  // The student's status in THIS group (trial lesson / active / frozen), as the
+  // same coloured chip the admin hover card shows. Only when the roster row
+  // doesn't carry it does the account's own status stand in, so a trial-lesson
+  // student never reads as plain "Active".
+  const groupStatus = toGroupStatus(student.status);
+  const statusChip = groupStatus ? GROUP_STATUS_STYLE[groupStatus] : undefined;
+  const accountStatus = groupStatus ? undefined : detail?.status;
+  const statusLabel = !accountStatus
     ? null
-    : knownStatus === "INACTIVE"
+    : accountStatus === "INACTIVE"
     ? t("singleGroup.studentHoverCard.inactiveArchived")
-    : knownStatus === "FROZEN"
+    : accountStatus === "FROZEN"
     ? t("singleGroup.studentHoverCard.frozenPaused")
     : t("singleGroup.studentHoverCard.activeLearns");
   const shortId = student.id.length > 12 ? `${student.id.slice(0, 8)}…` : student.id;
@@ -92,6 +99,17 @@ const StudentHoverCard = ({
           (id:{shortId})
         </Typography>
       </Box>
+      {statusChip && (
+        <Box
+          component="span"
+          sx={{
+            display: "inline-block", bgcolor: statusChip.background, color: statusChip.color,
+            fontSize: 11, fontWeight: 600, borderRadius: "20px", px: 1.5, py: 0.4, mb: 1, mr: 0.75,
+          }}
+        >
+          {t(statusChip.labelKey)}
+        </Box>
+      )}
       {statusLabel && <Box sx={{ fontSize: 13, color: "var(--color-text-muted)", mb: 1 }}>{statusLabel}</Box>}
       {isDebtor && (
         <Box
@@ -140,6 +158,9 @@ const StudentHoverCard = ({
 export const TeacherStudentRow = ({ student, groupId }: { student: TeacherPortalGroupStudent; groupId: string }) => {
   const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
+  // A trial lesson / freeze tints the name like the group roster does.
+  const groupStatus = toGroupStatus(student.status);
+  const pill = groupStatus === "PROBATION" || groupStatus === "FROZEN" ? GROUP_STATUS_STYLE[groupStatus] : undefined;
   const [position, setPosition] = useState<{ top: number; left: number; arrowSide: "left" | "right" }>({
     top: 0, left: 0, arrowSide: "right",
   });
@@ -190,7 +211,16 @@ export const TeacherStudentRow = ({ student, groupId }: { student: TeacherPortal
           "& .name": { color: hovered ? "#185FA5" : "var(--color-text-primary)", transition: "color 0.12s" },
         }}
       >
-        <Typography className="name" fontSize={14} sx={{ minWidth: 0, wordBreak: "break-word" }}>{student.name}</Typography>
+        <Typography
+          className="name"
+          fontSize={14}
+          sx={{
+            minWidth: 0, wordBreak: "break-word",
+            ...(pill && { backgroundColor: pill.background, color: `${pill.color} !important`, borderRadius: "6px", px: 1, py: 0.25 }),
+          }}
+        >
+          {student.name}
+        </Typography>
         <Typography fontSize={12} sx={{ color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
           {formatPhone(student.phone) || t("teacherGroups.noPhone")}
         </Typography>

@@ -39,11 +39,16 @@ import type { AttendanceRecord, AttendanceStatus } from "../../../app/api/attend
 import { useToast } from "../../../Context/ToastContext";
 import { downloadExcelBlob } from "../../../utils/downloadExcel";
 import { extractApiError } from "../../../utils/extractApiError";
-import { StudentStatusDot } from "../StudentStatusDot";
+import { StudentStatusDot, GROUP_STATUS_STYLE } from "../StudentStatusDot";
+import type { StudentGroupStatus } from "../../../app/api/groupsApi/types";
 
 // `archived`/`balance` only come from the admin page's roster (they drive the
 // status dot and the struck-through name); the teacher view leaves them out.
-type AttendanceStudent = Student & { realId: string; archived?: boolean; balance?: number };
+// `groupStatus` (the student's status in this group) tints the name of a trial
+// lesson / frozen member exactly like the roster next to it does.
+type AttendanceStudent = Student & {
+  realId: string; archived?: boolean; balance?: number; groupStatus?: StudentGroupStatus;
+};
 
 interface Props {
   groupId: string;
@@ -300,6 +305,7 @@ interface RowProps {
   active: boolean;
   archived?: boolean;
   balance?: number;
+  groupStatus?: StudentGroupStatus;
   // The student's mark for each column of `columns`, in the same order.
   vals: AttVal[];
   columns: DayColumn[];
@@ -320,8 +326,11 @@ const sameRow = (prev: RowProps, next: RowProps) =>
   );
 
 const AttendanceRow = memo(function AttendanceRow({
-  studentId, name, active, archived, balance, vals, columns, wasLabel, notLabel, restrictToToday, onSet, onRemove,
+  studentId, name, active, archived, balance, groupStatus, vals, columns, wasLabel, notLabel, restrictToToday, onSet, onRemove,
 }: RowProps) {
+  // The roster's own colours: a trial lesson is light sky-blue, a freeze dark
+  // blue, and neither gets the green "billed" dot.
+  const pill = groupStatus === "PROBATION" || groupStatus === "FROZEN" ? GROUP_STATUS_STYLE[groupStatus] : undefined;
   return (
     // Every cell gets the hover tint (not MUI's `hover` prop): the
     // sticky name cell is opaque, so only an explicit background
@@ -342,15 +351,16 @@ const AttendanceRow = memo(function AttendanceRow({
           <Avatar sx={{ width: 28, height: 28, fontSize: 12, flexShrink: 0 }}>
             {name[0]}
           </Avatar>
-          <StudentStatusDot active={active} archived={archived} balance={balance} />
+          <StudentStatusDot active={active && groupStatus !== "PROBATION"} archived={archived} balance={balance} />
           <Tooltip title={name} placement="top-start" enterDelay={400} disableInteractive>
             <Typography
               fontSize={13}
               noWrap
               sx={{
                 minWidth: 0,
-                color: archived ? "text.secondary" : undefined,
+                color: pill ? pill.color : archived ? "text.secondary" : undefined,
                 textDecoration: archived ? "line-through" : "none",
+                ...(pill && { backgroundColor: pill.background, borderRadius: "6px", px: 1, py: 0.25 }),
               }}
             >
               {name}
@@ -724,6 +734,7 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
                 active={student.active}
                 archived={student.archived}
                 balance={student.balance}
+                groupStatus={student.groupStatus}
                 vals={valsFor(student.realId)}
                 columns={columns}
                 wasLabel={wasLabel}

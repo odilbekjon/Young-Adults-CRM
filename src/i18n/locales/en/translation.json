@@ -1887,7 +1887,6 @@
       "removeFromGroup": "Remove from group",
       "reminders": "Reminders",
       "toast": {
-        "activated": "Student activated",
         "backToTrial": "Student moved back to trial lesson",
         "error": "Failed to complete the action. Please try again."
       }

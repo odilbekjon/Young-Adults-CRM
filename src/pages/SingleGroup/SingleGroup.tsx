@@ -517,6 +517,7 @@ export const SingleGroup = () => {
   // Student action states
   const [freezeOpen, setFreezeOpen] = useState(false);
   const [activateOpen, setActivateOpen] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
   const [graduateTrialOpen, setGraduateTrialOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -688,7 +689,7 @@ export const SingleGroup = () => {
       // backend documents support for it. The membership's real status
       // (FROZEN) comes back through the studentGroup/group tag invalidation
       // below and combinedStudents' overlay — no local optimistic patch,
-      // same pattern as handleActivateArchived/handleBackToTrialLesson.
+      // same pattern as handleRestoreConfirm/handleBackToTrialLesson.
       await freezeStudentGroup({
         id: studentGroupId,
         startDate: data.startDate,
@@ -783,27 +784,31 @@ export const SingleGroup = () => {
   const isSelectedFrozen = selectedStudent?.groupStatus === "FROZEN";
   const isSelectedTrial = selectedStudent?.groupStatus === "PROBATION";
 
-  // Both actions below use PATCH /student-groups/{id}/status (Swagger:
-  // status is required) to bring an archived (INACTIVE/DELETED) membership
-  // back — "Activate" straight to ACTIVE, "Back to trial lesson" to
-  // PROBATION — rather than the pure local-state stand-ins these were
-  // before (no backend call at all).
-  const handleActivateArchived = async () => {
+  // Bringing an archived (INACTIVE/DELETED) membership back with "Activate":
+  // one PATCH /student-groups/{id} sets status ACTIVE and paymentStartDate
+  // together — the same call StudentProfile's and the Archive page's restore
+  // make — so payment accounting starts on the date staff pick (the day the
+  // student comes back), never from "now" or the old join date. Carrying the
+  // student's previous balance over is up to the backend.
+  const handleRestoreConfirm = async (paymentStartDate: string) => {
     const target = selectedStudent;
-    handleCloseMenu();
+    setRestoreOpen(false);
     if (!target?.studentGroupId) {
-      toast.error(t("singleGroup.studentActionsMenu.toast.error"));
+      toast.error(t("singleGroup.activateModal.toast.error"));
       return;
     }
     try {
-      await updateStudentGroupStatus({ id: target.studentGroupId, status: "ACTIVE" }).unwrap();
-      toast.success(t("singleGroup.studentActionsMenu.toast.activated"));
+      await updateStudentGroup({ id: target.studentGroupId, status: "ACTIVE", paymentStartDate }).unwrap();
+      toast.success(t("singleGroup.activateModal.toast.success"));
     } catch (err) {
       const detail = extractApiError(err);
-      const generic = t("singleGroup.studentActionsMenu.toast.error");
+      const generic = t("singleGroup.activateModal.toast.error");
       toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
+
+  // "Back to trial lesson" uses PATCH /student-groups/{id}/status (Swagger:
+  // status is required) to put an archived membership on PROBATION.
 
   const handleBackToTrialLesson = async () => {
     const target = selectedStudent;
@@ -1378,7 +1383,7 @@ export const SingleGroup = () => {
         isArchived={isSelectedArchived}
         isFrozen={isSelectedFrozen}
         isTrial={isSelectedTrial}
-        onActivateArchived={handleActivateArchived}
+        onActivateArchived={() => { handleCloseMenu(); setRestoreOpen(true); }}
         onBackToTrialLesson={handleBackToTrialLesson}
         onGraduateTrial={() => { handleCloseMenu(); setGraduateTrialOpen(true); }}
         onActivate={() => { handleCloseMenu(); setActivateOpen(true); }}
@@ -1408,6 +1413,14 @@ export const SingleGroup = () => {
         onConfirm={handleActivateConfirm}
         isSaving={isUnfreezing || isSavingMembershipDates}
         defaultDate={selectedStudent?.joinedAt}
+      />
+
+      {/* Return an archived member to ACTIVE, picking the billing start date (defaults to today). */}
+      <ActivateModal
+        open={restoreOpen}
+        onClose={() => setRestoreOpen(false)}
+        onConfirm={handleRestoreConfirm}
+        isSaving={isSavingMembershipDates}
       />
 
       <GraduateTrialModal

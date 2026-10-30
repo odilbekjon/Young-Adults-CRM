@@ -1887,7 +1887,6 @@
       "removeFromGroup": "Guruhdan o'chirish",
       "reminders": "Eslatmalar",
       "toast": {
-        "activated": "O'quvchi faollashtirildi",
         "backToTrial": "O'quvchi sinov darsiga qaytarildi",
         "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."
       }

@@ -1,9 +1,8 @@
 // src/pages/groups/GraduateTrialModal.tsx
 // Promotes a PROBATION (trial-lesson) membership to ACTIVE and lets staff
-// pick the date payment calculation should start from — PATCH
-// /student-groups/{id}/status {status: "ACTIVE"} followed by PATCH
-// /student-groups/{id} {paymentStartDate} (see handleGraduateTrialConfirm in
-// SingleGroup.tsx).
+// pick the date payment calculation should start from — POST
+// /student-groups/{id}/graduate-trial followed by PATCH /student-groups/{id}
+// {paymentStartDate} (see handleGraduateTrialConfirm in SingleGroup.tsx).
 import { useEffect, useState } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton, Button } from "@mui/material";
 import { MdClose } from "react-icons/md";
@@ -15,25 +14,33 @@ import { submitOnEnter } from "../../../utils/submitOnEnter";
 const todayISO = todayLocalISO;
 
 export const GraduateTrialModal = ({
-  open, onClose, onConfirm, isSaving, defaultDate,
+  open, onClose, onConfirm, isSaving, joinedAt,
 }: {
   open: boolean;
   onClose: () => void;
   onConfirm: (paymentStartDate: string) => void;
   isSaving?: boolean;
-  // Pre-filled "since when" (the day the student joined the group); falls
-  // back to today when the membership carries no join date.
-  defaultDate?: string;
+  // The day the student joined the group. The trial lessons are free, so the
+  // default billing start is the day the trial ends (today) — not this date —
+  // but billing can never start before the student joined, so a join date still
+  // ahead of today is the earliest (and default) choice, and nothing earlier
+  // can be picked.
+  joinedAt?: string;
 }) => {
   const { t } = useTranslation();
   const [paymentStartDate, setPaymentStartDate] = useState(todayISO());
+  const joinedDate = joinedAt ? joinedAt.slice(0, 10) : undefined;
 
   useEffect(() => {
-    if (open) setPaymentStartDate(defaultDate || todayISO());
-  }, [open, defaultDate]);
+    if (!open) return;
+    const today = todayISO();
+    setPaymentStartDate(joinedDate && joinedDate > today ? joinedDate : today);
+  }, [open, joinedDate]);
+
+  const canSubmit = Boolean(paymentStartDate) && !(joinedDate && paymentStartDate < joinedDate);
 
   const handleSubmit = () => {
-    if (!paymentStartDate) return;
+    if (!canSubmit) return;
     onConfirm(paymentStartDate);
   };
 
@@ -57,25 +64,25 @@ export const GraduateTrialModal = ({
         <Typography fontSize={13} color="var(--color-text-secondary)" mb={1.5}>
           {t("singleGroup.graduateTrialModal.description")}
         </Typography>
-        <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} />
+        <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} min={joinedDate} />
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: "center", pb: 3, px: 2.5 }}>
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={!paymentStartDate || isSaving}
+          disabled={!canSubmit || isSaving}
           sx={{
             borderRadius: 999,
             textTransform: "none",
-            bgcolor: paymentStartDate ? "#5c7fa3" : "#c5cdd8",
+            bgcolor: canSubmit ? "#5c7fa3" : "#c5cdd8",
             fontSize: 14,
             fontWeight: 600,
             px: 5,
             py: 1.2,
             minWidth: 140,
             boxShadow: "none",
-            "&:hover": { bgcolor: paymentStartDate ? "#4a6a8a" : "#c5cdd8", boxShadow: "none" },
+            "&:hover": { bgcolor: canSubmit ? "#4a6a8a" : "#c5cdd8", boxShadow: "none" },
           }}
         >
           {isSaving ? t("singleGroup.graduateTrialModal.saving") : t("singleGroup.graduateTrialModal.submit")}

@@ -10,7 +10,7 @@ import {
   Button,
 } from "@mui/material";
 import {
-  TbColumns, TbWallet, TbFlag, TbInbox, TbTrash, TbClock, TbPlayerPlay, TbRocket,
+  TbColumns, TbWallet, TbFlag, TbInbox, TbTrash, TbClock, TbPlayerPlay,
 } from "react-icons/tb";
 import { HiBuildingLibrary } from "react-icons/hi2";
 import { FiX } from "react-icons/fi";
@@ -250,7 +250,15 @@ export const StudentActionsMenu = ({
           </div>
         ) : (
           <div>
-            {isFrozen ? (
+            {/* A trial-lesson (PROBATION) member is offered "Activate" — the
+                trial graduates to ACTIVE and billing starts — never "Make
+                Frozen": freezing only applies once the student is active. */}
+            {isTrial && onGraduateTrial ? (
+              <MenuItem onClick={onGraduateTrial} sx={itemSx}>
+                <TbPlayerPlay size={18} color={iconColor} />
+                {t("singleGroup.studentActionsMenu.activate")}
+              </MenuItem>
+            ) : isFrozen ? (
               <MenuItem onClick={onActivate} sx={itemSx}>
                 <TbPlayerPlay size={18} color={iconColor} />
                 {t("singleGroup.studentActionsMenu.activate")}
@@ -259,12 +267,6 @@ export const StudentActionsMenu = ({
               <MenuItem onClick={onMakeFrozen} sx={itemSx}>
                 <TbColumns size={18} color={iconColor} />
                 {t("singleGroup.studentActionsMenu.makeFrozen")}
-              </MenuItem>
-            )}
-            {isTrial && onGraduateTrial && (
-              <MenuItem onClick={onGraduateTrial} sx={itemSx}>
-                <TbRocket size={18} color={iconColor} />
-                {t("singleGroup.studentActionsMenu.graduateTrial")}
               </MenuItem>
             )}
             {hasPermission("PAYMENTS", "CREATE") && (

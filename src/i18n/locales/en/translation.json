@@ -848,6 +848,9 @@
       "name": "Name",
       "course": "Select course",
       "teacher": "Select teacher",
+      "teachersLoading": "Loading teachers...",
+      "teachersEmpty": "No teachers found for this branch",
+      "teachersError": "Teachers could not be loaded. Close and reopen the form to try again.",
       "days": "Days",
       "room": "Select room",
       "lessonStartTime": "Lesson start time",
@@ -1680,7 +1683,8 @@
       "saving": "Activating...",
       "toast": {
         "success": "Student activated, payment calculation started",
-        "error": "Failed to activate the student"
+        "error": "Failed to activate the student",
+        "dateError": "Student activated, but the payment start date couldn't be saved — check their balance"
       }
     },
     "addNoteModal": {
@@ -1875,7 +1879,6 @@
       },
       "activate": "Activate",
       "backToTrialLesson": "Back to trial lesson",
-      "graduateTrial": "Start billing (ACTIVE)",
       "makeFrozen": "Make Frozen",
       "addPayment": "Add payment",
       "addNewNote": "Add new note",

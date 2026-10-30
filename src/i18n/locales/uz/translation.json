@@ -848,6 +848,9 @@
       "name": "Nomi",
       "course": "Kursni tanlang",
       "teacher": "O'qituvchini tanlang",
+      "teachersLoading": "O'qituvchilar yuklanmoqda...",
+      "teachersEmpty": "Bu filialda o'qituvchi topilmadi",
+      "teachersError": "O'qituvchilarni yuklab bo'lmadi. Formani yopib, qayta oching.",
       "days": "Kunlar",
       "room": "Xonani tanlang",
       "lessonStartTime": "Dars boshlanish vaqti",
@@ -1680,7 +1683,8 @@
       "saving": "Faollashtirilmoqda...",
       "toast": {
         "success": "O'quvchi faollashtirildi, to'lov hisoblana boshladi",
-        "error": "O'quvchini faollashtirib bo'lmadi"
+        "error": "O'quvchini faollashtirib bo'lmadi",
+        "dateError": "O'quvchi faollashtirildi, lekin to'lov boshlanish sanasini saqlab bo'lmadi — balansini tekshiring"
       }
     },
     "addNoteModal": {
@@ -1875,7 +1879,6 @@
       },
       "activate": "Faollashtirish",
       "backToTrialLesson": "Sinov darsiga qaytarish",
-      "graduateTrial": "To'lovni faollashtirish (ACTIVE)",
       "makeFrozen": "Muzlatish",
       "addPayment": "To'lov qo'shish",
       "addNewNote": "Yangi eslatma qo'shish",

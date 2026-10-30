@@ -15,7 +15,7 @@ import { PiMicrosoftExcelLogoFill }      from "react-icons/pi";
 import { IoClose }                       from "react-icons/io5";
 import { TbAdjustmentsHorizontal, TbColumns3, TbCalendar } from "react-icons/tb";
 import { HiChevronDown }                 from "react-icons/hi";
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate }                   from "react-router-dom";
 import { useTranslation }                from "react-i18next";
 import { useSelector }                   from "react-redux";
@@ -30,7 +30,7 @@ import type { Group, GroupDay } from "../../app/api/groupsApi/types";
 import { useAllCoursesQuery, useCoursesSelectQuery } from "../../app/api/coursesApi";
 import { useAllRoomsQuery } from "../../app/api/roomsApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
-import { useTeachersSelectQuery } from "../../app/api/teachersApi";
+import { useTeacherOptions } from "../../hooks/useTeacherOptions";
 import { useTagsSelectQuery } from "../../app/api/tagsApi";
 import type { RootState } from "../../app/store";
 import { PortalPopover } from "../../components/common/PortalPopover";
@@ -547,12 +547,19 @@ export const Groups = () => {
   const { data: roomsData } = useAllRoomsQuery(undefined, { skip: !open });
   const { data: branchesData } = useAllBranchesQuery();
   // GET /teachers/select — the dropdown-specific endpoint for group create/
-  // edit's teacher picker (requires branchId; "all" when no branch is
-  // active), distinct from GET /teachers used by the Teachers management
-  // page. Using the management list here previously left the picker empty
-  // because its client-side branch-name filter depended on a `branches`
-  // shape that endpoint doesn't reliably return.
-  const { data: teacherOptions } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" });
+  // edit's teacher picker, distinct from GET /teachers used by the Teachers
+  // management page. Using the management list here previously left the
+  // picker empty because its client-side branch-name filter depended on a
+  // `branches` shape that endpoint doesn't reliably return.
+  const {
+    teachers: activeTeachers, isLoading: teachersLoading, isError: teachersError, refetch: refetchTeachers,
+  } = useTeacherOptions();
+  // A failed or empty answer would otherwise stay for the whole cache window
+  // and the form would offer no teacher at all — opening it asks again.
+  useEffect(() => {
+    if (open && !teachersLoading && (teachersError || activeTeachers.length === 0)) refetchTeachers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   // GET /courses/select — full course list for the Courses filter (the
   // filter used to be built from the courses of the already-loaded groups,
   // so a course without groups, or beyond the page limit, never showed up).
@@ -657,7 +664,6 @@ export const Groups = () => {
   const activeRooms = (roomsData?.data ?? [])
     .filter((r) => r.status === "ACTIVE")
     .filter((r) => selectedBranch === "all" || r.branch?.name === selectedBranch);
-  const activeTeachers = teacherOptions ?? [];
 
   const DAY_FILTER_OPTIONS = [
     { value: "Odd days",     label: t("groups.options.days.odd") },
@@ -1264,6 +1270,8 @@ export const Groups = () => {
               size="small"
               value={form.teacherIds[0] ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, teacherIds: e.target.value ? [e.target.value] : [] }))}
+              error={teachersError && activeTeachers.length === 0}
+              helperText={teachersError && activeTeachers.length === 0 ? t("groups.form.teachersError") : undefined}
               SelectProps={{
                 displayEmpty: true,
                 renderValue: (selected) =>
@@ -1273,6 +1281,11 @@ export const Groups = () => {
               }}
               sx={inputSx}
             >
+              {activeTeachers.length === 0 && (
+                <MenuItem disabled sx={{ fontSize: 13 }}>
+                  {teachersLoading ? t("groups.form.teachersLoading") : t("groups.form.teachersEmpty")}
+                </MenuItem>
+              )}
               {activeTeachers.map((tc) => (
                 <MenuItem key={tc.id} value={tc.id} sx={{ fontSize: 13 }}>{tc.name}</MenuItem>
               ))}

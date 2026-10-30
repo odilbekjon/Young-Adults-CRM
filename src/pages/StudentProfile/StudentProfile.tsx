@@ -1757,11 +1757,18 @@ export const StudentProfile = () => {
     }
     try {
       await graduateTrialStudentGroup(studentGroupId).unwrap();
+    } catch (err) {
+      const detail = extractApiError(err);
+      toast.error(detail ? `Failed to activate: ${detail}` : "Failed to activate");
+      return;
+    }
+    // Reported separately: the student IS active once the promotion went through.
+    try {
       await updateStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
       toast.success("Group membership activated");
     } catch (err) {
       const detail = extractApiError(err);
-      toast.error(detail ? `Failed to activate: ${detail}` : "Failed to activate");
+      toast.error(detail ? `Activated, but the payment start date was not saved: ${detail}` : "Activated, but the payment start date was not saved");
     }
   };
 
@@ -2144,7 +2151,7 @@ export const StudentProfile = () => {
         onClose={() => setGraduateTarget(null)}
         onConfirm={handleGraduateConfirm}
         isSaving={isGraduatingTrial || isSavingMembershipDates}
-        defaultDate={dateOnly(graduateTarget?.joinedAt)}
+        joinedAt={dateOnly(graduateTarget?.joinedAt)}
       />
 
       {/* Return an ended membership to ACTIVE, picking the billing start date. */}

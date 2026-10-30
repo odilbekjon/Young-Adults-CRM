@@ -45,7 +45,7 @@ import type { StudentDetail } from "../../app/api/studentsApi/types";
 import { useAllCoursesQuery } from "../../app/api/coursesApi";
 import { useAllRoomsQuery } from "../../app/api/roomsApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
-import { useTeachersSelectQuery } from "../../app/api/teachersApi";
+import { useTeacherOptions } from "../../hooks/useTeacherOptions";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError, formatTrainingDate, formatPhone, downloadExcelBlob } from "../../utils";
@@ -194,7 +194,7 @@ export const SingleGroup = () => {
   const { data: allCoursesData } = useAllCoursesQuery();
   const { data: allRoomsData } = useAllRoomsQuery(undefined, { skip: !editOpen });
   const { data: allBranchesData } = useAllBranchesQuery();
-  const { data: teacherSelectData } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" }, { skip: !editOpen });
+  const { teachers: activeTeachers } = useTeacherOptions({ skip: !editOpen });
   // GET /reasons/select — only ACTIVE reasons (the branch comes from the
   // x-branch-id header baseApi already sends), first 200 so a branch with
   // more than the backend's default page size doesn't lose options. The ids
@@ -477,7 +477,6 @@ export const SingleGroup = () => {
     () => (allRoomsData?.data ?? []).map((r) => ({ id: r.id, name: r.name })),
     [allRoomsData]
   );
-  const activeTeachers = teacherSelectData ?? [];
 
   // Prefill source for the Edit drawer: the for-edit snapshot (only if it is
   // for THIS group — the lazy query keeps the last result across groups), with
@@ -841,11 +840,21 @@ export const SingleGroup = () => {
     }
     try {
       await graduateTrialStudentGroup(target.studentGroupId).unwrap();
+    } catch (err) {
+      const detail = extractApiError(err);
+      const generic = t("singleGroup.graduateTrialModal.toast.error");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
+      return;
+    }
+    // Reported separately: once the promotion went through the student IS
+    // active, so a failure of the date step alone must not read as "activation
+    // failed" (staff would retry, and the billing date would never be set).
+    try {
       await updateStudentGroup({ id: target.studentGroupId, paymentStartDate }).unwrap();
       toast.success(t("singleGroup.graduateTrialModal.toast.success"));
     } catch (err) {
       const detail = extractApiError(err);
-      const generic = t("singleGroup.graduateTrialModal.toast.error");
+      const generic = t("singleGroup.graduateTrialModal.toast.dateError");
       toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
@@ -1406,7 +1415,7 @@ export const SingleGroup = () => {
         onClose={() => setGraduateTrialOpen(false)}
         onConfirm={handleGraduateTrialConfirm}
         isSaving={isChangingMembershipStatus || isSavingMembershipDates}
-        defaultDate={selectedStudent?.joinedAt}
+        joinedAt={selectedStudent?.joinedAt}
       />
 
       {/* ══ EDIT GROUP DRAWER ══ */}

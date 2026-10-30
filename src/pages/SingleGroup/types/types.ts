@@ -1,5 +1,6 @@
 // src/pages/groups/types.ts
 import { Student } from "../../../constants/Teachers";
+import type { StudentGroupStatus } from "../../../app/api/groupsApi/types";
 
 export type GroupStudent = Student & {
   balance?: number;
@@ -15,6 +16,9 @@ export interface StudentCardData {
   name: string;
   phone: string;
   active: boolean;
+  /** The student's own status in THIS group (their membership) — what the
+   * card's status chip shows; undefined when no source named it. */
+  groupStatus?: StudentGroupStatus;
   /** Real account status (ACTIVE/INACTIVE/FROZEN/DEBTOR) from GET
    * /students/{id} once it resolves — undefined during the brief pre-fetch
    * window, when `active` above is the only signal available yet. */

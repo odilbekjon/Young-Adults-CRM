@@ -1623,7 +1623,9 @@ export const StudentProfile = () => {
   // is relied on to reject/ignore a duplicate membership.
   const handleAddToGroup = async (groupId: string, joinedAt: string): Promise<boolean> => {
     try {
-      await assignStudentsToGroup({ id: groupId, studentIds: [student.uid], joinedAt }).unwrap();
+      // Joins on PROBATION (a trial lesson) like every other add path, so the
+      // student isn't billed as active before staff graduate the trial.
+      await assignStudentsToGroup({ id: groupId, studentIds: [student.uid], status: "PROBATION", joinedAt }).unwrap();
       toast.success("Student added to the group");
       return true;
     } catch (err) {

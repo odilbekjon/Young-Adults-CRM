@@ -10,7 +10,7 @@ import { BsFlag, BsPerson } from "react-icons/bs";
 import { useTeacherByIdQuery, useTeacherForEditQuery, useUpdateTeacherMutation, useTeacherHistoryQuery } from "../../app/api/teachersApi";
 import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
-import { useAllGroupsQuery } from "../../app/api/groupsApi";
+import { useActiveGroups } from "../../hooks/useActiveGroups";
 import { useStudentByIdQuery, useStudentGroupMembershipsQuery } from "../../app/api/studentsApi";
 import { BALANCE_STATUS_COLOR, classifyBalance } from "../../utils/balance";
 import { formatPhone } from "../../utils/formatPhone";
@@ -718,7 +718,7 @@ export const TeacherProfile = () => {
   // moslangan snapshot bo'lishi mumkin).
   const { data: teacherForEditData } = useTeacherForEditQuery(id ?? "", { skip: !id || !editOpen });
   const { data: branchesData } = useAllBranchesQuery();
-  const { data: allGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
+  const activeGroups = useActiveGroups({ teacherId: id, skip: !id });
   const [updateTeacher, { isLoading: isSaving }] = useUpdateTeacherMutation();
 
   const teacher = teacherData?.data;
@@ -727,29 +727,22 @@ export const TeacherProfile = () => {
   // ACTIVE only (same convention as Header's own branch dropdown).
   const branches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
 
-  // Backend `GET /teachers/{id}` javobida guruhlar ro'yxati yo'q — bu
-  // ro'yxat mavjud groupsApi ma'lumotidan (guruhning teachers[] massivi
-  // orqali) hisoblanadi, yangi endpoint o'ylab topilmadi.
+  // GET /teachers/{id} carries no group list, so it comes from GET /groups
+  // filtered by this teacher on the server (useActiveGroups). Every ACTIVE
+  // group is listed, whether or not its training end date has passed — the
+  // Teachers page count reads the same hook.
   const teacherGroups: ProfileGroup[] = useMemo(() => {
-    if (!teacher) return [];
-    const today = new Date();
-    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    return (allGroupsData?.data ?? [])
-      .filter((g) => g.teachers.some((tch) => tch.id === teacher.id))
-      // Only groups that are running now — same "Active" meaning as the Groups
-      // page filter: ACTIVE status and the training end date not yet passed.
-      .filter((g) => g.status?.toUpperCase() === "ACTIVE" && !(g.trainingEnd && g.trainingEnd.slice(0, 10) < todayIso))
-      .map((g) => ({
-        id: g.id,
-        name: g.name,
-        courseName: g.course?.name ?? "—",
-        startDate: g.trainingStart,
-        endDate: g.trainingEnd,
-        schedule: `${g.daysType === "EVEN" ? "Even days" : g.daysType === "ODD" ? "Odd days" : g.daysType ?? "—"} • ${g.time ?? ""}`,
-        room: g.room?.name ?? "—",
-        students: g.students.map((s) => ({ id: s.id, name: s.name, phone: s.phone })),
-      }));
-  }, [allGroupsData, teacher]);
+    return activeGroups.map((g) => ({
+      id: g.id,
+      name: g.name,
+      courseName: g.course?.name ?? "—",
+      startDate: g.trainingStart,
+      endDate: g.trainingEnd,
+      schedule: `${g.daysType === "EVEN" ? "Even days" : g.daysType === "ODD" ? "Odd days" : g.daysType ?? "—"} • ${g.time ?? ""}`,
+      room: g.room?.name ?? "—",
+      students: g.students.map((s) => ({ id: s.id, name: s.name, phone: s.phone })),
+    }));
+  }, [activeGroups]);
 
   const handleSaveTeacher = async (data: { name: string; phone: string; gender: TeacherGender | undefined; birthdate: string; branchIds: string[]; photo?: File; password?: string }) => {
     if (!id) return;

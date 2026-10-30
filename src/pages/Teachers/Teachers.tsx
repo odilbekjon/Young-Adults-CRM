@@ -49,7 +49,6 @@ import { downloadExcelBlob } from "../../utils/downloadExcel";
 import { compressImage } from "../../utils/compressImage";
 import { submitOnEnter } from "../../utils/submitOnEnter";
 import { formatPhoneSpaced } from "../../utils/formatPhone";
-import { todayLocalISO } from "../../utils/localDate";
 import {
   useAllTeachersQuery,
   useCreateTeacherMutation,
@@ -59,7 +58,7 @@ import {
   useLazyTeacherForEditQuery,
 } from "../../app/api/teachersApi";
 import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
-import { useAllGroupsQuery } from "../../app/api/groupsApi";
+import { useActiveGroups } from "../../hooks/useActiveGroups";
 import { usePersistedState } from "../../hooks/usePersistedState";
 
 const EMPTY_FORM = {
@@ -91,7 +90,7 @@ export const Teachers = () => {
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
 
   const { data: teachersData, isLoading: teachersLoading } = useAllTeachersQuery({ page: 1, limit: 100 });
-  const { data: allGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
+  const activeGroups = useActiveGroups();
   const [createTeacher, { isLoading: isCreating }] = useCreateTeacherMutation();
   const [updateTeacher, { isLoading: isUpdating }] = useUpdateTeacherMutation();
   const [fetchTeacherForEdit] = useLazyTeacherForEditQuery();
@@ -100,21 +99,17 @@ export const Teachers = () => {
 
   const teachers: Teacher[] = teachersData?.data ?? [];
 
-  // Real teacher endpointi guruhlar sonini qaytarmaydi — bu son mavjud
-  // groupsApi ma'lumotidan (har bir guruhning teachers[] massivi) hisoblanadi,
-  // yangi endpoint o'ylab topilmadi. Faqat hozir ishlayotgan guruhlar sanaladi
-  // (ACTIVE va tugash sanasi o'tmagan) — arxivga tushgan yoki o'chirilganlar
-  // emas; o'qituvchi profilidagi ro'yxat ham aynan shunday.
+  // GET /teachers returns no group count, so it is worked out from the groups
+  // themselves (each group's teachers[]) — no request per teacher. Only ACTIVE
+  // groups count, archived and deleted ones don't; the list on a teacher's
+  // profile comes from the same useActiveGroups, so the two always agree.
   const groupCountByTeacherId = useMemo(() => {
-    const today = todayLocalISO();
     const map = new Map<string, number>();
-    (allGroupsData?.data ?? [])
-      .filter((g) => g.status?.toUpperCase() === "ACTIVE" && !(g.trainingEnd && g.trainingEnd.slice(0, 10) < today))
-      .forEach((g) => {
-        g.teachers.forEach((tch) => map.set(tch.id, (map.get(tch.id) ?? 0) + 1));
-      });
+    activeGroups.forEach((g) => {
+      g.teachers.forEach((tch) => map.set(tch.id, (map.get(tch.id) ?? 0) + 1));
+    });
     return map;
-  }, [allGroupsData]);
+  }, [activeGroups]);
 
   const [searchValue, setSearchValue]             = usePersistedState("teachers:searchValue", "");
   const [open, setOpen]                           = useState(false);

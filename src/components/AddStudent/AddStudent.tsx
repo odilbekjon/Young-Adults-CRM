@@ -15,8 +15,6 @@ import type { StudentGender } from "../../app/api/studentsApi/types";
 import {
   useAllGroupsQuery,
   useAssignStudentsToGroupMutation,
-  useFreezeStudentGroupMutation,
-  useLazyStudentGroupsQuery,
 } from "../../app/api/groupsApi/groupsApi";
 import type { RootState } from "../../app/store";
 import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
@@ -89,8 +87,6 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
     { skip: !open }
   );
   const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
-  const [freezeStudentGroup] = useFreezeStudentGroupMutation();
-  const [fetchNewMembership] = useLazyStudentGroupsQuery();
   const groups = groupsData?.data ?? [];
 
   const [phone, setPhone] = useState("");
@@ -201,29 +197,15 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
       if (showGroupField && group) {
         try {
           // POST /groups/{id}/students/assign, the one way a member is added.
-          // Starts on PROBATION, then is immediately frozen — same "added →
-          // frozen, staff activates later" flow SingleGroup's own Add student
-          // modal uses, so a student added from here isn't treated as active
-          // (and billed) before anyone meant it to be.
+          // Starts on PROBATION (a trial lesson) and stays there — same flow as
+          // SingleGroup's own Add student modal, so a student added from here
+          // isn't treated as active (and billed) before anyone meant it to be.
           await assignStudentsToGroup({
             id: group,
             studentIds: [created.data.id],
             status: "PROBATION",
             joinedAt: joinedAt || todayLocalISO(),
           }).unwrap();
-          try {
-            const membership = await fetchNewMembership({ groupId: group, studentId: created.data.id, limit: 1 }).unwrap();
-            const newMembershipId = membership.rows[0]?.id;
-            if (newMembershipId) {
-              await freezeStudentGroup({
-                id: newMembershipId,
-                startDate: joinedAt || todayLocalISO(),
-              }).unwrap();
-            }
-          } catch {
-            // Non-fatal — the student is still added to the group, just not
-            // frozen; staff can freeze/activate them manually from there.
-          }
           toast.success(t("addStudent.toast.created"));
         } catch {
           toast.error(t("addStudent.toast.groupAssignFailed"));

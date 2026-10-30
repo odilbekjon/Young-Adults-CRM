@@ -61,7 +61,7 @@ import {
 import type { StudentFinanceStatus, StudentGender, studentsRequest } from "../../app/api/studentsApi/types";
 import { StudentContactFields, EMPTY_CONTACTS, type ContactValues } from "../../components/StudentContactFields/StudentContactFields";
 import { toPhoneInput, fromPhoneInput } from "../../utils/formatPhone";
-import { runLimited, runLimitedSettled } from "../../utils/runLimited";
+import { runLimitedSettled } from "../../utils/runLimited";
 import { submitOnEnter } from "../../utils/submitOnEnter";
 
 // Bulk actions send at most this many requests at once. The server rejects
@@ -72,8 +72,6 @@ import {
   useAllGroupsQuery,
   useAssignStudentsToGroupMutation,
   useStudentGroupsQuery,
-  useLazyStudentGroupsQuery,
-  useFreezeStudentGroupMutation,
 } from "../../app/api/groupsApi";
 import type { Group, StudentGroupStatus } from "../../app/api/groupsApi/types";
 import { useCoursesSelectQuery } from "../../app/api/coursesApi";
@@ -294,10 +292,10 @@ const DateFilterInput = ({ placeholder, value, onChange }: { placeholder: string
 
 /* ─── ADD TO GROUP MODAL ─────────────────────────────── */
 // Same rule as SingleGroup's "Add student": a student added to a group must
-// NOT be active on the spot — the membership is created as PROBATION (never
-// ACTIVE, which would start payment accounting) and immediately frozen; staff
-// activate it later from the group (Activate asks "since when"). So this
-// modal only asks for the group and the "joined on" date.
+// NOT be active on the spot — the membership is created as PROBATION, a trial
+// lesson (never ACTIVE, which would start payment accounting), and staff
+// graduate the trial later from the group. So this modal only asks for the
+// group and the "joined on" date.
 const pad2 = (n: number) => String(n).padStart(2, "0");
 // Local calendar date as YYYY-MM-DD (toISOString() is UTC, which lands on the
 // previous day for the first hours after midnight in UTC+5).
@@ -414,7 +412,7 @@ const AddToGroupModal = ({
           </Typography>
           <DatePickerField value={joinedAt} onChange={setJoinedAt} disabled={isSubmitting} />
           <Typography fontSize={12} color="var(--color-text-muted)" mt={0.8}>
-            {t("students.addToGroup.frozenHint")}
+            {t("students.addToGroup.trialHint")}
           </Typography>
         </Box>
 
@@ -720,8 +718,6 @@ export const Students = () => {
   const { branchLabel } = useBranch();
   const [updateStudent,{ isLoading: isUpdatingStudent }] = useUpdateStudentMutation();
   const { archiveStudent: archiveStudentFlow, deleteStudent: deleteStudentFlow } = useArchiveStudent();
-  const [fetchMemberships] = useLazyStudentGroupsQuery();
-  const [freezeStudentGroup] = useFreezeStudentGroupMutation();
   const [isArchiving, setIsArchiving] = useState(false);
   // GET /tags/select?type=STUDENT — real, admin-managed tags for the "Tags"
   // filter, replacing the disabled placeholder (students had no tags
@@ -1156,11 +1152,10 @@ export const Students = () => {
     }
     setIsAddingToGroup(true);
     // Same flow as SingleGroup's handleAddStudentSubmit: ONE POST /groups/{id}/
-    // students/assign carries the whole selection, as PROBATION (never ACTIVE —
-    // that would start payment accounting; no paymentStartDate) with joinedAt,
-    // then each new membership gets POST /student-groups/{id}/freeze
-    // (startDate = joinedAt) so the students land FROZEN. Staff activate them
-    // later ("since when" is asked then).
+    // students/assign carries the whole selection, as PROBATION (a trial
+    // lesson, never ACTIVE — that would start payment accounting; no
+    // paymentStartDate) with joinedAt. The students stay on PROBATION until
+    // staff graduate the trial.
     //
     // A failed request leaves everyone selected for another try; the group and
     // student lists are refetched either way (the mutation invalidates them), so
@@ -1174,43 +1169,10 @@ export const Students = () => {
       toast.error(detail ? `${base}: ${detail}` : base);
       return false;
     }
-
-    const freeze = async (membershipId: string): Promise<boolean> => {
-      try {
-        await freezeStudentGroup({ id: membershipId, startDate: joinedAt }).unwrap();
-        return true;
-      } catch {
-        // The student WAS added — only the follow-up freeze failed.
-        return false;
-      }
-    };
-    // The response names no memberships, so one look-up of the group's
-    // memberships finds the new ones for the whole batch; the freezes then run a
-    // couple at a time so they never pile up on one endpoint.
-    let notFrozen = 0;
-    try {
-      const found = await fetchMemberships({ groupId, limit: MEMBERSHIP_LIMIT }).unwrap();
-      const batch = new Set(eligibleUids);
-      const newest = new Map<string, string>();
-      // Oldest first, so a student's newest live membership is the one kept.
-      [...found.rows]
-        .filter((m) => batch.has(m.studentId) && m.status !== "INACTIVE" && m.status !== "DELETED")
-        .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""))
-        .forEach((m) => newest.set(m.studentId, m.id));
-      const frozen = await runLimited(eligibleUids, BULK_CONCURRENCY, async (uid) => {
-        const membershipId = newest.get(uid);
-        return membershipId ? freeze(membershipId) : false;
-      });
-      notFrozen = frozen.filter((ok) => !ok).length;
-    } catch {
-      // The students WERE added — only the look-up failed, so none got frozen.
-      notFrozen = eligibleUids.length;
-    }
     setIsAddingToGroup(false);
 
     setSelected((p) => p.filter((uid) => !eligibleUids.includes(uid)));
     toast.success(t("students.addToGroup.toast.success"));
-    if (notFrozen > 0) toast.error(t("students.addToGroup.toast.freezeError"));
     setAddToGroupOpen(false);
     return true;
   };

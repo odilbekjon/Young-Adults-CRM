@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { CircularProgress, Dialog, Grow } from "@mui/material";
-import { MdClose, MdSearch, MdCheckCircle, MdAcUnit } from "react-icons/md";
+import { MdClose, MdSearch, MdCheckCircle, MdInfoOutline } from "react-icons/md";
 import { DatePickerField } from "../DatePickerField";
 import { useAllStudentsQuery } from "../../../app/api/studentsApi";
 import type { RootState } from "../../../app/store";
@@ -18,9 +18,8 @@ export interface AddStudentOption {
 // students/assign; customPrice / discountReason aren't part of that body, so
 // SingleGroup applies them to the new membership afterwards. status /
 // paymentStartDate are deliberately not exposed here: SingleGroup always
-// adds the member on PROBATION (no payment start date) and freezes them right
-// after, so a new student never reads as active until staff explicitly
-// activate them.
+// adds the member on PROBATION (a trial lesson, no payment start date), so a
+// new student never reads as active until staff graduate the trial.
 export interface AddStudentPayload {
   studentId: string;
   joinedAt?: string;
@@ -413,14 +412,14 @@ export const AddStudentDrawer = ({
           </div>
         )}
 
-        {/* the business rule, stated up front so a frozen roster row isn't a surprise */}
+        {/* the business rule, stated up front so a trial-lesson roster row isn't a surprise */}
         <div style={{
           display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12.5, lineHeight: 1.45,
           color: "var(--color-text-secondary, #6b7a8d)", background: "var(--color-surface-alt, #f5f6f8)",
           borderRadius: 8, padding: "9px 12px",
         }}>
-          <MdAcUnit size={15} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span>{t("singleGroup.addStudentDrawer.frozenNote")}</span>
+          <MdInfoOutline size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>{t("singleGroup.addStudentDrawer.trialNote")}</span>
         </div>
 
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>

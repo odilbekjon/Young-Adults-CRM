@@ -169,7 +169,7 @@ const toGroupRow = (g: Group, archivedMembershipKeys: Set<string>): GroupRow => 
   days: classifyDays(g.daysType, g.days ?? []),
   dayList: g.days ?? [],
   lessonStartTime: g.time ?? "",
-  weekOfStudy: g.weekOfStudy ?? "",
+  weekOfStudy: String(g.weekOfStudy ?? ""),
   startDate: g.trainingStart ?? "",
   endDate: g.trainingEnd ?? "",
   studentCount: (g.students ?? []).filter((s) => !archivedMembershipKeys.has(`${s.id}|${g.id}`)).length,

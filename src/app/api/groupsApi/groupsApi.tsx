@@ -477,13 +477,14 @@ const buildGroupsExcelQueryString = (args: GroupsExcelQueryArgs = {}): string =>
 export const groupsApi = baseApi.injectEndpoints({
     endpoints: (builder) =>  ({
         allGroups: builder.query<groupsResponse, groupsRequest>({
-            query: ({ page = 1, limit = 10, tagId } = {}) => {
+            query: ({ page = 1, limit = 10, tagId, teacherId } = {}) => {
                 const params = new URLSearchParams();
                 params.set("page", String(page));
                 params.set("limit", String(limit));
                 // Same tagId convention as studentsApi's allStudents, for the
                 // Tags filter on the Groups list.
                 if (tagId) params.set("tagId", tagId);
+                if (teacherId) params.set("teacherId", teacherId);
                 return { url: `${PATHS.GROUPS}?${params.toString()}`, method: "GET" };
             },
             transformResponse: (response: groupsResponse) => ({
@@ -604,9 +605,9 @@ export const groupsApi = baseApi.injectEndpoints({
         // never created the /student-groups membership row through it (so
         // freeze/unfreeze/status calls had nothing to act on); the backend owner
         // now wants it used for every add. Callers that need the new membership
-        // ids look them up afterwards (the response documents none). Pass status
-        // PROBATION, never ACTIVE, to add someone who is frozen right after:
-        // going through ACTIVE would start payment accounting too early.
+        // ids look them up afterwards (the response documents none). Callers
+        // pass status PROBATION (a trial lesson), never ACTIVE: going through
+        // ACTIVE would start payment accounting too early.
         assignStudentsToGroup: builder.mutation<AssignStudentsResponse, AssignStudentsRequest>({
             query: ({ id, ...body }) => ({
                 url: `${PATHS.GROUPS}/${id}/students/assign`,
@@ -775,6 +776,7 @@ export const groupsApi = baseApi.injectEndpoints({
 
 export const {
     useAllGroupsQuery,
+    useLazyAllGroupsQuery,
     useGroupsByCourseQuery,
     useGroupByIdQuery,
     useLazyGroupForEditQuery,

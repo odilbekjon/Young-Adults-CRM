@@ -460,14 +460,13 @@
       },
       "paymentStartDate": "Payment start date",
       "joinedAt": "Joined on",
-      "frozenHint": "Added students start as Frozen — activate them later from the group (you will be asked since when).",
+      "trialHint": "Added students join as a trial lesson (probation) — payment is not calculated until you start billing from the group.",
       "submit": "Add student to group",
       "submitting": "Adding...",
       "toast": {
         "success": "Student(s) added to the group",
         "error": "Failed to add student(s) to the group",
-        "alreadyInGroup": "Selected student(s) are already in this group",
-        "freezeError": "Student(s) added, but couldn't be set to frozen — check their status manually"
+        "alreadyInGroup": "Selected student(s) are already in this group"
       }
     },
     "editDrawer": {
@@ -1735,12 +1734,11 @@
       "customPriceInvalid": "Enter a valid non-negative amount",
       "discountReason": "Discount reason",
       "discountReasonPlaceholder": "Why is this price different?",
-      "frozenNote": "The student is added as frozen. Use Activate in the student's menu to start them from a chosen date.",
+      "trialNote": "The student joins as a trial lesson (probation) — payment is not calculated. When the trial is over, use Start billing (ACTIVE) in the student's menu.",
       "cancel": "Cancel",
       "toast": {
         "success": "Student added to the group",
         "error": "Failed to add student. Please try again.",
-        "freezeError": "Student added, but couldn't be set to frozen — check their status manually",
         "priceError": "Student added, but the individual price couldn't be saved — please set it again"
       }
     },
@@ -1818,7 +1816,7 @@
       "toast": {
         "success": "Student moved to the new group",
         "error": "Failed to move student. Please try again.",
-        "freezeError": "Student moved, but couldn't be frozen in the new group — freeze them manually"
+        "trialError": "Student moved, but couldn't be set to trial lesson in the new group — set it manually"
       }
     },
     "reminderDrawer": {
@@ -1895,6 +1893,12 @@
       "activeLearns": "Active (Learns)",
       "frozenPaused": "Frozen (paused)",
       "inactiveArchived": "Inactive (archived)",
+      "groupStatus": {
+        "probation": "Trial lesson (Probation)",
+        "active": "Active",
+        "frozen": "Frozen",
+        "archived": "Archived (left the group)"
+      },
       "debtor": "Debtor",
       "debt": "Debt",
       "balance": "Balance",

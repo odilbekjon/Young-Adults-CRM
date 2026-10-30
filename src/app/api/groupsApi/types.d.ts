@@ -46,6 +46,15 @@ export interface GroupPersonRef {
   role: string;
   photo: string | null;
   phone: string;
+  // Only on GET /groups/{id} `students[]` (Swagger) — the member's own place
+  // in THIS group (their /student-groups membership), next to the account-wide
+  // studentStatus. Absent on teachers and on older responses.
+  studentStatus?: string;
+  studentGroupStatus?: StudentGroupStatus;
+  studentGroupId?: string;
+  joinedAt?: string | null;
+  paymentStartDate?: string | null;
+  customPrice?: number | null;
 }
 
 export interface GroupTagRef {
@@ -61,7 +70,8 @@ export interface Group {
   roomId: string | null;
   days: GroupDay[];
   time: string | null;
-  weekOfStudy: string | null;
+  // GET /groups sends a number (e.g. 14), not only free text.
+  weekOfStudy: string | number | null;
   trainingStart: string | null;
   trainingEnd: string | null;
   createdById: string | null;
@@ -82,6 +92,8 @@ export interface groupsRequest {
   page?: number;
   limit?: number;
   tagId?: string;
+  // Only the groups this teacher teaches (the teacher's profile list).
+  teacherId?: string;
 }
 
 export interface groupsResponse {
@@ -114,7 +126,7 @@ export interface GroupDetail {
   daysType: "EVEN" | "ODD" | string;
   days?: GroupDay[];
   time: string | null;
-  weekOfStudy?: string | null;
+  weekOfStudy?: string | number | null;
   roomId: string | null;
   roomName: string | null;
   roomCapacity: number | null;
@@ -172,8 +184,8 @@ export interface AssignStudentsRequest {
 }
 
 // Swagger documents the response as a bare 201, so no membership ids are
-// modeled: a caller that needs them (to freeze the new memberships, say)
-// looks them up with GET /student-groups.
+// modeled: a caller that needs them (to set a custom price on the new
+// membership, say) looks them up with GET /student-groups.
 export interface AssignStudentsResponse {
   success: boolean;
   message?: string;

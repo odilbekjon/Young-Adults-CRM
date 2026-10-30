@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StudentCardData } from "../types";
 import { BALANCE_STATUS_COLOR, classifyBalance } from "../../../utils";
+import { GROUP_STATUS_STYLE } from "../StudentStatusDot";
 
 export const StudentHoverCard = ({
   student,
@@ -59,14 +60,18 @@ export const StudentHoverCard = ({
   const isDebtor = student.balance !== undefined && student.balance < 0;
   // Real account status (ACTIVE/INACTIVE/FROZEN/DEBTOR) once GET
   // /students/{id} resolves — a DEBTOR is still "active" (matches the
-  // reference design: a debtor shows "Active (Learns)" plus a separate red
-  // Debtor badge, not a distinct status label). Falls back to the group's
+  // reference design: a debtor gets a separate red Debtor badge, not a
+  // distinct status). It decides the balance box below. Falls back to the group's
   // own `active` boolean during the brief pre-fetch window before real
   // status is known.
   const realStatus = student.status;
   const isFrozenStatus = realStatus ? realStatus === "FROZEN" : !student.active;
   const isInactiveStatus = realStatus === "INACTIVE";
   const showStatusBox = isFrozenStatus || isInactiveStatus;
+  // The student's status in THIS group (trial lesson / active / frozen /
+  // archived), unlike the account status above — shown as the coloured chip
+  // under the name, in the same colours as the name in the roster.
+  const groupStatusStyle = student.groupStatus ? GROUP_STATUS_STYLE[student.groupStatus] : undefined;
 
   return (
     <div
@@ -97,13 +102,15 @@ export const StudentHoverCard = ({
           <span style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)" }}>{student.name}</span>
           <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>(id:{student.id})</span>
         </div>
-        <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 2 }}>
-          {isInactiveStatus
-            ? t("singleGroup.studentHoverCard.inactiveArchived")
-            : isFrozenStatus
-            ? t("singleGroup.studentHoverCard.frozenPaused")
-            : t("singleGroup.studentHoverCard.activeLearns")}
-        </div>
+        {groupStatusStyle && (
+          <span style={{
+            display: "inline-block", marginTop: 6, marginRight: 6,
+            background: groupStatusStyle.background, color: groupStatusStyle.color,
+            fontSize: 11, fontWeight: 600, borderRadius: 20, padding: "3px 10px",
+          }}>
+            {t(groupStatusStyle.labelKey)}
+          </span>
+        )}
         {isDebtor && (
           <span style={{
             display: "inline-block", marginTop: 6,
@@ -112,6 +119,11 @@ export const StudentHoverCard = ({
           }}>
             {t("singleGroup.studentHoverCard.debtor")}
           </span>
+        )}
+        {student.groupStatus === "FROZEN" && student.frozenAt && (
+          <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 6 }}>
+            {t("singleGroup.studentHoverCard.frozenAt")}: {student.frozenAt}
+          </div>
         )}
       </div>
 
@@ -137,11 +149,6 @@ export const StudentHoverCard = ({
                 ? `${student.balance > 0 ? "+" : ""}${student.balance.toLocaleString()} UZS`
                 : "—"}
             </div>
-            {isFrozenStatus && student.frozenAt && (
-              <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 6 }}>
-                {t("singleGroup.studentHoverCard.frozenAt")}: {student.frozenAt}
-              </div>
-            )}
           </div>
 
         </>

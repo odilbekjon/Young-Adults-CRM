@@ -35,7 +35,7 @@ import {
   useUpdateStudentGroupMutation,
   useGraduateTrialStudentGroupMutation,
 } from "../../app/api/groupsApi";
-import type { GroupDetail, StudentGroupRecord, UpdateGroupRequest } from "../../app/api/groupsApi/types";
+import type { GroupDetail, StudentGroupRecord, StudentGroupStatus, UpdateGroupRequest } from "../../app/api/groupsApi/types";
 import {
   useAllStudentsQuery,
   useTransferStudentBranchMutation,
@@ -65,7 +65,7 @@ import { Comments } from "./tabs/Comments";
 import { GroupStudent } from "./types";
 import { ActionIconBtn } from "./ActionIconBtn";
 import { StudentHoverCard } from "./StudentHoverCard";
-import { StudentStatusDot } from "./StudentStatusDot";
+import { StudentStatusDot, GROUP_STATUS_STYLE, toGroupStatus } from "./StudentStatusDot";
 import { StudentActionsMenu } from "./StudentActionsMenu";
 import { FreezeModal } from "./FreezeModal";
 import { useLazyStudentFreezesQuery } from "../../app/api/studentFreezesApi";
@@ -88,22 +88,17 @@ const TAB_KEYS = [
   "discountPrices", "exams", "history", "comments",
 ];
 
-// GroupDetail.students carries no balance/archived/frozen status at all, so
-// those start out as neutral defaults here and are corrected afterwards by
+// GroupDetail.students carries no balance, so that starts out as a neutral
+// default here, and a member's status in this group is corrected afterwards by
 // overlaying real per-membership data from GET /student-groups (see
-// combinedStudents below) — studentGroupId in particular comes only from
+// combinedStudents below) — studentGroupId in particular normally comes from
 // that overlay, since it's the /student-groups row's own id, required by
 // freeze/unfreeze/status-change calls (distinct from realId, the student's
-// own id).
-type RealGroupStudent = GroupStudent & { realId: string; studentGroupId?: string; isTrial?: boolean; joinedAt?: string };
-
-const pad2 = (n: number) => String(n).padStart(2, "0");
-// Local calendar date as YYYY-MM-DD (toISOString() is UTC, which lands on the
-// previous day for the first hours after midnight in UTC+5).
-const todayLocalISO = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-};
+// own id). Where the overlay has no row for a member, the status/id/join date
+// GET /groups/{id} itself names for them (see toRealStudents) are kept.
+// groupStatus is the member's status in this group; active/archived derive from
+// it (see groupStatusFlags).
+type RealGroupStudent = GroupStudent & { realId: string; studentGroupId?: string; groupStatus?: StudentGroupStatus; joinedAt?: string };
 
 const toLegacyGroup = (d: GroupDetail): LegacyGroup => ({
   id: 0,
@@ -126,6 +121,17 @@ const toLegacyGroup = (d: GroupDetail): LegacyGroup => ({
   branch: undefined,
 });
 
+// A trial lesson (PROBATION) counts as active, an archived status (INACTIVE/
+// DELETED) as archived, and FROZEN — or a status the app doesn't know — as neither.
+const groupStatusFlags = (raw: string | null | undefined) => {
+  const groupStatus = toGroupStatus(raw);
+  return {
+    groupStatus,
+    active: groupStatus === "ACTIVE" || groupStatus === "PROBATION",
+    archived: groupStatus === "INACTIVE" || groupStatus === "DELETED",
+  };
+};
+
 const toRealStudents = (d: GroupDetail): RealGroupStudent[] =>
   (d.students ?? []).map((s, i) => ({
     id: i + 1,
@@ -135,6 +141,13 @@ const toRealStudents = (d: GroupDetail): RealGroupStudent[] =>
     active: true,
     archived: false,
     balance: 0,
+    // The member's own status in this group, as GET /groups/{id} reports it —
+    // used for whoever the /student-groups overlay has no row for.
+    ...(s.studentGroupStatus && {
+      studentGroupId: s.studentGroupId,
+      ...groupStatusFlags(s.studentGroupStatus),
+      joinedAt: s.joinedAt?.slice(0, 10),
+    }),
   }));
 
 // A student is archived-in-this-group if their /student-groups membership
@@ -265,7 +278,7 @@ export const SingleGroup = () => {
 
   // GroupDetail.students is the legacy relation — POST /groups/{id}/students/
   // assign (how "Add student" creates a member) isn't guaranteed to write to
-  // it, so a freshly added (frozen) student could otherwise be missing from
+  // it, so a freshly added (trial-lesson) student could otherwise be missing from
   // the roster entirely. /student-groups is the authoritative roster (see the
   // comment on studentGroupsData above), so any live membership the legacy
   // relation doesn't list is added here.
@@ -407,15 +420,13 @@ export const SingleGroup = () => {
         ...s,
         ...(membership && {
           studentGroupId: membership.id,
-          active: membership.status === "ACTIVE" || membership.status === "PROBATION",
-          archived: membership.status === "INACTIVE" || membership.status === "DELETED",
-          isTrial: membership.status === "PROBATION",
+          ...groupStatusFlags(membership.status),
           // Day the student came into the group (YYYY-MM-DD) — the default
           // "since when" for activation, so billing runs from the arrival day
           // to the end of the month rather than from whenever staff click.
           joinedAt: membership.joinedAt ? membership.joinedAt.slice(0, 10) : undefined,
         }),
-        ...(!membership && removedIds.has(s.realId) && { active: false, archived: true }),
+        ...(!membership && removedIds.has(s.realId) && groupStatusFlags("INACTIVE")),
         ...(realBalance !== undefined && { balance: realBalance }),
       };
     });
@@ -583,6 +594,7 @@ export const SingleGroup = () => {
       name: detail?.name ?? student.name,
       phone: detail?.phone ?? student.phone,
       active: detail ? detail.status === "ACTIVE" : student.active,
+      groupStatus: student.groupStatus,
       status: detail?.status,
       // Before GET /students/{id} resolves, only a balance that was really
       // loaded counts — the roster placeholder 0 must not read as "0 UZS".
@@ -769,8 +781,8 @@ export const SingleGroup = () => {
   };
 
   const isSelectedArchived = Boolean(selectedStudent?.archived);
-  const isSelectedFrozen = selectedStudent ? !selectedStudent.active && !selectedStudent.archived : false;
-  const isSelectedTrial = Boolean(selectedStudent?.isTrial) && !isSelectedArchived && !isSelectedFrozen;
+  const isSelectedFrozen = selectedStudent?.groupStatus === "FROZEN";
+  const isSelectedTrial = selectedStudent?.groupStatus === "PROBATION";
 
   // Both actions below use PATCH /student-groups/{id}/status (Swagger:
   // status is required) to bring an archived (INACTIVE/DELETED) membership
@@ -899,11 +911,13 @@ export const SingleGroup = () => {
     if (!id) return;
     // POST /groups/{id}/students/assign (see assignStudentsToGroup in groupsApi)
     // is the one way a member is added. joinedAt ("since when") is optional.
-    // Starts on PROBATION (never ACTIVE) with no paymentStartDate — going
-    // through ACTIVE, even briefly, would trigger PATCH .../status's
-    // documented "payment accounting starts" side effect before a staff
-    // member meant it to. The endpoint takes no price, so customPrice /
-    // discountReason are applied to the new membership below.
+    // Business rule: a new student joins on PROBATION (a trial lesson) and
+    // stays there — never frozen — until staff graduate the trial. No
+    // paymentStartDate and never ACTIVE: going through ACTIVE, even briefly,
+    // would trigger PATCH .../status's documented "payment accounting starts"
+    // side effect before a staff member meant it to. The endpoint takes no
+    // price, so customPrice / discountReason are applied to the new
+    // membership below.
     try {
       await assignStudentsToGroup({ id, studentIds: [studentId], status: "PROBATION", joinedAt }).unwrap();
     } catch (err) {
@@ -918,46 +932,22 @@ export const SingleGroup = () => {
     setMovedOutIds((prev) => { if (!prev.has(studentId)) return prev; const next = new Set(prev); next.delete(studentId); return next; });
     setBranchMovedIds((prev) => { if (!prev.has(studentId)) return prev; const next = new Set(prev); next.delete(studentId); return next; });
 
-    // Business rule: a newly added student must NOT read as active — they
-    // land FROZEN, and a staff member explicitly activates them afterwards
-    // (StudentActionsMenu's "Activate" -> ActivateModal asks "since when" and
-    // unfreezes + sets the payment start date). Assigning only documents
-    // PROBATION/ACTIVE as initial statuses, so the brand-new membership is
-    // frozen as an immediate follow-up through the one endpoint that IS
-    // documented for FROZEN (POST /student-groups/{id}/freeze, startDate
-    // required). The assign response names no membership, so its id is looked
-    // up via GET /student-groups.
-    //
-    // The student WAS added — only these follow-ups can fail — so each gets a
-    // distinct, narrower warning rather than the generic add-failed error
+    toast.success(t("singleGroup.addStudentDrawer.toast.success"));
+    if (customPrice === undefined) return;
+    // The assign response names no membership, so its id is looked up via
+    // GET /student-groups. The student WAS added — only this follow-up can
+    // fail — so it gets a narrower warning than the generic add-failed error
     // above, carrying the backend's message + HTTP status (the failed request
     // is also in the console — see logStudentGroupAction in groupsApi).
-    const warn = (generic: string, err: unknown) => {
-      const detail = describeApiError(err);
-      toast.error(detail ? `${generic}: ${detail}` : generic);
-    };
-    toast.success(t("singleGroup.addStudentDrawer.toast.success"));
-    let newMembershipId: string | undefined;
     try {
       const found = await fetchNewMembership({ groupId: id, studentId, limit: 1 }).unwrap();
-      newMembershipId = found.rows[0]?.id;
+      const newMembershipId = found.rows[0]?.id;
       if (!newMembershipId) throw new Error("new membership id not found");
+      await updateStudentGroup({ id: newMembershipId, customPrice, discountReason }).unwrap();
     } catch (err) {
-      if (customPrice !== undefined) warn(t("singleGroup.addStudentDrawer.toast.priceError"), err);
-      warn(t("singleGroup.addStudentDrawer.toast.freezeError"), err);
-      return;
-    }
-    if (customPrice !== undefined) {
-      try {
-        await updateStudentGroup({ id: newMembershipId, customPrice, discountReason }).unwrap();
-      } catch (err) {
-        warn(t("singleGroup.addStudentDrawer.toast.priceError"), err);
-      }
-    }
-    try {
-      await freezeStudentGroup({ id: newMembershipId, startDate: joinedAt || todayLocalISO() }).unwrap();
-    } catch (err) {
-      warn(t("singleGroup.addStudentDrawer.toast.freezeError"), err);
+      const detail = describeApiError(err);
+      const generic = t("singleGroup.addStudentDrawer.toast.priceError");
+      toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
 
@@ -968,18 +958,18 @@ export const SingleGroup = () => {
       toast.success(t("singleGroup.moveStudentDialog.toast.success"));
       // Business rule (same as a freshly added member): a transferred student
       // must NOT land ACTIVE in the new group — the backend creates the new
-      // membership active, so it is frozen right away and staff activate it
-      // later ("Activate" asks since when, which is when billing starts).
-      // Best effort: the transfer itself already succeeded.
+      // membership active, so it is put on PROBATION (a trial lesson) right
+      // away and staff graduate the trial later. Best effort: the transfer
+      // itself already succeeded.
       try {
         const found = await fetchNewMembership({ groupId: newGroupId, studentId: selectedStudent.realId, limit: 20 }).unwrap();
         const live = found.rows.find((m) => m.status !== "INACTIVE" && m.status !== "DELETED");
-        if (live && live.status !== "FROZEN") {
-          await freezeStudentGroup({ id: live.id, startDate: todayLocalISO(), reason }).unwrap();
+        if (live && live.status !== "PROBATION") {
+          await updateStudentGroupStatus({ id: live.id, status: "PROBATION" }).unwrap();
         }
       } catch (err) {
         const detail = describeApiError(err);
-        const generic = t("singleGroup.moveStudentDialog.toast.freezeError");
+        const generic = t("singleGroup.moveStudentDialog.toast.trialError");
         toast.error(detail ? `${generic}: ${detail}` : generic);
       }
       // Drop them from this (source) group's roster right away instead of
@@ -1200,7 +1190,9 @@ export const SingleGroup = () => {
           {/* Student list */}
           <List dense disablePadding>
             {sortedStudents.map((s, i) => {
-              const isFrozen = !s.active && !s.archived;
+              // A trial lesson and a freeze tint the name (see GROUP_STATUS_STYLE);
+              // ACTIVE and archived members keep a plain one.
+              const pill = s.groupStatus === "PROBATION" || s.groupStatus === "FROZEN" ? GROUP_STATUS_STYLE[s.groupStatus] : undefined;
               const isArchived = Boolean(s.archived);
               return (
                 <ListItem
@@ -1214,7 +1206,7 @@ export const SingleGroup = () => {
                     cursor: "pointer",
                     transition: "background 0.15s",
                     opacity: isArchived ? 0.75 : 1,
-                    "&:hover": { backgroundColor: isFrozen ? "var(--color-primary-surface)" : "var(--color-surface-alt)" },
+                    "&:hover": { backgroundColor: pill ? "var(--color-primary-surface)" : "var(--color-surface-alt)" },
                   }}
                   onMouseEnter={(e) => handleStudentMouseEnter(e, s)}
                   onMouseLeave={handleStudentMouseLeave}
@@ -1223,7 +1215,7 @@ export const SingleGroup = () => {
                   <Typography fontSize={12} color="text.secondary" sx={{ minWidth: 22, flexShrink: 0 }}>
                     {i + 1}
                   </Typography>
-                  <StudentStatusDot active={s.active} archived={s.archived} balance={s.balance} />
+                  <StudentStatusDot active={s.active && s.groupStatus !== "PROBATION"} archived={s.archived} balance={s.balance} />
                   {/* Name and phone share one row: the name takes the remaining
                       width and truncates, the phone always keeps its own. */}
                   <Box sx={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 1 }}>
@@ -1234,11 +1226,11 @@ export const SingleGroup = () => {
                       fontSize={13}
                       fontWeight={500}
                       sx={{
-                        px: isFrozen ? 1 : 0,
-                        py: isFrozen ? 0.35 : 0,
-                        borderRadius: isFrozen ? "6px" : 0,
-                        backgroundColor: isFrozen ? "#bfe3fa" : "transparent",
-                        color: isArchived ? "dimgray" : isFrozen ? "#1a2332" : "var(--color-text-primary)",
+                        px: pill ? 1 : 0,
+                        py: pill ? 0.35 : 0,
+                        borderRadius: pill ? "6px" : 0,
+                        backgroundColor: pill?.background ?? "transparent",
+                        color: isArchived ? "dimgray" : pill?.color ?? "var(--color-text-primary)",
                         textDecoration: isArchived ? "line-through" : "none",
                       }}
                     >
@@ -1438,7 +1430,7 @@ export const SingleGroup = () => {
         onClose={() => setAddStudentOpen(false)}
         memberStatusById={memberStatusById}
         onSubmit={handleAddStudentSubmit}
-        isSubmitting={isAssigning || isFreezing}
+        isSubmitting={isAssigning}
       />
 
       {/* ══ ADD NOTE MODAL (top) ══ */}

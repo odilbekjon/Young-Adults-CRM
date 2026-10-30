@@ -460,14 +460,13 @@
       },
       "paymentStartDate": "To'lov hisoblana boshlash sanasi",
       "joinedAt": "Qo'shilgan sana",
-      "frozenHint": "Qo'shilgan o'quvchilar avval muzlatilgan holatda turadi — keyin guruhdan faollashtiring (qachondan ekanligi so'raladi).",
+      "trialHint": "Qo'shilgan o'quvchilar sinov darsi (probation) holatida bo'ladi — to'lov hisoblanmaydi. Sinovdan keyin guruhdan to'lovni faollashtiring.",
       "submit": "O'quvchini guruhga qo'shish",
       "submitting": "Qo'shilmoqda...",
       "toast": {
         "success": "O'quvchi(lar) guruhga qo'shildi",
         "error": "O'quvchi(lar)ni guruhga qo'shib bo'lmadi",
-        "alreadyInGroup": "Tanlangan o'quvchi(lar) bu guruhda allaqachon bor",
-        "freezeError": "O'quvchi(lar) qo'shildi, lekin muzlatib bo'lmadi — holatini qo'lda tekshiring"
+        "alreadyInGroup": "Tanlangan o'quvchi(lar) bu guruhda allaqachon bor"
       }
     },
     "editDrawer": {
@@ -1735,12 +1734,11 @@
       "customPriceInvalid": "To'g'ri (manfiy bo'lmagan) summa kiriting",
       "discountReason": "Chegirma sababi",
       "discountReasonPlaceholder": "Nega narx boshqacha?",
-      "frozenNote": "O'quvchi muzlatilgan holatda qo'shiladi. Uni tanlangan sanadan boshlash uchun o'quvchi menyusidagi Faollashtirish tugmasidan foydalaning.",
+      "trialNote": "O'quvchi sinov darsi (probation) holatida qo'shiladi — to'lov hisoblanmaydi. Sinov tugagach, o'quvchi menyusidagi To'lovni faollashtirish (ACTIVE) tugmasidan foydalaning.",
       "cancel": "Bekor qilish",
       "toast": {
         "success": "O'quvchi guruhga qo'shildi",
         "error": "O'quvchini qo'shib bo'lmadi. Qaytadan urinib ko'ring.",
-        "freezeError": "O'quvchi qo'shildi, lekin uni muzlatib qo'yib bo'lmadi — holatini qo'lda tekshiring",
         "priceError": "O'quvchi qo'shildi, lekin individual narxni saqlab bo'lmadi — uni qaytadan kiriting"
       }
     },
@@ -1818,7 +1816,7 @@
       "toast": {
         "success": "O'quvchi yangi guruhga ko'chirildi",
         "error": "O'quvchini ko'chirib bo'lmadi. Qaytadan urinib ko'ring.",
-        "freezeError": "O'quvchi ko'chirildi, lekin yangi guruhda muzlatib bo'lmadi — qo'lda muzlating"
+        "trialError": "O'quvchi ko'chirildi, lekin yangi guruhda uni sinov darsiga o'tkazib bo'lmadi — qo'lda o'tkazing"
       }
     },
     "reminderDrawer": {
@@ -1895,6 +1893,12 @@
       "activeLearns": "Faol (o'qimoqda)",
       "frozenPaused": "Muzlatilgan (pauza)",
       "inactiveArchived": "Faol emas (arxivda)",
+      "groupStatus": {
+        "probation": "Sinov darsi (Probation)",
+        "active": "Faol",
+        "frozen": "Muzlatilgan",
+        "archived": "Arxivda (guruhdan chiqqan)"
+      },
       "debtor": "Qarzdor",
       "debt": "Qarzdorlik",
       "balance": "Balans",

@@ -134,7 +134,7 @@ export const TeacherAccountGroups = () => {
         {groups.length === 0 ? (
           <Typography color="text.secondary" fontSize={14}>{t("teacherGroups.empty")}</Typography>
         ) : (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25, maxHeight: { lg: 560 }, overflowY: "auto", pr: 0.25 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
             {groups.map((g) => (
               <GroupCard key={g.id} group={g} active={g.id === selectedId} onSelect={() => setSelectedId(g.id)} />
             ))}
@@ -166,7 +166,7 @@ export const TeacherAccountGroups = () => {
             </Typography>
           </Box>
 
-          <Box sx={{ borderTop: "1px solid var(--color-border)", pt: 1.5, maxHeight: 360, overflowY: "auto" }}>
+          <Box sx={{ borderTop: "1px solid var(--color-border)", pt: 1.5 }}>
             {studentsLoading ? (
               <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
             ) : studentsError ? (

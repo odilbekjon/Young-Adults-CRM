@@ -17,6 +17,7 @@ import {
   useAssignStudentsToGroupMutation,
 } from "../../app/api/groupsApi/groupsApi";
 import type { RootState } from "../../app/store";
+import { isActiveGroup } from "../../hooks/useActiveGroups";
 import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
 import { StudentTagsSelect } from "../StudentTagsSelect";
 
@@ -87,7 +88,8 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
     { skip: !open }
   );
   const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
-  const groups = groupsData?.data ?? [];
+  // Only running groups: a student can't be added to an archived one.
+  const groups = (groupsData?.data ?? []).filter(isActiveGroup);
 
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");

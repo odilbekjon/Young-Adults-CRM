@@ -480,7 +480,7 @@ const StudentsList = ({
           </div>
         )}
       </div>
-      <div style={{ overflowY: "auto", maxHeight: 360 }}>
+      <div>
         {group.students.map((s, idx) => (
           <StudentRow
             key={s.id}
@@ -857,7 +857,7 @@ export const TeacherProfile = () => {
             {teacherGroups.length === 0 ? (
               <div style={{ color: "var(--color-text-muted)", fontSize: 13, padding: "24px 0", textAlign: "center" }}>No groups assigned</div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 440, overflowY: "auto", paddingRight: 2 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {teacherGroups.map((group, i) => (
                   <GroupCard key={group.id} group={group} index={i} isSelected={group.id === activeGroupId} onSelect={() => setSelectedGroupId(group.id === activeGroupId ? null : group.id)} />
                 ))}

@@ -874,7 +874,9 @@
       "updated": "Guruh muvaffaqiyatli yangilandi",
       "deleted": "Guruh muvaffaqiyatli o'chirildi",
       "statusToggled": "Guruh holati o'zgartirildi",
-      "statusToggleError": "Guruh holatini o'zgartirib bo'lmadi"
+      "statusToggleError": "Guruh holatini o'zgartirib bo'lmadi",
+      "deleteError": "Guruhni o'chirib bo'lmadi",
+      "deleteConflict": "Guruhda o'quvchilar, o'qituvchilar yoki davomat yozuvlari bor ekan, uni o'chirib bo'lmaydi"
     },
     "loadError": "Guruhlarni yuklab bo'lmadi.",
     "weekdays": {
@@ -892,6 +894,12 @@
       "cancel": "Bekor qilish",
       "confirm": "O'chirish",
       "error": "Guruhni o'chirishda xatolik yuz berdi. Qaytadan urinib ko'ring."
+    },
+    "permanentDeleteDialog": {
+      "title": "Guruhni butunlay o'chirish",
+      "body": "Arxivdagi guruh butunlay o'chiriladi va uni qaytarib bo'lmaydi. Guruhda o'quvchilar, o'qituvchilar yoki davomat yozuvlari bo'lsa, o'chirish rad etiladi.",
+      "cancel": "Bekor qilish",
+      "confirm": "O'chirish"
     }
   },
   "finance": {

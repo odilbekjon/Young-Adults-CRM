@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Popover, Typography, TextField, MenuItem, Button, CircularProgress, Box } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { useGroupsSelectQuery } from "../../app/api/groupsApi";
+import { useActiveGroups } from "../../hooks/useActiveGroups";
 import { useAddLeadToTrialMutation } from "../../app/api/leadsApi";
 import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../../pages/SingleGroup/DatePickerField";
@@ -18,8 +18,9 @@ export const AddToTrialPopover = ({ leadId, anchorEl, onClose }: Props) => {
   const toast = useToast();
   const open = Boolean(anchorEl);
   // Every lead card mounts a popover, so the group list is only fetched once
-  // one is opened (and GET /groups/select isn't capped like a paged list).
-  const { data: groups = [] } = useGroupsSelectQuery(undefined, { skip: !open });
+  // one is opened. Running groups only (all pages of GET /groups): a lead can't
+  // be put on a trial in an archived group.
+  const groups = useActiveGroups({ skip: !open });
   const [addLeadToTrial, { isLoading }] = useAddLeadToTrialMutation();
   const [groupId, setGroupId] = useState("");
   const [trialDate, setTrialDate] = useState("");

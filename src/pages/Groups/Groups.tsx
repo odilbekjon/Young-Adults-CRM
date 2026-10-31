@@ -23,7 +23,7 @@ import { usePersistedState }            from "../../hooks/usePersistedState";
 
 import {
   useAllGroupsQuery, useCreateGroupMutation, useUpdateGroupMutation,
-  useToggleGroupStatusMutation, useLazyGroupsExcelQuery, useLazyStudentGroupsQuery,
+  useToggleGroupStatusMutation, useDeleteGroupMutation, useLazyGroupsExcelQuery, useLazyStudentGroupsQuery,
   useStudentGroupsQuery,
 } from "../../app/api/groupsApi";
 import type { Group, GroupDay } from "../../app/api/groupsApi/types";
@@ -414,12 +414,12 @@ interface GroupTableRowProps {
   onMenuClose: () => void;
   onEdit: (group: GroupRow) => void;
   onSms: (id: string) => void;
-  onArchiveOrActivate: (group: GroupRow) => void;
+  onArchiveOrDelete: (group: GroupRow) => void;
 }
 
 const GroupTableRow = memo(({
   group: g, index, visibleCols, menuAnchor, smsLoading,
-  onOpen, onMenuToggle, onMenuClose, onEdit, onSms, onArchiveOrActivate,
+  onOpen, onMenuToggle, onMenuClose, onEdit, onSms, onArchiveOrDelete,
 }: GroupTableRowProps) => {
   const { t } = useTranslation();
   const col = (key: string) => visibleCols.includes(key);
@@ -487,11 +487,13 @@ const GroupTableRow = memo(({
             <MdSms size={15} /> {t("groups.actions.sms")}
           </MenuItem>
           <Divider sx={{ my: 0.5 }} />
+          {/* An active group is archived ("Delete" moves it to the archive); an
+              archived one is deleted for good. Any other status keeps "Activate". */}
           <MenuItem
-            onClick={() => onArchiveOrActivate(g)}
-            sx={{ fontSize: 13, gap: 1, color: g.status === "ACTIVE" ? "#d32f2f" : undefined }}
+            onClick={() => onArchiveOrDelete(g)}
+            sx={{ fontSize: 13, gap: 1, color: g.status === "ACTIVE" || isArchivedGroup(g) ? "#d32f2f" : undefined }}
           >
-            {g.status === "ACTIVE"
+            {g.status === "ACTIVE" || isArchivedGroup(g)
               ? <><MdDelete size={15} /> {t("groups.deleteDialog.confirm")}</>
               : <><MdUnarchive size={15} /> {t("groups.actions.activate")}</>}
           </MenuItem>
@@ -585,6 +587,7 @@ export const Groups = () => {
   const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [updateGroup, { isLoading: isUpdating }] = useUpdateGroupMutation();
   const [toggleGroupStatus] = useToggleGroupStatusMutation();
+  const [deleteGroup, { isLoading: isDeletingGroup }] = useDeleteGroupMutation();
   const [fetchGroupsExcel, { isFetching: isExportingExcel }] = useLazyGroupsExcelQuery();
   const [fetchGroupRoster, { isFetching: isLoadingSmsRoster }] = useLazyStudentGroupsQuery();
 
@@ -680,6 +683,9 @@ export const Groups = () => {
   const [saveError,         setSaveError]         = useState<string | null>(null);
   const [actionMenuAnchor,  setActionMenuAnchor]  = useState<{ el: HTMLElement; id: string } | null>(null);
   const [deleteConfirmId,   setDeleteConfirmId]   = useState<string | null>(null);
+  // An archived group about to be deleted for good (DELETE /groups/{id}).
+  const [permanentDeleteId, setPermanentDeleteId] = useState<string | null>(null);
+  const [permanentDeleteError, setPermanentDeleteError] = useState<string | null>(null);
   const [smsGroupId,        setSmsGroupId]        = useState<string | null>(null);
   const [smsStudentIds,     setSmsStudentIds]     = useState<string[]>([]);
   const [sortKey,           setSortKey]           = usePersistedState<SortKey>("groups:sortKey", "");
@@ -849,13 +855,13 @@ export const Groups = () => {
     }
   };
 
-  // The active list's "Delete" is really an archive: PATCH
+  // An active group's "Delete" is really an archive: PATCH
   // /groups/{id}/toggle-status (Swagger, same endpoint SingleGroup's own
   // "toggle status" button already uses) flips the group between ACTIVE and
-  // ARCHIVE without touching its students/teachers/attendance. A real DELETE
-  // /groups/{id} is not exposed from here — the backend rejects it outright
-  // while any of those still reference the group, which is true for nearly
-  // every real group.
+  // ARCHIVE without touching its students/teachers/attendance. The real DELETE
+  // /groups/{id} is only offered for a group that is already archived (see
+  // handlePermanentDelete), since the backend rejects it while anything still
+  // references the group.
   const handleToggleStatus = useCallback(async (id: string) => {
     setActionMenuAnchor(null);
     try {
@@ -868,6 +874,27 @@ export const Groups = () => {
     }
   }, [toggleGroupStatus, toast, t]);
 
+  // An archived group's "Delete" is the real thing: DELETE /groups/{id} (Swagger:
+  // "Hard Delete", refused with 409 Conflict while the group still has users —
+  // students/teachers — or attendance records). A refusal keeps the dialog open
+  // and says why, so the group is never reported deleted when it isn't.
+  const handlePermanentDelete = async () => {
+    if (!permanentDeleteId) return;
+    setPermanentDeleteError(null);
+    try {
+      await deleteGroup(permanentDeleteId).unwrap();
+      setPermanentDeleteId(null);
+      toast.success(t("groups.toast.deleted"));
+    } catch (err) {
+      const detail = extractApiError(err);
+      const conflict = (err as { status?: unknown })?.status === 409;
+      const generic = t(conflict ? "groups.toast.deleteConflict" : "groups.toast.deleteError");
+      const message = detail && !conflict ? `${generic}: ${detail}` : generic;
+      setPermanentDeleteError(message);
+      toast.error(message);
+    }
+  };
+
   // The row callbacks keep their identity between renders (see GroupTableRow).
   const openGroup = useCallback((id: string) => navigate(`/groups/${id}`), [navigate]);
   const toggleRowMenu = useCallback((e: React.MouseEvent<HTMLElement>, id: string) => {
@@ -875,9 +902,13 @@ export const Groups = () => {
     setActionMenuAnchor((prev) => (prev?.id === id ? null : { el, id }));
   }, []);
   const closeRowMenu = useCallback(() => setActionMenuAnchor(null), []);
-  const archiveOrActivate = useCallback((g: GroupRow) => {
+  const archiveOrDelete = useCallback((g: GroupRow) => {
     if (g.status === "ACTIVE") {
       setDeleteConfirmId(g.id);
+      setActionMenuAnchor(null);
+    } else if (isArchivedGroup(g)) {
+      setPermanentDeleteError(null);
+      setPermanentDeleteId(g.id);
       setActionMenuAnchor(null);
     } else {
       handleToggleStatus(g.id);
@@ -1159,7 +1190,7 @@ export const Groups = () => {
                   onMenuClose={closeRowMenu}
                   onEdit={handleOpenEdit}
                   onSms={handleOpenGroupSms}
-                  onArchiveOrActivate={archiveOrActivate}
+                  onArchiveOrDelete={archiveOrDelete}
                 />
               ))}
               {filteredGroups.length === 0 && (
@@ -1467,6 +1498,40 @@ export const Groups = () => {
             sx={{ textTransform: "none", borderRadius: 1.5 }}
           >
             {t("groups.deleteDialog.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* PERMANENT DELETE CONFIRM (archived groups) */}
+      <Dialog
+        open={permanentDeleteId !== null}
+        onClose={() => { if (!isDeletingGroup) setPermanentDeleteId(null); }}
+        PaperProps={{ sx: { borderRadius: 2, minWidth: 360, maxWidth: 460 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>{t("groups.permanentDeleteDialog.title")}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">{t("groups.permanentDeleteDialog.body")}</Typography>
+          {permanentDeleteError && (
+            <Typography variant="body2" sx={{ color: "#d32f2f", mt: 1.5 }}>{permanentDeleteError}</Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            variant="outlined"
+            disabled={isDeletingGroup}
+            onClick={() => setPermanentDeleteId(null)}
+            sx={{ textTransform: "none", borderRadius: 1.5 }}
+          >
+            {t("groups.permanentDeleteDialog.cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={isDeletingGroup}
+            onClick={handlePermanentDelete}
+            sx={{ textTransform: "none", borderRadius: 1.5 }}
+          >
+            {t("groups.permanentDeleteDialog.confirm")}
           </Button>
         </DialogActions>
       </Dialog>

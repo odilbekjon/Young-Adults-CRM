@@ -55,6 +55,7 @@ import { StudentTagsSelect } from "../../components/StudentTagsSelect";
 import { StudentContactFields, EMPTY_CONTACTS, type ContactValues } from "../../components/StudentContactFields/StudentContactFields";
 import { toPhoneInput, fromPhoneInput } from "../../utils/formatPhone";
 import { submitOnEnter } from "../../utils/submitOnEnter";
+import { isActiveGroup } from "../../hooks/useActiveGroups";
 import { StudentPaymentsSection } from "./payments/StudentPaymentsSection";
 import { FreezeModal } from "../SingleGroup/FreezeModal";
 import { ActivateModal } from "../SingleGroup/ActivateModal";
@@ -1406,8 +1407,10 @@ export const StudentProfile = () => {
     (groupsData?.data ?? []).forEach((g) => map.set(g.id, g));
     return map;
   }, [groupsData]);
+  // Only running groups can be joined; groupsById above keeps every group for
+  // the memberships the profile lists.
   const groupOptions = useMemo(
-    () => (groupsData?.data ?? []).map((g) => ({ id: g.id, name: g.name })),
+    () => (groupsData?.data ?? []).filter(isActiveGroup).map((g) => ({ id: g.id, name: g.name })),
     [groupsData]
   );
 

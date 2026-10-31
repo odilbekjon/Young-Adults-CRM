@@ -21,7 +21,6 @@ import {
 import {
   useGroupByIdQuery,
   useLazyGroupForEditQuery,
-  useGroupsSelectQuery,
   useAssignStudentsToGroupMutation,
   useTransferStudentMutation,
   useUpdateGroupMutation,
@@ -46,6 +45,7 @@ import { useAllCoursesQuery } from "../../app/api/coursesApi";
 import { useAllRoomsQuery } from "../../app/api/roomsApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
 import { useTeacherOptions } from "../../hooks/useTeacherOptions";
+import { useActiveGroups } from "../../hooks/useActiveGroups";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
 import { useToast } from "../../Context/ToastContext";
 import { extractApiError, formatTrainingDate, formatPhone, downloadExcelBlob } from "../../utils";
@@ -188,7 +188,9 @@ export const SingleGroup = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
-  const { data: groupsSelectData } = useGroupsSelectQuery(undefined, { skip: !moveOpen });
+  // Running groups only (GET /groups/select carries no status, so an archived
+  // group would be offered as a target).
+  const moveTargetGroups = useActiveGroups({ skip: !moveOpen });
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { data: allStudentsData } = useAllStudentsQuery({ page: 1, limit: 100, branchId: selectedBranchId ?? undefined });
   const { data: allCoursesData } = useAllCoursesQuery();
@@ -465,8 +467,8 @@ export const SingleGroup = () => {
   }, [visibleStudents, sortBy, membershipByStudentId]);
 
   const otherGroups = useMemo(
-    () => (groupsSelectData ?? []).filter((g) => g.id !== id),
-    [groupsSelectData, id]
+    () => moveTargetGroups.filter((g) => g.id !== id),
+    [moveTargetGroups, id]
   );
 
   const courseOptions = useMemo(

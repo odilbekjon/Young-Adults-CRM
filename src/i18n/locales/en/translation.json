@@ -874,7 +874,9 @@
       "updated": "Group updated successfully",
       "deleted": "Group deleted successfully",
       "statusToggled": "Group status updated",
-      "statusToggleError": "Failed to change the group status"
+      "statusToggleError": "Failed to change the group status",
+      "deleteError": "Failed to delete the group",
+      "deleteConflict": "The group can't be deleted while it still has students, teachers or attendance records"
     },
     "loadError": "Failed to load groups.",
     "weekdays": {
@@ -892,6 +894,12 @@
       "cancel": "Cancel",
       "confirm": "Delete",
       "error": "Failed to delete the group. Please try again."
+    },
+    "permanentDeleteDialog": {
+      "title": "Delete group permanently",
+      "body": "This permanently deletes the archived group and cannot be undone. It is refused while the group still has students, teachers or attendance records.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
     }
   },
   "finance": {

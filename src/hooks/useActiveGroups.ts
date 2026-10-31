@@ -7,6 +7,10 @@ const PAGE_LIMIT = 100;
 // requests: past this many pages the rest is left unread.
 const MAX_PAGES = 10;
 
+// A group that is running — the only kind a student can be put into. Archived
+// (and completed) groups are not offered by any group picker.
+export const isActiveGroup = (g: { status?: string | null }): boolean => g.status?.toUpperCase() === "ACTIVE";
+
 // Every ACTIVE group of the selected branch — only the ones `teacherId` teaches
 // when it is given. ACTIVE is the whole rule: a group past its training end date
 // that nobody archived is still its teacher's active group (the Groups page's
@@ -46,8 +50,7 @@ export const useActiveGroups = ({ teacherId, skip = false }: { teacherId?: strin
   }, [first.data, totalPages, teacherId, key, fetchPage]);
 
   return useMemo(
-    () => [...(first.data?.data ?? []), ...(more?.key === key ? more.groups : [])]
-      .filter((g) => g.status?.toUpperCase() === "ACTIVE"),
+    () => [...(first.data?.data ?? []), ...(more?.key === key ? more.groups : [])].filter(isActiveGroup),
     [first.data, more, key],
   );
 };

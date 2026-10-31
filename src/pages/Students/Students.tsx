@@ -76,6 +76,7 @@ import {
 import type { Group, StudentGroupStatus } from "../../app/api/groupsApi/types";
 import { useCoursesSelectQuery } from "../../app/api/coursesApi";
 import { useTeachersSelectQuery } from "../../app/api/teachersApi";
+import { isActiveGroup } from "../../hooks/useActiveGroups";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
 import { useTagsSelectQuery } from "../../app/api/tagsApi";
 import { useToast } from "../../Context/ToastContext";
@@ -1026,11 +1027,12 @@ export const Students = () => {
     [courseOptions],
   );
 
-  // AddToGroupModal ochiladigan barcha guruhlar — backenddan (GET /groups),
-  // joriy sahifadagi studentlarning guruhlaridan hosil qilingan taxminiy
-  // ro'yxat emas.
+  // AddToGroupModal ochiladigan guruhlar — backenddan (GET /groups), joriy
+  // sahifadagi studentlarning guruhlaridan hosil qilingan taxminiy ro'yxat
+  // emas. Faqat faol guruhlar: arxivdagi guruhga student qo'shib bo'lmaydi
+  // (groupById esa Groups ustuni uchun hammasini saqlaydi).
   const allGroupsOptions = useMemo(
-    () => allGroupRows.map((g) => ({ id: g.id, name: g.name })),
+    () => allGroupRows.filter(isActiveGroup).map((g) => ({ id: g.id, name: g.name })),
     [allGroupRows]
   );
   const groupById = useMemo(() => new Map(allGroupRows.map((g) => [g.id, g])), [allGroupRows]);

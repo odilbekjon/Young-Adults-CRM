@@ -875,8 +875,7 @@
       "deleted": "Group deleted successfully",
       "statusToggled": "Group status updated",
       "statusToggleError": "Failed to change the group status",
-      "deleteError": "Failed to delete the group",
-      "deleteConflict": "The group can't be deleted while it still has students, teachers or attendance records"
+      "deleteError": "Failed to delete the group"
     },
     "loadError": "Failed to load groups.",
     "weekdays": {
@@ -899,7 +898,12 @@
       "title": "Delete group permanently",
       "body": "This permanently deletes the archived group and cannot be undone. It is refused while the group still has students, teachers or attendance records.",
       "cancel": "Cancel",
-      "confirm": "Delete"
+      "confirm": "Delete",
+      "stillLinked": "Still linked to this group:",
+      "linkedTeachers": "Teacher: {{names}}",
+      "linkedStudents": "Students who were removed from the group: {{count}} (their records stay linked)",
+      "linkedAttendance": "Attendance records of past lessons, if any",
+      "cannotRemove": "These links can't be removed from the app, so the server keeps the group in the archive."
     }
   },
   "finance": {

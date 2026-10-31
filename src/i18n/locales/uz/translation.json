@@ -875,8 +875,7 @@
       "deleted": "Guruh muvaffaqiyatli o'chirildi",
       "statusToggled": "Guruh holati o'zgartirildi",
       "statusToggleError": "Guruh holatini o'zgartirib bo'lmadi",
-      "deleteError": "Guruhni o'chirib bo'lmadi",
-      "deleteConflict": "Guruhda o'quvchilar, o'qituvchilar yoki davomat yozuvlari bor ekan, uni o'chirib bo'lmaydi"
+      "deleteError": "Guruhni o'chirib bo'lmadi"
     },
     "loadError": "Guruhlarni yuklab bo'lmadi.",
     "weekdays": {
@@ -899,7 +898,12 @@
       "title": "Guruhni butunlay o'chirish",
       "body": "Arxivdagi guruh butunlay o'chiriladi va uni qaytarib bo'lmaydi. Guruhda o'quvchilar, o'qituvchilar yoki davomat yozuvlari bo'lsa, o'chirish rad etiladi.",
       "cancel": "Bekor qilish",
-      "confirm": "O'chirish"
+      "confirm": "O'chirish",
+      "stillLinked": "Guruhga hali bog'langan:",
+      "linkedTeachers": "O'qituvchi: {{names}}",
+      "linkedStudents": "Guruhdan chiqarilgan o'quvchilar: {{count}} (ularning yozuvlari guruhga bog'liq qoladi)",
+      "linkedAttendance": "O'tgan darslarning davomat yozuvlari (agar bo'lsa)",
+      "cannotRemove": "Bu bog'lanishlarni ilovadan olib tashlab bo'lmaydi, shuning uchun server guruhni arxivda saqlab turadi."
     }
   },
   "finance": {

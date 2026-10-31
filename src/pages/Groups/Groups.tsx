@@ -686,6 +686,9 @@ export const Groups = () => {
   // An archived group about to be deleted for good (DELETE /groups/{id}).
   const [permanentDeleteId, setPermanentDeleteId] = useState<string | null>(null);
   const [permanentDeleteError, setPermanentDeleteError] = useState<string | null>(null);
+  // What this page can see still tying a refused group to the server: its teacher(s)
+  // and the students who were removed from it (their memberships stay).
+  const [permanentDeleteLinks, setPermanentDeleteLinks] = useState<{ teachers: string[]; removedStudents: number } | null>(null);
   const [smsGroupId,        setSmsGroupId]        = useState<string | null>(null);
   const [smsStudentIds,     setSmsStudentIds]     = useState<string[]>([]);
   const [sortKey,           setSortKey]           = usePersistedState<SortKey>("groups:sortKey", "");
@@ -874,24 +877,43 @@ export const Groups = () => {
     }
   }, [toggleGroupStatus, toast, t]);
 
+  // After a refusal (409): the teacher(s) and the removed students that still
+  // reference the group, as far as this page can tell. Attendance can't be
+  // counted from here, so the dialog only names it as a possibility.
+  const loadDeleteLinks = async (groupId: string) => {
+    const teachers = allGroups.find((g) => g.id === groupId)?.teacherNames ?? [];
+    setPermanentDeleteLinks({ teachers, removedStudents: 0 });
+    try {
+      const [inactive, deleted] = await Promise.all(
+        (["INACTIVE", "DELETED"] as const).map((status) => fetchGroupRoster({ groupId, status, limit: 1 }).unwrap()),
+      );
+      const size = (r: { rows: unknown[]; meta?: { total?: number } }) => Math.max(r.meta?.total ?? 0, r.rows.length);
+      setPermanentDeleteLinks({ teachers, removedStudents: size(inactive) + size(deleted) });
+    } catch {
+      /* best effort: the teacher line above is still shown */
+    }
+  };
+
   // An archived group's "Delete" is the real thing: DELETE /groups/{id} (Swagger:
   // "Hard Delete", refused with 409 Conflict while the group still has users —
   // students/teachers — or attendance records). A refusal keeps the dialog open
-  // and says why, so the group is never reported deleted when it isn't.
+  // and shows the server's own reason, so the group is never reported deleted
+  // when it isn't (and the real cause is never replaced by a guess).
   const handlePermanentDelete = async () => {
-    if (!permanentDeleteId) return;
+    const groupId = permanentDeleteId;
+    if (!groupId) return;
     setPermanentDeleteError(null);
     try {
-      await deleteGroup(permanentDeleteId).unwrap();
+      await deleteGroup(groupId).unwrap();
       setPermanentDeleteId(null);
       toast.success(t("groups.toast.deleted"));
     } catch (err) {
       const detail = extractApiError(err);
-      const conflict = (err as { status?: unknown })?.status === 409;
-      const generic = t(conflict ? "groups.toast.deleteConflict" : "groups.toast.deleteError");
-      const message = detail && !conflict ? `${generic}: ${detail}` : generic;
+      const generic = t("groups.toast.deleteError");
+      const message = detail ? `${generic}: ${detail}` : generic;
       setPermanentDeleteError(message);
       toast.error(message);
+      if ((err as { status?: unknown })?.status === 409) void loadDeleteLinks(groupId);
     }
   };
 
@@ -908,6 +930,7 @@ export const Groups = () => {
       setActionMenuAnchor(null);
     } else if (isArchivedGroup(g)) {
       setPermanentDeleteError(null);
+      setPermanentDeleteLinks(null);
       setPermanentDeleteId(g.id);
       setActionMenuAnchor(null);
     } else {
@@ -1513,6 +1536,23 @@ export const Groups = () => {
           <Typography variant="body2" color="text.secondary">{t("groups.permanentDeleteDialog.body")}</Typography>
           {permanentDeleteError && (
             <Typography variant="body2" sx={{ color: "#d32f2f", mt: 1.5 }}>{permanentDeleteError}</Typography>
+          )}
+          {permanentDeleteError && permanentDeleteLinks && (
+            <Box sx={{ mt: 1.5 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>{t("groups.permanentDeleteDialog.stillLinked")}</Typography>
+              <Box component="ul" sx={{ m: 0, pl: 2.5, fontSize: 13, color: "text.secondary" }}>
+                {permanentDeleteLinks.teachers.length > 0 && (
+                  <li>{t("groups.permanentDeleteDialog.linkedTeachers", { names: permanentDeleteLinks.teachers.join(", ") })}</li>
+                )}
+                {permanentDeleteLinks.removedStudents > 0 && (
+                  <li>{t("groups.permanentDeleteDialog.linkedStudents", { count: permanentDeleteLinks.removedStudents })}</li>
+                )}
+                <li>{t("groups.permanentDeleteDialog.linkedAttendance")}</li>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                {t("groups.permanentDeleteDialog.cannotRemove")}
+              </Typography>
+            </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

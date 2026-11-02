@@ -1341,7 +1341,10 @@ export const SingleGroup = () => {
                 <Tab key={key} label={t(`singleGroup.tabs.${key}.tabLabel`)} />
               ))}
             </Tabs>
-            <Box sx={{ p: 3, maxHeight: "calc(100vh - 220px)", overflowY: "auto", overflowX: "visible" }}>
+            {/* Attendance shows every student and lets the page scroll (its
+                table scrolls sideways on its own); the other tabs keep the
+                capped, self-scrolling box. */}
+            <Box sx={tabIndex === 0 ? { p: 3 } : { p: 3, maxHeight: "calc(100vh - 220px)", overflowY: "auto", overflowX: "visible" }}>
               {/* visibleStudents (not combinedStudents) — a student removed
                   from the group (archived) shouldn't still be markable for
                   attendance/grades/discounts; this is the same filter the

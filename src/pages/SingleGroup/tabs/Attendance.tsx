@@ -651,23 +651,24 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
         </Alert>
       )}
 
-      {/* TABLE — scrolls on its own in both directions, so the sticky header
-          row and the sticky name column stay put while a long roster or many
-          lesson days are scrolled. maxHeight leaves room for the tab strip and
-          the header above so the page's own scroll doesn't kick in as well. */}
+      {/* TABLE — scrolls sideways on its own (many lesson days) so the sticky
+          name column stays put, but has no height cap: every student is shown
+          and the page itself scrolls vertically. overflowY is hidden, not auto,
+          so this box can never grow a second, inner vertical scrollbar. The
+          header row isn't sticky — it could only stick to this box, which no
+          longer scrolls vertically, so it would scroll away with the page. */}
       <TableContainer
         component={Paper}
         elevation={0}
         sx={{
           borderRadius: 2,
           border: "1px solid var(--color-border)",
-          overflow: "auto",
-          maxHeight: "calc(100vh - 340px)",
+          overflowX: "auto",
+          overflowY: "hidden",
         }}
       >
         <Table
           size="small"
-          stickyHeader
           sx={{
             tableLayout: "fixed",
             width: "100%",

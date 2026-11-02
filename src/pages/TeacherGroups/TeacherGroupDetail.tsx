@@ -21,6 +21,7 @@ import { IoArrowBack } from "react-icons/io5";
 import { MdCalendarToday } from "react-icons/md";
 import {
   isArchivedGroupStatus,
+  isExpiredGroup,
   useTeacherPortalGroupByIdQuery,
   useTeacherPortalGroupsQuery,
   useTeacherPortalGroupStudentsQuery,
@@ -94,8 +95,10 @@ export const TeacherGroupDetail = () => {
     return <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}><CircularProgress /></Box>;
   }
 
-  // An archived group is not shown even when its id is typed into the address bar.
-  if (notMine || isError || !group || isArchivedGroupStatus(group.status)) {
+  // An archived or expired group is not shown even when its id is typed into the
+  // address bar (the list above has already dropped it, unless that list came
+  // back empty, so the group's own status/end date is checked as well).
+  if (notMine || isError || !group || isArchivedGroupStatus(group.status) || isExpiredGroup(group.trainingEnd)) {
     return (
       <Box sx={{ p: 4 }}>
         <Typography color="error" mb={2}>{t("teacherGroups.notFound")}</Typography>
@@ -260,7 +263,9 @@ export const TeacherGroupDetail = () => {
                 <Tab key={key} label={t(`singleGroup.tabs.${key}.tabLabel`)} />
               ))}
             </Tabs>
-            <Box sx={{ p: 3, maxHeight: "calc(100vh - 220px)", overflowY: "auto", overflowX: "visible" }}>
+            {/* No height cap: every student is shown and the page itself scrolls
+                (the Attendance table scrolls sideways on its own). */}
+            <Box sx={{ p: 3 }}>
               {rosterLoading ? (
                 <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={22} /></Box>
               ) : (

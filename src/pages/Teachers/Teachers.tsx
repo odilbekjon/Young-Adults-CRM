@@ -500,7 +500,8 @@ export const Teachers = () => {
                 {showPassword ? t("teachers.form.hidePasswordToggle") : t("teachers.form.setPasswordToggle")}
               </Button>
               <Collapse in={showPassword}>
-                <TextField name="password" type="password" value={form.password} onChange={handleChange}
+                {/* new-password: stops the browser filling the admin's own saved login into a new teacher's password. */}
+                <TextField name="password" type="password" autoComplete="new-password" value={form.password} onChange={handleChange}
                   fullWidth size="small" placeholder={t("teachers.form.passwordPlaceholder")} sx={{ ...inputSx, mt: 1.5 }} />
               </Collapse>
             </Box>

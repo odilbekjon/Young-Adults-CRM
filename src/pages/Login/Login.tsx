@@ -166,6 +166,7 @@ const LoginPage = () => {
                 required
                 size="small"
                 type="text"
+                autoComplete="username"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
@@ -179,6 +180,7 @@ const LoginPage = () => {
                 required
                 size="small"
                 type={showPass ? "text" : "password"}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}

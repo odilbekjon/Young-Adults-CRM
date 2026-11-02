@@ -677,7 +677,7 @@ export const Staff = () => {
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.password")}</Typography>
               <TextField
-                name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange}
+                name="password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={form.password} onChange={handleChange}
                 fullWidth size="small" placeholder={t("settings.ceo.staff.form.passwordPlaceholder")}
                 error={Boolean(errors.password)} helperText={errors.password}
                 InputProps={{

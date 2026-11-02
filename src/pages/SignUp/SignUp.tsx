@@ -48,8 +48,9 @@ const SignUp = () => {
     };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    // No backend endpoint yet. The applicant's phone/email must not be written
+    // to the browser console (shared front-desk machines, support screenshots).
     event.preventDefault();
-    console.log("SUBMITTED:", formData);
   };
 
   return (

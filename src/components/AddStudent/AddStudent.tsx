@@ -417,6 +417,7 @@ export const AddStudent = ({ open, onClose, onSuccess }: AddStudentDrawerProps) 
           {showPasswordField && (
             <input
               type="password"
+              autoComplete="new-password"
               style={{ ...inputStyle, marginTop: 8 }}
               placeholder={t("addStudent.passwordPlaceholder")}
               value={password}

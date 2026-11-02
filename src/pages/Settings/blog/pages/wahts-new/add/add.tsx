@@ -92,8 +92,9 @@ export const BlogAdd = () => {
   };
 
   const handleSave = () => {
-    const content = editorRef.current?.innerHTML ?? "";
-    console.log({ title, content, isPublic });
+    // No backend endpoint yet, so nothing is saved. The post body is HTML typed
+    // in a contentEditable: once it is stored, any page that renders it must
+    // sanitize it (DOMPurify) instead of using dangerouslySetInnerHTML as is.
     navigate(-1);
   };
 

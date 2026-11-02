@@ -81,7 +81,7 @@ export const EditPaymentDrawer = ({
     }
     if (date && date !== day(tx.date)) body.date = date;
     const originalMonth = monthStart(tx.month);
-    const monthChanged = Boolean(forMonth) && forMonth !== originalMonth;
+    const monthChanged = Boolean(forMonth) && monthStart(forMonth) !== originalMonth;
     if (notes.trim() !== (tx.notes ?? "").trim()) body.notes = notes.trim();
     if (groupId && groupId !== (tx.groupId ?? "")) body.groupId = groupId;
 
@@ -92,7 +92,9 @@ export const EditPaymentDrawer = ({
     // Always send the month the payment already counts for (or the one the
     // user picked): a PATCH without it can re-file the payment under another
     // month (e.g. the month of the edit/date) instead of leaving it where it was.
-    if (forMonth) body.forMonth = forMonth;
+    // It is a MONTH, so it goes out as that month's first day: a picked "15th"
+    // would otherwise be stored as a mid-month date.
+    if (forMonth) body.forMonth = monthStart(forMonth);
 
     try {
       await updatePayment({ id: tx.paymentId, ...body }).unwrap();

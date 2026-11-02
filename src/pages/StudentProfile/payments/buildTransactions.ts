@@ -1,6 +1,7 @@
 import type { StudentFinanceHistoryEntry } from "../../../app/api/studentsApi/types";
 import type { PaymentRow } from "../../../app/api/financeApi/types";
 import { isCompletedPaymentStatus } from "../../../app/api/financeApi";
+import { toLocalISODate } from "../../../utils/localDate";
 
 // One row of the Payments table. "system" = a monthly group charge computed
 // by the backend (GET /students/{id}/finance-history `debts`), "payment" = a
@@ -23,12 +24,25 @@ export interface PaymentTx {
   paymentId: string | null;
   paymentMethodId: string | null;
   status: string | null;
-  // The finance-history month ("YYYY-MM...") this entry is listed under — the
-  // month the payment currently counts for (null for rows outside the ledger).
+  // The finance-history month ("YYYY-MM...") this entry is listed under — for a
+  // payment the month it currently counts for, for a system charge the month it
+  // bills (null for rows outside the ledger).
   month: string | null;
 }
 
 const day = (iso: string | null | undefined) => (iso ?? "").slice(0, 10);
+
+// The local calendar day an ISO timestamp falls on, for pairing a ledger entry
+// with its payment record. The two endpoints may write the same instant with
+// different offsets ("2026-04-16T02:30:00+05:00" vs "2026-04-15T21:30:00.000Z");
+// cutting the strings would put such a payment on two different days, leave it
+// unmatched and take its Edit/Remove actions away. A bare date stays as written.
+const localDay = (iso: string | null | undefined) => {
+  const value = iso ?? "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? day(value) : toLocalISODate(parsed);
+};
 
 // Flattens every month's debts + payments into one newest-first list.
 //
@@ -60,13 +74,14 @@ export const buildTransactions = (history: StudentFinanceHistoryEntry[], payment
         paymentId: null,
         paymentMethodId: null,
         status: null,
-        month: null,
+        // Editing a charge must say WHICH month's charge it is (see EditDebtDialog).
+        month: month.month || d.date.slice(0, 7) || null,
       });
     });
 
     month.payments.forEach((p, i) => {
       const candidates = payments.filter(
-        (r) => !used.has(r.id) && day(r.date) === day(p.date) && Math.abs(r.amount - p.amount) < 1
+        (r) => !used.has(r.id) && localDay(r.date) === localDay(p.date) && Math.abs(r.amount - p.amount) < 1
       );
       const matched =
         candidates.find((r) => r.paymentMethodName && r.paymentMethodName === p.method) ?? candidates[0];

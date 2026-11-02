@@ -121,12 +121,16 @@ export interface DebtorsResult {
 // PATCH /finance/debt/{studentId}/{groupId} — "Maxsus qarz yoki joriy guruh
 // oylik to'lov miqdorini tahrirlaydi." The one Finance endpoint whose
 // Swagger body is application/json (not multipart/form-data) — a plain
-// {amount, reason} object, both path ids carried in the URL instead.
+// {amount, reason, month} object, both path ids carried in the URL instead.
+// `month` names the month of the charge being edited ("2026-09", the ledger's
+// own label). Swagger types it only as "string"; without it the backend picks
+// the month itself and the edit lands on the NEXT month's charge.
 export interface UpdateDebtRequest {
   studentId: string;
   groupId: string;
   amount: number;
   reason?: string;
+  month?: string;
 }
 
 export interface UpdateDebtResponse {

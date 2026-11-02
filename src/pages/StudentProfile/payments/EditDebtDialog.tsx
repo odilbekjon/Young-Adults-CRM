@@ -7,10 +7,14 @@ import { extractApiError } from "../../../utils/extractApiError";
 import { submitOnEnter } from "../../../utils/submitOnEnter";
 import type { PaymentTx } from "./buildTransactions";
 
+// "2026-09" out of a ledger month label or a charge date ("2026-09-01T00:00:00+05:00").
+const monthOf = (value: string | null | undefined) => /^(\d{4}-\d{2})/.exec(value ?? "")?.[1];
+
 // Edit a "system" (charge) row: PATCH /finance/debt/{studentId}/{groupId},
-// JSON {amount, reason}. Per Swagger this edits the student's special debt /
-// the current group's monthly payment amount for that group — not one
-// historical charge line — hence the hint below the fields.
+// JSON {amount, reason, month}. Per Swagger this edits the student's special
+// debt / the group's monthly payment amount for that group. The row's own
+// month is always sent: without it the backend chooses the month itself and
+// the change lands on the next month's charge instead of the edited one.
 // mode "remove": the backend has no DELETE for a charge, so removing it is the
 // same PATCH with amount 0 (reason required), and only asks for the reason.
 export const EditDebtDialog = ({
@@ -49,8 +53,21 @@ export const EditDebtDialog = ({
       return;
     }
     setError(null);
+    const groupId = tx.groupId;
+    const month = monthOf(tx.month ?? tx.date);
+    const send = (monthParam?: string) =>
+      updateDebt({ studentId, groupId, amount: num, reason: reason.trim(), month: monthParam }).unwrap();
     try {
-      await updateDebt({ studentId, groupId: tx.groupId, amount: num, reason: reason.trim() }).unwrap();
+      try {
+        await send(month);
+      } catch (err) {
+        // Swagger types `month` only as "string". A validator that wants a full
+        // date answers 400 naming the field, so the month is retried once as the
+        // first day of that month; any other failure is reported as it is.
+        const rejectedMonth = (err as { status?: unknown })?.status === 400 && /month/i.test(extractApiError(err) ?? "");
+        if (!month || !rejectedMonth) throw err;
+        await send(`${month}-01`);
+      }
       toast.success(isRemove ? t("studentPayments.toast.removed", "Charge removed") : t("studentPayments.toast.debtUpdated", "Amount updated"));
       onClose();
     } catch (err) {

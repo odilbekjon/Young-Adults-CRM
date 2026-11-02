@@ -740,7 +740,9 @@ export const financeApi = baseApi.injectEndpoints({
                 url: `${PATHS.PAYMENTS}/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["payment", "student"],
+            // "group" too (like create/update): a group's roster shows each
+            // student's balance and debtor mark, and would stay stale otherwise.
+            invalidatesTags: ["payment", "student", "group"],
         }),
         financeStats: builder.query<FinanceStats, void>({
             query: () => ({

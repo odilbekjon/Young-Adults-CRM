@@ -78,18 +78,49 @@ const normalizeStaffUser = (r: Row): StaffUser => {
     };
 };
 
-const normalizeStaffUserForEdit = (r: Row): StaffUserForEdit => ({
-    id: str(r.id, r._id),
-    name: str(r.name),
-    email: strOrNull(r.email),
-    phone: strOrNull(r.phone),
-    rolePermissionId: strOrNull(r.rolePermissionId),
-    jobTitle: strOrNull(r.jobTitle),
-    photo: strOrNull(r.photo),
-    gender: strOrNull(r.gender),
-    birthdate: strOrNull(r.birthdate),
-    branchIds: Array.isArray(r.branchIds) ? (r.branchIds as unknown[]).map((id) => str(id)).filter(Boolean) : [],
-});
+// An id given bare ("abc"), or as the record it belongs to ({id: "abc"}).
+const idOf = (raw: unknown): string => {
+    if (raw && typeof raw === "object") return str((raw as Row).id, (raw as Row)._id);
+    return str(raw);
+};
+
+const uniqueIds = (ids: string[]): string[] => [...new Set(ids.filter(Boolean))];
+
+// The edit form must open filled in, so this reads each field from every place
+// the backend might put it: the documented flat keys first, then the nested
+// shapes GET /users uses ({rolePermission}, {rolePermissions: [{rolePermission}]},
+// {branches: [{branchId, branch}]}) and the other spellings of the birth date.
+const normalizeStaffUserForEdit = (r: Row): StaffUserForEdit => {
+    const rolePermissionIds = uniqueIds([
+        idOf(r.rolePermissionId),
+        idOf(r.rolePermission),
+        ...(Array.isArray(r.rolePermissionIds) ? (r.rolePermissionIds as unknown[]).map(idOf) : []),
+        ...(Array.isArray(r.rolePermissions)
+            ? (r.rolePermissions as Row[]).map((entry) => idOf(entry?.rolePermission ?? entry))
+            : []),
+    ]);
+    const flatBranchIds = Array.isArray(r.branchIds) ? (r.branchIds as unknown[]).map(idOf) : [];
+    const branchIds = uniqueIds(
+        flatBranchIds.length
+            ? flatBranchIds
+            : Array.isArray(r.branches)
+            ? (r.branches as Row[]).map((entry) => str(entry?.branchId) || idOf(entry?.branch) || idOf(entry))
+            : []
+    );
+    return {
+        id: str(r.id, r._id),
+        name: str(r.name),
+        email: strOrNull(r.email),
+        phone: strOrNull(r.phone),
+        rolePermissionId: rolePermissionIds[0] ?? null,
+        rolePermissionIds,
+        jobTitle: strOrNull(r.jobTitle),
+        photo: strOrNull(r.photo),
+        gender: strOrNull(r.gender),
+        birthdate: strOrNull(r.birthdate, r.birthDate, r.dateOfBirth),
+        branchIds,
+    };
+};
 
 // GET /users' confirmed real response is {success, data: [...]} with no
 // meta captured — normalized the same defensive way as every other list

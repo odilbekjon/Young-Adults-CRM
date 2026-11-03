@@ -57,57 +57,24 @@ import {
   useLazyStaffUserForEditQuery,
   useLazyStaffUsersExcelQuery,
 } from "../../../../../app/api/usersApi";
-import type { UserStatus } from "../../../../../app/api/usersApi/types";
+import type { RolePermissionRef, StaffUserBranchRef, UserStatus } from "../../../../../app/api/usersApi/types";
 import { useAllBranchesQuery } from "../../../../../app/api/branchesApi";
-import { isCeoPositionName } from "../../../../../utils/permissions";
 import {
   useRolePermissionsSelectQuery,
   useAssignRolePermissionToUserMutation,
   useRemoveRolePermissionFromUserMutation,
 } from "../../../../../app/api/rolePermissionsApi";
 import { usePersistedState } from "../../../../../hooks/usePersistedState";
-
-// POST /users' `role` (SUPERADMIN/ADMIN) is a legacy field, optional per
-// Swagger (unlike `rolePermissionId`, which is required and is what actually
-// "belgilaydi" — determines — the account's position and permissions). A
-// dedicated "System role" picker duplicated what Position already controls,
-// so this form no longer surfaces one — every staff account created here is
-// sent as ADMIN, the tier this endpoint documents itself as being for
-// ("Faqat SUPERADMIN va ADMIN foydalana oladi"); editing an existing
-// account's role is left untouched (see openEditDrawer/handleSubmit below).
-const DEFAULT_STAFF_ROLE = "ADMIN";
-
-interface StaffForm {
-  name: string;
-  email: string;
-  phone: string;
-  password: string;
-  jobTitle: string;
-  role: string;
-  // A user can hold more than one lavozim (AUTH_ROLE_DOCS.md's
-  // UserRolePermission is many-to-many) — POST/PATCH /users itself only
-  // accepts a single primary `rolePermissionId`, so any additional selected
-  // ids here are attached afterwards via assign-user (see handleSubmit).
-  rolePermissionIds: string[];
-  branchIds: string[];
-  dateOfBirth: string;
-  gender: string;
-  photo: File | null;
-}
-
-const EMPTY_FORM: StaffForm = {
-  name: "",
-  email: "",
-  phone: "",
-  password: "",
-  jobTitle: "",
-  role: DEFAULT_STAFF_ROLE,
-  rolePermissionIds: [],
-  branchIds: [],
-  dateOfBirth: "",
-  gender: "",
-  photo: null,
-};
+import { resolveMediaUrl } from "../../../../../utils/mediaUrl";
+import {
+  EMPTY_FORM,
+  buildCreatePayload,
+  buildEditForm,
+  buildUpdatePayload,
+  planRolePermissionChanges,
+  validateStaffForm,
+  type StaffForm,
+} from "./staffForm";
 
 const inputSx = {
   "& .MuiOutlinedInput-root": {
@@ -172,14 +139,14 @@ export const Staff = () => {
 
   const { data: usersData, isLoading: usersLoading, isError: usersError } = useStaffUsersQuery(usersQueryArgs);
   const { data: branchesData } = useAllBranchesQuery();
-  const { data: rolePermissionOptions } = useRolePermissionsSelectQuery();
+  const { data: rolePermissionOptions, isLoading: positionsLoading } = useRolePermissionsSelectQuery();
   const [createStaffUser, { isLoading: isCreating }] = useCreateStaffUserMutation();
   const [updateStaffUser, { isLoading: isUpdating }] = useUpdateStaffUserMutation();
   const [assignRolePermission] = useAssignRolePermissionToUserMutation();
   const [removeRolePermission] = useRemoveRolePermissionFromUserMutation();
   const [isSavingRoles, setIsSavingRoles] = useState(false);
   const [toggleStaffUserStatus] = useToggleStaffUserStatusMutation();
-  const [fetchStaffUserForEdit, { isFetching: isLoadingForEdit }] = useLazyStaffUserForEditQuery();
+  const [fetchStaffUserForEdit] = useLazyStaffUserForEditQuery();
   const [fetchStaffUsersExcel, { isFetching: isExportingExcel }] = useLazyStaffUsersExcelQuery();
 
   const staffLoading = usersLoading;
@@ -205,14 +172,10 @@ export const Staff = () => {
   // GET /branches includes soft-deleted/deactivated branches — filtered to
   // ACTIVE only, same convention as Header's own branch dropdown, so a
   // staff member can't be assigned to a branch that no longer exists.
-  const branchOptions = (branchesData?.data ?? [])
-    .filter((b) => b.status === "ACTIVE")
-    .map((b) => ({ id: b.id, name: b.name }));
-
-  // A CEO-position account works across the whole company, so it is linked to
-  // every active branch (the branch picker is replaced by a note).
-  const hasCeoSelected = (form: StaffForm) =>
-    form.rolePermissionIds.some((id) => isCeoPositionName(rolePermissionOptions?.find((o) => o.id === id)?.name));
+  const branchOptions = useMemo(
+    () => (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE").map((b) => ({ id: b.id, name: b.name })),
+    [branchesData]
+  );
 
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
@@ -220,17 +183,49 @@ export const Staff = () => {
   const [selectedMember, setSelectedMember] = useState<{ id: string } | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [form, setForm] = useState<StaffForm>(EMPTY_FORM);
-  // The only lavozim GET /users actually tells us this member already has
-  // (StaffUser.rolePermission is a single ref) — used on edit to know which
-  // assign-user/remove-user calls to make without ever touching a lavozim
-  // this page was never told about (see handleSubmit).
-  const [editOriginalRolePermissionId, setEditOriginalRolePermissionId] = useState<string | null>(null);
+  // What the edit drawer was opened with (null when adding): the baseline that
+  // decides which fields changed and which positions were added or dropped
+  // (see buildUpdatePayload / planRolePermissionChanges).
+  const [editInitial, setEditInitial] = useState<StaffForm | null>(null);
+  // The edited member's own positions and branches, as the list names them:
+  // /role-permissions/select only returns ACTIVE positions and the branch
+  // picker only ACTIVE branches, so a member who still holds an inactive one
+  // would otherwise show it unticked (or as a raw id).
+  const [editKnownPositions, setEditKnownPositions] = useState<RolePermissionRef[]>([]);
+  const [editKnownBranches, setEditKnownBranches] = useState<StaffUserBranchRef["branch"][]>([]);
+  // True from the click on "Edit" until GET /users/{id}/for-edit has answered.
+  const [editLoading, setEditLoading] = useState(false);
+  // Bumped whenever the drawer is opened or closed: a for-edit answer that
+  // arrives for an older opening (drawer closed meanwhile, or another member
+  // opened) must not fill the form.
+  const editRequestRef = useRef(0);
   const [smsOpen, setSmsOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Ticked positions first need a label: the active ones from /select, plus
+  // any the edited member already holds.
+  const positionOptions = useMemo(() => {
+    const options = [...(rolePermissionOptions ?? [])];
+    for (const known of editKnownPositions) {
+      if (known.name && !options.some((o) => o.id === known.id)) options.push(known);
+    }
+    return options;
+  }, [rolePermissionOptions, editKnownPositions]);
+  const branchChoices = useMemo(() => {
+    const choices = [...branchOptions];
+    for (const known of editKnownBranches) {
+      if (known.name && !choices.some((b) => b.id === known.id)) choices.push({ id: known.id, name: known.name });
+    }
+    return choices;
+  }, [branchOptions, editKnownBranches]);
+  const selectedBranchName = branchOptions.find((b) => b.id === selectedBranchId)?.name;
+  const editStatus = isEdit ? usersData?.rows.find((u) => u.id === selectedMember?.id)?.status : undefined;
+  const showBranchPicker = isEdit || !selectedBranchId;
+  const formBusy = isCreating || isUpdating || isSavingRoles || editLoading;
 
   const openMenu = Boolean(anchorEl);
 
@@ -241,57 +236,86 @@ export const Staff = () => {
   };
   const handleCloseMenu = () => setAnchorEl(null);
 
-  const openAdd = () => {
-    setIsEdit(false);
-    setSelectedMember(null);
-    setForm(EMPTY_FORM);
-    setEditOriginalRolePermissionId(null);
+  // Every opening starts from a clean slate: all form state is (re)initialised
+  // here or in openEditDrawer, never carried over from the previous member.
+  const resetDrawerState = () => {
+    setEditInitial(null);
+    setEditKnownPositions([]);
+    setEditKnownBranches([]);
     setPhotoPreview(null);
     setShowPassword(false);
     setErrors({});
     setFormError(null);
+  };
+
+  const closeDrawer = () => {
+    editRequestRef.current += 1;
+    setEditLoading(false);
+    setOpen(false);
+  };
+
+  const openAdd = () => {
+    editRequestRef.current += 1;
+    setEditLoading(false);
+    setIsEdit(false);
+    setSelectedMember(null);
+    setForm(EMPTY_FORM);
+    resetDrawerState();
     setOpen(true);
   };
 
   // GET /users/{id}/for-edit is the only endpoint that actually returns
   // branchIds/gender/birthdate (confirmed live, 2026-09) — the already-
   // cached list row (StaffUser) doesn't carry those, so prefilling from it
-  // used to silently blank them out on every edit.
+  // alone used to silently blank them out on every edit. The drawer opens at
+  // once on a spinner and fills in when the answer arrives; the list row
+  // supplies what for-edit doesn't name (the member's other positions, role).
   const openEditDrawer = async () => {
     const memberId = selectedMember?.id;
     handleCloseMenu();
     if (!memberId) return;
-    setFormError(null);
+    // The row as it is now, before the await: the list may change meanwhile.
+    const row = usersData?.rows.find((u) => u.id === memberId) ?? null;
+    const requestId = ++editRequestRef.current;
+    setIsEdit(true);
+    setSelectedMember({ id: memberId });
+    setForm(EMPTY_FORM);
+    resetDrawerState();
+    setEditLoading(true);
+    setOpen(true);
     try {
       const member = await fetchStaffUserForEdit(memberId).unwrap();
-      setIsEdit(true);
-      setSelectedMember({ id: memberId });
-      setForm({
-        name: member.name,
-        email: member.email ?? "",
-        phone: member.phone ?? "",
-        password: "",
-        jobTitle: member.jobTitle ?? usersData?.rows.find((u) => u.id === memberId)?.jobTitle ?? "",
-        role: usersData?.rows.find((u) => u.id === memberId)?.role ?? "",
-        rolePermissionIds: member.rolePermissionId ? [member.rolePermissionId] : [],
-        branchIds: member.branchIds,
-        dateOfBirth: member.birthdate ?? "",
-        gender: member.gender ?? "",
-        photo: null,
-      });
-      setEditOriginalRolePermissionId(member.rolePermissionId);
-      setPhotoPreview(null);
-      setShowPassword(false);
-      setErrors({});
-      setOpen(true);
+      if (requestId !== editRequestRef.current) return;
+      const loaded = buildEditForm(member, row);
+      setForm(loaded);
+      setEditInitial(loaded);
+      setEditKnownPositions(row?.rolePermissions ?? []);
+      setEditKnownBranches((row?.branches ?? []).map((b) => b.branch));
+      setPhotoPreview(resolveMediaUrl(member.photo ?? row?.photo));
     } catch (err) {
+      if (requestId !== editRequestRef.current) return;
+      setOpen(false);
       toast.error(extractApiError(err) || t("settings.ceo.staff.toast.error"));
+    } finally {
+      if (requestId === editRequestRef.current) setEditLoading(false);
     }
+  };
+
+  // Typing in a field retires the message that was about that field.
+  const clearError = (field: string) => {
+    setFormError(null);
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    clearError(name);
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -302,16 +326,16 @@ export const Staff = () => {
     }
   };
 
+  // The rules live in staffForm.ts; the first message is also shown beside the
+  // submit button, since the field it belongs to may be scrolled out of view.
   const validate = () => {
-    const e: Record<string, string> = {};
-    if (!form.name.trim()) e.name = t("settings.ceo.staff.validation.nameRequired");
-    if (form.rolePermissionIds.length === 0) e.rolePermissionId = t("settings.ceo.staff.validation.rolePermissionIdRequired");
-    if (!isEdit && !form.email.trim() && !form.phone.trim()) e.phone = t("settings.ceo.staff.validation.contactRequired");
-    // Same minimum as login (AUTH_ROLE_DOCS.md §1) — this is the same
-    // password field a created account will log in with.
-    if (form.password && form.password.length < 6) e.password = t("settings.ceo.staff.validation.passwordTooShort");
-    setErrors(e);
-    return Object.keys(e).length === 0;
+    const found = validateStaffForm(form, editInitial);
+    const messages: Record<string, string> = {};
+    for (const [field, key] of Object.entries(found)) messages[field] = t(key);
+    setErrors(messages);
+    const first = Object.values(messages)[0];
+    if (first) setFormError(first);
+    return !first;
   };
 
   // POST /users' response shape for the created record isn't documented
@@ -324,73 +348,61 @@ export const Staff = () => {
     return typeof id === "string" && id ? id : null;
   };
 
+  // A remove-user answered 404 means the member no longer holds that position
+  // (e.g. the PATCH already swapped it out) — which is what was asked for.
+  const isNotFound = (err: unknown) => (err as { status?: unknown } | undefined)?.status === 404;
+
   const handleSubmit = async () => {
+    if (editLoading) return;
     setFormError(null);
     if (!validate()) return;
-    const [primaryRolePermissionId, ...extraRolePermissionIds] = form.rolePermissionIds;
-    const payload = {
-      name: form.name.trim(),
-      email: form.email.trim() || undefined,
-      phone: form.phone.trim() || undefined,
-      password: form.password || undefined,
-      jobTitle: form.jobTitle.trim() || undefined,
-      role: form.role.trim() || undefined,
-      rolePermissionId: primaryRolePermissionId,
-      // A new staff member goes to whichever branch is selected in the
-      // header (the picker below is hidden then); with "All branches" the
-      // picker decides.
-      branchIds: hasCeoSelected(form) && branchOptions.length
-        ? branchOptions.map((b) => b.id)
-        : !isEdit && selectedBranchId ? [selectedBranchId] : form.branchIds.length ? form.branchIds : undefined,
-      birthdate: form.dateOfBirth || undefined,
-      gender: form.gender || undefined,
-      photo: form.photo ?? undefined,
-    };
     try {
       let userId: string | null = null;
-      if (isEdit && selectedMember) {
-        await updateStaffUser({ id: selectedMember.id, ...payload }).unwrap();
+      let assign: string[] = [];
+      let remove: string[] = [];
+      if (isEdit && selectedMember && editInitial) {
+        const plan = planRolePermissionChanges(editInitial.rolePermissionIds, form.rolePermissionIds);
+        assign = plan.assign;
+        remove = plan.remove;
+        const payload = buildUpdatePayload(form, editInitial, plan);
+        // Nothing but positions (or nothing at all) changed: no PATCH needed.
+        if (Object.keys(payload).length > 0) await updateStaffUser({ id: selectedMember.id, ...payload }).unwrap();
         userId = selectedMember.id;
       } else {
-        const created = await createStaffUser({
-          ...payload,
-          name: form.name.trim(),
-          rolePermissionId: primaryRolePermissionId,
-        }).unwrap();
+        const payload = buildCreatePayload(form, selectedBranchId);
+        const created = await createStaffUser(payload).unwrap();
         userId = extractUserId(created);
+        assign = form.rolePermissionIds.filter((id) => id !== payload.rolePermissionId);
       }
 
       // Every additional lavozim beyond the primary one is a separate
       // attach call (POST /role-permissions/{id}/assign-user/{userId} —
       // AUTH_ROLE_DOCS.md §14, idempotent even if already assigned). On
-      // edit, a previously-known lavozim that got unchecked (and wasn't
-      // re-picked as the new primary) is explicitly detached — nothing
-      // this page was never told about is ever touched.
-      if (userId) {
+      // edit, a lavozim the member held that got unchecked is explicitly
+      // detached — nothing this page was never told about is ever touched.
+      let rolesFailed = false;
+      if (userId && (assign.length > 0 || remove.length > 0)) {
         setIsSavingRoles(true);
         try {
-          const toAssign = extraRolePermissionIds;
-          const toRemove =
-            isEdit && editOriginalRolePermissionId && editOriginalRolePermissionId !== primaryRolePermissionId && !extraRolePermissionIds.includes(editOriginalRolePermissionId)
-              ? [editOriginalRolePermissionId]
-              : [];
           const results = await Promise.allSettled([
-            ...toAssign.map((rpId) => assignRolePermission({ id: rpId, userId: userId! }).unwrap()),
-            ...toRemove.map((rpId) => removeRolePermission({ id: rpId, userId: userId! }).unwrap()),
+            ...assign.map((rpId) => assignRolePermission({ id: rpId, userId: userId! }).unwrap()),
+            ...remove.map((rpId) =>
+              removeRolePermission({ id: rpId, userId: userId! }).unwrap().catch((err) => {
+                if (!isNotFound(err)) throw err;
+              })
+            ),
           ]);
-          const failed = results.some((r) => r.status === "rejected");
-          if (failed) {
-            toast.error(t("settings.ceo.staff.toast.rolePermissionPartialError"));
-          }
+          rolesFailed = results.some((r) => r.status === "rejected");
         } finally {
           setIsSavingRoles(false);
         }
       }
 
-      toast.success(isEdit ? t("settings.ceo.staff.toast.updated") : t("settings.ceo.staff.toast.created"));
-      setOpen(false);
+      if (rolesFailed) toast.error(t("settings.ceo.staff.toast.rolePermissionPartialError"));
+      else toast.success(isEdit ? t("settings.ceo.staff.toast.updated") : t("settings.ceo.staff.toast.created"));
+      closeDrawer();
       setForm(EMPTY_FORM);
-      setEditOriginalRolePermissionId(null);
+      setEditInitial(null);
       setSelectedMember(null);
     } catch (err) {
       const detail = extractApiError(err);
@@ -569,7 +581,7 @@ export const Staff = () => {
                       anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                       transformOrigin={{ vertical: "top", horizontal: "right" }}
                     >
-                      <MenuItem onClick={openEditDrawer} disabled={isLoadingForEdit}>{t("settings.ceo.staff.menu.edit")}</MenuItem>
+                      <MenuItem onClick={openEditDrawer}>{t("settings.ceo.staff.menu.edit")}</MenuItem>
                       <MenuItem onClick={handleDeleteClick} sx={{ color: "#d32f2f" }}>
                         <MdDelete size={15} style={{ marginRight: 8 }} /> {t("settings.ceo.staff.menu.delete")}
                       </MenuItem>
@@ -636,21 +648,40 @@ export const Staff = () => {
       <Drawer
         anchor="right"
         open={open}
-        onClose={() => setOpen(false)}
-        onKeyDown={submitOnEnter(handleSubmit, isCreating || isUpdating || isSavingRoles)}
+        onClose={closeDrawer}
+        onKeyDown={submitOnEnter(handleSubmit, formBusy)}
         PaperProps={{ sx: { width: 420, display: "flex", flexDirection: "column", bgcolor: "var(--color-surface)" } }}
       >
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 3, py: 2.5, borderBottom: "1px solid var(--color-border)" }}>
           <Typography fontWeight={700} fontSize={17} color="var(--color-text-primary)">
             {isEdit ? t("settings.ceo.staff.drawer.editTitle") : t("settings.ceo.staff.drawer.addTitle")}
           </Typography>
-          <IconButton onClick={() => setOpen(false)} size="small" sx={{ color: "var(--color-text-muted)" }}>
+          <IconButton onClick={closeDrawer} size="small" sx={{ color: "var(--color-text-muted)" }}>
             <MdClose size={20} />
           </IconButton>
         </Box>
 
         <Box sx={{ flex: 1, overflowY: "auto", px: 3, py: 3 }}>
+          {editLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress /></Box>
+          ) : (
           <Stack spacing={2.5}>
+            {/* The account's system role and status can't be edited here (the
+                role is never sent; status is toggled from the list), so they
+                are shown as they are. */}
+            {isEdit && (
+              <Stack direction="row" gap={0.75} flexWrap="wrap">
+                {form.role && <Chip label={form.role} size="small" sx={{ height: 20, fontSize: 11, bgcolor: "var(--color-surface-alt)", color: "var(--color-text-secondary)" }} />}
+                {editStatus && (
+                  <Chip
+                    label={editStatus === "INACTIVE" ? t("settings.ceo.staff.filters.inactive") : t("settings.ceo.staff.filters.active")}
+                    size="small"
+                    sx={{ height: 20, fontSize: 11 }}
+                  />
+                )}
+              </Stack>
+            )}
+
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.name")}</Typography>
               <TextField name="name" value={form.name} onChange={handleChange} fullWidth size="small" error={Boolean(errors.name)} helperText={errors.name} sx={inputSx} />
@@ -679,7 +710,8 @@ export const Staff = () => {
               <TextField
                 name="password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={form.password} onChange={handleChange}
                 fullWidth size="small" placeholder={t("settings.ceo.staff.form.passwordPlaceholder")}
-                error={Boolean(errors.password)} helperText={errors.password}
+                error={Boolean(errors.password)}
+                helperText={errors.password || (isEdit ? t("settings.ceo.staff.form.passwordKeepHelp") : undefined)}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -703,7 +735,10 @@ export const Staff = () => {
 
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.email")}</Typography>
-              <TextField name="email" value={form.email} onChange={handleChange} fullWidth size="small" placeholder={t("settings.ceo.staff.form.emailPlaceholder")} sx={inputSx} />
+              <TextField
+                name="email" value={form.email} onChange={handleChange} fullWidth size="small" placeholder={t("settings.ceo.staff.form.emailPlaceholder")}
+                error={Boolean(errors.email)} helperText={errors.email} sx={inputSx}
+              />
             </Box>
 
             <Box>
@@ -714,28 +749,30 @@ export const Staff = () => {
                   rolePermissionId; every other checked box is attached via
                   a separate assign-user call in handleSubmit. */}
               <Box sx={{ display: "flex", flexWrap: "wrap", columnGap: 2, rowGap: 0.5 }}>
-                {(rolePermissionOptions ?? []).map((option) => (
+                {positionOptions.map((option) => (
                   <FormControlLabel
                     key={option.id}
                     control={
                       <Checkbox
                         size="small"
                         checked={form.rolePermissionIds.includes(option.id)}
-                        onChange={() =>
+                        onChange={() => {
+                          clearError("rolePermissionId");
                           setForm((p) => ({
                             ...p,
                             rolePermissionIds: p.rolePermissionIds.includes(option.id)
                               ? p.rolePermissionIds.filter((id) => id !== option.id)
                               : [...p.rolePermissionIds, option.id],
-                          }))
-                        }
+                          }));
+                        }}
                       />
                     }
                     label={<span style={{ fontSize: 13 }}>{option.name}</span>}
                     sx={{ mr: 0 }}
                   />
                 ))}
-                {(rolePermissionOptions ?? []).length === 0 && (
+                {positionsLoading && <CircularProgress size={18} />}
+                {!positionsLoading && positionOptions.length === 0 && (
                   <Typography fontSize={12.5} color="var(--color-text-muted)">
                     {t("settings.ceo.staff.form.rolePermissionIdHelp")}
                   </Typography>
@@ -746,13 +783,9 @@ export const Staff = () => {
               )}
             </Box>
 
-            {hasCeoSelected(form) && (
-              <Typography fontSize={12} color="var(--color-text-muted)">
-                {t("settings.ceo.staff.form.ceoAllBranches", "CEO sees and manages every branch — all active branches are assigned automatically.")}
-              </Typography>
-            )}
-
-            {!hasCeoSelected(form) && (isEdit || !selectedBranchId) && (
+            {/* Every position — a CEO included — is attached only to the
+                branches chosen here (or the one selected in the header). */}
+            {showBranchPicker ? (
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.branches")}</Typography>
               <Select
@@ -761,20 +794,31 @@ export const Staff = () => {
                 fullWidth
                 displayEmpty
                 value={form.branchIds}
-                onChange={(e) => setForm((p) => ({ ...p, branchIds: e.target.value as string[] }))}
+                error={Boolean(errors.branches)}
+                onChange={(e) => {
+                  clearError("branches");
+                  setForm((p) => ({ ...p, branchIds: e.target.value as string[] }));
+                }}
                 renderValue={(selected) =>
                   (selected as string[]).length
-                    ? (selected as string[]).map((id) => branchOptions.find((b) => b.id === id)?.name ?? id).join(", ")
+                    ? (selected as string[]).map((id) => branchChoices.find((b) => b.id === id)?.name ?? id).join(", ")
                     : <span style={{ color: "var(--color-text-muted)" }}>{t("settings.ceo.staff.form.branches")}</span>
                 }
                 sx={{ bgcolor: "var(--color-surface-alt)", fontSize: 14 }}
               >
-                {branchOptions.map((b) => (
+                {branchChoices.map((b) => (
                   <MenuItem key={b.id} value={b.id} sx={{ fontSize: 14 }}>{b.name}</MenuItem>
                 ))}
               </Select>
+              {errors.branches && (
+                <Typography fontSize={12} color="error" mt={0.5}>{errors.branches}</Typography>
+              )}
             </Box>
-            )}
+            ) : selectedBranchName ? (
+              <Typography fontSize={12} color="var(--color-text-muted)">
+                {t("settings.ceo.staff.form.branchFromHeader", { branch: selectedBranchName })}
+              </Typography>
+            ) : null}
 
             <Box>
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("settings.ceo.staff.form.dateOfBirth")}</Typography>
@@ -811,15 +855,17 @@ export const Staff = () => {
               </Box>
             </Box>
 
-            {formError && (
-              <Typography fontSize={13} color="error">{formError}</Typography>
-            )}
           </Stack>
+          )}
         </Box>
 
         <Box sx={{ px: 3, py: 2.5, borderTop: "1px solid var(--color-border)" }}>
+          {/* Outside the scrolling form so an error is never hidden below the fold. */}
+          {formError && (
+            <Typography fontSize={13} color="error" mb={1.5}>{formError}</Typography>
+          )}
           <Button
-            fullWidth variant="contained" onClick={handleSubmit} disabled={isCreating || isUpdating || isSavingRoles}
+            fullWidth variant="contained" onClick={handleSubmit} disabled={formBusy}
             sx={{ borderRadius: "24px", py: 1.3, fontSize: 15, fontWeight: 600, textTransform: "none", bgcolor: "#4f7ec4", boxShadow: "0 4px 12px rgba(79,126,196,0.35)", "&:hover": { bgcolor: "#3b6ab0" } }}
           >
             {(isCreating || isUpdating || isSavingRoles) ? <CircularProgress size={18} sx={{ color: "#fff" }} /> : t("settings.ceo.staff.form.submit")}

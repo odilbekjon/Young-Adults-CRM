@@ -50,7 +50,11 @@ export interface StaffUserForEdit {
   name: string;
   email: string | null;
   phone: string | null;
+  // The primary position, as the backend names it.
   rolePermissionId: string | null;
+  // Every position id the response names, primary first — just
+  // [rolePermissionId] when the backend only sends the one.
+  rolePermissionIds: string[];
   jobTitle: string | null;
   photo: string | null;
   gender: string | null;

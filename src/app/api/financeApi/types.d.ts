@@ -321,6 +321,16 @@ export interface PaymentsListResult {
   meta: FinanceListMeta;
 }
 
+// Filters of one paymentsRange request: the period (and what the backend can
+// narrow it by) without paging — the endpoint walks every page itself.
+export type PaymentsRangeQueryArgs = Omit<FinanceListQueryArgs, "page" | "limit" | "categoryId">;
+
+// Every payment of the period, all pages merged (refunded/cancelled ones
+// included, flagged by their own `status`).
+export interface PaymentsRangeResult {
+  rows: PaymentRow[];
+}
+
 // GET /finance/payments/{id} — plain detail row. Not yet confirmed live
 // against a real response (only the list and the /receipt variant below
 // have been); kept as a defensive superset of PaymentRow until confirmed.

@@ -1,6 +1,8 @@
+import type { FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
 import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
 import { decimalToNumber } from "../../../utils/decimal";
+import { runLimitedSettled } from "../../../utils/runLimited";
 import {
     CreatePaymentRequest,
     UpdatePaymentRequest,
@@ -23,6 +25,8 @@ import {
     ExpensesResult,
     PaymentRow,
     PaymentsListResult,
+    PaymentsRangeQueryArgs,
+    PaymentsRangeResult,
     PaymentDetail,
     PaymentReceipt,
     FinanceStats,
@@ -57,6 +61,29 @@ const NON_COMPLETED_PAYMENT_STATUSES = new Set(["REFUNDED", "CANCELLED", "CANCEL
 // PaymentReceiptModal).
 export const isCompletedPaymentStatus = (status: string | null | undefined): boolean =>
     !status || !NON_COMPLETED_PAYMENT_STATUSES.has(status.toUpperCase());
+
+// paymentsRange asks for big pages first: a month of payments is usually one
+// request. A backend that caps the page size and answers 400/422 to the big
+// ask is asked again with the smaller one; a cap it applies silently shows up
+// in meta.totalPages, which drives the paging below either way.
+const PAYMENTS_RANGE_PAGE_SIZES = [1000, 100];
+// More payments than this in one period (a multi-year range) are not pulled
+// into the browser: the page asks for a narrower range instead.
+const PAYMENTS_RANGE_MAX_ROWS = 20000;
+const PAYMENTS_RANGE_MAX_PARALLEL = 3;
+const TOO_MANY_PAYMENTS = "TOO_MANY_PAYMENTS";
+const INCOMPLETE_PAYMENTS = "INCOMPLETE_PAYMENTS";
+
+const isPageSizeRejection = (error: FetchBaseQueryError | undefined): boolean =>
+    error?.status === 400 || error?.status === 422;
+
+// How many payments the period holds when paymentsRange refused to load them
+// all (see PAYMENTS_RANGE_MAX_ROWS); null for any other outcome.
+export const getTooManyPaymentsTotal = (error: unknown): number | null => {
+    const e = error as { status?: unknown; error?: unknown; data?: { total?: unknown } } | undefined;
+    if (e?.status !== "CUSTOM_ERROR" || e.error !== TOO_MANY_PAYMENTS) return null;
+    return Number(e.data?.total) || 0;
+};
 
 const appendPaymentFormData = (formData: FormData, data: Partial<CreatePaymentRequest>) => {
     const { receiptUrl, ...rest } = data;
@@ -688,6 +715,51 @@ export const financeApi = baseApi.injectEndpoints({
             }),
             providesTags: ["payment"],
         }),
+        // GET /finance/payments walked page by page until the period's payments
+        // are ALL here. The backend has no per-day series (GET /finance/chart is
+        // one point per month), so the page builds its daily chart, cards and
+        // table from these rows — which is only honest if the list is complete:
+        // a list that can't be loaded in full is an error (too many payments, a
+        // page that failed, rows that went missing between pages), never a
+        // silently shortened result.
+        paymentsRange: builder.query<PaymentsRangeResult, PaymentsRangeQueryArgs>({
+            queryFn: async (args, _api, _extra, fetchWithBQ) => {
+                const fetchPage = (page: number, limit: number) =>
+                    fetchWithBQ({ url: `${PATHS.PAYMENTS}?${buildFinanceListQueryString({ ...args, page, limit })}`, method: "GET" });
+                type PageBody = { data?: unknown; meta?: unknown } | undefined;
+
+                let limit = PAYMENTS_RANGE_PAGE_SIZES[0];
+                let first = await fetchPage(1, limit);
+                for (const smaller of PAYMENTS_RANGE_PAGE_SIZES.slice(1)) {
+                    if (!isPageSizeRejection(first.error)) break;
+                    limit = smaller;
+                    first = await fetchPage(1, limit);
+                }
+                if (first.error) return { error: first.error };
+
+                const firstBody = first.data as PageBody;
+                const meta = normalizeListMeta(firstBody?.meta);
+                if (meta.total > PAYMENTS_RANGE_MAX_ROWS) {
+                    return { error: { status: "CUSTOM_ERROR", error: TOO_MANY_PAYMENTS, data: { total: meta.total } } };
+                }
+
+                const rows = new Map<string, PaymentRow>();
+                normalizePaymentRows(firstBody?.data).forEach((row) => rows.set(row.id, row));
+
+                const lastPage = meta.totalPages || Math.ceil(meta.total / limit);
+                const otherPages = Array.from({ length: Math.max(0, lastPage - 1) }, (_, i) => i + 2);
+                const fetched = await runLimitedSettled(otherPages, PAYMENTS_RANGE_MAX_PARALLEL, async (page) => fetchPage(page, limit));
+                for (const page of fetched) {
+                    if (page.status === "rejected") return { error: { status: "FETCH_ERROR", error: String(page.reason) } };
+                    if (page.value.error) return { error: page.value.error };
+                    normalizePaymentRows((page.value.data as PageBody)?.data).forEach((row) => rows.set(row.id, row));
+                }
+
+                if (rows.size < meta.total) return { error: { status: "CUSTOM_ERROR", error: INCOMPLETE_PAYMENTS } };
+                return { data: { rows: [...rows.values()] } };
+            },
+            providesTags: ["payment"],
+        }),
         paymentById: builder.query<PaymentDetail, string>({
             query: (id) => ({
                 url: `${PATHS.PAYMENTS}/${id}`,
@@ -826,6 +898,7 @@ export const {
     useCreateExpenseMutation,
     useDeleteExpenseMutation,
     usePaymentsListQuery,
+    usePaymentsRangeQuery,
     usePaymentByIdQuery,
     usePaymentReceiptQuery,
     usePaymentsTotalQuery,

@@ -1,6 +1,7 @@
 import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
 import { runLimited } from "../../../utils/runLimited";
+import { findFutureAttendanceDate } from "../../../utils/attendanceDates";
 import {
   SaveAttendanceRequest,
   SaveAttendanceResponse,
@@ -334,11 +335,19 @@ export const attendancesApi = baseApi.injectEndpoints({
       // genuinely use multipart for photo fields), so the Swagger label here
       // looks like a documentation artifact — plain JSON is what the backend
       // actually accepts.
-      query: (body) => ({
-        url: PATHS.ATTENDANCES,
-        method: "POST",
-        body,
-      }),
+      //
+      // A mark for a day that has not come yet is refused here, before any
+      // request is made — for every role, the CEO included. The grid already
+      // locks those days; this keeps any other caller from sending one.
+      queryFn: async (body, _api, _extra, fetchWithBQ) => {
+        const future = findFutureAttendanceDate(body.records.map((record) => record.date));
+        if (future) {
+          const reason = `Attendance cannot be marked for a future date (${future}).`;
+          return { error: { status: "CUSTOM_ERROR", error: reason, data: { error: reason } } };
+        }
+        const result = await fetchWithBQ({ url: PATHS.ATTENDANCES, method: "POST", body });
+        return result.error ? { error: result.error } : { data: result.data as SaveAttendanceResponse };
+      },
       invalidatesTags: ["attendance"],
     }),
     // GET /attendances/group/{id}/excel — confirmed via Swagger: downloads the

@@ -24,6 +24,7 @@ import {
   MdClose,
   MdCheck,
   MdDownload,
+  MdLock,
 } from "react-icons/md";
 import { keyframes } from "@mui/material/styles";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -39,6 +40,8 @@ import type { AttendanceRecord, AttendanceStatus } from "../../../app/api/attend
 import { useToast } from "../../../Context/ToastContext";
 import { downloadExcelBlob } from "../../../utils/downloadExcel";
 import { extractApiError } from "../../../utils/extractApiError";
+import { isAfterDay, isFutureAttendanceDate } from "../../../utils/attendanceDates";
+import { toLocalISODate } from "../../../utils/localDate";
 import { StudentStatusDot, GROUP_STATUS_STYLE } from "../StudentStatusDot";
 import type { StudentGroupStatus } from "../../../app/api/groupsApi/types";
 
@@ -111,6 +114,8 @@ interface DayColumn {
   day: number;
   isToday: boolean;
   isPast: boolean;
+  // A day that has not come yet: locked for everyone (CEO and teachers alike).
+  isFuture: boolean;
   isEditable: boolean;
 }
 
@@ -148,6 +153,9 @@ const CELL_STYLES = {
   "& .att-cell .cell-value.was": { backgroundColor: "#00897b", color: "#fff" },
   "& .att-cell .cell-value.not": { backgroundColor: "#ef5350", color: "#fff" },
   "& .att-cell:hover .cell-value": { opacity: 1 },
+  // A future day is locked for good, so unlike a frozen one it stays dimmed on
+  // hover too (same specificity as the hover rule, hence placed after it).
+  "& .att-cell .cell-value.future": { opacity: 0.4, borderStyle: "dashed" },
   "& .att-cell.editable:hover .cell-value": { opacity: 0 },
   "& .att-cell .att-picker": { opacity: 0, pointerEvents: "none", transition: "opacity 0.12s" },
   "& .att-cell.editable:hover .att-picker": { opacity: 1, pointerEvents: "auto" },
@@ -161,15 +169,17 @@ interface CellProps {
   val: AttVal;
   wasLabel: string;
   notLabel: string;
+  // Why a future day can't be marked — the cell's native tooltip.
+  futureLabel: string;
   restrictToToday?: boolean;
   onSet: (studentId: string, day: number, val: "Was" | "Not") => void;
   onRemove: (e: React.MouseEvent, studentId: string, day: number) => void;
 }
 
 const AttendanceCell = memo(function AttendanceCell({
-  studentId, column, val, wasLabel, notLabel, restrictToToday, onSet, onRemove,
+  studentId, column, val, wasLabel, notLabel, futureLabel, restrictToToday, onSet, onRemove,
 }: CellProps) {
-  const { day, isToday, isPast, isEditable } = column;
+  const { day, isToday, isPast, isFuture, isEditable } = column;
   // The was/not picker (two tooltips and buttons) and the remove button are only
   // built while the pointer is over the cell and for the fade-out after it —
   // a month of 30 students would otherwise carry ~1000 of them that are almost
@@ -191,7 +201,8 @@ const AttendanceCell = memo(function AttendanceCell({
     isToday && "today",
     isEditable && "editable",
     // Frozen (read-only) day for a TEACHER session.
-    restrictToToday && !isEditable && "frozen",
+    restrictToToday && !isEditable && !isFuture && "frozen",
+    isFuture && "future",
     val === "Was" ? "was" : val === "Not" ? "not" : isPast && "past",
   ].filter(Boolean).join(" ");
 
@@ -199,6 +210,8 @@ const AttendanceCell = memo(function AttendanceCell({
     <TableCell align="center" className={isToday ? "att-day today" : "att-day"}>
       <div
         className={isEditable ? "att-cell editable" : "att-cell"}
+        title={isFuture ? futureLabel : undefined}
+        aria-disabled={isFuture || undefined}
         onMouseEnter={isEditable ? handleEnter : undefined}
         onMouseLeave={isEditable ? handleLeave : undefined}
       >
@@ -311,6 +324,7 @@ interface RowProps {
   columns: DayColumn[];
   wasLabel: string;
   notLabel: string;
+  futureLabel: string;
   restrictToToday?: boolean;
   onSet: CellProps["onSet"];
   onRemove: CellProps["onRemove"];
@@ -326,7 +340,7 @@ const sameRow = (prev: RowProps, next: RowProps) =>
   );
 
 const AttendanceRow = memo(function AttendanceRow({
-  studentId, name, active, archived, balance, groupStatus, vals, columns, wasLabel, notLabel, restrictToToday, onSet, onRemove,
+  studentId, name, active, archived, balance, groupStatus, vals, columns, wasLabel, notLabel, futureLabel, restrictToToday, onSet, onRemove,
 }: RowProps) {
   // The roster's own colours: a trial lesson is light sky-blue, a freeze dark
   // blue, and neither gets the green "billed" dot.
@@ -377,6 +391,7 @@ const AttendanceRow = memo(function AttendanceRow({
           val={vals[i]}
           wasLabel={wasLabel}
           notLabel={notLabel}
+          futureLabel={futureLabel}
           restrictToToday={restrictToToday}
           onSet={onSet}
           onRemove={onRemove}
@@ -431,6 +446,12 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
   const totalDays = getDaysInMonth(year, month);
   const today = now.getDate();
   const isCurrentMonth = year === nowYear && month === nowMonth;
+  // The viewer's local today as YYYY-MM-DD, whichever month is on screen: what
+  // every day column is compared against to tell the future from the rest.
+  const todayIso = toLocalISODate(now);
+  // A month that has not started: the whole grid is locked.
+  const isFutureMonth = year * 12 + month > nowYear * 12 + nowMonth;
+  const futureLabel = t("singleGroup.tabs.attendance.futureDate");
 
   // If the backend hasn't returned any lesson dates for this month (e.g. no
   // schedule set yet), fall back to showing every calendar day so the tab
@@ -477,13 +498,13 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
     setYear(nowYear);
   };
 
-  const todayIso = dateFor(today);
-
-  // Whether a given day column may be marked. Staff can mark any column; a
-  // TEACHER only today's column, and only if it is a scheduled lesson day
-  // (when the backend returned a lesson-day list for this month — if it
-  // returned none, every day is shown and the server stays the judge).
+  // Whether a given day column may be marked. A day that has not come yet is
+  // locked for everyone — a TEACHER, staff, the CEO. Past days: staff can mark
+  // any column; a TEACHER only today's column, and only if it is a scheduled
+  // lesson day (when the backend returned a lesson-day list for this month — if
+  // it returned none, every day is shown and the server stays the judge).
   const isDayEditable = useCallback((day: number) => {
+    if (isAfterDay(dateFor(day), todayIso)) return false;
     if (!restrictToToday) return true;
     // TEACHER: nothing is markable while the month failed to load — whether
     // today is a lesson day can't be verified. Staff keep the old behavior
@@ -491,7 +512,7 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
     if (loadFailed) return false;
     if (!isCurrentMonth || day !== today) return false;
     return lessonDates.length === 0 || lessonDates.some((d) => d.slice(0, 10) === todayIso);
-  }, [restrictToToday, loadFailed, isCurrentMonth, today, lessonDates, todayIso]);
+  }, [dateFor, restrictToToday, loadFailed, isCurrentMonth, today, lessonDates, todayIso]);
   // TEACHER view: today's column exists in the grid but isn't a lesson day, so
   // every cell is frozen — say why instead of leaving a silently dead table.
   const showNotLessonDay =
@@ -499,6 +520,12 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
 
   const handleSet = useCallback((studentId: string, day: number, val: "Was" | "Not") => {
     const date = dateFor(day);
+    // The grid never offers a future day; this is the second lock, read off the
+    // clock at the moment of the click, so no path can send one.
+    if (isFutureAttendanceDate(date)) {
+      toastError(futureLabel);
+      return;
+    }
     if (!isDayEditable(day)) return;
     setOverrides((prev) => ({
       ...prev,
@@ -528,7 +555,7 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
         const generic = t("singleGroup.tabs.attendance.saveError");
         toastError(detail ? `${generic} ${detail}` : generic);
       });
-  }, [dateFor, isDayEditable, saveAttendance, groupId, restrictToToday, toastSuccess, toastError, t]);
+  }, [dateFor, isDayEditable, saveAttendance, groupId, restrictToToday, toastSuccess, toastError, futureLabel, t]);
 
   // Remove (X) button on hover — clears the mark locally; the API contract
   // doesn't expose a delete/clear endpoint, so a removed mark reappears
@@ -551,9 +578,10 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
       day: d,
       isToday: isCurrentMonth && d === today,
       isPast: year < nowYear || (year === nowYear && month < nowMonth) || (isCurrentMonth && d < today),
+      isFuture: isAfterDay(dateFor(d), todayIso),
       isEditable: isDayEditable(d),
     })),
-    [days, isCurrentMonth, today, year, month, nowYear, nowMonth, isDayEditable],
+    [days, isCurrentMonth, today, year, month, nowYear, nowMonth, isDayEditable, dateFor, todayIso],
   );
   const wasLabel = t(`singleGroup.tabs.attendance.${ATT_VAL_LABEL_KEYS.Was}`);
   const notLabel = t(`singleGroup.tabs.attendance.${ATT_VAL_LABEL_KEYS.Not}`);
@@ -650,6 +678,11 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
           {t("singleGroup.tabs.attendance.notLessonDay")}
         </Alert>
       )}
+      {isFutureMonth && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          {t("singleGroup.tabs.attendance.futureMonth")}
+        </Alert>
+      )}
 
       {/* TABLE — scrolls sideways on its own (many lesson days) so the sticky
           name column stays put, but has no height cap: every student is shown
@@ -695,8 +728,16 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
                 {t("singleGroup.tabs.attendance.name")}
               </TableCell>
 
-              {days.map((d) => {
-                const isToday = isCurrentMonth && d === today;
+              {columns.map(({ day: d, isToday, isFuture }) => {
+                const heading = (
+                  <>
+                    {d}
+                    <br />
+                    <span style={{ fontSize: 10, opacity: 0.7 }}>
+                      {t(`singleGroup.tabs.attendance.months.${MONTH_KEYS[month]}`)}
+                    </span>
+                  </>
+                );
                 return (
                   <TableCell
                     key={d}
@@ -705,7 +746,7 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
                       width: DAY_COL_WIDTH,
                       px: 0.5,
                       fontWeight: isToday ? 700 : 400,
-                      color: isToday ? "primary.main" : "text.secondary",
+                      color: isToday ? "primary.main" : isFuture ? "text.disabled" : "text.secondary",
                       fontSize: 12,
                       bgcolor: isToday ? "var(--color-primary-surface)" : "var(--color-surface-alt)",
                       borderBottom: isToday
@@ -713,11 +754,14 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
                         : undefined,
                     }}
                   >
-                    {d}
-                    <br />
-                    <span style={{ fontSize: 10, opacity: 0.7 }}>
-                      {t(`singleGroup.tabs.attendance.months.${MONTH_KEYS[month]}`)}
-                    </span>
+                    {isFuture ? (
+                      <Tooltip title={futureLabel} placement="top" arrow>
+                        <Box sx={{ cursor: "not-allowed" }}>
+                          {heading}
+                          <MdLock size={10} style={{ marginLeft: 3, verticalAlign: "-1px" }} />
+                        </Box>
+                      </Tooltip>
+                    ) : heading}
                   </TableCell>
                 );
               })}
@@ -740,6 +784,7 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
                 columns={columns}
                 wasLabel={wasLabel}
                 notLabel={notLabel}
+                futureLabel={futureLabel}
                 restrictToToday={restrictToToday}
                 onSet={handleSet}
                 onRemove={handleRemove}

@@ -3,6 +3,10 @@
     "message": "The page you're looking for doesn't exist.",
     "backHome": "Back to home"
   },
+  "routeError": {
+    "message": "This page couldn't be loaded. Check your connection and try again.",
+    "reload": "Reload"
+  },
   "accessDenied": {
     "message": "You don't have access to this page.",
     "backHome": "Back to home",
@@ -911,10 +915,14 @@
       "title": "All payments",
       "exportExcel": "Export to Excel",
       "exportError": "Failed to export the list. Please try again.",
+      "exportFilteredHint": "Excel export covers the dates, name/phone and payment method only. Clear the other filters to export.",
+      "tooMany": "This period has too many payments ({{count}}) to show at once. Narrow the date range.",
       "stats": {
         "totalRevenue": "Total Revenue:",
         "totalNetProfit": "Total Net Profit:",
         "filteredTotal": "Total for selected filters:",
+        "netProfitHint": "Shown for whole months with no other filters.",
+        "byMethod": "By payment method",
         "details": "Details",
         "thisMonth": {
           "title": "This month",
@@ -929,6 +937,11 @@
         "payments": "Payments",
         "expenses": "Expenses",
         "netProfit": "Net profit",
+        "caption": {
+          "day": "Payments per day",
+          "week": "Payments per week",
+          "month": "Payments per month"
+        },
         "loadError": "Failed to load chart data.",
         "retry": "Retry"
       },
@@ -1540,7 +1553,9 @@
         "saveSuccess": "Attendance saved.",
         "loadError": "Could not load attendance.",
         "retry": "Retry",
-        "notLessonDay": "Today is not a lesson day for this group — attendance can only be marked on a lesson day."
+        "notLessonDay": "Today is not a lesson day for this group — attendance can only be marked on a lesson day.",
+        "futureDate": "Cannot mark attendance for a future date",
+        "futureMonth": "This month has not started yet — attendance cannot be marked for future dates."
       },
       "grade": {
         "tabLabel": "Grade",
@@ -2271,7 +2286,8 @@
         "drawer": { "addTitle": "Add New Staff", "editTitle": "Edit Staff" },
         "form": {
           "title": "Add New Staff", "name": "Name", "phone": "Phone", "email": "Email", "emailPlaceholder": "email@example.com",
-          "password": "Password", "passwordPlaceholder": "Enter password", "setPasswordToggle": "+ Set password", "hidePasswordToggle": "− Hide password",
+          "password": "Password", "passwordPlaceholder": "Enter password", "passwordKeepHelp": "Leave empty to keep the current password.", "setPasswordToggle": "+ Set password", "hidePasswordToggle": "− Hide password",
+          "branchFromHeader": "This staff member will be added to the \"{{branch}}\" branch selected in the header. Switch the header to \"All branches\" to choose other branches.",
           "rolePermissionId": "Position",
           "rolePermissionIdHelp": "Required — controls what this account can access. Pick one of the positions defined in the Positions module.",
           "branches": "Branches", "jobTitle": "Job title", "jobTitlePlaceholder": "e.g. Manager", "jobTitleHelp": "Shown in the staff list — free text, distinct from \"Position\" above (the access role).", "dateOfBirth": "Date of birth", "gender": "Gender", "male": "Male", "female": "Female",
@@ -2279,7 +2295,7 @@
         },
         "roles": { "ceo": "CEO", "branchDirector": "Branch Director", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Limited Administrator", "teacher": "Teacher", "marketer": "Marketer", "cashier": "Cashier" },
         "gender": { "male": "Male", "female": "Female" },
-        "validation": { "nameRequired": "Name is required", "rolePermissionIdRequired": "At least one position is required", "contactRequired": "Enter an email or phone number", "passwordTooShort": "Password must be at least 6 characters" },
+        "validation": { "nameRequired": "Name is required", "rolePermissionIdRequired": "At least one position is required", "contactRequired": "Enter an email or phone number", "phoneInvalid": "Enter the 9 digits of the phone number after +998", "emailInvalid": "Enter a valid email address", "branchesRequired": "Keep at least one branch selected", "passwordTooShort": "Password must be at least 6 characters" },
         "deleteDialog": { "title": "Delete staff member", "message": "Are you sure you want to delete this staff member? They will be moved to the archive and marked Inactive — you can restore them at any time from the Archive page.", "cancel": "Cancel", "confirm": "Delete" },
         "toast": { "created": "Staff member added", "updated": "Staff member updated", "deleted": "Staff member deleted", "statusToggled": "Status updated", "error": "Failed to complete the action. Please try again.", "deleteConflict": "This staff member is still assigned to a branch and can't be deleted.", "rolePermissionPartialError": "Staff member saved, but assigning/removing some positions failed." },
         "pagination": { "prev": "Prev", "next": "Next" }

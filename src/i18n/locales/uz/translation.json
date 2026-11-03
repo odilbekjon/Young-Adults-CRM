@@ -3,6 +3,10 @@
     "message": "Siz izlagan sahifa mavjud emas.",
     "backHome": "Bosh sahifaga"
   },
+  "routeError": {
+    "message": "Sahifani yuklab bo'lmadi. Internet aloqasini tekshirib, qayta urinib ko'ring.",
+    "reload": "Qayta yuklash"
+  },
   "accessDenied": {
     "message": "Bu sahifani ko'rish uchun sizda ruxsat yo'q.",
     "backHome": "Bosh sahifaga",
@@ -911,10 +915,17 @@
       "title": "Barcha to'lovlar",
       "exportExcel": "Excelga eksport",
       "exportError": "Ro'yxatni eksport qilib bo'lmadi. Qaytadan urinib ko'ring.",
+      "exportFilteredHint": "Excelga eksport faqat sana, ism/telefon va to'lov usulini hisobga oladi. Eksport qilish uchun boshqa filtrlarni tozalang.",
+      "tooMany": "Bu davrda to'lovlar juda ko'p ({{count}}), hammasini birdan ko'rsatib bo'lmaydi. Sana oralig'ini toraytiring.",
       "chart": {
         "payments": "To'lovlar",
         "expenses": "Xarajatlar",
         "netProfit": "Sof foyda",
+        "caption": {
+          "day": "Kunlar bo'yicha to'lovlar",
+          "week": "Haftalar bo'yicha to'lovlar",
+          "month": "Oylar bo'yicha to'lovlar"
+        },
         "loadError": "Grafik ma'lumotlarini yuklab bo'lmadi.",
         "retry": "Qayta urinish"
       },
@@ -922,6 +933,8 @@
         "totalRevenue": "Umumiy daromad:",
         "totalNetProfit": "Umumiy sof foyda:",
         "filteredTotal": "Tanlangan filtr bo'yicha jami:",
+        "netProfitHint": "Faqat to'liq oylar uchun, boshqa filtrlarsiz ko'rsatiladi.",
+        "byMethod": "To'lov usullari bo'yicha",
         "details": "Batafsil",
         "thisMonth": {
           "title": "Joriy oy",
@@ -1540,7 +1553,9 @@
         "saveSuccess": "Davomat saqlandi.",
         "loadError": "Davomatni yuklab bo'lmadi.",
         "retry": "Qayta urinish",
-        "notLessonDay": "Bugun bu guruhning dars kuni emas — davomat faqat dars kunida belgilanadi."
+        "notLessonDay": "Bugun bu guruhning dars kuni emas — davomat faqat dars kunida belgilanadi.",
+        "futureDate": "Kelajakdagi sana uchun davomat belgilab bo'lmaydi",
+        "futureMonth": "Bu oy hali boshlanmagan — kelajakdagi sanalar uchun davomat belgilab bo'lmaydi."
       },
       "grade": {
         "tabLabel": "Baho",
@@ -2271,7 +2286,8 @@
         "drawer": { "addTitle": "Yangi xodim qo'shish", "editTitle": "Xodimni tahrirlash" },
         "form": {
           "title": "Yangi xodim qo'shish", "name": "Ism", "phone": "Telefon", "email": "Email", "emailPlaceholder": "email@example.com",
-          "password": "Parol", "passwordPlaceholder": "Parolni kiriting", "setPasswordToggle": "+ Parol o'rnatish", "hidePasswordToggle": "− Parolni yashirish",
+          "password": "Parol", "passwordPlaceholder": "Parolni kiriting", "passwordKeepHelp": "Joriy parolni saqlash uchun bo'sh qoldiring.", "setPasswordToggle": "+ Parol o'rnatish", "hidePasswordToggle": "− Parolni yashirish",
+          "branchFromHeader": "Xodim sarlavhada tanlangan \"{{branch}}\" filialiga qo'shiladi. Boshqa filiallarni tanlash uchun sarlavhada \"Barcha filiallar\"ni tanlang.",
           "rolePermissionId": "Lavozim",
           "rolePermissionIdHelp": "Majburiy — bu hisobning kirish darajasini belgilaydi. Lavozimlar modulidagi lavozimlardan birini tanlang.",
           "branches": "Filiallar", "jobTitle": "Ish unvoni", "jobTitlePlaceholder": "Masalan: Menejer", "jobTitleHelp": "Xodimlar ro'yxatida shu unvon ko'rsatiladi — yuqoridagi \"Lavozim\" (ruxsatlar profili)dan farqli, erkin matn.", "dateOfBirth": "Tug'ilgan sana", "gender": "Jinsi", "male": "Erkak", "female": "Ayol",
@@ -2279,7 +2295,7 @@
         },
         "roles": { "ceo": "CEO", "branchDirector": "Filial direktori", "administrator": "Administrator", "administrator2": "Administrator2", "limitedAdministrator": "Cheklangan administrator", "teacher": "O'qituvchi", "marketer": "Marketolog", "cashier": "Kassir" },
         "gender": { "male": "Erkak", "female": "Ayol" },
-        "validation": { "nameRequired": "Ism kiritilishi shart", "rolePermissionIdRequired": "Kamida bitta lavozim tanlanishi shart", "contactRequired": "Email yoki telefon raqamini kiriting", "passwordTooShort": "Parol kamida 6 ta belgidan iborat bo'lishi kerak" },
+        "validation": { "nameRequired": "Ism kiritilishi shart", "rolePermissionIdRequired": "Kamida bitta lavozim tanlanishi shart", "contactRequired": "Email yoki telefon raqamini kiriting", "phoneInvalid": "+998 dan keyin telefon raqamining 9 ta raqamini kiriting", "emailInvalid": "To'g'ri email manzilini kiriting", "branchesRequired": "Kamida bitta filial tanlangan bo'lishi kerak", "passwordTooShort": "Parol kamida 6 ta belgidan iborat bo'lishi kerak" },
         "deleteDialog": { "title": "Xodimni o'chirish", "message": "Rostdan ham bu xodimni o'chirmoqchimisiz? U arxivga ko'chiriladi va \"Faol emas\" holatiga o'tkaziladi — istalgan vaqtda Arxiv sahifasidan qayta tiklashingiz mumkin.", "cancel": "Bekor qilish", "confirm": "O'chirish" },
         "toast": { "created": "Xodim qo'shildi", "updated": "Xodim ma'lumotlari yangilandi", "deleted": "Xodim o'chirildi", "statusToggled": "Status yangilandi", "error": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring.", "deleteConflict": "Bu xodim hali filialga biriktirilgan, shuning uchun o'chirib bo'lmaydi.", "rolePermissionPartialError": "Xodim saqlandi, lekin ba'zi qo'shimcha lavozimlarni biriktirish/olib tashlashda xatolik yuz berdi." },
         "pagination": { "prev": "Orqaga", "next": "Oldinga" }

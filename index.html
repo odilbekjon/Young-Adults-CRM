@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <!-- Open the connection to the API (DNS + TCP + TLS, about half a second) while
+         the scripts are still downloading, so the first request does not pay for it.
+         The app calls the API with credentials: 'include', hence use-credentials: a
+         connection opened without it is not reused for those requests. -->
+    <link rel="preconnect" href="https://api.youngadults-crm.uz" crossorigin="use-credentials" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Young Adults CRM</title>
   </head>

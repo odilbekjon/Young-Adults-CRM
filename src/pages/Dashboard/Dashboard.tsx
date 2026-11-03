@@ -1,12 +1,8 @@
-import { useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { Box, Paper, Typography, Tooltip, CircularProgress, Chip } from "@mui/material";
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip as RTooltip,
-  CartesianGrid, ResponsiveContainer, ReferenceDot,
-} from "recharts";
 
 import { ScheduleTab, ScheduleEvent } from "../../types/dashboardTypes";
 import type { RootState } from "../../app/store";
@@ -26,8 +22,16 @@ import { useReportLeftStudentsQuery } from "../../app/api/reportsApi";
 import { SCHEDULE_COLORS, DEFAULT_LESSON_DURATION } from "../../constants/DashboardData";
 import { STATS } from "../../constants/DashboardStats";
 import { useActiveStudentCount } from "../../hooks/useActiveStudentCount";
+import { lazyNamed } from "../../utils/lazyPage";
 import { useNearViewport } from "./useNearViewport";
 import { ScheduleCard } from "./ScheduleCard";
+
+// recharts is the biggest library in the app, so the chart is a chunk of its own:
+// it is requested as soon as the Dashboard mounts (see below) and downloads while
+// the numbers behind it are still loading, instead of being part of the first
+// download of every page.
+const loadRevenueChart = () => import("./RevenueChart");
+const RevenueChart = lazyNamed(loadRevenueChart, "RevenueChart");
 
 // "This month" as [firstOfMonth, today] in the plain YYYY-MM-DD format every
 // finance list endpoint expects (same format the date-range filters on the
@@ -135,31 +139,8 @@ const STAT_TARGETS: Record<string, string> = {
   leftTrial:  "/settings/office/students-left-group?leftType=trial",
 };
 
-const formatChartValue = (value: number, currency: string) => {
-  if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B ${currency}`;
-  if (value >= 1000000) return `${(value / 1000000).toFixed(0)} 000 000 ${currency}`;
-  return `${new Intl.NumberFormat("uz-UZ").format(value)} ${currency}`;
-};
-
-// ─── Custom chart tooltip ─────────────────────────────────────────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ChartTooltip = ({ active, payload, label }: any) => {
-  const { t } = useTranslation();
-  if (!active || !payload?.length) return null;
-  return (
-    <Box sx={{
-      background: "var(--color-surface)", border: "1px solid var(--color-border)",
-      borderRadius: 2, px: 2.2, py: 1.6,
-      boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
-    }}>
-      <Typography sx={{ fontSize: 12, color: "var(--color-text-secondary)", fontWeight: 700 }}>{label}</Typography>
-      <Typography sx={{ fontSize: 15, fontWeight: 800, color: "#f97316", mt: 0.3 }}>
-        {formatChartValue(payload[0].value, t("dashboard.chart.currency"))}
-      </Typography>
-    </Box>
-  );
-};
+// Same height as the drawn chart, so the card does not jump when it appears.
+const CHART_HEIGHT = 230;
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -176,6 +157,11 @@ export const Dashboard = () => {
   // particular documents branchId as a distinct filter from the header.
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const branchId = selectedBranchId ?? undefined;
+
+  // Start downloading the chart's code now, not when its data arrives.
+  useEffect(() => {
+    loadRevenueChart().catch(() => { /* the chart's own Suspense reports a failure */ });
+  }, []);
 
   // Coming back to the Dashboard within baseApi's cache window costs no
   // requests: whatever the user changed in the meantime has already evicted the
@@ -263,11 +249,6 @@ export const Dashboard = () => {
   // used on the Groups list page — see realStudentCount's own comment.
   const { data: inactiveMembershipsData } = useStudentGroupsQuery({ status: "INACTIVE", branchId, limit: 1000 }, { skip: !scheduleNear });
   const { data: deletedMembershipsData } = useStudentGroupsQuery({ status: "DELETED", branchId, limit: 1000 }, { skip: !scheduleNear });
-
-  const peakPoint = useMemo(() => {
-    if (!chartMonths || chartMonths.length === 0) return null;
-    return chartMonths.reduce((max, point) => (point.totalPayments > max.totalPayments ? point : max), chartMonths[0]);
-  }, [chartMonths]);
 
   // Backend's /dashboard/stats figure only while the real count is unavailable
   // (loading / the lists failed) - never as the answer once it is known.
@@ -391,7 +372,7 @@ export const Dashboard = () => {
         p: 3, mb: 3, background: "var(--color-surface)",
       }}>
         {chartLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: CHART_HEIGHT }}>
             <CircularProgress size={28} />
           </Box>
         ) : chartIsError ? (
@@ -407,40 +388,13 @@ export const Dashboard = () => {
             </Typography>
           </Box>
         ) : (
-          <Box height={230}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartMonths} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fontSize: 11, fill: "var(--color-text-secondary)" }}
-                  axisLine={false} tickLine={false}
-                  interval={0}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: "var(--color-text-secondary)" }}
-                  axisLine={false} tickLine={false}
-                  tickFormatter={(v) => formatChartValue(v as number, t("dashboard.chart.currency"))}
-                  width={130}
-                />
-                <RTooltip content={<ChartTooltip />} />
-                <Line
-                  type="monotone" dataKey="totalPayments"
-                  stroke="#f97316" strokeWidth={2.5}
-                  dot={{ r: 4, fill: "var(--color-surface)", stroke: "#f97316", strokeWidth: 2 }}
-                  activeDot={{ r: 6, fill: "#f97316" }}
-                  isAnimationActive
-                />
-                {peakPoint && (
-                  <ReferenceDot
-                    x={peakPoint.month}
-                    y={peakPoint.totalPayments}
-                    r={5} fill="#f97316" stroke="var(--color-surface)" strokeWidth={2}
-                  />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          </Box>
+          <Suspense fallback={
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: CHART_HEIGHT }}>
+              <CircularProgress size={28} />
+            </Box>
+          }>
+            <RevenueChart months={chartMonths} />
+          </Suspense>
         )}
       </Paper>
 

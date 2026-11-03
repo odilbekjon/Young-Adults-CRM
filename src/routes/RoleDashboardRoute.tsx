@@ -6,9 +6,15 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Layout } from "../layouts/layout";
+import { LazyPage } from "../components/LazyPage";
 import { Dashboard } from "../pages/Dashboard";
-import { TeacherDashboard } from "../pages/Dashboard/TeacherDashboard";
-import { TeacherAccount } from "../pages/TeacherAccount/TeacherAccount";
+import { lazyNamed } from "../utils/lazyPage";
+
+// The admin Dashboard is the landing page of every staff login, so it ships with
+// the first download; the teacher pages are only fetched for a TEACHER session
+// (the route wraps them in a Suspense boundary).
+const TeacherDashboard = lazyNamed(() => import("../pages/Dashboard/TeacherDashboard"), "TeacherDashboard");
+const TeacherAccount = lazyNamed(() => import("../pages/TeacherAccount/TeacherAccount"), "TeacherAccount");
 
 export const DashboardRoute = () => {
   const { isTeacher } = useAuth();
@@ -25,7 +31,9 @@ export const SalaryRoute = () => {
   if (!isTeacher) return <Navigate to="/finance/salaries" replace />;
   return (
     <Layout>
-      <TeacherAccount tab="salary" />
+      <LazyPage>
+        <TeacherAccount tab="salary" />
+      </LazyPage>
     </Layout>
   );
 };

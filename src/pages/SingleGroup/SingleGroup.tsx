@@ -48,7 +48,7 @@ import { useTeacherOptions } from "../../hooks/useTeacherOptions";
 import { useActiveGroups } from "../../hooks/useActiveGroups";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
 import { useToast } from "../../Context/ToastContext";
-import { extractApiError, formatTrainingDate, formatPhone, downloadExcelBlob } from "../../utils";
+import { extractApiError, formatTrainingDate, formatPhone, downloadExcelBlob, branchIdOf, filterByBranch } from "../../utils";
 import { formatDate } from "../../constants/FlatStudents";
 
 import { AddStudentDrawer, type AddStudentPayload } from "./AddStudentDrawer/AddStudentDrawer";
@@ -471,13 +471,22 @@ export const SingleGroup = () => {
     [moveTargetGroups, id]
   );
 
+  // A group lives in its course's branch, so the edit form offers the courses
+  // (and rooms) of that branch only - picking a course of another branch would
+  // move the group there. The group's current course/room stay in the list.
+  const editBranchId = useMemo(
+    () => branchIdOf((allCoursesData?.data ?? []).find((c) => c.id === groupDetailData?.data.courseId)),
+    [allCoursesData, groupDetailData]
+  );
   const courseOptions = useMemo(
-    () => (allCoursesData?.data ?? []).map((c) => ({ id: c.id, name: c.name, months: c.months })),
-    [allCoursesData]
+    () => filterByBranch(allCoursesData?.data ?? [], editBranchId, groupDetailData?.data.courseId)
+      .map((c) => ({ id: c.id, name: c.name, months: c.months })),
+    [allCoursesData, editBranchId, groupDetailData]
   );
   const roomOptions = useMemo(
-    () => (allRoomsData?.data ?? []).map((r) => ({ id: r.id, name: r.name })),
-    [allRoomsData]
+    () => filterByBranch(allRoomsData?.data ?? [], editBranchId, groupDetailData?.data.roomId)
+      .map((r) => ({ id: r.id, name: r.name })),
+    [allRoomsData, editBranchId, groupDetailData]
   );
 
   // Prefill source for the Edit drawer: the for-edit snapshot (only if it is

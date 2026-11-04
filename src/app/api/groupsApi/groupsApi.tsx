@@ -554,13 +554,19 @@ export const groupsApi = baseApi.injectEndpoints({
             }),
         }),
         createGroup: builder.mutation<GroupResponse, CreateGroupRequest>({
-            query: (data) => {
+            query: ({ branchId, ...data }) => {
                 const formData = new FormData();
                 appendGroupFormData(formData, data);
                 return {
                     url: PATHS.GROUPS,
                     method: "POST",
                     body: formData,
+                    // A group is filed under its course's branch, so the request
+                    // names the branch the group is meant for instead of leaving
+                    // it to whatever the header selector says (or to nothing at
+                    // all on "All branches"). It is not a body field: the Swagger
+                    // body of POST /groups documents no branchId.
+                    headers: branchId ? { "x-branch-id": branchId } : undefined,
                 };
             },
             invalidatesTags: ["group"],
@@ -672,6 +678,7 @@ export const groupsApi = baseApi.injectEndpoints({
             query: (args) => ({
                 url: `${PATHS.STUDENT_GROUPS}?${buildStudentGroupsQueryString(args ?? {})}`,
                 method: "GET",
+                priority: args?.priority,
             }),
             transformResponse: (response: unknown) => normalizeStudentGroupsList(response),
             providesTags: ["studentGroup"],

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { PaymentRow } from "../../../../app/api/financeApi/types";
 import {
-  EMPTY_FILTERS, buildGroupDirectory, countedPayments, createdLocalDate, filterPayments, hasClientFilters,
-  hasPaymentFilters, parseAmountFilter, sortPayments, sumAmounts, toOptions, totalsByMethod,
-  type PaymentFilters,
+  DEFAULT_SORT, EMPTY_FILTERS, buildGroupDirectory, countedPayments, createdLocalDate, createdLocalDateTime, filterPayments,
+  hasClientFilters, hasPaymentFilters, parseAmountFilter, sortPayments, staffKeyOf, sumAmounts, teacherNamesOf, toOptions,
+  totalsByMethod,
+  type PaymentFilters, type PaymentSort,
 } from "./clientFilters";
 
 const row = (over: Partial<PaymentRow> = {}): PaymentRow => ({
@@ -16,16 +17,55 @@ const row = (over: Partial<PaymentRow> = {}): PaymentRow => ({
 const filters = (over: Partial<PaymentFilters> = {}): PaymentFilters => ({ ...EMPTY_FILTERS, ...over });
 
 const directory = buildGroupDirectory([
-  { id: "g1", courseId: "c1", teachers: [{ id: "t1" }, { id: "t2" }] },
-  { id: "g2", course: { id: "c2" }, teachers: [{ id: "t2" }] },
+  { id: "g1", courseId: "c1", teachers: [{ id: "t1", name: "Anvar" }, { id: "t2", name: "Malika" }] },
+  { id: "g2", course: { id: "c2" }, teachers: [{ id: "t2", name: "Malika" }] },
   { id: "g3", courseId: "c2", teachers: null },
 ]);
 
 describe("buildGroupDirectory", () => {
-  it("maps each group to its course and teacher ids", () => {
-    expect(directory.g1).toEqual({ courseId: "c1", teacherIds: ["t1", "t2"] });
-    expect(directory.g2).toEqual({ courseId: "c2", teacherIds: ["t2"] });
-    expect(directory.g3).toEqual({ courseId: "c2", teacherIds: [] });
+  it("maps each group to its course and teachers", () => {
+    expect(directory.g1).toEqual({
+      courseId: "c1", teacherIds: ["t1", "t2"], teachers: [{ id: "t1", name: "Anvar" }, { id: "t2", name: "Malika" }],
+    });
+    expect(directory.g2).toEqual({ courseId: "c2", teacherIds: ["t2"], teachers: [{ id: "t2", name: "Malika" }] });
+    expect(directory.g3).toEqual({ courseId: "c2", teacherIds: [], teachers: [] });
+  });
+});
+
+describe("teacherNamesOf", () => {
+  it("lists the teachers of the payment's group, comma-separated", () => {
+    expect(teacherNamesOf(row({ groupId: "g1" }), directory)).toBe("Anvar, Malika");
+    expect(teacherNamesOf(row({ groupId: "g2" }), directory)).toBe("Malika");
+  });
+
+  it("is empty when the group has no teacher or is not known", () => {
+    expect(teacherNamesOf(row({ groupId: "g3" }), directory)).toBe("");
+    expect(teacherNamesOf(row({ groupId: "g404" }), directory)).toBe("");
+    expect(teacherNamesOf(row({ groupId: null }), directory)).toBe("");
+  });
+
+  it("falls back to the teachers the payment itself carries", () => {
+    const own = row({ groupId: "g404", teachers: [{ id: "t9", name: "Zafar" }] });
+    expect(teacherNamesOf(own, directory)).toBe("Zafar");
+    // ...but the group's own list wins when there is one.
+    expect(teacherNamesOf({ ...own, groupId: "g2" }, directory)).toBe("Malika");
+  });
+
+  it("leaves out a teacher without a name instead of printing a gap", () => {
+    const unnamed = buildGroupDirectory([{ id: "g1", teachers: [{ id: "t1" }, { id: "t2", name: "Malika" }] }]);
+    expect(teacherNamesOf(row({ groupId: "g1" }), unnamed)).toBe("Malika");
+  });
+});
+
+describe("staffKeyOf", () => {
+  it("is the creator's id, so two people with the same name stay apart", () => {
+    expect(staffKeyOf(row({ createdById: "u1", createdBy: "Ali" }))).toBe("u1");
+    expect(staffKeyOf(row({ createdById: "u2", createdBy: "Ali" }))).toBe("u2");
+  });
+
+  it("falls back to the name, and is empty for an anonymous payment", () => {
+    expect(staffKeyOf(row({ createdById: null, createdBy: "Ali" }))).toBe("name:Ali");
+    expect(staffKeyOf(row({ createdById: null, createdBy: null }))).toBe("");
   });
 });
 
@@ -33,7 +73,7 @@ describe("parseAmountFilter", () => {
   it("reads digits, ignoring the spaces of a formatted number", () => {
     expect(parseAmountFilter("400000")).toBe(400_000);
     expect(parseAmountFilter("400 000")).toBe(400_000);
-    expect(parseAmountFilter("400 000")).toBe(400_000);
+    expect(parseAmountFilter("400 000")).toBe(400_000);
     expect(parseAmountFilter("1,250,000")).toBe(1_250_000);
   });
 
@@ -80,6 +120,21 @@ describe("createdLocalDate", () => {
   });
 });
 
+describe("createdLocalDateTime", () => {
+  it("is the day and time on the viewer's clock", () => {
+    // 04:47:27 UTC is 09:47:27 in Asia/Tashkent.
+    expect(createdLocalDateTime("2026-11-04T04:47:27.000Z")).toBe("04.11.2026 09:47:27");
+    // 20:30 UTC on the 2nd is already the 3rd in Tashkent.
+    expect(createdLocalDateTime("2026-11-02T20:30:05.000Z")).toBe("03.11.2026 01:30:05");
+  });
+
+  it("is null without a usable timestamp", () => {
+    expect(createdLocalDateTime(undefined)).toBeNull();
+    expect(createdLocalDateTime("")).toBeNull();
+    expect(createdLocalDateTime("garbage")).toBeNull();
+  });
+});
+
 describe("filterPayments", () => {
   const rows = [
     row({ id: "a", groupId: "g1", amount: 400_000, createdBy: "Maksuda", createdAt: "2026-11-03T08:00:00.000Z" }),
@@ -107,6 +162,15 @@ describe("filterPayments", () => {
     expect(ids(filterPayments(rows, filters({ teacherId: "t1" }), directory))).toEqual(["a"]);
   });
 
+  it("uses the course and teachers a payment carries when its group is not in the directory", () => {
+    const own = [
+      row({ id: "x", groupId: "g404", courseId: "c7", teachers: [{ id: "t9", name: "Zafar" }] }),
+      row({ id: "y", groupId: "g404" }),
+    ];
+    expect(ids(filterPayments(own, filters({ teacherId: "t9" }), directory))).toEqual(["x"]);
+    expect(ids(filterPayments(own, filters({ courseId: "c7" }), directory))).toEqual(["x"]);
+  });
+
   it("drops a payment whose group is unknown when a course or teacher is asked for", () => {
     expect(ids(filterPayments(rows, filters({ courseId: "c1" }), {}))).toEqual([]);
     expect(ids(filterPayments(rows, filters({ teacherId: "t1" }), {}))).toEqual([]);
@@ -122,8 +186,19 @@ describe("filterPayments", () => {
     expect(filterPayments(rows, filters({ amount: "abc" }), directory)).toEqual([]);
   });
 
-  it("filters by the staff member who recorded the payment", () => {
-    expect(ids(filterPayments(rows, filters({ staff: "Maksuda" }), directory))).toEqual(["a", "c"]);
+  it("filters by the staff member who recorded the payment (by name when there is no id)", () => {
+    expect(ids(filterPayments(rows, filters({ staff: "name:Maksuda" }), directory))).toEqual(["a", "c"]);
+  });
+
+  it("filters by the creator's id: a namesake is not the same staff member", () => {
+    const people = [
+      row({ id: "u1-a", createdById: "u1", createdBy: "Ali" }),
+      row({ id: "u2-a", createdById: "u2", createdBy: "Ali" }),
+      row({ id: "u1-b", createdById: "u1", createdBy: "Ali" }),
+    ];
+    expect(ids(filterPayments(people, filters({ staff: "u1" }), directory))).toEqual(["u1-a", "u1-b"]);
+    expect(ids(filterPayments(people, filters({ staff: "u2" }), directory))).toEqual(["u2-a"]);
+    expect(ids(filterPayments(people, filters({ staff: "name:Ali" }), directory))).toEqual([]);
   });
 
   it("filters by the day the payment was recorded, both ends included", () => {
@@ -143,8 +218,8 @@ describe("filterPayments", () => {
   });
 
   it("combines filters (all must hold)", () => {
-    expect(ids(filterPayments(rows, filters({ staff: "Maksuda", courseId: "c2" }), directory))).toEqual(["c"]);
-    expect(ids(filterPayments(rows, filters({ staff: "Maksuda", amount: "250000" }), directory))).toEqual([]);
+    expect(ids(filterPayments(rows, filters({ staff: "name:Maksuda", courseId: "c2" }), directory))).toEqual(["c"]);
+    expect(ids(filterPayments(rows, filters({ staff: "name:Maksuda", amount: "250000" }), directory))).toEqual([]);
   });
 });
 
@@ -162,6 +237,56 @@ describe("sortPayments", () => {
     const input = [row({ id: "a", date: "2026-11-01" }), row({ id: "b", date: "2026-11-02" })];
     sortPayments(input);
     expect(input.map((p) => p.id)).toEqual(["a", "b"]);
+  });
+
+  describe("by a column", () => {
+    const list = [
+      row({ id: "a", date: "2026-11-02", amount: 300, studentName: "Charos", paymentMethodName: "Naqd", createdBy: "Maksuda", groupId: "g1" }),
+      row({ id: "b", date: "2026-11-03", amount: 100, studentName: "asila", paymentMethodName: "Click", createdBy: "Dilnoza", groupId: "g2" }),
+      row({ id: "c", date: "2026-11-01", amount: 200, studentName: "Botir", paymentMethodName: "Payme", createdBy: null, groupId: "g3" }),
+    ];
+    const sorted = (sort: PaymentSort) => sortPayments(list, sort, directory).map((p) => p.id);
+
+    it("starts from the default: date, newest first", () => {
+      expect(DEFAULT_SORT).toEqual({ key: "date", dir: "desc" });
+      expect(sorted(DEFAULT_SORT)).toEqual(["b", "a", "c"]);
+      expect(sorted({ key: "date", dir: "asc" })).toEqual(["c", "a", "b"]);
+    });
+
+    it("sorts by the student's name, ignoring case", () => {
+      expect(sorted({ key: "name", dir: "asc" })).toEqual(["b", "c", "a"]);
+      expect(sorted({ key: "name", dir: "desc" })).toEqual(["a", "c", "b"]);
+    });
+
+    it("sorts by the sum as a number", () => {
+      expect(sorted({ key: "sum", dir: "asc" })).toEqual(["b", "c", "a"]);
+      expect(sorted({ key: "sum", dir: "desc" })).toEqual(["a", "c", "b"]);
+    });
+
+    it("sorts by the payment type", () => {
+      expect(sorted({ key: "method", dir: "asc" })).toEqual(["b", "a", "c"]);
+      expect(sorted({ key: "method", dir: "desc" })).toEqual(["c", "a", "b"]);
+    });
+
+    it("sorts by the teacher's name, a payment with no teacher always last", () => {
+      // g1 -> Anvar, Malika; g2 -> Malika; g3 -> nobody
+      expect(sorted({ key: "teacher", dir: "asc" })).toEqual(["a", "b", "c"]);
+      expect(sorted({ key: "teacher", dir: "desc" })).toEqual(["b", "a", "c"]);
+    });
+
+    it("sorts by the staff member, a payment with no creator always last", () => {
+      expect(sorted({ key: "staff", dir: "asc" })).toEqual(["b", "a", "c"]);
+      expect(sorted({ key: "staff", dir: "desc" })).toEqual(["a", "b", "c"]);
+    });
+
+    it("keeps payments that tie in newest-first order, whichever way the column goes", () => {
+      const ties = [
+        row({ id: "old", amount: 100, date: "2026-11-01" }),
+        row({ id: "new", amount: 100, date: "2026-11-03" }),
+      ];
+      expect(sortPayments(ties, { key: "sum", dir: "asc" }).map((p) => p.id)).toEqual(["new", "old"]);
+      expect(sortPayments(ties, { key: "sum", dir: "desc" }).map((p) => p.id)).toEqual(["new", "old"]);
+    });
   });
 });
 

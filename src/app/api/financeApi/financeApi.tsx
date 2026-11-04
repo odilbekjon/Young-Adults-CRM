@@ -24,6 +24,7 @@ import {
     ExpenseRow,
     ExpensesResult,
     PaymentRow,
+    PaymentPerson,
     PaymentsListResult,
     PaymentsRangeQueryArgs,
     PaymentsRangeResult,
@@ -280,6 +281,69 @@ const normalizeExpenseRows = (raw: unknown): ExpenseRow[] => {
     return list.map((item, index) => normalizeExpenseRow(item, index));
 };
 
+// An id as the backend writes them. A bare string in a person field is either
+// the person's name or their id; these shapes are never a name.
+const looksLikeId = (value: string): boolean =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) || /^\d+$/.test(value);
+
+// The display name of a person however the backend spells it: a plain name
+// string, or an object with `name`, `fullName`, `firstName` + `lastName` or a
+// username. An id-only value has no name (it is "", never the id itself and
+// never "[object Object]").
+const personName = (raw: unknown): string => {
+    if (typeof raw === "string") {
+        const value = raw.trim();
+        return looksLikeId(value) ? "" : value;
+    }
+    if (!raw || typeof raw !== "object") return "";
+    const o = raw as Record<string, unknown>;
+    const text = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+    const full = [o.firstName ?? o.first_name, o.lastName ?? o.last_name].map(text).filter(Boolean).join(" ");
+    return text(o.name) || text(o.fullName) || text(o.full_name) || full || text(o.username) || text(o.login);
+};
+
+const personId = (raw: unknown): string => {
+    if (typeof raw === "string") {
+        const value = raw.trim();
+        return looksLikeId(value) ? value : "";
+    }
+    if (!raw || typeof raw !== "object") return "";
+    const o = raw as Record<string, unknown>;
+    return asId(o.id ?? o.userId ?? o.uuid);
+};
+
+// Who recorded a payment/expense/withdrawal row: `createdBy` / `creator` is
+// either an object (name, fullName, firstName + lastName, username, optionally
+// with the id) or a bare name or id, with `createdById` / `createdByName`
+// beside it. Each of them is tried, so a row that names the person in one
+// field and gives the id in another still resolves to both.
+const readCreator = (obj: Record<string, unknown>): { id: string | null; name: string | null } => {
+    const candidates = [obj.createdBy, obj.creator, obj.createdByUser, obj.cashier, obj.user];
+    const name =
+        candidates.map(personName).find(Boolean) ||
+        personName(obj.createdByName ?? obj.creatorName ?? obj.cashierName ?? obj.createdByFullName);
+    const id = candidates.map(personId).find(Boolean) || asId(obj.createdById ?? obj.creatorId ?? obj.cashierId ?? obj.userId);
+    return { id: id || null, name: name || null };
+};
+
+// The teachers a payment row carries itself (on its group, or beside it).
+const readPaymentTeachers = (obj: Record<string, unknown>, group: Record<string, unknown>): PaymentPerson[] => {
+    const lists = [group.teachers, obj.teachers].filter(Array.isArray).flat() as unknown[];
+    const people = [...lists, obj.teacher, group.teacher, obj.teacherName];
+    const seen = new Set<string>();
+    const result: PaymentPerson[] = [];
+    people.forEach((person) => {
+        const name = personName(person);
+        if (!name) return;
+        const id = personId(person);
+        const key = id || name;
+        if (seen.has(key)) return;
+        seen.add(key);
+        result.push({ id, name });
+    });
+    return result;
+};
+
 // GET /finance/payments (registry) row shape confirmed live (2026-09):
 // nested student/group/branch/paymentMethod/createdBy objects.
 const normalizePaymentRow = (raw: unknown, index: number): PaymentRow => {
@@ -288,7 +352,9 @@ const normalizePaymentRow = (raw: unknown, index: number): PaymentRow => {
     const group = (obj.group ?? {}) as Record<string, unknown>;
     const branch = (obj.branch ?? {}) as Record<string, unknown>;
     const method = (obj.paymentMethod ?? {}) as Record<string, unknown>;
-    const creator = (obj.createdBy ?? obj.creator ?? {}) as Record<string, unknown>;
+    const course = (obj.course ?? group.course ?? {}) as Record<string, unknown>;
+    const creator = readCreator(obj);
+    const teachers = readPaymentTeachers(obj, group);
 
     return {
         id: asString(obj.id ?? `row-${index}`),
@@ -307,9 +373,13 @@ const normalizePaymentRow = (raw: unknown, index: number): PaymentRow => {
         provider: (obj.provider ? asString(obj.provider) : null) as PaymentRow["provider"],
         transactionId: obj.transactionId ? asString(obj.transactionId) : null,
         receiptUrl: obj.receiptUrl ? asString(obj.receiptUrl) : null,
-        createdBy: asString(creator.name ?? obj.createdBy) || null,
+        createdBy: creator.name,
+        createdById: creator.id,
         createdAt: obj.createdAt ? asString(obj.createdAt) : undefined,
         status: obj.status ? asString(obj.status) : null,
+        courseId: asId(obj.courseId ?? course.id) || null,
+        courseName: asString(obj.courseName ?? course.name),
+        teachers,
     };
 };
 

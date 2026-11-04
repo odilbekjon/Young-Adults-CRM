@@ -851,6 +851,9 @@
       "editTitle": "Edit Group",
       "name": "Name",
       "course": "Select course",
+      "coursesLoading": "Loading courses...",
+      "coursesEmpty": "No active courses in this branch",
+      "courseBranchNotice": "The group will be created in the branch of this course: {{branch}}",
       "teacher": "Select teacher",
       "teachersLoading": "Loading teachers...",
       "teachersEmpty": "No teachers found for this branch",
@@ -870,6 +873,8 @@
       "errors": {
         "name": "Group name is required",
         "course": "Course is required",
+        "courseBranch": "This course belongs to another branch ({{courseBranch}}), so the group would end up there. Pick a course of {{branch}}.",
+        "roomBranch": "This room belongs to another branch. Pick a room of {{branch}}.",
         "save": "Failed to save the group"
       }
     },
@@ -954,7 +959,7 @@
         "group": "Select group",
         "course": "Course",
         "teacher": "Teacher",
-        "methodPay": "Method pay",
+        "methodPay": "Payment type",
         "sum": "Sum",
         "amountPlaceholder": "Amount",
         "staffName": "Staff Name",
@@ -967,12 +972,13 @@
       },
       "table": {
         "date": "Date",
-        "name": "Name",
+        "name": "Student name",
         "sum": "Sum",
-        "methodPay": "Method pay",
+        "methodPay": "Payment type",
         "teacher": "Teacher",
         "comment": "Comment",
         "creator": "Creator",
+        "staff": "Staff",
         "empty": "No payments found",
         "loadError": "Failed to load payments",
         "retry": "Retry",

@@ -24,6 +24,7 @@ import { STATS } from "../../constants/DashboardStats";
 import { useActiveStudentCount } from "../../hooks/useActiveStudentCount";
 import { lazyNamed } from "../../utils/lazyPage";
 import { useNearViewport } from "./useNearViewport";
+import { activeStudentsStat } from "./activeStudentsStat";
 import { ScheduleCard } from "./ScheduleCard";
 
 // recharts is the biggest library in the app, so the chart is a chunk of its own:
@@ -169,10 +170,15 @@ export const Dashboard = () => {
   // are computed from, see dashboardApi).
   //
   // Requests start in the order the hooks are declared and baseApi caps how many
-  // run at once, so the cheap counts behind the stat tiles come first, the big
-  // lists behind "Active students" next, and the cards further down the page
+  // run at once, so what the page waits on longest goes first: the big lists
+  // behind "Active students" (several MB, and a page count that is only known once
+  // the first page is in) right after the cheap /dashboard/stats call, then the
+  // cheap counts behind the other stat tiles, and the cards further down the page
   // last — those only start once they are about to scroll into view.
-  const { data: statsData } = useDashboardStatsQuery();
+  const { data: statsData, isLoading: statsLoading } = useDashboardStatsQuery();
+
+  // "Active students": a group AND an ACTIVE status in it (see the hook).
+  const activeStudents = useActiveStudentCount(branchId);
 
   // "Active leads" — GET /leads?status=ACTIVE (leadsApi's own definition of
   // an active lead, same enum the Leads Kanban board and Reports use). Only the
@@ -223,9 +229,6 @@ export const Dashboard = () => {
   const { data: chartMonths, isLoading: chartLoading, isError: chartIsError } =
     useFinanceChartQuery({ year: currentYear, branchId });
 
-  // "Active students": a group AND an ACTIVE status in it (see the hook).
-  const activeStudents = useActiveStudentCount(branchId);
-
   // Attendance / Recent activity / Teacher performance cards.
   const [summaryRef, summaryNear] = useNearViewport();
   const summaryOptions = { skip: !summaryNear };
@@ -250,16 +253,17 @@ export const Dashboard = () => {
   const { data: inactiveMembershipsData } = useStudentGroupsQuery({ status: "INACTIVE", branchId, limit: 1000 }, { skip: !scheduleNear });
   const { data: deletedMembershipsData } = useStudentGroupsQuery({ status: "DELETED", branchId, limit: 1000 }, { skip: !scheduleNear });
 
-  // Backend's /dashboard/stats figure only while the real count is unavailable
-  // (loading / the lists failed) - never as the answer once it is known.
-  const activeStudentsStat =
-    activeStudents.count !== null
-      ? { value: activeStudents.count, loading: false }
-      : { value: statsData?.data.activeStudentsCount ?? 0, loading: activeStudents.isLoading && !statsData };
+  // The exact count once it is known; until then an estimate that is marked as
+  // one (see activeStudentsStat) - never an unmarked number that later changes.
+  const activeStudentsTile = activeStudentsStat(activeStudents, {
+    count: statsData?.data.activeStudentsCount,
+    isLoading: statsLoading,
+  });
 
-  const liveStatValues: Record<string, { value: number; loading: boolean }> = {
+  // `approximate`/`refining` are only ever set by the Active students tile.
+  const liveStatValues: Record<string, { value: number; loading: boolean; approximate?: boolean; refining?: boolean }> = {
     leads:      { value: activeLeadsData?.meta?.total ?? 0, loading: activeLeadsLoading },
-    students:   activeStudentsStat,
+    students:   activeStudentsTile,
     groups:     { value: statsData?.data.activeGroupsCount ?? 0, loading: !statsData },
     debtors:    { value: debtorsData?.meta.total ?? 0, loading: debtorsLoading },
     trial:      { value: trialGroupsData?.meta.total ?? 0, loading: trialLoading },
@@ -354,7 +358,14 @@ export const Dashboard = () => {
                 {t(labelKey)}
               </Typography>
               <Typography sx={{ fontSize: 32,  color: "var(--color-primary)", lineHeight: 1 }}>
-                {stat.loading ? <CircularProgress size={20} /> : stat.value}
+                {stat.loading ? <CircularProgress size={20} /> : stat.approximate ? (
+                  // An estimate: "≈", and dimmed with a small spinner (which takes
+                  // no room, so nothing moves) while the exact figure is coming.
+                  <Box component="span" aria-busy={stat.refining} sx={{ position: "relative", opacity: stat.refining ? 0.55 : 1, transition: "opacity 0.2s ease" }}>
+                    ≈ {stat.value}
+                    {stat.refining && <CircularProgress size={10} thickness={6} sx={{ position: "absolute", top: 2, right: -14 }} />}
+                  </Box>
+                ) : stat.value}
               </Typography>
             </Paper>
           </Tooltip>

@@ -6,6 +6,7 @@ import { useToast } from "../../Context/ToastContext";
 import { useStudentByIdQuery, useStudentGroupMembershipsQuery } from "../../app/api/studentsApi/studentsApi";
 import { useCreatePaymentMutation, useUpdatePaymentMutation } from "../../app/api/financeApi/financeApi";
 import { PaymentMethodPicker } from "../PaymentMethodPicker";
+import { MoneyInput } from "../MoneyInput";
 import { StudentSearchField, type SearchedStudent } from "./StudentSearchField";
 import { PaymentGroupPicker, type PaymentGroupOption } from "./PaymentGroupPicker";
 import { PaymentReceiptModal } from "../PaymentReceiptModal";
@@ -18,6 +19,7 @@ import { extractApiError } from "../../utils/extractApiError";
 import { getProviderFromMethodName } from "../../utils/paymentProvider";
 import { todayLocalISO } from "../../utils/localDate";
 import { submitOnEnter } from "../../utils/submitOnEnter";
+import { moneyToDigits } from "../../utils/moneyInput";
 
 const todayISO = todayLocalISO;
 
@@ -162,7 +164,7 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
   useEffect(() => {
     if (!open || !editPayment) return;
     setPaymentMethodId(editPayment.paymentMethodId);
-    setAmount(String(editPayment.amount));
+    setAmount(moneyToDigits(editPayment.amount));
     setDate(editPayment.date || todayISO());
     setNotes(editPayment.notes || "");
   }, [open, editPayment]);
@@ -315,11 +317,10 @@ export const AddPayment = ({ open, onClose, initialStudentId, initialStudentName
         {/* Amount */}
         <div>
           <label style={labelStyle}>{t("addPayment.amount")}</label>
-          <input
+          <MoneyInput
             style={inputStyle}
-            type="number"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={setAmount}
             placeholder="0"
           />
         </div>

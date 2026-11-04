@@ -35,8 +35,9 @@ const branchHeader = (branchId: string) => ({ "x-branch-id": branchId });
 
 export const coursesApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        // Courses are shared by all branches, so the list is never scoped to the
-        // selected branch (baseApi also leaves x-branch-id off GET /courses).
+        // Every branch's courses, never scoped to the selected branch (baseApi
+        // leaves x-branch-id off GET /courses). Each course carries its branchId;
+        // the group form narrows the list to one branch (utils/groupBranch.ts).
         allCourses: builder.query<CoursesResponse, void>({
             query: () => ({
                 url: PATHS.COURSES,

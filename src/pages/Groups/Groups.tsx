@@ -41,7 +41,12 @@ import { Calendar } from "../SingleGroup/Calendar";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
 import { TimeSelectField } from "../SingleGroup/TimeSelectField";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
-import { extractApiError, formatTrainingDate, addMonthsToIsoDate, classifyDays, classifyDayList, DAYS_PRESETS, downloadExcelBlob, submitOnEnter } from "../../utils";
+import {
+  extractApiError, formatTrainingDate, addMonthsToIsoDate, classifyDays, classifyDayList, DAYS_PRESETS, downloadExcelBlob, submitOnEnter,
+  branchIdOf, clearStaleBranchChoices, filterByBranch, findBranchConflict, groupBranchId, singleBranchId,
+} from "../../utils";
+import type { Course } from "../../app/api/coursesApi/types";
+import type { Room } from "../../app/api/roomsApi/types";
 import { StudyPeriodCell } from "./StudyPeriodCell";
 
 /* ─── types ─────────────────────────────────────────────── */
@@ -52,6 +57,8 @@ interface GroupRow {
   id: string;
   name: string;
   courseId: string;
+  // The group's branch is its course's branch (see utils/groupBranch.ts).
+  courseBranchId: string;
   course: string;
   roomId: string;
   room: string;
@@ -160,6 +167,7 @@ const toGroupRow = (g: Group, archivedMembershipKeys: Set<string>): GroupRow => 
   id: g.id,
   name: g.name,
   courseId: g.courseId,
+  courseBranchId: g.course?.branchId ?? "",
   course: g.course?.name ?? "—",
   roomId: g.roomId ?? "",
   room: g.room?.name ?? "—",
@@ -545,7 +553,7 @@ export const Groups = () => {
   // Declared ahead of the queries below: only the create/edit drawer needs the
   // full course and room lists, so they are fetched once it is opened.
   const [open, setOpen] = useState(false);
-  const { data: coursesData } = useAllCoursesQuery(undefined, { skip: !open });
+  const { data: coursesData, isLoading: coursesLoading } = useAllCoursesQuery(undefined, { skip: !open });
   const { data: roomsData } = useAllRoomsQuery(undefined, { skip: !open });
   const { data: branchesData } = useAllBranchesQuery();
   // GET /teachers/select — the dropdown-specific endpoint for group create/
@@ -662,12 +670,6 @@ export const Groups = () => {
     [branchFilteredGroups, archivedMembershipKeys]
   );
 
-  // Courses are shared by every branch, so they are not filtered by branch.
-  const activeCourses = (coursesData?.data ?? []).filter((c) => c.status === "ACTIVE");
-  const activeRooms = (roomsData?.data ?? [])
-    .filter((r) => r.status === "ACTIVE")
-    .filter((r) => selectedBranch === "all" || r.branch?.name === selectedBranch);
-
   const DAY_FILTER_OPTIONS = [
     { value: "Odd days",     label: t("groups.options.days.odd") },
     { value: "Even days",    label: t("groups.options.days.even") },
@@ -677,9 +679,13 @@ export const Groups = () => {
   ];
 
   const [editingId,         setEditingId]         = useState<string | null>(null);
+  // What the group being edited had when the form opened: its course and room
+  // stay offered (and are never cleared) whatever their branch, and its course's
+  // branch is the branch the form works in.
+  const [editingOrigin,     setEditingOrigin]     = useState<{ courseId: string; roomId: string; branchId: string | null } | null>(null);
   const [form,              setForm]              = useState<FormState>(EMPTY_FORM);
   const [daysMode,          setDaysMode]          = useState<string>("");
-  const [formErrors,        setFormErrors]        = useState<{ name?: string; course?: string }>({});
+  const [formErrors,        setFormErrors]        = useState<{ name?: string; course?: string; room?: string }>({});
   const [saveError,         setSaveError]         = useState<string | null>(null);
   const [actionMenuAnchor,  setActionMenuAnchor]  = useState<{ el: HTMLElement; id: string } | null>(null);
   const [deleteConfirmId,   setDeleteConfirmId]   = useState<string | null>(null);
@@ -697,6 +703,45 @@ export const Groups = () => {
   const [columnsAnchor,     setColumnsAnchor]     = useState<null | HTMLElement>(null);
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
   const [visibleFilters,   setVisibleFilters]   = usePersistedState<string[]>("groups:visibleFilters", ["status", "teacher", "course", "days", "tags", "date"]);
+
+  /* ── Which branch the group form works in ──────────────────
+     A group lives in its COURSE's branch, so the course list is narrowed to the
+     branch the group is created in (the one picked in the header). On "All
+     branches" nothing narrows it: every course is offered with its branch named
+     and the group goes to the branch of the course picked. Editing keeps the
+     group in the branch it already has. The rooms follow the same branch. */
+  const allCourses = useMemo(() => coursesData?.data ?? [], [coursesData]);
+  const allRooms = useMemo(() => roomsData?.data ?? [], [roomsData]);
+  const headerBranchId = singleBranchId(selectedBranchId);
+  const scopeBranchId = editingId !== null ? (editingOrigin?.branchId ?? headerBranchId) : headerBranchId;
+  const courseChoices = useMemo(
+    () => filterByBranch(allCourses.filter((c) => c.status === "ACTIVE"), scopeBranchId, editingOrigin?.courseId),
+    [allCourses, scopeBranchId, editingOrigin],
+  );
+  const chosenCourse = allCourses.find((c) => c.id === form.courseId);
+  const chosenRoom = allRooms.find((r) => r.id === form.roomId);
+  // The branch the group will end up in; null while "All branches" and no course.
+  const formBranchId = groupBranchId(scopeBranchId, chosenCourse);
+  const roomChoices = useMemo(
+    () => filterByBranch(allRooms.filter((r) => r.status === "ACTIVE"), formBranchId, editingOrigin?.roomId),
+    [allRooms, formBranchId, editingOrigin],
+  );
+  const branchNameOf = (item: Course | Room | undefined): string =>
+    item?.branch?.name ?? branchNameById[branchIdOf(item) ?? ""] ?? "";
+
+  // A course or room picked earlier is dropped as soon as it stops belonging to
+  // the group's branch (the branch changed under the open form, or another
+  // course was chosen on "All branches").
+  useEffect(() => {
+    if (!open) return;
+    setForm((prev) => {
+      const next = clearStaleBranchChoices(prev, {
+        scopeBranchId, courses: allCourses, rooms: allRooms,
+        keepCourseId: editingOrigin?.courseId, keepRoomId: editingOrigin?.roomId,
+      });
+      return next.courseId === prev.courseId && next.roomId === prev.roomId ? prev : { ...prev, ...next };
+    });
+  }, [open, scopeBranchId, allCourses, allRooms, editingOrigin, form.courseId, form.roomId]);
 
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -771,7 +816,7 @@ export const Groups = () => {
   // than clearing whatever the user may have entered manually).
   const recalcEndDate = (courseId: string, startDate: string) => {
     if (!startDate) return;
-    const months = activeCourses.find((c) => c.id === courseId)?.months;
+    const months = courseChoices.find((c) => c.id === courseId)?.months;
     if (!months) return;
     const end = addMonthsToIsoDate(startDate, months);
     if (end) setForm((prev) => ({ ...prev, trainingEnd: end }));
@@ -790,6 +835,7 @@ export const Groups = () => {
 
   const handleOpenAdd = () => {
     setEditingId(null);
+    setEditingOrigin(null);
     setForm(EMPTY_FORM);
     setDaysMode("");
     setFormErrors({});
@@ -799,6 +845,7 @@ export const Groups = () => {
 
   const handleOpenEdit = useCallback((group: GroupRow) => {
     setEditingId(group.id);
+    setEditingOrigin({ courseId: group.courseId, roomId: group.roomId, branchId: singleBranchId(group.courseBranchId) });
     setForm({
       name: group.name,
       courseId: group.courseId,
@@ -818,9 +865,29 @@ export const Groups = () => {
   }, []);
 
   const validate = () => {
-    const errs: { name?: string; course?: string } = {};
+    const errs: { name?: string; course?: string; room?: string } = {};
     if (!form.name.trim()) errs.name = t("groups.form.errors.name");
     if (!form.courseId)    errs.course = t("groups.form.errors.course");
+    else {
+      // Last line of defence: the pickers only offer the branch's own courses
+      // and rooms, but a course of another branch would silently move the group
+      // there, so nothing is sent while the choice does not fit the group's
+      // branch. A course/room an edited group already had is not re-judged.
+      const conflict = findBranchConflict({
+        scopeBranchId,
+        course: editingOrigin?.courseId === form.courseId ? undefined : chosenCourse,
+        room: form.roomId && editingOrigin?.roomId !== form.roomId ? chosenRoom : undefined,
+      });
+      if (conflict === "course") {
+        errs.course = t("groups.form.errors.courseBranch", {
+          courseBranch: branchNameOf(chosenCourse), branch: branchNameById[scopeBranchId ?? ""] ?? "",
+        });
+      } else if (conflict === "room") {
+        errs.room = t("groups.form.errors.roomBranch", {
+          branch: branchNameById[formBranchId ?? ""] ?? branchNameOf(chosenCourse),
+        });
+      }
+    }
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -845,7 +912,9 @@ export const Groups = () => {
         await updateGroup({ id: editingId, ...payload }).unwrap();
         toast.success(t("groups.toast.updated"));
       } else {
-        await createGroup(payload).unwrap();
+        // Names the branch the group is meant for (the course's branch decides
+        // where the backend files it), rather than whatever the header holds.
+        await createGroup({ ...payload, branchId: formBranchId ?? undefined }).unwrap();
         toast.success(t("groups.toast.created"));
       }
       setOpen(false);
@@ -1304,11 +1373,23 @@ export const Groups = () => {
               size="small"
               fullWidth
               error={!!formErrors.course}
-              helperText={formErrors.course}
+              // On "All branches" the group goes to the branch of the course, so
+              // that branch is spelled out once a course is picked.
+              helperText={formErrors.course
+                ?? (scopeBranchId === null && chosenCourse
+                  ? t("groups.form.courseBranchNotice", { branch: branchNameOf(chosenCourse) })
+                  : undefined)}
               sx={inputSx}
             >
-              {activeCourses.map((c) => (
-                <MenuItem key={c.id} value={c.id} sx={{ fontSize: 13 }}>{c.name}</MenuItem>
+              {courseChoices.length === 0 && (
+                <MenuItem disabled sx={{ fontSize: 13 }}>
+                  {coursesLoading ? t("groups.form.coursesLoading") : t("groups.form.coursesEmpty")}
+                </MenuItem>
+              )}
+              {courseChoices.map((c) => (
+                <MenuItem key={c.id} value={c.id} sx={{ fontSize: 13 }}>
+                  {scopeBranchId === null && branchNameOf(c) ? `${c.name} — ${branchNameOf(c)}` : c.name}
+                </MenuItem>
               ))}
             </TextField>
           </Box>
@@ -1410,11 +1491,16 @@ export const Groups = () => {
               onChange={handleChange}
               size="small"
               fullWidth
+              error={!!formErrors.room}
+              helperText={formErrors.room}
               sx={inputSx}
             >
               <MenuItem value="" sx={{ fontSize: 13 }}>—</MenuItem>
-              {activeRooms.map((r) => (
-                <MenuItem key={r.id} value={r.id} sx={{ fontSize: 13 }}>{r.name}</MenuItem>
+              {roomChoices.map((r) => (
+                <MenuItem key={r.id} value={r.id} sx={{ fontSize: 13 }}>
+                  {/* Until a branch is settled (All branches, no course yet) the same room name can exist in several branches */}
+                  {formBranchId === null && branchNameOf(r) ? `${r.name} — ${branchNameOf(r)}` : r.name}
+                </MenuItem>
               ))}
             </TextField>
           </Box>

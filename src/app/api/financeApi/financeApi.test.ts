@@ -65,6 +65,82 @@ describe("financeApi.paymentsRange", () => {
     });
   });
 
+  describe("who recorded a payment", () => {
+    const creatorOf = async (over: Record<string, unknown>) => {
+      const store = createTestStore();
+      stubFetch(pagedBackend([paymentJson("p1", over)]));
+      const result = await store.dispatch(financeApi.endpoints.paymentsRange.initiate(NOVEMBER));
+      const [row] = result.data?.rows ?? [];
+      return { name: row.createdBy, id: row.createdById };
+    };
+
+    it("reads the name of a createdBy object", async () => {
+      expect(await creatorOf({ createdBy: { id: "u1", name: "Maksuda" } })).toEqual({ name: "Maksuda", id: "u1" });
+    });
+
+    it("reads fullName, firstName + lastName and username when there is no name", async () => {
+      expect(await creatorOf({ createdBy: { id: "u1", fullName: "Maksuda Karimova" } })).toEqual({ name: "Maksuda Karimova", id: "u1" });
+      expect(await creatorOf({ createdBy: { id: "u1", firstName: "Maksuda", lastName: "Karimova" } })).toEqual({ name: "Maksuda Karimova", id: "u1" });
+      expect(await creatorOf({ createdBy: { id: "u1", firstName: "Maksuda" } })).toEqual({ name: "Maksuda", id: "u1" });
+      expect(await creatorOf({ createdBy: { id: "u1", username: "maksuda" } })).toEqual({ name: "maksuda", id: "u1" });
+    });
+
+    it("reads the creator from `creator` too", async () => {
+      expect(await creatorOf({ creator: { id: "u2", name: "Dilnoza" } })).toEqual({ name: "Dilnoza", id: "u2" });
+    });
+
+    it("never shows an object or an id as a name", async () => {
+      expect(await creatorOf({ createdBy: { id: "u1" } })).toEqual({ name: null, id: "u1" });
+      expect(await creatorOf({ createdBy: "9b2c1f6e-1d2a-4c3b-8e4f-5a6b7c8d9e0f" })).toEqual({
+        name: null, id: "9b2c1f6e-1d2a-4c3b-8e4f-5a6b7c8d9e0f",
+      });
+    });
+
+    it("takes a plain name string as the name", async () => {
+      expect(await creatorOf({ createdBy: "Maksuda" })).toEqual({ name: "Maksuda", id: null });
+    });
+
+    it("combines a creator id with a name that sits in another field", async () => {
+      // createdBy is the id, the name is beside it (as `creator`, or as createdByName).
+      expect(await creatorOf({ createdBy: "7", creator: { name: "Maksuda" } })).toEqual({ name: "Maksuda", id: "7" });
+      expect(await creatorOf({ createdById: "u3", createdByName: "Dilnoza" })).toEqual({ name: "Dilnoza", id: "u3" });
+      expect(await creatorOf({ createdBy: null, createdById: "u3" })).toEqual({ name: null, id: "u3" });
+    });
+
+    it("is empty for a payment that names nobody", async () => {
+      expect(await creatorOf({})).toEqual({ name: null, id: null });
+    });
+  });
+
+  describe("the course and teachers a payment carries", () => {
+    const rowOf = async (over: Record<string, unknown>) => {
+      const store = createTestStore();
+      stubFetch(pagedBackend([paymentJson("p1", over)]));
+      const result = await store.dispatch(financeApi.endpoints.paymentsRange.initiate(NOVEMBER));
+      return result.data!.rows[0];
+    };
+
+    it("reads the teachers and course of the nested group", async () => {
+      const row = await rowOf({
+        group: { id: "g1", name: "Deep Science", course: { id: "c1", name: "IELTS" }, teachers: [{ id: "t1", name: "Anvar" }, { id: "t2", name: "Malika" }] },
+      });
+      expect(row.teachers).toEqual([{ id: "t1", name: "Anvar" }, { id: "t2", name: "Malika" }]);
+      expect(row.courseId).toBe("c1");
+      expect(row.courseName).toBe("IELTS");
+    });
+
+    it("reads a single teacher object or a teacherName next to the group", async () => {
+      expect((await rowOf({ teacher: { id: "t1", name: "Anvar" } })).teachers).toEqual([{ id: "t1", name: "Anvar" }]);
+      expect((await rowOf({ teacherName: "Anvar" })).teachers).toEqual([{ id: "", name: "Anvar" }]);
+    });
+
+    it("has no teachers or course when the payment carries none", async () => {
+      const row = await rowOf({});
+      expect(row.teachers).toEqual([]);
+      expect(row.courseId).toBeNull();
+    });
+  });
+
   it("is an empty list, not an error, for a period without payments", async () => {
     const store = createTestStore();
     stubFetch(pagedBackend([]));

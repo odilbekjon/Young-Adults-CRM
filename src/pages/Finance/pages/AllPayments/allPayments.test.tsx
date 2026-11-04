@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse, stubFetch, type SentRequest } from "../../../../test/fetchStub";
 import { renderWithStore } from "../../../../test/renderWithStore";
@@ -18,12 +18,12 @@ const money = (n: number) => fmt(n).replace(/\s/g, " ");
 const payment = (id: string, over: Record<string, unknown> = {}) => ({
   id, amount: 400_000, date: "2026-11-03", status: null, createdAt: "2026-11-03T08:00:00.000Z",
   student: { id: `s-${id}`, name: `Student ${id}` }, group: { id: "g1", name: "Deep Science" },
-  paymentMethod: { id: "m1", name: "Cash" }, createdBy: { name: "Maksuda" }, ...over,
+  paymentMethod: { id: "m1", name: "Cash" }, createdBy: { id: "u1", name: "Maksuda" }, ...over,
 });
 
 const PAYMENTS = [
   payment("p1"),
-  payment("p2", { amount: 250_000, group: { id: "g2", name: "Kids English" }, paymentMethod: { id: "m2", name: "Click" }, createdBy: { name: "Dilnoza" } }),
+  payment("p2", { amount: 250_000, group: { id: "g2", name: "Kids English" }, paymentMethod: { id: "m2", name: "Click" }, createdBy: { id: "u2", name: "Dilnoza" } }),
   payment("p3", { amount: 100_000, date: "2026-11-05", status: "REFUNDED" }),
 ];
 
@@ -59,9 +59,8 @@ const renderPage = (url = "/finance/payments") =>
     </MemoryRouter>,
   );
 
-// "Total Revenue" card value: the card's heading is followed by its amount.
-const revenueCard = () => screen.getByText("Total Revenue:").parentElement as HTMLElement;
-const netProfitCard = () => screen.getByText("Total Net Profit:").parentElement as HTMLElement;
+const revenueCard = () => screen.getByTestId("revenue-card");
+const netProfitCard = () => screen.getByTestId("net-profit-card");
 
 beforeEach(() => {
   sessionStorage.clear();
@@ -91,18 +90,52 @@ describe("AllPayments: monthly view", () => {
     expect(within(netProfitCard()).getByText(/01\.11\.2026 — 30\.11\.2026/)).toBeTruthy();
   });
 
-  it("puts the filters above the summary cards and the chart", async () => {
+  it("lays the page out as statistics, then the filters, then the table", async () => {
     stubFetch(answer);
     renderPage();
 
-    const filters = await screen.findByText("Date from");
-    const revenue = screen.getByText("Total Revenue:");
-    expect(filters.compareDocumentPosition(revenue) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // Every filter of the design is there.
+    const title = await screen.findByRole("heading", { name: "All payments" });
+    const revenue = revenueCard();
+    const netProfit = netProfitCard();
+    const chart = await screen.findByText("Payments per day");
+    const thisMonth = await screen.findByText("This month");
+    const byMethod = await screen.findByText("By payment method");
+    const firstFilter = screen.getByText("Date from");
+    const filtersToggle = screen.getByRole("button", { name: "Filters" });
+    const tableHead = screen.getByRole("columnheader", { name: "Date" });
+
+    const before = (a: Element, b: Element) => expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    [title, revenue, netProfit, chart, thisMonth, byMethod, firstFilter, filtersToggle, tableHead].reduce((previous, next) => {
+      before(previous, next);
+      return next;
+    });
+    // The statistics are not inside the filter form.
     const form = screen.getByRole("button", { name: "Filter" }).closest("form") as HTMLElement;
-    ["Date to", "Name or Phone", "Select group", "Course", "Teacher", "Method pay", "Sum", "Staff Name", "From created date", "To created date"].forEach((label) => {
+    expect(form.contains(revenue)).toBe(false);
+    expect(form.contains(chart)).toBe(false);
+    // Every filter of the design is there, a label above each.
+    ["Date from", "Date to", "Name or Phone", "Select group", "Course", "Teacher", "Payment type", "Sum", "Staff Name", "From created date", "To created date"].forEach((label) => {
       expect(within(form).getByText(label)).toBeTruthy();
     });
+  });
+
+  it("has a Filters button above the table that hides and shows the filters (shown by default)", async () => {
+    stubFetch(answer);
+    renderPage();
+    expect(await screen.findByText("Date from")).toBeTruthy();
+
+    const toggle = screen.getByRole("button", { name: "Filters" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(toggle);
+    await waitFor(() => expect(screen.queryByText("Date from")).toBeNull());
+    expect(screen.queryByRole("button", { name: "Filter" })).toBeNull();
+    // The table and the statistics stay.
+    expect(screen.getByText("Student p1")).toBeTruthy();
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+
+    fireEvent.click(toggle);
+    expect(await screen.findByText("Date from")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Filter" })).toBeTruthy();
   });
 
   it("totals the money received in the period — a refunded payment is listed but not counted", async () => {
@@ -146,9 +179,9 @@ describe("AllPayments: monthly view", () => {
 describe("AllPayments: filters saved for a refresh", () => {
   const save = (day: string, startDate: string, endDate: string) => {
     const filters = { startDate, endDate, search: "", paymentMethodId: "", groupId: "", courseId: "", teacherId: "", amount: "", staff: "", createdFrom: "", createdTo: "" };
-    sessionStorage.setItem("ya-crm:state:allPayments:v2:day", JSON.stringify(day));
-    sessionStorage.setItem("ya-crm:state:allPayments:v2:applied", JSON.stringify(filters));
-    sessionStorage.setItem("ya-crm:state:allPayments:v2:draft", JSON.stringify(filters));
+    sessionStorage.setItem("ya-crm:state:allPayments:v3:day", JSON.stringify(day));
+    sessionStorage.setItem("ya-crm:state:allPayments:v3:applied", JSON.stringify(filters));
+    sessionStorage.setItem("ya-crm:state:allPayments:v3:draft", JSON.stringify(filters));
   };
 
   it("keeps the period picked earlier today", async () => {
@@ -159,6 +192,19 @@ describe("AllPayments: filters saved for a refresh", () => {
     await waitFor(() => expect(paymentListRequests(requests)).toHaveLength(1));
     expect(new URL(paymentListRequests(requests)[0].url).searchParams.get("startDate")).toBe("2026-10-01");
     expect(screen.getByText("01.10.2026")).toBeTruthy();
+  });
+
+  it("ignores filters saved by an older version of the page (the staff filter held a name then)", async () => {
+    const old = { startDate: "2026-10-01", endDate: "2026-10-31", search: "", paymentMethodId: "", groupId: "", courseId: "", teacherId: "", amount: "", staff: "Dilnoza", createdFrom: "", createdTo: "" };
+    sessionStorage.setItem("ya-crm:state:allPayments:v2:day", JSON.stringify("2026-11-03"));
+    sessionStorage.setItem("ya-crm:state:allPayments:v2:applied", JSON.stringify(old));
+    sessionStorage.setItem("ya-crm:state:allPayments:v2:draft", JSON.stringify(old));
+    const { requests } = stubFetch(answer);
+    renderPage();
+
+    await waitFor(() => expect(paymentListRequests(requests)).toHaveLength(1));
+    expect(new URL(paymentListRequests(requests)[0].url).searchParams.get("startDate")).toBe("2026-11-01");
+    expect(await screen.findByText("Student p2")).toBeTruthy();
   });
 
   it("falls back to the current month when they were saved on an earlier day", async () => {
@@ -216,7 +262,7 @@ describe("AllPayments: filters drive the table, the cards and the chart", () => 
     renderPage();
     await within(revenueCard()).findByText(money(650_000));
 
-    fireEvent.change((await screen.findByRole("option", { name: "Dilnoza" })).closest("select")!, { target: { value: "Dilnoza" } });
+    fireEvent.change((await screen.findByRole("option", { name: "Dilnoza" })).closest("select")!, { target: { value: "u2" } });
     fireEvent.click(screen.getByRole("button", { name: "Filter" }));
     await within(revenueCard()).findByText(money(250_000));
     expect(screen.queryByText("Student p1")).toBeNull();
@@ -298,5 +344,341 @@ describe("AllPayments: a period that can't be shown in full", () => {
 
     expect(await screen.findByText("Failed to load chart data.")).toBeTruthy();
     expect(screen.getByText("Failed to load payments")).toBeTruthy();
+  });
+});
+
+// ─── The table, its teacher column and its sorting ───────────────────────────
+
+// Answers like `answer`, with other payments and/or a paged GET /groups.
+const serve = (
+  { payments = PAYMENTS, groupPages }: {
+    payments?: unknown[];
+    groupPages?: (page: number) => { data: unknown[]; totalPages: number };
+  } = {},
+) => (request: SentRequest) => {
+  const { pathname, searchParams } = new URL(request.url);
+  if (pathname.endsWith("/finance/payments")) {
+    return jsonResponse({ success: true, data: payments, meta: { total: payments.length, page: 1, limit: 1000, totalPages: 1 } });
+  }
+  if (pathname.endsWith("/groups") && groupPages) {
+    const page = Number(searchParams.get("page"));
+    const { data, totalPages } = groupPages(page);
+    return jsonResponse({ success: true, data, meta: { total: data.length, page, limit: 100, totalPages } });
+  }
+  return answer(request);
+};
+
+const rowOf = (studentName: string) => screen.getByText(studentName).closest("tr") as HTMLElement;
+// Cells of a body row: date, student, sum, payment type, teacher, comment, staff, refund.
+const cellOf = (row: HTMLElement, index: number) => row.querySelectorAll("td")[index] as HTMLElement;
+const studentOrder = () => [...document.querySelectorAll("tbody tr")].map((tr) => tr.querySelectorAll("td")[1]?.textContent);
+const headerButton = (name: string) => within(screen.getByRole("columnheader", { name })).getByRole("button");
+const groupRequests = (requests: SentRequest[]) =>
+  requests.filter((r) => r.method === "GET" && new URL(r.url).pathname.endsWith("/groups"));
+
+describe("AllPayments: table", () => {
+  it("has the columns of the design, in order", async () => {
+    stubFetch(answer);
+    renderPage();
+    await screen.findByText("Student p1");
+
+    const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    expect(headers).toEqual(["Date", "Student name", "Sum", "Payment type", "Teacher", "Comment", "Staff", ""]);
+    // Date is the sort column from the start: newest first.
+    expect(screen.getByRole("columnheader", { name: "Date" }).getAttribute("aria-sort")).toBe("descending");
+  });
+
+  it("shows the teachers of each payment group, the row number before the date, and who recorded it and when", async () => {
+    stubFetch(serve({
+      payments: [
+        payment("p1", { notes: "March fee", createdAt: "2026-11-04T04:47:27.000Z" }),
+        payment("p2", { group: { id: "g2", name: "Kids English" } }),
+      ],
+      groupPages: () => ({
+        data: [{ ...GROUPS[0], teachers: [{ id: "t1", name: "Anvar" }, { id: "t3", name: "Sarvar" }] }, GROUPS[1]],
+        totalPages: 1,
+      }),
+    }));
+    renderPage();
+    await screen.findByText("Student p1");
+
+    const first = rowOf("Student p1");
+    expect(cellOf(first, 0).textContent).toBe("1.03.11.2026");
+    await waitFor(() => expect(cellOf(first, 4).textContent).toBe("Anvar, Sarvar"));
+    expect(cellOf(first, 5).textContent).toBe("March fee");
+    expect(cellOf(first, 6).textContent).toBe("Maksuda04.11.2026 09:47:27");
+    expect(cellOf(rowOf("Student p2"), 4).textContent).toBe("Malika");
+  });
+
+  it("shows a dash instead of a teacher when the group of the payment is not known", async () => {
+    stubFetch(serve({ payments: [payment("p9", { group: { id: "g404", name: "Deleted group" } })] }));
+    renderPage();
+    await screen.findByText("Student p9");
+
+    await waitFor(() => expect(cellOf(rowOf("Student p9"), 4).textContent).toBe("—"));
+  });
+
+  it("opens the student profile when a row is clicked, but not from the refund button", async () => {
+    stubFetch(answer);
+    renderWithStore(
+      <MemoryRouter initialEntries={["/finance/payments"]}>
+        <ToastProvider>
+          <Routes>
+            <Route path="/finance/payments" element={<AllPayments />} />
+            <Route path="/students/:id" element={<div>Student profile page</div>} />
+          </Routes>
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    await screen.findByText("Student p1");
+
+    fireEvent.click(within(rowOf("Student p1")).getByRole("button"));
+    expect(await screen.findByText("Refund this payment? This action cannot be undone.")).toBeTruthy();
+    expect(screen.queryByText("Student profile page")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    fireEvent.click(screen.getByText("Student p2"));
+    expect(await screen.findByText("Student profile page")).toBeTruthy();
+  });
+
+  it("keeps a refunded payment struck through with its status and no refund button", async () => {
+    stubFetch(answer);
+    renderPage();
+    await screen.findByText("Student p3");
+
+    const voided = rowOf("Student p3");
+    expect(within(voided).getByText("refunded")).toBeTruthy();
+    expect(within(voided).queryByRole("button")).toBeNull();
+    expect(cellOf(voided, 2).querySelector(".line-through")).not.toBeNull();
+    expect(within(rowOf("Student p1")).getByRole("button")).toBeTruthy();
+  });
+});
+
+describe("AllPayments: sorting", () => {
+  it("lists the newest payment first until a header is clicked", async () => {
+    stubFetch(answer);
+    renderPage();
+    await screen.findByText("Student p1");
+
+    // p3 is dated the 5th, p1 and p2 the 3rd.
+    expect(studentOrder()).toEqual(["Student p3", "Student p1", "Student p2"]);
+  });
+
+  it("sorts by sum, and a second click flips the direction", async () => {
+    stubFetch(answer);
+    renderPage();
+    await screen.findByText("Student p1");
+
+    fireEvent.click(headerButton("Sum"));
+    expect(studentOrder()).toEqual(["Student p3", "Student p2", "Student p1"]); // 100k, 250k, 400k
+    expect(screen.getByRole("columnheader", { name: "Sum" }).getAttribute("aria-sort")).toBe("ascending");
+    expect(screen.getByRole("columnheader", { name: "Date" }).getAttribute("aria-sort")).toBeNull();
+
+    fireEvent.click(headerButton("Sum"));
+    expect(studentOrder()).toEqual(["Student p1", "Student p2", "Student p3"]);
+    expect(screen.getByRole("columnheader", { name: "Sum" }).getAttribute("aria-sort")).toBe("descending");
+  });
+
+  it("sorts by date (oldest first on the second click), student name, payment type, teacher and staff", async () => {
+    stubFetch(answer);
+    renderPage();
+    await screen.findByText("Student p1");
+    // The teacher column needs the groups.
+    await waitFor(() => expect(cellOf(rowOf("Student p1"), 4).textContent).toBe("Anvar"));
+
+    fireEvent.click(headerButton("Date"));
+    expect(studentOrder()).toEqual(["Student p1", "Student p2", "Student p3"]);
+
+    fireEvent.click(headerButton("Student name"));
+    expect(studentOrder()).toEqual(["Student p1", "Student p2", "Student p3"]);
+    fireEvent.click(headerButton("Student name"));
+    expect(studentOrder()).toEqual(["Student p3", "Student p2", "Student p1"]);
+
+    // Cash (p3, p1 - newest first among equals), then Click (p2).
+    fireEvent.click(headerButton("Payment type"));
+    expect(studentOrder()).toEqual(["Student p3", "Student p1", "Student p2"]);
+    fireEvent.click(headerButton("Payment type"));
+    expect(studentOrder()).toEqual(["Student p2", "Student p3", "Student p1"]);
+
+    // Anvar teaches p3 and p1, Malika p2.
+    fireEvent.click(headerButton("Teacher"));
+    expect(studentOrder()).toEqual(["Student p3", "Student p1", "Student p2"]);
+    fireEvent.click(headerButton("Teacher"));
+    expect(studentOrder()).toEqual(["Student p2", "Student p3", "Student p1"]);
+
+    // Dilnoza recorded p2, Maksuda p3 and p1.
+    fireEvent.click(headerButton("Staff"));
+    expect(studentOrder()).toEqual(["Student p2", "Student p3", "Student p1"]);
+    fireEvent.click(headerButton("Staff"));
+    expect(studentOrder()).toEqual(["Student p3", "Student p1", "Student p2"]);
+  });
+
+  it("works together with the filters", async () => {
+    stubFetch(answer);
+    renderPage();
+    await screen.findByText("Student p1");
+
+    fireEvent.change((await screen.findByRole("option", { name: "Deep Science" })).closest("select")!, { target: { value: "g1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await waitFor(() => expect(screen.queryByText("Student p2")).toBeNull());
+
+    fireEvent.click(headerButton("Sum"));
+    expect(studentOrder()).toEqual(["Student p3", "Student p1"]);
+    // Dropping the filter keeps the chosen order.
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    await screen.findByText("Student p2");
+    expect(studentOrder()).toEqual(["Student p3", "Student p2", "Student p1"]);
+  });
+
+  it("goes back to page 1 when the order changes, and sorts every page, not just the one on screen", async () => {
+    const many = Array.from({ length: 25 }, (_, i) => {
+      const n = i + 1;
+      // q1 is the oldest and the cheapest; q25 the newest and the dearest.
+      return payment(`q${n}`, { amount: n * 1000, createdAt: `2026-11-03T08:${String(n).padStart(2, "0")}:00.000Z` });
+    });
+    stubFetch(serve({ payments: many }));
+    renderPage();
+    await screen.findByText("Student q25");
+
+    expect(studentOrder()[0]).toBe("Student q25");
+    fireEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
+    expect(await screen.findByText("Student q1")).toBeTruthy();
+    expect(studentOrder()).toHaveLength(5);
+
+    fireEvent.click(headerButton("Sum"));
+    expect(screen.getByText("Showing", { exact: false }).textContent).toContain("1–20");
+    expect(studentOrder()[0]).toBe("Student q1");
+    expect(studentOrder()).toHaveLength(20);
+    // The dearest payment is on the last page, not lost.
+    fireEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
+    expect(await screen.findByText("Student q25")).toBeTruthy();
+  });
+});
+
+// ─── Filters against what the backend really sends ───────────────────────────
+
+describe("AllPayments: staff filter", () => {
+  const realistic = [
+    payment("s1", { createdBy: { id: "u1", firstName: "Maksuda", lastName: "Karimova" }, createdAt: "2026-11-04T04:47:27.000Z" }),
+    payment("s2", { createdBy: { id: "u2", fullName: "Dilnoza Aliyeva" } }),
+    payment("s3", { createdBy: "3", creator: { name: "Bobur" } }),
+    payment("s4", { createdBy: { id: "u4", name: "Sardor" } }),
+    payment("s5", { createdBy: { id: "u5", name: "Sardor" } }),
+    payment("s6", { createdBy: { id: "u6" } }),
+  ];
+
+  it("shows the name of whoever recorded the payment, whichever way the backend spells it", async () => {
+    stubFetch(serve({ payments: realistic }));
+    renderPage();
+    await screen.findByText("Student s1");
+
+    expect(cellOf(rowOf("Student s1"), 6).textContent).toBe("Maksuda Karimova04.11.2026 09:47:27");
+    expect(cellOf(rowOf("Student s2"), 6).textContent).toContain("Dilnoza Aliyeva");
+    expect(cellOf(rowOf("Student s3"), 6).textContent).toContain("Bobur");
+    // An id with no name is a dash, never "[object Object]" or the id.
+    expect(cellOf(rowOf("Student s6"), 6).textContent).toMatch(/^—/);
+    expect(screen.queryByText(/\[object Object\]/)).toBeNull();
+    expect(screen.queryByText("u6")).toBeNull();
+  });
+
+  it("lists each staff member once by id, two people with the same name apart, and filters by the one picked", async () => {
+    stubFetch(serve({ payments: realistic }));
+    renderPage();
+    await screen.findByText("Student s1");
+
+    const select = (await screen.findByRole("option", { name: "Maksuda Karimova" })).closest("select") as HTMLSelectElement;
+    expect([...select.options].map((o) => o.textContent)).toEqual(["Select", "Bobur", "Dilnoza Aliyeva", "Maksuda Karimova", "Sardor", "Sardor"]);
+
+    fireEvent.change(select, { target: { value: "u4" } });
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await waitFor(() => expect(screen.queryByText("Student s1")).toBeNull());
+    expect(studentOrder()).toEqual(["Student s4"]);
+
+    // A staff member whose id sits in `createdBy` and whose name in a separate `creator` object.
+    fireEvent.change(select, { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await waitFor(() => expect(screen.queryByText("Student s4")).toBeNull());
+    expect(studentOrder()).toEqual(["Student s3"]);
+  });
+
+  it("narrows the cards and the chart along with the table", async () => {
+    stubFetch(serve({ payments: realistic }));
+    renderPage();
+    await within(revenueCard()).findByText(money(2_400_000));
+
+    fireEvent.change((await screen.findByRole("option", { name: "Dilnoza Aliyeva" })).closest("select")!, { target: { value: "u2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await within(revenueCard()).findByText(money(400_000));
+    expect(screen.getByText("Payments per day")).toBeTruthy();
+    expect(within(netProfitCard()).getByText("—")).toBeTruthy();
+  });
+
+  it("submits the filters with the form (Enter in a field), not only with the button", async () => {
+    stubFetch(answer);
+    renderPage();
+    await within(revenueCard()).findByText(money(650_000));
+
+    fireEvent.change((await screen.findByRole("option", { name: "Kids English" })).closest("select")!, { target: { value: "g2" } });
+    fireEvent.submit(screen.getByRole("button", { name: "Filter" }).closest("form") as HTMLElement);
+    await within(revenueCard()).findByText(money(250_000));
+  });
+});
+
+describe("AllPayments: teacher and course filters over every group", () => {
+  // 100 groups fill the first page of GET /groups; the group of payment `late` is on the second.
+  const filler = Array.from({ length: 100 }, (_, i) => ({
+    id: `f${i}`, name: `Filler ${i}`, courseId: "c1", course: { id: "c1", name: "IELTS" }, teachers: [{ id: "t1", name: "Anvar" }],
+  }));
+  const lateGroup = {
+    id: "g101", name: "Late Group", status: "ARCHIVE", courseId: "c9", course: { id: "c9", name: "Late Course" },
+    teachers: [{ id: "t9", name: "Zafar" }],
+  };
+  const payments = [
+    payment("early", { group: { id: "f1", name: "Filler 1" } }),
+    payment("late", { group: { id: "g101", name: "Late Group" } }),
+  ];
+  const groupPages = (page: number) => ({ data: page === 1 ? filler : [lateGroup], totalPages: 2 });
+
+  it("reads every page of groups, so a group past the first 100 (even an archived one) has its teacher", async () => {
+    const { requests } = stubFetch(serve({ payments, groupPages }));
+    renderPage();
+    await screen.findByText("Student early");
+
+    await waitFor(() => expect(cellOf(rowOf("Student late"), 4).textContent).toBe("Zafar"));
+    expect(cellOf(rowOf("Student early"), 4).textContent).toBe("Anvar");
+    expect(groupRequests(requests).map((r) => new URL(r.url).searchParams.get("page"))).toEqual(["1", "2"]);
+  });
+
+  it("offers the teacher and the course of that group, and filters by them", async () => {
+    stubFetch(serve({ payments, groupPages }));
+    renderPage();
+    await screen.findByText("Student early");
+
+    const teacherSelect = (await screen.findByRole("option", { name: "Zafar" })).closest("select")!;
+    fireEvent.change(teacherSelect, { target: { value: "t9" } });
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await waitFor(() => expect(screen.queryByText("Student early")).toBeNull());
+    expect(studentOrder()).toEqual(["Student late"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    await screen.findByText("Student early");
+    fireEvent.change((await screen.findByRole("option", { name: "Late Course" })).closest("select")!, { target: { value: "c9" } });
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await waitFor(() => expect(screen.queryByText("Student early")).toBeNull());
+    expect(studentOrder()).toEqual(["Student late"]);
+  });
+
+  it("uses the teachers and course a payment carries itself when GET /groups does not know its group", async () => {
+    stubFetch(serve({
+      payments: [payment("own", { group: { id: "g404", name: "Old group", course: { id: "c5", name: "Old Course" }, teachers: [{ id: "t5", name: "Nodira" }] } })],
+    }));
+    renderPage();
+    await screen.findByText("Student own");
+
+    expect(cellOf(rowOf("Student own"), 4).textContent).toBe("Nodira");
+    fireEvent.change((await screen.findByRole("option", { name: "Nodira" })).closest("select")!, { target: { value: "t5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await within(revenueCard()).findByText(money(400_000));
+    expect(screen.getByText("Student own")).toBeTruthy();
   });
 });

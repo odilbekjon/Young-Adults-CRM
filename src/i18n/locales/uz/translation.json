@@ -851,6 +851,9 @@
       "editTitle": "Guruhni tahrirlash",
       "name": "Nomi",
       "course": "Kursni tanlang",
+      "coursesLoading": "Kurslar yuklanmoqda...",
+      "coursesEmpty": "Bu filialda faol kurs yo'q",
+      "courseBranchNotice": "Guruh shu kursning filialida yaratiladi: {{branch}}",
       "teacher": "O'qituvchini tanlang",
       "teachersLoading": "O'qituvchilar yuklanmoqda...",
       "teachersEmpty": "Bu filialda o'qituvchi topilmadi",
@@ -870,6 +873,8 @@
       "errors": {
         "name": "Guruh nomi kiritilishi shart",
         "course": "Kurs tanlanishi shart",
+        "courseBranch": "Bu kurs boshqa filialga tegishli ({{courseBranch}}), guruh o'sha yerga tushib qoladi. {{branch}} filialining kursini tanlang.",
+        "roomBranch": "Bu xona boshqa filialga tegishli. {{branch}} filialining xonasini tanlang.",
         "save": "Guruhni saqlab bo'lmadi"
       }
     },
@@ -930,8 +935,8 @@
         "retry": "Qayta urinish"
       },
       "stats": {
-        "totalRevenue": "Umumiy daromad:",
-        "totalNetProfit": "Umumiy sof foyda:",
+        "totalRevenue": "To'lovlar miqdori:",
+        "totalNetProfit": "Sof foyda miqdori:",
         "filteredTotal": "Tanlangan filtr bo'yicha jami:",
         "netProfitHint": "Faqat to'liq oylar uchun, boshqa filtrlarsiz ko'rsatiladi.",
         "byMethod": "To'lov usullari bo'yicha",
@@ -954,7 +959,7 @@
         "group": "Guruhni tanlang",
         "course": "Kurs",
         "teacher": "O'qituvchi",
-        "methodPay": "To'lov usuli",
+        "methodPay": "To'lov turi",
         "sum": "Summa",
         "amountPlaceholder": "Summa",
         "staffName": "Xodim ismi",
@@ -967,12 +972,13 @@
       },
       "table": {
         "date": "Sana",
-        "name": "Ism",
+        "name": "Talaba ismi",
         "sum": "Summa",
-        "methodPay": "To'lov usuli",
+        "methodPay": "To'lov turi",
         "teacher": "O'qituvchi",
         "comment": "Izoh",
         "creator": "Yaratuvchi",
+        "staff": "Xodim",
         "empty": "To'lovlar topilmadi",
         "loadError": "To'lovlarni yuklab bo'lmadi",
         "retry": "Qayta urinish",

@@ -311,9 +311,24 @@ export interface PaymentRow {
   provider: PaymentProvider | null;
   transactionId: string | null;
   receiptUrl: string | null;
+  // The display name of whoever recorded the payment (never an id) and, when
+  // the backend sends it, that person's id.
   createdBy: string | null;
+  createdById?: string | null;
   createdAt?: string;
   status: string | null;
+  // Course and teachers of the payment's group, only when the payment row itself
+  // carries them (the All payments page otherwise looks them up by `groupId`).
+  courseId?: string | null;
+  courseName?: string;
+  teachers?: PaymentPerson[];
+}
+
+// A person embedded in a payment row (a teacher of its group). `id` is empty
+// when the backend names the person without an id.
+export interface PaymentPerson {
+  id: string;
+  name: string;
 }
 
 export interface PaymentsListResult {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { API_BASE_URL } from "../baseApi";
 import { extractHistoryList, groupsApi, normalizeHistory } from "./groupsApi";
+import { setSelectedBranchId } from "../../store/branchSlice";
 import { createTestStore } from "../../../test/testStore";
 import { jsonResponse, readFormData, stubFetch } from "../../../test/fetchStub";
 
@@ -444,6 +445,44 @@ describe("groupsApi.createGroup", () => {
       ["days[]", "FRIDAY"],
       ["teacherIds[]", "t1"],
     ]);
+  });
+
+  it("names the branch the group is created in with the x-branch-id header, not in the body", async () => {
+    const store = createTestStore();
+    store.dispatch(setSelectedBranchId("b-grammar"));
+    const { requests } = stubFetch(() => jsonResponse({ success: true }));
+
+    await store.dispatch(
+      groupsApi.endpoints.createGroup.initiate({ name: "Morning", courseId: "c1", branchId: "b-ielts" }),
+    );
+
+    // the request's own branch wins over the one picked in the header selector
+    expect(requests[0].headers.get("x-branch-id")).toBe("b-ielts");
+    expect(await readFormData(requests[0])).toEqual([
+      ["name", "Morning"],
+      ["courseId", "c1"],
+    ]);
+  });
+
+  it("keeps using the header selector's branch when the caller names none", async () => {
+    const store = createTestStore();
+    store.dispatch(setSelectedBranchId("b-grammar"));
+    const { requests } = stubFetch(() => jsonResponse({ success: true }));
+
+    await store.dispatch(groupsApi.endpoints.createGroup.initiate({ name: "Morning", courseId: "c1" }));
+
+    expect(requests[0].headers.get("x-branch-id")).toBe("b-grammar");
+  });
+
+  it("sends the named branch even when no branch is selected (All branches)", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch(() => jsonResponse({ success: true }));
+
+    await store.dispatch(
+      groupsApi.endpoints.createGroup.initiate({ name: "Morning", courseId: "c1", branchId: "b-grammar" }),
+    );
+
+    expect(requests[0].headers.get("x-branch-id")).toBe("b-grammar");
   });
 });
 

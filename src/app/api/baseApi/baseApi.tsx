@@ -23,8 +23,11 @@ import { logout, setToken } from "../../store/authSlice";
 
 export const API_BASE_URL = "https://api.youngadults-crm.uz/api/v1";
 
-// Courses are shared by every branch, so reading them must not be narrowed
-// by the branch picked in the header.
+// Reading courses is not narrowed by the branch picked in the header: the list
+// holds every branch's courses, each with its branchId (Settings > Courses and
+// the course filters need them all). A picker that must offer one branch's
+// courses only - the group form - narrows the list itself, see
+// utils/groupBranch.ts. A course belongs to one branch; it is not shared.
 const isCoursesRead = (arg: string | FetchArgs): boolean => {
   const url = typeof arg === "string" ? arg : arg.url;
   const method = typeof arg === "string" ? "GET" : (arg.method ?? "GET").toUpperCase();
@@ -58,8 +61,12 @@ const fetchQuery = fetchBaseQuery({
 // turn. Pages mount a dozen-plus queries and bulk actions add many more — all
 // fired together they stall the browser and flood the backend (each one also
 // waits behind the others anyway). Writes jump the queue so a click is never
-// stuck behind a pile of background reads. A request cancelled while still
-// queued is dropped without being sent.
+// stuck behind a pile of background reads. A read that sends `priority: "high"`
+// (the standard fetch option) goes ahead of the other queued reads: it is for a
+// read the page is waiting on that only becomes known after earlier ones were
+// queued (the further pages of a list whose page count the first page reveals),
+// which would otherwise wait behind everything requested in the meantime. A
+// request cancelled while still queued is dropped without being sent.
 //
 // On top of that the backend answers HTTP 429 ("Bir vaqtda bitta API ga 3 tadan
 // ortiq parallel so'rov yuborish taqiqlangan") to a 4th parallel request to ONE
@@ -72,7 +79,11 @@ const MAX_IN_FLIGHT = 6;
 const MAX_READS_PER_ENDPOINT = 3;
 const MAX_WRITES_PER_ENDPOINT = 2;
 
-type QueuedRequest = { endpoint: string; isWrite: boolean; start: () => void };
+type QueuedRequest = { endpoint: string; isWrite: boolean; isUrgent: boolean; start: () => void };
+
+// Writes first, then urgent reads, then the rest; each kind keeps its own order.
+const queueRank = ({ isWrite, isUrgent }: Pick<QueuedRequest, "isWrite" | "isUrgent">): number =>
+  isWrite ? 2 : isUrgent ? 1 : 0;
 
 let inFlight = 0;
 const inFlightByEndpoint = new Map<string, number>();
@@ -120,17 +131,17 @@ const withSlot = async <T,>(
   signal: AbortSignal | undefined,
   endpoint: string,
   isWrite: boolean,
+  isUrgent: boolean,
   run: () => Promise<T>,
 ): Promise<T | null> => {
   if (hasRoom({ endpoint, isWrite })) {
     takeSlot(endpoint);
   } else {
     await new Promise<void>((start) => {
-      const entry = { endpoint, isWrite, start };
-      // Writes go ahead of every queued read, but stay in order among themselves.
-      const firstRead = queue.findIndex((queued) => !queued.isWrite);
-      if (isWrite && firstRead !== -1) queue.splice(firstRead, 0, entry);
-      else queue.push(entry);
+      const entry = { endpoint, isWrite, isUrgent, start };
+      const at = queue.findIndex((queued) => queueRank(queued) < queueRank(entry));
+      if (at === -1) queue.push(entry);
+      else queue.splice(at, 0, entry);
     });
   }
   // The slot is now ours (taken just above, or handed over by `releaseSlot`).
@@ -186,8 +197,9 @@ const sendWithinLimits = async (
   extraOptions: object,
 ) => {
   const endpoint = endpointOf(args);
+  const isUrgent = !isWrite && typeof args !== "string" && args.priority === "high";
   for (let attempt = 1; ; attempt += 1) {
-    const sent = await withSlot(api.signal, endpoint, isWrite, async () => fetchQuery(withTimeout(args, isWrite), api, extraOptions));
+    const sent = await withSlot(api.signal, endpoint, isWrite, isUrgent, async () => fetchQuery(withTimeout(args, isWrite), api, extraOptions));
     if (sent?.error?.status !== 429 || attempt > MAX_RATE_LIMIT_RETRIES) return sent;
     await pause(rateLimitDelayMs(sent.meta?.response, attempt), api.signal);
   }

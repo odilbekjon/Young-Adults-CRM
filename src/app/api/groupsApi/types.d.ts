@@ -158,9 +158,13 @@ export interface CreateGroupRequest {
   teacherIds?: string[];
   studentIds?: string[];
   tagIds?: string[];
+  // The branch the group is created in. NOT a body field (Swagger's body for
+  // POST /groups lists none, so none is sent): it only becomes this request's
+  // x-branch-id header, the same way createCourse names its branch.
+  branchId?: string;
 }
 
-export interface UpdateGroupRequest extends Partial<Omit<CreateGroupRequest, "name" | "courseId">> {
+export interface UpdateGroupRequest extends Partial<Omit<CreateGroupRequest, "name" | "courseId" | "branchId">> {
   id: string;
   name?: string;
   courseId?: string;
@@ -337,6 +341,8 @@ export interface StudentGroupRecord {
 }
 
 export interface StudentGroupsRequest {
+  // "high": the request goes ahead of the other queued reads (see baseApi).
+  priority?: "high";
   branchId?: string;
   groupId?: string;
   studentId?: string;

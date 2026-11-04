@@ -5,11 +5,13 @@ import { useUpdatePaymentMutation } from "../../../app/api/financeApi";
 import type { PaymentMethod, UpdatePaymentRequest } from "../../../app/api/financeApi/types";
 import type { StudentGroupMembership } from "../../../app/api/studentsApi/types";
 import { PaymentMethodPicker } from "../../../components/PaymentMethodPicker";
+import { MoneyInput } from "../../../components/MoneyInput";
 import { RightDrawer } from "../../../components/RightDrawer";
 import { DatePickerField } from "../../SingleGroup/DatePickerField";
 import { inputStyle, labelStyle, paymentSubmitBtn } from "../../SingleGroup/styles/styles";
 import { extractApiError } from "../../../utils/extractApiError";
 import { getProviderFromMethodName } from "../../../utils/paymentProvider";
+import { moneyToDigits } from "../../../utils/moneyInput";
 import { submitOnEnter } from "../../../utils/submitOnEnter";
 import type { PaymentTx } from "./buildTransactions";
 
@@ -49,7 +51,7 @@ export const EditPaymentDrawer = ({
   // Prefill from the row each time the drawer opens for a (different) payment.
   useEffect(() => {
     if (!open || !tx) return;
-    setAmount(String(tx.amount));
+    setAmount(moneyToDigits(tx.amount));
     setMethodId(tx.paymentMethodId ?? "");
     setMethod(undefined);
     setDate(day(tx.date));
@@ -74,7 +76,9 @@ export const EditPaymentDrawer = ({
     }
 
     const body: Omit<UpdatePaymentRequest, "id"> = {};
-    if (num !== tx.amount) body.amount = num;
+    // The field holds whole sums, so compare with the stored amount as the field
+    // shows it - a stored fraction that was not touched is not re-sent rounded.
+    if (amount !== moneyToDigits(tx.amount)) body.amount = num;
     if (methodId && methodId !== (tx.paymentMethodId ?? "")) {
       body.paymentMethodId = methodId;
       if (method) body.provider = getProviderFromMethodName(method.name);
@@ -142,7 +146,7 @@ export const EditPaymentDrawer = ({
 
         <div>
           <label style={labelStyle}>{t("addPayment.amount", "Amount")}</label>
-          <input style={inputStyle} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+          <MoneyInput style={inputStyle} value={amount} onChange={setAmount} placeholder="0" />
         </div>
 
         <div>

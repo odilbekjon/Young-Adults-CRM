@@ -98,3 +98,57 @@ export const clearStaleBranchChoices = (
   );
   return { courseId, roomId: roomStale ? "" : choice.roomId };
 };
+
+// ── Moving a group to another branch while editing ──────────────────────────
+// A group follows its course, so the only way to put a group that landed in the
+// wrong branch back is to give it a course of the right branch. An edit form
+// therefore has a Branch select, starting on the group's own branch.
+
+export interface EditBranchScope {
+  // Whether the Branch select now points at a branch other than the group's own.
+  moving: boolean;
+  // The branch being moved to; null unless `moving`.
+  moveToBranchId: string | null;
+  // The branch the form's course/room lists and checks work in: the target while
+  // moving, the group's own branch otherwise (null = no single branch known).
+  scopeBranchId: string | null;
+  // The group's own course/room stay offered (and are never emptied) only while
+  // it stays where it is; once it is being moved they belong to the old branch.
+  keepCourseId: string | null;
+  keepRoomId: string | null;
+}
+
+export const editBranchScope = ({
+  homeBranchId,
+  pickedBranchId,
+  courseId,
+  roomId,
+}: {
+  // The group's own branch (the branch of its course), or the branch the form
+  // falls back to when that is unknown.
+  homeBranchId?: string | null;
+  // What the Branch select holds; null/undefined = untouched.
+  pickedBranchId?: string | null;
+  // The group's course and room as they were when the form opened.
+  courseId?: string | null;
+  roomId?: string | null;
+}): EditBranchScope => {
+  const home = singleBranchId(homeBranchId);
+  const picked = singleBranchId(pickedBranchId);
+  const moveToBranchId = picked && picked !== home ? picked : null;
+  return {
+    moving: moveToBranchId !== null,
+    moveToBranchId,
+    scopeBranchId: moveToBranchId ?? home,
+    keepCourseId: moveToBranchId ? null : courseId || null,
+    keepRoomId: moveToBranchId ? null : roomId || null,
+  };
+};
+
+// The entries of the Branch select: the branches the user may work in, plus the
+// group's own branch when it is not one of them (so the select can show where
+// the group is now). Never adds any other branch.
+export const branchSelectOptions = <B extends { id: string; name: string }>(
+  accessible: readonly B[],
+  currentBranch?: B | null,
+): B[] => (currentBranch && !accessible.some((b) => b.id === currentBranch.id) ? [...accessible, currentBranch] : [...accessible]);

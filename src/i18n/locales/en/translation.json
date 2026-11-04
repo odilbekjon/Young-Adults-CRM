@@ -851,6 +851,9 @@
       "editTitle": "Edit Group",
       "name": "Name",
       "course": "Select course",
+      "branch": "Branch",
+      "branchMoveNotice": "This group will be moved to {{branch}}. Pick a course of that branch.",
+      "branchNoCourses": "{{branch}} has no active courses yet. Create one first: Settings → Courses → ADD NEW, and choose {{branch}} in the Branch field.",
       "coursesLoading": "Loading courses...",
       "coursesEmpty": "No active courses in this branch",
       "courseBranchNotice": "The group will be created in the branch of this course: {{branch}}",
@@ -881,6 +884,7 @@
     "toast": {
       "created": "Group created successfully",
       "updated": "Group updated successfully",
+      "moved": "Group moved to {{branch}}",
       "deleted": "Group deleted successfully",
       "statusToggled": "Group status updated",
       "statusToggleError": "Failed to change the group status",

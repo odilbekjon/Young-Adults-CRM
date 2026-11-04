@@ -48,7 +48,8 @@ import { useTeacherOptions } from "../../hooks/useTeacherOptions";
 import { useActiveGroups } from "../../hooks/useActiveGroups";
 import { useReasonsSelectQuery } from "../../app/api/reasonsApi";
 import { useToast } from "../../Context/ToastContext";
-import { extractApiError, formatTrainingDate, formatPhone, downloadExcelBlob, branchIdOf, filterByBranch } from "../../utils";
+import { extractApiError, formatTrainingDate, formatPhone, downloadExcelBlob, branchIdOf } from "../../utils";
+import { useAccessibleBranches } from "../../hooks/useAccessibleBranches";
 import { formatDate } from "../../constants/FlatStudents";
 
 import { AddStudentDrawer, type AddStudentPayload } from "./AddStudentDrawer/AddStudentDrawer";
@@ -196,6 +197,7 @@ export const SingleGroup = () => {
   const { data: allCoursesData } = useAllCoursesQuery();
   const { data: allRoomsData } = useAllRoomsQuery(undefined, { skip: !editOpen });
   const { data: allBranchesData } = useAllBranchesQuery();
+  const { branches: accessibleBranches } = useAccessibleBranches();
   const { teachers: activeTeachers } = useTeacherOptions({ skip: !editOpen });
   // GET /reasons/select — only ACTIVE reasons (the branch comes from the
   // x-branch-id header baseApi already sends), first 200 so a branch with
@@ -471,22 +473,29 @@ export const SingleGroup = () => {
     [moveTargetGroups, id]
   );
 
-  // A group lives in its course's branch, so the edit form offers the courses
-  // (and rooms) of that branch only - picking a course of another branch would
-  // move the group there. The group's current course/room stay in the list.
+  // A group lives in its course's branch. The edit form narrows these lists to
+  // that branch (picking a course of another branch would move the group there)
+  // and has a Branch select to move the group on purpose, so it gets every
+  // course/room with its branch and the group's own branch.
   const editBranchId = useMemo(
     () => branchIdOf((allCoursesData?.data ?? []).find((c) => c.id === groupDetailData?.data.courseId)),
     [allCoursesData, groupDetailData]
   );
+  const editGroupBranch = useMemo(() => {
+    if (!editBranchId) return null;
+    const name = accessibleBranches.find((b) => b.id === editBranchId)?.name
+      ?? allBranchesData?.data.find((b) => b.id === editBranchId)?.name
+      ?? (allCoursesData?.data ?? []).find((c) => c.id === groupDetailData?.data.courseId)?.branch?.name
+      ?? "";
+    return { id: editBranchId, name };
+  }, [editBranchId, accessibleBranches, allBranchesData, allCoursesData, groupDetailData]);
   const courseOptions = useMemo(
-    () => filterByBranch(allCoursesData?.data ?? [], editBranchId, groupDetailData?.data.courseId)
-      .map((c) => ({ id: c.id, name: c.name, months: c.months })),
-    [allCoursesData, editBranchId, groupDetailData]
+    () => (allCoursesData?.data ?? []).map((c) => ({ id: c.id, name: c.name, months: c.months, branchId: branchIdOf(c) })),
+    [allCoursesData]
   );
   const roomOptions = useMemo(
-    () => filterByBranch(allRoomsData?.data ?? [], editBranchId, groupDetailData?.data.roomId)
-      .map((r) => ({ id: r.id, name: r.name })),
-    [allRoomsData, editBranchId, groupDetailData]
+    () => (allRoomsData?.data ?? []).map((r) => ({ id: r.id, name: r.name, branchId: branchIdOf(r) })),
+    [allRoomsData]
   );
 
   // Prefill source for the Edit drawer: the for-edit snapshot (only if it is
@@ -1047,12 +1056,23 @@ export const SingleGroup = () => {
     }
   };
 
-  const handleSaveGroup = async (data: Omit<UpdateGroupRequest, "id">) => {
+  const handleSaveGroup = async (data: Omit<UpdateGroupRequest, "id">, moveToBranchId: string | null) => {
     if (!id) return;
     try {
+      // A move is just the new courseId (the group follows its course); no
+      // x-branch-id of the target is sent - see Groups.tsx handleSave.
       await updateGroup({ id, ...data }).unwrap();
-      toast.success(t("singleGroup.editGroupDrawer.toast.success"));
       setEditOpen(false);
+      if (moveToBranchId) {
+        const name = accessibleBranches.find((b) => b.id === moveToBranchId)?.name
+          ?? allBranchesData?.data.find((b) => b.id === moveToBranchId)?.name
+          ?? "";
+        toast.success(t("groups.toast.moved", { branch: name }));
+        // The group has left the branch this page may be scoped to - go back to the list.
+        navigate("/groups");
+      } else {
+        toast.success(t("singleGroup.editGroupDrawer.toast.success"));
+      }
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("singleGroup.editGroupDrawer.toast.error");
@@ -1453,6 +1473,8 @@ export const SingleGroup = () => {
         courses={courseOptions}
         rooms={roomOptions}
         teachers={activeTeachers}
+        groupBranch={editGroupBranch}
+        branches={accessibleBranches}
         onSave={handleSaveGroup}
         isSaving={isSavingGroup}
       />

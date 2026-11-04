@@ -851,6 +851,9 @@
       "editTitle": "Guruhni tahrirlash",
       "name": "Nomi",
       "course": "Kursni tanlang",
+      "branch": "Filial",
+      "branchMoveNotice": "Bu guruh {{branch}} filialiga ko'chiriladi. Shu filialning kursini tanlang.",
+      "branchNoCourses": "{{branch}} filialida hali faol kurs yo'q. Avval kurs yarating: Sozlamalar → Kurslar → QO'SHISH, «Filial» maydonida {{branch}} ni tanlang.",
       "coursesLoading": "Kurslar yuklanmoqda...",
       "coursesEmpty": "Bu filialda faol kurs yo'q",
       "courseBranchNotice": "Guruh shu kursning filialida yaratiladi: {{branch}}",
@@ -881,6 +884,7 @@
     "toast": {
       "created": "Guruh muvaffaqiyatli qo'shildi",
       "updated": "Guruh muvaffaqiyatli yangilandi",
+      "moved": "Guruh {{branch}} filialiga ko'chirildi",
       "deleted": "Guruh muvaffaqiyatli o'chirildi",
       "statusToggled": "Guruh holati o'zgartirildi",
       "statusToggleError": "Guruh holatini o'zgartirib bo'lmadi",

@@ -9,6 +9,7 @@ import { useBranch, type BranchId } from "../../Context/BranchContext";
 import { useSidebar } from "../../Context/SidebarContext";
 import { useThemeMode } from "../../Context/ThemeContext";
 import { useAuth } from "../../hooks/useAuth";
+import { activeOwnBranches, pickAccessibleBranches } from "../../hooks/useAccessibleBranches";
 
 import { HEADER_HEIGHT, useSidebarWidth } from "../Sidebar/Sidebar";
 import { AddStudent } from "../../components/AddStudent/AddStudent";
@@ -84,11 +85,10 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
   // their way into a branch's data they don't otherwise have access to. Those
   // branches come with their names from GET /auth/me; GET /branches is only the
   // fallback, since not every role may read it.
-  const activeBranches = (branchesData?.data ?? []).filter((b) => b.status === "ACTIVE");
-  const ownBranches = (user?.branches ?? []).flatMap((r) => (r.branch?.status === "ACTIVE" ? [r.branch] : []));
-  const scopedBranches = isCeo
-    ? activeBranches
-    : ownBranches.length > 0 ? ownBranches : activeBranches.filter((b) => branchIds.includes(b.id));
+  // (the rule itself lives in useAccessibleBranches, which the forms that ask
+  // "which branch?" share)
+  const ownBranches = activeOwnBranches(user?.branches);
+  const scopedBranches = pickAccessibleBranches({ isCeo, allBranches: branchesData?.data ?? [], ownBranches, branchIds });
 
   const waitingForBranches = branchesLoading && (isCeo || ownBranches.length === 0);
 

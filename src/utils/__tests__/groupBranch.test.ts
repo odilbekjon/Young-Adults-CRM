@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   branchIdOf,
+  branchSelectOptions,
   clearStaleBranchChoices,
+  editBranchScope,
   filterByBranch,
   findBranchConflict,
   groupBranchId,
@@ -168,5 +170,81 @@ describe("clearStaleBranchChoices", () => {
     expect(
       clearStaleBranchChoices({ courseId: "unknown", roomId: "unknown-room" }, { scopeBranchId: IELTS, courses: [], rooms: [] }),
     ).toEqual({ courseId: "unknown", roomId: "unknown-room" });
+  });
+});
+
+describe("editBranchScope", () => {
+  const own = { courseId: "grammar-a", roomId: "room-grammar" };
+
+  it("stays in the group's own branch while the Branch select is untouched", () => {
+    expect(editBranchScope({ homeBranchId: GRAMMAR, ...own })).toEqual({
+      moving: false,
+      moveToBranchId: null,
+      scopeBranchId: GRAMMAR,
+      keepCourseId: "grammar-a",
+      keepRoomId: "room-grammar",
+    });
+  });
+
+  it("is not a move when the select points at the group's own branch", () => {
+    const scope = editBranchScope({ homeBranchId: GRAMMAR, pickedBranchId: GRAMMAR, ...own });
+    expect(scope.moving).toBe(false);
+    expect(scope.keepCourseId).toBe("grammar-a");
+  });
+
+  it("works in the target branch once another branch is picked, and no longer keeps the group's own course/room", () => {
+    expect(editBranchScope({ homeBranchId: GRAMMAR, pickedBranchId: IELTS, ...own })).toEqual({
+      moving: true,
+      moveToBranchId: IELTS,
+      scopeBranchId: IELTS,
+      keepCourseId: null,
+      keepRoomId: null,
+    });
+  });
+
+  it("goes back to keeping them when the original branch is picked again", () => {
+    const back = editBranchScope({ homeBranchId: GRAMMAR, pickedBranchId: null, ...own });
+    expect(back.moving).toBe(false);
+    expect(back.keepRoomId).toBe("room-grammar");
+  });
+
+  it("treats 'all' as no pick, and an unknown home branch as 'any pick is a move'", () => {
+    expect(editBranchScope({ homeBranchId: GRAMMAR, pickedBranchId: "all", ...own }).moving).toBe(false);
+    expect(editBranchScope({ homeBranchId: null, pickedBranchId: IELTS, ...own }).moving).toBe(true);
+    expect(editBranchScope({ homeBranchId: null, ...own })).toMatchObject({ moving: false, scopeBranchId: null });
+  });
+
+  it("drives the lists and the safety net against the TARGET branch", () => {
+    const courses = [course("ielts-a", IELTS), course("grammar-a", GRAMMAR)];
+    const scope = editBranchScope({ homeBranchId: GRAMMAR, pickedBranchId: IELTS, ...own });
+
+    // only the target branch's courses are offered; the old course is not kept
+    expect(filterByBranch(courses, scope.scopeBranchId, scope.keepCourseId).map((c) => c.id)).toEqual(["ielts-a"]);
+    // the group's old course/room are judged against the target and refused
+    expect(findBranchConflict({ scopeBranchId: scope.scopeBranchId, course: courses[1] })).toBe("course");
+    expect(findBranchConflict({ scopeBranchId: scope.scopeBranchId, course: courses[0], room: course("room-grammar", GRAMMAR) })).toBe("room");
+    expect(findBranchConflict({ scopeBranchId: scope.scopeBranchId, course: courses[0], room: course("room-ielts", IELTS) })).toBeNull();
+    // and a stale pick is emptied
+    expect(
+      clearStaleBranchChoices(
+        { courseId: "grammar-a", roomId: "room-grammar" },
+        { scopeBranchId: scope.scopeBranchId, courses, rooms: [course("room-grammar", GRAMMAR)], keepCourseId: scope.keepCourseId, keepRoomId: scope.keepRoomId },
+      ),
+    ).toEqual({ courseId: "", roomId: "" });
+  });
+});
+
+describe("branchSelectOptions", () => {
+  const a = { id: IELTS, name: "IELTS" };
+  const b = { id: GRAMMAR, name: "Grammar" };
+
+  it("lists the accessible branches", () => {
+    expect(branchSelectOptions([a, b], a)).toEqual([a, b]);
+    expect(branchSelectOptions([a, b])).toEqual([a, b]);
+  });
+
+  it("adds the group's own branch when the user cannot otherwise reach it - and nothing else", () => {
+    expect(branchSelectOptions([a], b)).toEqual([a, b]);
+    expect(branchSelectOptions([a], null)).toEqual([a]);
   });
 });

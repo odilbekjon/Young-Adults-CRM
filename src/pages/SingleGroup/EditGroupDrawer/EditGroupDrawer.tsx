@@ -8,7 +8,10 @@ import { GroupTagsSelect, getGroupTagIds } from "../../../components/GroupTagsSe
 import { inputStyle, labelStyle, submitBtn, cancelBtn } from "../styles";
 import { DatePickerField } from "../DatePickerField";
 import { TimeSelectField } from "../TimeSelectField";
-import { DAYS_PRESETS, classifyDayList, addMonthsToIsoDate, parseTrainingDate, submitOnEnter } from "../../../utils";
+import {
+  DAYS_PRESETS, classifyDayList, addMonthsToIsoDate, parseTrainingDate, submitOnEnter,
+  branchSelectOptions, editBranchScope, filterByBranch, findBranchConflict, singleBranchId,
+} from "../../../utils";
 import type { GroupDay, GroupDetail, UpdateGroupRequest } from "../../../app/api/groupsApi/types";
 
 const ALL_DAYS: GroupDay[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
@@ -43,12 +46,17 @@ const SelectField = ({
   onChange,
   options,
   placeholder,
+  hint,
+  hintIsError,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
   placeholder?: string;
+  // A line of text under the select (a notice, or an error when hintIsError).
+  hint?: string;
+  hintIsError?: boolean;
 }) => (
   <div>
     <label style={labelStyle}>{label}</label>
@@ -67,6 +75,11 @@ const SelectField = ({
       </select>
       <HiChevronDown size={16} style={chevronStyle} />
     </div>
+    {hint && (
+      <div role={hintIsError ? "alert" : "status"} style={{ marginTop: 6, fontSize: 12, color: hintIsError ? "var(--color-danger)" : "var(--color-warning, #b45309)" }}>
+        {hint}
+      </div>
+    )}
   </div>
 );
 
@@ -128,29 +141,71 @@ export const EditGroupDrawer = ({
   courses,
   rooms,
   teachers,
+  groupBranch,
+  branches = [],
   onSave,
   isSaving,
 }: {
   group: GroupForEditShape;
   open: boolean;
   onClose: () => void;
-  courses: { id: string; name: string; months?: number | null }[];
-  rooms: { id: string; name: string }[];
+  // Every course / room, each with its branch: the drawer narrows them to the
+  // branch the group is in (or is being moved to).
+  courses: { id: string; name: string; months?: number | null; branchId?: string | null }[];
+  rooms: { id: string; name: string; branchId?: string | null }[];
   teachers: { id: string; name: string }[];
-  onSave: (data: Omit<UpdateGroupRequest, "id">) => void;
+  // The branch the group is in now (its course's branch), when known.
+  groupBranch?: { id: string; name: string } | null;
+  // The branches the user may work in; the Branch select (moving the group to
+  // another branch) shows only when there is more than one.
+  branches?: { id: string; name: string }[];
+  // moveToBranchId is set when the group is being moved to another branch.
+  onSave: (data: Omit<UpdateGroupRequest, "id">, moveToBranchId: string | null) => void;
   isSaving: boolean;
 }) => {
   const { t } = useTranslation();
   const [form, setForm] = useState<EditGroupFormState>(() => toFormState(group));
   const [daysMode, setDaysMode] = useState<string>(() => classifyDayList(group.days ?? []));
+  // The branch picked in the Branch select (null = untouched). Another branch
+  // than the group's own moves the group there: it follows its course.
+  const [pickedBranchId, setPickedBranchId] = useState<string | null>(null);
+  const [branchError, setBranchError] = useState<{ course?: string; room?: string }>({});
 
   // Har safar drawer ochilganda formani real guruh ma'lumotlari bilan qayta boshlaymiz.
   useEffect(() => {
     if (open) {
       setForm(toFormState(group));
       setDaysMode(classifyDayList(group.days ?? []));
+      setPickedBranchId(null);
+      setBranchError({});
     }
   }, [open, group]);
+
+  const homeBranchId = singleBranchId(groupBranch?.id);
+  const { moving, moveToBranchId, scopeBranchId, keepCourseId, keepRoomId } = editBranchScope({
+    homeBranchId, pickedBranchId, courseId: group.courseId, roomId: group.roomId,
+  });
+  const courseOptions = useMemo(
+    () => filterByBranch(courses, scopeBranchId, keepCourseId),
+    [courses, scopeBranchId, keepCourseId],
+  );
+  const roomOptions = useMemo(
+    () => filterByBranch(rooms, scopeBranchId, keepRoomId),
+    [rooms, scopeBranchId, keepRoomId],
+  );
+  const branchOptions = useMemo(() => branchSelectOptions(branches, groupBranch), [branches, groupBranch]);
+  const nameOfBranch = (id: string | null) => branchOptions.find((b) => b.id === id)?.name ?? "";
+
+  const handleBranchPick = (picked: string) => {
+    setBranchError({});
+    if (picked === homeBranchId) {
+      setPickedBranchId(null);
+      setForm((f) => ({ ...f, courseId: group.courseId ?? "", roomId: group.roomId ?? "" }));
+    } else {
+      setPickedBranchId(picked);
+      setForm((f) => ({ ...f, courseId: "", roomId: "" }));
+    }
+  };
 
   const toggleDay = (day: GroupDay) => {
     setForm((f) => ({
@@ -186,13 +241,33 @@ export const EditGroupDrawer = ({
   // create/edit drawer, kept consistent here.
   const recalcEndDate = (courseId: string, startDate: string) => {
     if (!startDate) return;
-    const months = courses.find((c) => c.id === courseId)?.months;
+    const months = courseOptions.find((c) => c.id === courseId)?.months;
     if (!months) return;
     const end = addMonthsToIsoDate(startDate, months);
     if (end) setForm((f) => ({ ...f, trainingEnd: end }));
   };
 
   const handleSubmit = () => {
+    // Moving needs a course of the target branch; and whatever is picked must
+    // fit the branch the group ends up in (a course of another branch would
+    // put the group there).
+    const errors: { course?: string; room?: string } = {};
+    if (moving && !form.courseId) errors.course = t("groups.form.errors.course");
+    const pickedCourse = courses.find((c) => c.id === form.courseId);
+    const conflict = findBranchConflict({
+      scopeBranchId,
+      course: form.courseId && keepCourseId !== form.courseId ? pickedCourse : undefined,
+      room: form.roomId && keepRoomId !== form.roomId ? rooms.find((r) => r.id === form.roomId) : undefined,
+    });
+    if (conflict === "course") {
+      errors.course = t("groups.form.errors.courseBranch", {
+        courseBranch: nameOfBranch(pickedCourse?.branchId ?? null), branch: nameOfBranch(scopeBranchId),
+      });
+    } else if (conflict === "room") {
+      errors.room = t("groups.form.errors.roomBranch", { branch: nameOfBranch(scopeBranchId) });
+    }
+    setBranchError(errors);
+    if (errors.course || errors.room) return;
     onSave({
       name: form.name,
       courseId: form.courseId || undefined,
@@ -203,7 +278,7 @@ export const EditGroupDrawer = ({
       trainingStart: toDateOnly(form.trainingStart) || undefined,
       trainingEnd: toDateOnly(form.trainingEnd) || undefined,
       tagIds: form.tagIds.length ? form.tagIds : undefined,
-    });
+    }, moveToBranchId);
   };
 
   return (
@@ -219,12 +294,30 @@ export const EditGroupDrawer = ({
           />
         </div>
 
+        {branches.length > 1 && (
+          <SelectField
+            label={t("groups.form.branch")}
+            value={scopeBranchId ?? ""}
+            onChange={handleBranchPick}
+            options={branchOptions.map((b) => ({ value: b.id, label: b.name }))}
+            placeholder={t("groups.form.branch")}
+            hint={moving ? t("groups.form.branchMoveNotice", { branch: nameOfBranch(moveToBranchId) }) : undefined}
+          />
+        )}
+
         <SelectField
           label={t("singleGroup.editGroupDrawer.selectCourse")}
           value={form.courseId}
-          onChange={(v) => { setForm((f) => ({ ...f, courseId: v })); recalcEndDate(v, form.trainingStart); }}
-          options={courses.map((c) => ({ value: c.id, label: c.name }))}
+          onChange={(v) => { setForm((f) => ({ ...f, courseId: v })); setBranchError((e) => ({ ...e, course: undefined })); recalcEndDate(v, form.trainingStart); }}
+          options={courseOptions.map((c) => ({ value: c.id, label: c.name }))}
           placeholder={t("singleGroup.editGroupDrawer.selectCourse")}
+          hint={
+            branchError.course
+            ?? (moving && courses.length > 0 && courseOptions.length === 0
+              ? t("groups.form.branchNoCourses", { branch: nameOfBranch(moveToBranchId) })
+              : undefined)
+          }
+          hintIsError
         />
 
         <div>
@@ -309,8 +402,10 @@ export const EditGroupDrawer = ({
           label={t("singleGroup.editGroupDrawer.selectRoom")}
           value={form.roomId}
           onChange={(v) => setForm((f) => ({ ...f, roomId: v }))}
-          options={rooms.map((r) => ({ value: r.id, label: r.name }))}
+          options={roomOptions.map((r) => ({ value: r.id, label: r.name }))}
           placeholder={t("singleGroup.editGroupDrawer.selectRoom")}
+          hint={branchError.room}
+          hintIsError
         />
 
         <div>

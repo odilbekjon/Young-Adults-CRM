@@ -16,7 +16,7 @@ import { MdRefresh, MdTune, MdViewColumn } from "react-icons/md";
 
 import { useAllGroupsQuery, useStudentGroupsQuery } from "../../../../../app/api/groupsApi";
 import type { StudentGroupStatus } from "../../../../../app/api/groupsApi/types";
-import { useAllCoursesQuery } from "../../../../../app/api/coursesApi";
+import { useBranchCourses } from "../../../../../hooks/useBranchCourses";
 import { useReasonsSelectQuery } from "../../../../../app/api/reasonsApi";
 import { useStudentFreezesQuery } from "../../../../../app/api/studentFreezesApi";
 import type { StudentFreezeRecord } from "../../../../../app/api/studentFreezesApi/types";
@@ -266,7 +266,8 @@ export const StudentLeft = () => {
   // itself — only groupName/groupId are) and for the filter dropdowns' real
   // option lists, same pattern Groups.tsx uses for its own filters.
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 }, { skip: tab === "old" });
-  const { data: coursesData } = useAllCoursesQuery(undefined, { skip: tab === "old" });
+  // Only the header branch's courses (all of them on "All branches").
+  const { courses: branchCourses } = useBranchCourses({ skip: tab === "old" });
   // GET /reasons/select — the same active-reasons list Settings > Reasons
   // manages (reasonsApi) and SingleGroup's "remove student" dialog stores
   // `reasonId` from, so the option ids match StudentGroupRecord.reasonId.
@@ -339,7 +340,7 @@ export const StudentLeft = () => {
     [studentGroupsData, groupById, freezesByMembership, reasonNameById]
   );
 
-  const COURSES = useMemo(() => (coursesData?.data ?? []).map((c) => c.name), [coursesData]);
+  const COURSES = useMemo(() => [...new Set(branchCourses.map((c) => c.name))], [branchCourses]);
   const GROUPS = useMemo(() => (groupsData?.data ?? []).map((g) => ({ id: g.id, name: g.name })), [groupsData]);
   const TEACHERS = useMemo(
     () => [...new Set((groupsData?.data ?? []).flatMap((g) => g.teachers?.map((tc) => tc.name) ?? []))],

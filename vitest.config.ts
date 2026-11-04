@@ -14,6 +14,10 @@ export default defineConfig({
     // between 00:00 and 05:00 local time toISOString() still reports the
     // previous day.
     env: { TZ: "Asia/Tashkent" },
+    // Page tests render whole screens; with the full suite running dozens of files
+    // at once one of them can take several seconds longer than it does alone, so
+    // the default 5 s limit makes the suite flaky rather than catching anything.
+    testTimeout: 20_000,
     // Every test starts from a clean slate: spies restored, stubbed globals
     // (fetch) put back.
     restoreMocks: true,

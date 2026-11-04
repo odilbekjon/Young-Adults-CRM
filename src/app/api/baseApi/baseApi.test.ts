@@ -56,7 +56,7 @@ describe("baseApi request headers", () => {
     expect(requests[0].headers.has("x-branch-id")).toBe(false);
   });
 
-  it("does not narrow the shared course list by the selected branch", async () => {
+  it("scopes a course list to the selected branch like every other read (a course belongs to one branch)", async () => {
     const store = createTestStore();
     store.dispatch(setSelectedBranchId("branch-7"));
     const { requests } = stubFetch(() => jsonResponse({ data: [] }));
@@ -64,7 +64,7 @@ describe("baseApi request headers", () => {
     await store.dispatch(coursesApi.endpoints.allCourses.initiate());
 
     expect(requests[0].url).toBe(`${API_BASE_URL}/courses`);
-    expect(requests[0].headers.has("x-branch-id")).toBe(false);
+    expect(requests[0].headers.get("x-branch-id")).toBe("branch-7");
   });
 
   it("keeps a branch header the request names itself", async () => {

@@ -493,9 +493,10 @@ export const groupsApi = baseApi.injectEndpoints({
             }),
             providesTags: ["group"],
         }),
-        // GET /groups/by-course?courseId=... — every group of one course. Courses
-        // are shared by all branches (see baseApi), so the list must not be
-        // narrowed to the branch selected in the header: "all" overrides it.
+        // GET /groups/by-course?courseId=... — every group of one course. The
+        // course page opens a course by id, also one of another branch than the
+        // header's (a direct link), so the list is not narrowed to the branch
+        // selected in the header: "all" overrides it.
         groupsByCourse: builder.query<CourseGroup[], string>({
             query: (courseId) => ({
                 url: `${PATHS.GROUPS}/by-course?courseId=${encodeURIComponent(courseId)}`,

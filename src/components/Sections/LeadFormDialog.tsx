@@ -38,7 +38,8 @@ export const LeadFormDialog = ({ open, onClose, sectionId, leadId }: Props) => {
   const { currentData: leadData, isLoading: leadLoading } = useLeadForEditQuery(leadId ?? "", { skip: !leadId || !open });
   const { data: sourcesData } = useAllLeadSourcesQuery(undefined, { skip: !open });
   const sources = sourcesData?.data ?? [];
-  const { data: courses } = useCoursesSelectQuery(undefined, { skip: !open });
+  // The header branch's courses (all of them on "All branches").
+  const { currentData: courses } = useCoursesSelectQuery({ branchId: selectedBranchId ?? "all" }, { skip: !open });
 
   const [createLead, { isLoading: isCreating }] = useCreateLeadMutation();
   const [updateLead, { isLoading: isUpdating }] = useUpdateLeadMutation();

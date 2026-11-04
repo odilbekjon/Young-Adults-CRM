@@ -110,7 +110,9 @@ export const SingleCourse = () => {
   const [confirmAction, setConfirmAction] = useState<CourseAction>("archive");
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
-  const { data, isLoading } = useAllCoursesQuery();
+  // Courses of every branch: this page opens a course by id, also one of another
+  // branch than the header's (a direct link, or from a group of that branch).
+  const { data, isLoading } = useAllCoursesQuery({ branchId: "all" });
   const [toggleCourseStatus, { isLoading: isToggling }] = useToggleCourseStatusMutation();
   const [deleteCourse, { isLoading: isDeleting }] = useDeleteCourseMutation();
   const isActing = isToggling || isDeleting;

@@ -238,7 +238,7 @@ export const Salaries = () => {
 
   const branchArg = selectedBranchId ?? "all";
   const { data: teacherOptions } = useTeachersSelectQuery({ branchId: branchArg }, { skip: scope !== "teacher" });
-  const { data: courseOptions } = useCoursesSelectQuery(undefined, { skip: scope !== "course" });
+  const { currentData: courseOptions } = useCoursesSelectQuery({ branchId: branchArg }, { skip: scope !== "course" });
   const { data: groupOptions } = useGroupsSelectQuery(undefined, { skip: scope !== "group" });
 
   const entityOptions =

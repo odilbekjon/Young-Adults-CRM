@@ -194,7 +194,10 @@ export const SingleGroup = () => {
   const moveTargetGroups = useActiveGroups({ skip: !moveOpen });
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { data: allStudentsData } = useAllStudentsQuery({ page: 1, limit: 100, branchId: selectedBranchId ?? undefined });
-  const { data: allCoursesData } = useAllCoursesQuery();
+  // Courses of every branch: the group's own course (name, branch) is looked up
+  // by id and may sit in another branch than the header's, and the edit form's
+  // "move to another branch" needs the target branch's courses.
+  const { data: allCoursesData } = useAllCoursesQuery({ branchId: "all" });
   const { data: allRoomsData } = useAllRoomsQuery(undefined, { skip: !editOpen });
   const { data: allBranchesData } = useAllBranchesQuery();
   const { branches: accessibleBranches } = useAccessibleBranches();

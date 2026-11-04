@@ -12,6 +12,7 @@ import {
     BulkCoursesResponse,
     CourseSelectOption,
     CoursesSelectRequest,
+    AllCoursesRequest,
 } from "./types";
 
 // Backend ba'zan ro'yxatni tekis massiv, ba'zan {data: [...], meta} ko'rinishida
@@ -35,14 +36,28 @@ const branchHeader = (branchId: string) => ({ "x-branch-id": branchId });
 
 export const coursesApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        // Every branch's courses, never scoped to the selected branch (baseApi
-        // leaves x-branch-id off GET /courses). Each course carries its branchId;
-        // the group form narrows the list to one branch (utils/groupBranch.ts).
-        allCourses: builder.query<CoursesResponse, void>({
-            query: () => ({
-                url: PATHS.COURSES,
-                method: "GET"
-            }),
+        // GET /courses. A course belongs to ONE branch, so a list follows the branch
+        // picked in the header. `branchId` says which branch the list is for:
+        //  - a branch id: that branch's courses - named in the query AND in this
+        //    request's x-branch-id (same belt-and-braces as students/teachers),
+        //  - "all": every branch's courses whatever the header says (an explicit
+        //    x-branch-id: all, as groupsApi's by-course does) - for the group
+        //    forms and for looking a course up by id, which must see courses of
+        //    any branch,
+        //  - omitted: whatever the header alone decides (baseApi attaches it).
+        // Each course carries its branchId, so a caller can narrow the answer
+        // again itself (utils/groupBranch.ts) and not trust the server to have done it.
+        allCourses: builder.query<CoursesResponse, AllCoursesRequest | void>({
+            query: (args) => {
+                const branchId = args?.branchId;
+                if (!branchId) return { url: PATHS.COURSES, method: "GET" };
+                if (branchId === "all") return { url: PATHS.COURSES, method: "GET", headers: branchHeader("all") };
+                return {
+                    url: `${PATHS.COURSES}?branchId=${encodeURIComponent(branchId)}`,
+                    method: "GET",
+                    headers: branchHeader(branchId),
+                };
+            },
             transformResponse: (response: CoursesResponse) => ({
                 ...response,
                 data: normalizeList<CoursesResponse["data"][number]>(response.data),
@@ -50,17 +65,18 @@ export const coursesApi = baseApi.injectEndpoints({
             providesTags: ["course"],
         }),
         // GET /courses/select — simplified dropdown list (id, name, code,
-        // months, ...) used by filters/pickers. branchId is required by
-        // Swagger: required branchId — always "all", since courses are shared
-        // by every branch (the arg is kept so callers stay unchanged).
+        // months, ...) used by filters/pickers. branchId is required by Swagger:
+        // the selected branch id, or "all" for every branch (callers pass the
+        // header's branch, "all" on "All branches"). The list is cached per
+        // branch. Its items carry no branchId, so unlike /courses it cannot be
+        // narrowed again on this side - it relies on the server honouring it.
         coursesSelect: builder.query<CourseSelectOption[], CoursesSelectRequest | void>({
-            query: () => ({
-                url: `${PATHS.COURSES}/select?branchId=all`,
+            query: (args) => ({
+                url: `${PATHS.COURSES}/select?branchId=${encodeURIComponent(args?.branchId || "all")}`,
                 method: "GET",
             }),
             transformResponse: (response: { data: unknown }) => normalizeList<CourseSelectOption>(response?.data),
             providesTags: ["course"],
-            serializeQueryArgs: ({ endpointName }) => endpointName,
         }),
         createCourse: builder.mutation<CourseResponse, CreateCourseRequest>({
             query: ({ name, price, branchId, code, months, lessonDuration, lessonsPerMonth, description }) => {

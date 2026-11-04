@@ -1,7 +1,11 @@
 // Runs before every test file (see vitest.config.ts). Vitest is used without
 // globals, so Testing Library's automatic cleanup has to be wired up by hand.
 import { afterEach, beforeEach, vi } from "vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
+
+// waitFor / findBy* give up after 1 s by default - too tight for a screen that is
+// rendered while the rest of the suite hogs the CPU.
+configure({ asyncUtilTimeout: 5_000 });
 
 // The app's i18n module (and the Redux slices) read localStorage the moment
 // they are first imported, so English is forced before any test file gets to

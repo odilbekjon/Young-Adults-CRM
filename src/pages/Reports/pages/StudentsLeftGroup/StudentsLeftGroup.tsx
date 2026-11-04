@@ -12,7 +12,6 @@ import {
   useLazyReportLeftStudentsExcelQuery,
 } from "../../../../app/api/reportsApi";
 import type { ReportBreakdownItem } from "../../../../app/api/reportsApi/types";
-import { useAllCoursesQuery } from "../../../../app/api/coursesApi";
 import { useAllTeachersQuery } from "../../../../app/api/teachersApi";
 import { useReasonsSelectQuery } from "../../../../app/api/reasonsApi";
 import { useAllBranchesQuery } from "../../../../app/api/branchesApi";
@@ -23,6 +22,8 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../../../app/store";
 import { DatePickerField } from "../../../SingleGroup/DatePickerField";
 import { usePersistedState } from "../../../../hooks/usePersistedState";
+import { useBranchCourses } from "../../../../hooks/useBranchCourses";
+import { useDropStaleFilter } from "../../../../hooks/useDropStaleFilter";
 
 interface SelectOption {
   value: string;
@@ -119,14 +120,26 @@ export const StudentsLeftGroup = () => {
 
   // Filter option lists come from the real reference endpoints instead of
   // hardcoded names.
-  const { data: coursesData } = useAllCoursesQuery();
+  // The courses of the report's own branch when one is picked, else of the header's.
+  const { courses: branchCourses, branchId: courseBranchId, isLoaded: coursesLoaded } = useBranchCourses({ branchId });
   const { data: teachersData } = useAllTeachersQuery({ page: 1, limit: 100 });
   const { data: reasonOptions } = useReasonsSelectQuery();
   const { data: branchesData } = useAllBranchesQuery();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { branchLabel } = useBranch();
 
-  const courseOptions = useMemo(() => (coursesData?.data ?? []).map((c) => ({ value: c.name, label: c.name })), [coursesData]);
+  const courseOptions = useMemo(
+    () => [...new Set(branchCourses.map((c) => c.name))].map((name) => ({ value: name, label: name })),
+    [branchCourses],
+  );
+  // A saved course (a name) of another branch must not keep narrowing the report.
+  const courseNames = useMemo(() => courseOptions.map((o) => o.value), [courseOptions]);
+  useDropStaleFilter({
+    value: course,
+    options: coursesLoaded ? courseNames : undefined,
+    branchKey: courseBranchId,
+    onStale: () => setCourse(""),
+  });
   const teacherOptions = useMemo(() => (teachersData?.data ?? []).map((tc) => ({ value: tc.name, label: tc.name })), [teachersData]);
   const reasonOptionList = useMemo(() => (reasonOptions ?? []).map((r) => ({ value: r.name, label: r.name })), [reasonOptions]);
   // Same convention as staff.tsx's own branch dropdown — exclude

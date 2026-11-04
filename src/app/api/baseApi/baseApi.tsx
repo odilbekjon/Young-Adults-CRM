@@ -23,23 +23,12 @@ import { logout, setToken } from "../../store/authSlice";
 
 export const API_BASE_URL = "https://api.youngadults-crm.uz/api/v1";
 
-// Reading courses is not narrowed by the branch picked in the header: the list
-// holds every branch's courses, each with its branchId (Settings > Courses and
-// the course filters need them all). A picker that must offer one branch's
-// courses only - the group form - narrows the list itself, see
-// utils/groupBranch.ts. A course belongs to one branch; it is not shared.
-const isCoursesRead = (arg: string | FetchArgs): boolean => {
-  const url = typeof arg === "string" ? arg : arg.url;
-  const method = typeof arg === "string" ? "GET" : (arg.method ?? "GET").toUpperCase();
-  return method === "GET" && /^\/?courses(\/|\?|$)/.test(url);
-};
-
 const fetchQuery = fetchBaseQuery({
   // Fixed on purpose: a stale VITE_API_URL left in the hosting dashboard
   // (Vercel) kept builds pointing at the old Render backend.
   baseUrl: API_BASE_URL,
   credentials: 'include',
-  prepareHeaders: (headers, { getState, arg }) => {
+  prepareHeaders: (headers, { getState }) => {
     const token = useStorage.getTokens()?.accessToken;
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
@@ -47,8 +36,9 @@ const fetchQuery = fetchBaseQuery({
   
     const state = getState() as { branch?: { selectedBranchId?: string | null } };
     const branchId = state.branch?.selectedBranchId;
-    // A request that names its own branch keeps it (see coursesApi's branchHeader).
-    if (branchId && !headers.has("x-branch-id") && !isCoursesRead(arg)) {
+    // A request that names its own branch keeps it (coursesApi's branchHeader, or
+    // "all" for a read that needs every branch whatever the header says).
+    if (branchId && !headers.has("x-branch-id")) {
       headers.set("x-branch-id", branchId);
     }
     headers.set("x-lang", i18n.language);

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useAuth } from "../../hooks/useAuth";
 import { usePersistedState } from "../../hooks/usePersistedState";
+import { useDropStaleFilter } from "../../hooks/useDropStaleFilter";
 import { useArchiveStudent } from "../../hooks/useArchiveStudent";
 import {
   Avatar,
@@ -728,7 +729,8 @@ export const Students = () => {
   // GET /courses/select + GET /teachers/select — the complete lists for the
   // "By courses" / "By teacher" filters (they used to be derived from the
   // students on the current page, so most options never appeared).
-  const { data: courseOptions } = useCoursesSelectQuery();
+  // The courses of the header's branch (all of them on "All branches").
+  const { currentData: courseOptions } = useCoursesSelectQuery({ branchId: selectedBranchId ?? "all" });
   const { data: teacherOptions } = useTeachersSelectQuery({ branchId: selectedBranchId ?? "all" });
   // GET /groups is paginated (100 per page): pages 2-3 are only requested when
   // the previous page came back full. The group list serves the Add-to-group
@@ -1001,6 +1003,15 @@ export const Students = () => {
     prevBranchId.current = selectedBranchId;
     setPage(1);
   }, [selectedBranchId, setPage]);
+
+  // A saved course filter of another branch must not keep narrowing the table.
+  const courseFilterIds = useMemo(() => courseOptions?.map((c) => c.id), [courseOptions]);
+  useDropStaleFilter({
+    value: filters.course,
+    options: courseFilterIds,
+    branchKey: selectedBranchId,
+    onStale: () => setFilters((p) => ({ ...p, course: "" })),
+  });
 
   // A changed filter starts over from page 1. (The search box is the
   // exception: it resets the page once the debounced term is applied.)

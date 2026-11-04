@@ -65,6 +65,15 @@ export const GRAMMAR_GROUP = {
   students: [],
 };
 
+// A running group of the IELTS Campus.
+export const IELTS_GROUP = {
+  ...GRAMMAR_GROUP,
+  id: "g-ielts",
+  name: "IELTS Morning",
+  courseId: "c-ielts",
+  course: { id: "c-ielts", name: "IELTS Intensive", branchId: IELTS },
+};
+
 // The same group with a room of its branch and a teacher who is not in the
 // header branch's teacher list.
 export const GRAMMAR_GROUP_WITH_ROOM = {
@@ -76,13 +85,24 @@ export const GRAMMAR_GROUP_WITH_ROOM = {
 
 export const path = (request: SentRequest) => request.url.replace(API_BASE_URL, "");
 
+const coursesOfBranch = (branchId: string | null) =>
+  branchId && branchId !== "all" ? COURSES.filter((c) => c.branchId === branchId) : COURSES;
+
 export const answerWith = (groups: unknown[] = [], me?: unknown) => (request: SentRequest) => {
   const p = path(request);
   if (request.method === "GET") {
     if (p.startsWith("/auth/me")) return jsonResponse({ success: true, data: me });
     if (p.startsWith("/auth/sidebar")) return jsonResponse({ success: true, data: { allAccess: false, labels: [] } });
-    if (p.startsWith("/courses/select")) return jsonResponse({ success: true, data: COURSES.map(({ id, name }) => ({ id, name })) });
-    if (p.startsWith("/courses")) return jsonResponse({ success: true, data: COURSES });
+    if (p.startsWith("/courses/select")) {
+      const active = coursesOfBranch(new URL(request.url).searchParams.get("branchId")).filter((c) => c.status === "ACTIVE");
+      return jsonResponse({ success: true, data: active.map(({ id, name }) => ({ id, name })) });
+    }
+    // Like the real backend: a branch named in the query or in x-branch-id narrows
+    // the list, "all" (or no branch at all) does not.
+    if (p.startsWith("/courses")) {
+      const named = new URL(request.url).searchParams.get("branchId") ?? request.headers.get("x-branch-id");
+      return jsonResponse({ success: true, data: coursesOfBranch(named) });
+    }
     if (p.startsWith("/rooms")) return jsonResponse({ success: true, data: ROOMS });
     if (p.startsWith("/branches")) return jsonResponse({ success: true, data: BRANCHES });
     if (p.startsWith("/teachers/select")) return jsonResponse({ success: true, data: [{ id: "t1", name: "Aziz" }] });

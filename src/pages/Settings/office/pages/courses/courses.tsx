@@ -29,6 +29,7 @@ import type { Course } from "../../../../../app/api/coursesApi/types";
 import { useToast } from "../../../../../Context/ToastContext";
 import { CARD_COLORS } from "../../../../../constants/CardColors";
 import { decimalToNumber, extractApiError } from "../../../../../utils";
+import { useBranchCourses } from "../../../../../hooks/useBranchCourses";
 import { CourseFormDrawer } from "./CourseFormDrawer";
 
 export const BookIllustration = () => (
@@ -53,7 +54,8 @@ export const Courses = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const { data, isLoading, isError, refetch, isFetching } = useAllCoursesQuery();
+  // The courses of the branch picked in the header (every branch's on "All branches").
+  const { courses: branchCourses, branchId: headerBranchId, isLoading, isError, refetch, isFetching } = useBranchCourses();
   const [toggleCourseStatus, { isLoading: isToggling }] = useToggleCourseStatusMutation();
   const [deleteCourse, { isLoading: isDeleting }] = useDeleteCourseMutation();
   const [bulkToggleStatus, { isLoading: isBulkToggling }] = useBulkToggleCourseStatusMutation();
@@ -64,12 +66,17 @@ export const Courses = () => {
   // An archived course keeps its name taken in its branch (the backend still
   // answers "already exists" when it is re-created), so the archive has to stay
   // reachable from here to restore or delete it.
-  // Courses are shared by every branch — the header's branch never narrows them.
-  const allCourses = data?.data ?? [];
+  const allCourses = branchCourses;
   const courses = allCourses.filter((c) => (tab === "faol" ? c.status === "ACTIVE" : c.status !== "ACTIVE"));
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  // The form can create a course in any branch, so its archived-twin check needs
+  // the courses of every branch, not just the header's (read only once it opens).
+  const { currentData: everyBranchData } = useAllCoursesQuery(
+    { branchId: "all" },
+    { skip: !drawerOpen || !headerBranchId },
+  );
 
   const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -469,7 +476,7 @@ export const Courses = () => {
         </Box>
       )}
 
-      <CourseFormDrawer open={drawerOpen} course={editingCourse} courses={allCourses} onClose={closeDrawer} />
+      <CourseFormDrawer open={drawerOpen} course={editingCourse} courses={headerBranchId ? (everyBranchData?.data ?? allCourses) : allCourses} onClose={closeDrawer} />
 
       {/* Archive confirmation */}
       <Dialog

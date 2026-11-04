@@ -26,7 +26,7 @@ import {
   FiShare2,
 } from "react-icons/fi";
 import { MdOutlineDateRange } from "react-icons/md";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -38,6 +38,7 @@ import type { LeadStatus } from "../../app/api/leadsApi/types";
 import type { RootState } from "../../app/store";
 import { useBranch } from "../../Context/BranchContext";
 import { useToast } from "../../Context/ToastContext";
+import { useDropStaleFilter } from "../../hooks/useDropStaleFilter";
 import { downloadExcelBlob } from "../../utils/downloadExcel";
 import { toLocalISODate } from "../../utils/localDate";
 import { withApiDetail } from "../Sections/withApiDetail";
@@ -381,7 +382,16 @@ export const FromWhere = ({ filters, onChange, onOpenColumnSettings, onOpenSourc
 
   const { data: sectionsData } = useAllLeadSectionsQuery();
   const { data: sourcesData } = useAllLeadSourcesQuery();
-  const { data: courses } = useCoursesSelectQuery();
+  // The header branch's courses (all of them on "All branches").
+  const { currentData: courses } = useCoursesSelectQuery({ branchId: selectedBranchId ?? "all" });
+  const courseIds = useMemo(() => courses?.map((c) => c.id), [courses]);
+  // A course filter of another branch must not keep narrowing the leads.
+  useDropStaleFilter({
+    value: filters.courseId,
+    options: courseIds,
+    branchKey: selectedBranchId,
+    onStale: () => onChange({ ...filters, courseId: "" }),
+  });
   const [fetchExcel] = useLazyReportLeadsExcelQuery();
 
   const [dateAnchor, setDateAnchor] = useState<HTMLElement | null>(null);

@@ -57,6 +57,12 @@ export interface CoursesSelectRequest {
   branchId: string;
 }
 
+// GET /courses: a branch id (that branch's courses), "all" (every branch's,
+// whatever the header says) or nothing (whatever the header alone decides).
+export interface AllCoursesRequest {
+  branchId?: string;
+}
+
 export interface CoursesResponse {
   success: boolean;
   message: string;

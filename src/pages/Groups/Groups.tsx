@@ -32,6 +32,7 @@ import { useAllRoomsQuery } from "../../app/api/roomsApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useTeacherOptions } from "../../hooks/useTeacherOptions";
 import { useAccessibleBranches } from "../../hooks/useAccessibleBranches";
+import { useDropStaleFilter } from "../../hooks/useDropStaleFilter";
 import { useTagsSelectQuery } from "../../app/api/tagsApi";
 import type { RootState } from "../../app/store";
 import { PortalPopover } from "../../components/common/PortalPopover";
@@ -554,7 +555,10 @@ export const Groups = () => {
   // Declared ahead of the queries below: only the create/edit drawer needs the
   // full course and room lists, so they are fetched once it is opened.
   const [open, setOpen] = useState(false);
-  const { data: coursesData, isLoading: coursesLoading } = useAllCoursesQuery(undefined, { skip: !open });
+  // Courses of every branch whatever the header says: the form narrows them to
+  // the group's branch itself (and "move to another branch" needs the target
+  // branch's), see utils/groupBranch.ts.
+  const { data: coursesData, isLoading: coursesLoading } = useAllCoursesQuery({ branchId: "all" }, { skip: !open });
   const { data: roomsData } = useAllRoomsQuery(undefined, { skip: !open });
   const { data: branchesData } = useAllBranchesQuery();
   // GET /teachers/select — the dropdown-specific endpoint for group create/
@@ -574,7 +578,16 @@ export const Groups = () => {
   // GET /courses/select — full course list for the Courses filter (the
   // filter used to be built from the courses of the already-loaded groups,
   // so a course without groups, or beyond the page limit, never showed up).
-  const { data: courseOptions } = useCoursesSelectQuery();
+  // Only the header branch's courses (all of them on "All branches").
+  const { currentData: courseOptions } = useCoursesSelectQuery({ branchId: selectedBranchId ?? "all" });
+  // A saved course filter of another branch must not keep narrowing the list.
+  const courseFilterIds = useMemo(() => courseOptions?.map((c) => c.id), [courseOptions]);
+  useDropStaleFilter({
+    value: filters.course,
+    options: courseFilterIds,
+    branchKey: selectedBranchId,
+    onStale: () => setFilters((prev) => ({ ...prev, course: "" })),
+  });
   // GET /tags/select — real, admin-managed tags for the Groups "Tags"
   // filter. `type` is required by the endpoint and the only enum values are
   // GROUP | STUDENT (Settings > Tags). Live data showed existing tags stored

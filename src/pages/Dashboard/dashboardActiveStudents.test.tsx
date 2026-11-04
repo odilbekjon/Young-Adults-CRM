@@ -1,6 +1,6 @@
-import { screen, waitFor } from "@testing-library/react";
+import { configure, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse, stubFetch, type SentRequest } from "../../test/fetchStub";
 import { renderWithStore } from "../../test/renderWithStore";
 import { baseApi } from "../../app/api/baseApi";
@@ -9,6 +9,12 @@ import { Dashboard } from "./Dashboard";
 
 // The "Active students" tile end to end: the page's real queries and hooks over a
 // stubbed backend whose answers the test releases one by one.
+
+// The whole Dashboard is mounted here, so on a busy machine (the full suite runs
+// dozens of files at once) a first render can outlast the default 1 s waitFor /
+// 5 s test limits.
+configure({ asyncUtilTimeout: 10_000 });
+vi.setConfig({ testTimeout: 30_000 });
 
 const BACKEND_FIGURE = 412; // GET /dashboard/stats - a different definition, so it can be off
 

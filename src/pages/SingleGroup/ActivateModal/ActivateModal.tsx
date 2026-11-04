@@ -61,7 +61,7 @@ export const ActivateModal = ({
         <Typography fontSize={13} color="var(--color-text-secondary)" mb={1.5}>
           {t("singleGroup.activateModal.description")}
         </Typography>
-        <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} />
+        <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} shortcuts />
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: "center", pb: 3, px: 2.5 }}>

@@ -82,36 +82,74 @@ describe("GraduateTrialModal", () => {
     });
   });
 
-  describe("earliest selectable date", () => {
-    it("cannot be earlier than the join date", () => {
+  // A student moved from another group joins "today", yet is billed from an
+  // earlier day: nothing in the past may be disabled.
+  describe("past dates", () => {
+    it("are all selectable, including days before the join date", () => {
       renderModal({ joinedAt: "2026-06-10" });
 
       fireEvent.click(screen.getByText("15.06.2026")); // open the picker
 
-      expect(dayCell(2026, 5, 9).disabled).toBe(true);
-      expect(dayCell(2026, 5, 1).disabled).toBe(true);
+      expect(dayCell(2026, 5, 1).disabled).toBe(false);
+      expect(dayCell(2026, 5, 9).disabled).toBe(false);
       expect(dayCell(2026, 5, 10).disabled).toBe(false);
       expect(dayCell(2026, 5, 20).disabled).toBe(false);
     });
 
-    it("is the join date itself when it is still in the future", () => {
+    it("are selectable when the student joined today (moved from another group)", () => {
+      const { props } = renderModal({ joinedAt: "2026-06-15" });
+
+      fireEvent.click(screen.getByText("15.06.2026"));
+      expect(dayCell(2026, 5, 1).disabled).toBe(false);
+      fireEvent.click(dayCell(2026, 5, 1));
+      expect(screen.getByText("01.06.2026")).toBeTruthy();
+
+      fireEvent.click(confirmButton());
+      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-01");
+    });
+
+    it("are selectable even when the join date still lies ahead", () => {
       renderModal({ joinedAt: "2026-06-20" });
 
       fireEvent.click(screen.getByText("20.06.2026"));
 
-      expect(dayCell(2026, 5, 19).disabled).toBe(true);
-      expect(dayCell(2026, 5, 20).disabled).toBe(false);
+      expect(dayCell(2026, 5, 19).disabled).toBe(false);
+      expect(dayCell(2026, 5, 1).disabled).toBe(false);
     });
 
-    it("lets billing start on any day from the join date on, and confirms the picked one", () => {
-      const { props } = renderModal({ joinedAt: "2026-06-10" });
+    it("reach back into earlier months, and the picked day is confirmed", () => {
+      const { props } = renderModal({ joinedAt: "2026-06-15" });
 
       fireEvent.click(screen.getByText("15.06.2026"));
-      fireEvent.click(dayCell(2026, 5, 10));
-      expect(screen.getByText("10.06.2026")).toBeTruthy();
+      fireEvent.click(screen.getByText("‹")); // previous month: May 2026
+      expect(dayCell(2026, 4, 12).disabled).toBe(false);
+      fireEvent.click(dayCell(2026, 4, 12));
+      expect(screen.getByText("12.05.2026")).toBeTruthy();
 
       fireEvent.click(confirmButton());
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-10");
+      expect(props.onConfirm).toHaveBeenCalledTimes(1);
+      expect(props.onConfirm).toHaveBeenCalledWith("2026-05-12");
+    });
+
+    it("can be picked in one click with the 'Start of the month' shortcut", () => {
+      const { props } = renderModal({ joinedAt: "2026-06-15" });
+
+      fireEvent.click(screen.getByText("15.06.2026"));
+      fireEvent.click(screen.getByText("Start of the month"));
+      expect(screen.getByText("01.06.2026")).toBeTruthy();
+
+      fireEvent.click(confirmButton());
+      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-01");
+    });
+
+    it("do not block Enter either", () => {
+      const { props } = renderModal({ joinedAt: "2026-06-15" });
+
+      fireEvent.click(screen.getByText("15.06.2026"));
+      fireEvent.click(dayCell(2026, 5, 3));
+      fireEvent.keyDown(screen.getByText("Finish trial lesson"), { key: "Enter" });
+
+      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-03");
     });
   });
 

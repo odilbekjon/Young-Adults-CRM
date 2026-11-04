@@ -22,9 +22,10 @@ export const GraduateTrialModal = ({
   isSaving?: boolean;
   // The day the student joined the group. The trial lessons are free, so the
   // default billing start is the day the trial ends (today) — not this date —
-  // but billing can never start before the student joined, so a join date still
-  // ahead of today is the earliest (and default) choice, and nothing earlier
-  // can be picked.
+  // unless the join date is still ahead of today, which then is the default.
+  // Any date can be picked, past ones included: a student moved from another
+  // group (or activated late) is billed from the day staff say, e.g. the 1st of
+  // this month or a day of an earlier month.
   joinedAt?: string;
 }) => {
   const { t } = useTranslation();
@@ -37,7 +38,7 @@ export const GraduateTrialModal = ({
     setPaymentStartDate(joinedDate && joinedDate > today ? joinedDate : today);
   }, [open, joinedDate]);
 
-  const canSubmit = Boolean(paymentStartDate) && !(joinedDate && paymentStartDate < joinedDate);
+  const canSubmit = Boolean(paymentStartDate);
 
   const handleSubmit = () => {
     if (!canSubmit) return;
@@ -64,7 +65,7 @@ export const GraduateTrialModal = ({
         <Typography fontSize={13} color="var(--color-text-secondary)" mb={1.5}>
           {t("singleGroup.graduateTrialModal.description")}
         </Typography>
-        <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} min={joinedDate} />
+        <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} shortcuts />
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: "center", pb: 3, px: 2.5 }}>

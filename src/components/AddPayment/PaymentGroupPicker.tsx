@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { MdRadioButtonChecked, MdRadioButtonUnchecked } from "react-icons/md";
 import { useGroupByIdQuery } from "../../app/api/groupsApi/groupsApi";
+import { sortByName } from "../../utils/compareNames";
 
 export interface PaymentGroupOption {
   id: string;
@@ -118,6 +120,8 @@ export const PaymentGroupPicker = ({ options, value, onChange, isLoading, isErro
   disabled?: boolean;
 }) => {
   const { t } = useTranslation();
+  // The student's groups are offered A -> Z by name, whatever order they arrive in.
+  const sortedOptions = useMemo(() => sortByName(options), [options]);
 
   if (isLoading) {
     return <div style={{ fontSize: 13, color: "var(--color-text-muted, #9ca3af)" }}>{t("addPayment.groupsLoading")}</div>;
@@ -125,12 +129,12 @@ export const PaymentGroupPicker = ({ options, value, onChange, isLoading, isErro
   if (isError) {
     return <div style={{ fontSize: 13, color: "var(--color-danger, #d93f4f)" }}>{t("addPayment.groupsError")}</div>;
   }
-  if (options.length === 0) {
+  if (sortedOptions.length === 0) {
     return <div style={{ fontSize: 13, color: "var(--color-text-muted, #9ca3af)" }}>{t("addPayment.noGroups")}</div>;
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {options.map((o) => (
+      {sortedOptions.map((o) => (
         <GroupCard
           key={o.id}
           option={o}
@@ -139,7 +143,7 @@ export const PaymentGroupPicker = ({ options, value, onChange, isLoading, isErro
           onSelect={() => onChange(o.id === value ? "" : o.id)}
         />
       ))}
-      {options.length > 1 && !value && (
+      {sortedOptions.length > 1 && !value && (
         <div style={{ fontSize: 12, color: "var(--color-text-muted, #9ca3af)" }}>{t("addPayment.groupHint")}</div>
       )}
     </div>

@@ -127,7 +127,7 @@ describe("Groups edit form: moving a group to another branch", () => {
     await waitFor(() => expect(optionTexts()).toEqual(["—", "Room A"]));
   });
 
-  it("still sees the target branch's courses while the header is on another branch (the form reads every branch)", async () => {
+  it("asks for the target branch's courses by name while the header is on another branch", async () => {
     // header: Grammar Campus; the backend only narrows a course list when asked to
     const { requests } = signIn(CEO_ME);
     renderGroups();
@@ -135,8 +135,10 @@ describe("Groups edit form: moving a group to another branch", () => {
 
     openSelect("courseId");
     await waitFor(() => expect(optionTexts()).toEqual(["IELTS Intensive"]));
-    const read = requests.find((r) => path(r) === "/courses")!;
-    expect(read.headers.get("x-branch-id")).toBe("all");
+    const read = requests.find((r) => path(r) === `/courses?branchId=${IELTS}`)!;
+    expect(read.headers.get("x-branch-id")).toBe(IELTS);
+    // never "every branch at once": only a CEO could be allowed that
+    expect(requests.some((r) => r.headers.get("x-branch-id") === "all")).toBe(false);
   });
 
   it("will not save until a course of the target branch is picked", async () => {

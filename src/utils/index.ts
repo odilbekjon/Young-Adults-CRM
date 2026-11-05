@@ -11,3 +11,4 @@ export * from "./decimal";
 export * from "./localDate";
 export * from "./submitOnEnter";
 export * from "./moneyInput";
+export * from "./compareNames";

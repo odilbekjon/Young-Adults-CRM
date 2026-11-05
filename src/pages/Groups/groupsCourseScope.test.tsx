@@ -104,8 +104,8 @@ describe("Groups: the Courses filter follows the header's branch", () => {
   });
 });
 
-describe("Groups form: courses of every branch, whatever the header", () => {
-  it("reads the courses unscoped (x-branch-id: all) while the header is on one branch", async () => {
+describe("Groups form: the course request names the branch the form works in", () => {
+  it("asks for the header's branch - in the query and in x-branch-id - and never for every branch at once", async () => {
     store.dispatch(setSelectedBranchId(IELTS));
     const { requests } = stubFetch(answerWith(GROUPS));
     renderGroups();
@@ -113,12 +113,12 @@ describe("Groups form: courses of every branch, whatever the header", () => {
 
     await openAddDrawer();
     openSelect("courseId");
-    // still only the header branch's courses are offered for a new group ...
     await waitFor(() => expect(optionTexts()).toEqual(["IELTS Intensive"]));
 
-    // ... but the list behind it is every branch's
-    const read = requests.find((r) => path(r) === "/courses")!;
-    expect(read).toBeTruthy();
-    expect(read.headers.get("x-branch-id")).toBe("all");
+    const reads = requests.filter((r) => path(r).startsWith("/courses") && !path(r).startsWith("/courses/select"));
+    expect(reads.map(path)).toEqual([`/courses?branchId=${IELTS}`]);
+    expect(reads[0].headers.get("x-branch-id")).toBe(IELTS);
+    // "all" is something only a CEO may be allowed to ask for
+    expect(requests.some((r) => r.headers.get("x-branch-id") === "all")).toBe(false);
   });
 });

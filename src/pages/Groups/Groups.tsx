@@ -45,7 +45,7 @@ import { TimeSelectField } from "../SingleGroup/TimeSelectField";
 import { SendSmsModal } from "../../components/SendSmsModal/SendSmsModal";
 import {
   extractApiError, formatTrainingDate, addMonthsToIsoDate, classifyDays, classifyDayList, DAYS_PRESETS, downloadExcelBlob, submitOnEnter,
-  branchIdOf, branchSelectOptions, clearStaleBranchChoices, editBranchScope, filterByBranch, findBranchConflict, groupBranchId, singleBranchId,
+  branchIdOf, branchSelectOptions, clearStaleBranchChoices, compareNames, editBranchScope, filterByBranch, findBranchConflict, groupBranchId, singleBranchId,
 } from "../../utils";
 import type { Course } from "../../app/api/coursesApi/types";
 import type { Room } from "../../app/api/roomsApi/types";
@@ -553,12 +553,9 @@ export const Groups = () => {
     return set;
   }, [inactiveStudentGroupsData, deletedStudentGroupsData]);
   // Declared ahead of the queries below: only the create/edit drawer needs the
-  // full course and room lists, so they are fetched once it is opened.
+  // course and room lists, so they are fetched once it is opened. (The course
+  // list is asked for further down, once the branch the form works in is known.)
   const [open, setOpen] = useState(false);
-  // Courses of every branch whatever the header says: the form narrows them to
-  // the group's branch itself (and "move to another branch" needs the target
-  // branch's), see utils/groupBranch.ts.
-  const { data: coursesData, isLoading: coursesLoading } = useAllCoursesQuery({ branchId: "all" }, { skip: !open });
   const { data: roomsData } = useAllRoomsQuery(undefined, { skip: !open });
   const { data: branchesData } = useAllBranchesQuery();
   // GET /teachers/select — the dropdown-specific endpoint for group create/
@@ -716,8 +713,12 @@ export const Groups = () => {
   const [permanentDeleteLinks, setPermanentDeleteLinks] = useState<{ teachers: string[]; removedStudents: number } | null>(null);
   const [smsGroupId,        setSmsGroupId]        = useState<string | null>(null);
   const [smsStudentIds,     setSmsStudentIds]     = useState<string[]>([]);
-  const [sortKey,           setSortKey]           = usePersistedState<SortKey>("groups:sortKey", "");
+  const [sortKey,           setSortKey]           = usePersistedState<SortKey>("groups:sortKey", "name");
   const [sortDir,           setSortDir]           = usePersistedState<SortDir>("groups:sortDir", "asc");
+  // Groups are listed A -> Z by name until another column is picked (a "" saved by
+  // an older tab, from before the list was sorted by default, counts as that too).
+  const activeSortKey: SortKey = sortKey || "name";
+  const activeSortDir: SortDir = sortKey ? sortDir : "asc";
   const [visibleCols,       setVisibleCols]       = usePersistedState<string[]>("groups:visibleCols", ALL_COLUMNS.map((c) => c.key));
   const [columnsAnchor,     setColumnsAnchor]     = useState<null | HTMLElement>(null);
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
@@ -725,29 +726,65 @@ export const Groups = () => {
 
   /* ── Which branch the group form works in ──────────────────
      A group lives in its COURSE's branch, so the course list is narrowed to the
-     branch the group is created in (the one picked in the header). On "All
-     branches" nothing narrows it: every course is offered with its branch named
-     and the group goes to the branch of the course picked. Editing keeps the
-     group in the branch it already has. The rooms follow the same branch. */
-  const allCourses = useMemo(() => coursesData?.data ?? [], [coursesData]);
+     branch the group is created in (the one picked in the header; when the header
+     names none, the user's only branch). On "All branches" nothing narrows it:
+     every course the account can read is offered with its branch named and the
+     group goes to the branch of the course picked. Editing keeps the group in
+     the branch it already has. The rooms follow the same branch. */
   const allRooms = useMemo(() => roomsData?.data ?? [], [roomsData]);
   const headerBranchId = singleBranchId(selectedBranchId);
+  // The branches the user may work in (the header offers the same ones). Also
+  // the fallback for a header that names no branch: a user with a single branch
+  // works in it, whether or not their selection has been settled yet.
+  const { branches: accessibleBranches } = useAccessibleBranches();
+  const defaultBranchId = headerBranchId ?? (accessibleBranches.length === 1 ? accessibleBranches[0].id : null);
   // Editing starts in the group's own branch and can be pointed at another one
   // on purpose (the Branch select): that moves the group, because a group
   // follows its course. Creating works in the header's branch.
   const { moving, moveToBranchId, scopeBranchId, keepCourseId, keepRoomId } = editBranchScope(
     editingId !== null
       ? {
-          homeBranchId: editingOrigin?.branchId ?? headerBranchId, pickedBranchId,
+          homeBranchId: editingOrigin?.branchId ?? defaultBranchId, pickedBranchId,
           courseId: editingOrigin?.courseId, roomId: editingOrigin?.roomId,
         }
-      : { homeBranchId: headerBranchId },
+      : { homeBranchId: defaultBranchId },
   );
+  // GET /courses for the branch the form works in: named in the query and in
+  // this request's own x-branch-id, the same request Settings > Courses makes, so
+  // it is answered for every role that can work in that branch (CEO, branch
+  // director, admin) and follows the form's branch when it changes. Never the
+  // "x-branch-id: all" the form used to send: only a CEO can be expected to be
+  // allowed to ask for every branch at once, and a refused or empty answer left
+  // the picker without courses. With no single branch known (a CEO on "All
+  // branches") nothing is named and the account's own scope decides, which is
+  // what Settings > Courses sends there too.
+  const coursesQuery = useAllCoursesQuery({ branchId: scopeBranchId ?? undefined }, { skip: !open });
+  // currentData, not data: after a branch switch `data` still holds the previous
+  // branch's list until the new one arrives.
+  const listedCourses = coursesQuery.currentData?.data;
+  const coursesLoaded = listedCourses !== undefined;
+  const coursesLoading = coursesQuery.isLoading || (coursesQuery.isFetching && !coursesLoaded);
+  const coursesFailed = coursesQuery.isError && !coursesLoaded;
+  const allCourses = useMemo(() => listedCourses ?? [], [listedCourses]);
+  // Every course listed since the form was opened, whichever branch's list it came
+  // from. The list is read per branch, so a course picked in one branch is not in
+  // the next branch's list - remembering it lets the form still tell which branch
+  // that course belongs to (to drop it, or to refuse to save it). Reset on open.
+  const [remembered, setRemembered] = useState<{ source: Course[] | undefined; byId: Record<string, Course> }>(
+    { source: undefined, byId: {} },
+  );
+  if (listedCourses && listedCourses !== remembered.source) {
+    setRemembered({
+      source: listedCourses,
+      byId: { ...remembered.byId, ...Object.fromEntries(listedCourses.map((c) => [c.id, c])) },
+    });
+  }
+  const knownCourses = useMemo(() => Object.values(remembered.byId), [remembered.byId]);
   const courseChoices = useMemo(
     () => filterByBranch(allCourses.filter((c) => c.status === "ACTIVE"), scopeBranchId, keepCourseId),
     [allCourses, scopeBranchId, keepCourseId],
   );
-  const chosenCourse = allCourses.find((c) => c.id === form.courseId);
+  const chosenCourse = knownCourses.find((c) => c.id === form.courseId);
   const chosenRoom = allRooms.find((r) => r.id === form.roomId);
   // The branch the group will end up in; null while "All branches" and no course.
   const formBranchId = groupBranchId(scopeBranchId, chosenCourse);
@@ -765,22 +802,21 @@ export const Groups = () => {
     if (!open) return;
     setForm((prev) => {
       const next = clearStaleBranchChoices(prev, {
-        scopeBranchId, courses: allCourses, rooms: allRooms,
+        scopeBranchId, courses: knownCourses, rooms: allRooms,
         keepCourseId, keepRoomId,
       });
       return next.courseId === prev.courseId && next.roomId === prev.roomId ? prev : { ...prev, ...next };
     });
-  }, [open, scopeBranchId, allCourses, allRooms, keepCourseId, keepRoomId, form.courseId, form.roomId]);
+  }, [open, scopeBranchId, knownCourses, allRooms, keepCourseId, keepRoomId, form.courseId, form.roomId]);
 
-  // The Branch select of the edit form: the branches the user may work in (the
-  // header offers the same ones), plus the group's own so it can show where the
+  // The Branch select of the edit form: the branches the user may work in (see
+  // accessibleBranches above), plus the group's own so it can show where the
   // group is now. A user with a single branch has nothing to choose.
-  const { branches: accessibleBranches } = useAccessibleBranches();
   // (GET /branches is not readable by every role, so the user's own branches
   // name themselves first)
   const nameOfBranch = (id: string | null) =>
     accessibleBranches.find((b) => b.id === id)?.name ?? branchNameById[id ?? ""] ?? "";
-  const homeBranchId = singleBranchId(editingOrigin?.branchId ?? headerBranchId);
+  const homeBranchId = singleBranchId(editingOrigin?.branchId ?? defaultBranchId);
   const branchChoices = useMemo(
     () => branchSelectOptions(
       accessibleBranches,
@@ -790,7 +826,8 @@ export const Groups = () => {
   );
   const showBranchSelect = editingId !== null && accessibleBranches.length > 1;
   const targetBranchName = nameOfBranch(moveToBranchId);
-  const noCoursesToMoveTo = moving && !coursesLoading && courseChoices.length === 0;
+  // (not claimed when the course list itself could not be read)
+  const noCoursesToMoveTo = moving && coursesLoaded && courseChoices.length === 0;
   // The group's teachers stay selectable even when the teacher list (scoped to
   // the header's branch) does not contain them.
   const teacherChoices = useMemo(
@@ -817,20 +854,21 @@ export const Groups = () => {
   const filteredGroups = useMemo(() => {
     const today = todayIso();
     const list = allGroups.filter((g) => matchesFilters(g, filters, today));
-    if (!sortKey) return list;
+    const sign = activeSortDir === "asc" ? 1 : -1;
     return [...list].sort((a, b) => {
-      if (sortKey === "studentCount") {
-        return sortDir === "asc" ? a.studentCount - b.studentCount : b.studentCount - a.studentCount;
-      }
-      const av = String(a[sortKey as keyof GroupRow] ?? "");
-      const bv = String(b[sortKey as keyof GroupRow] ?? "");
-      return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      const byColumn =
+        activeSortKey === "studentCount"
+          ? a.studentCount - b.studentCount
+          : compareNames(String(a[activeSortKey as keyof GroupRow] ?? ""), String(b[activeSortKey as keyof GroupRow] ?? ""));
+      // Groups that tie on the column (or every group, when sorted by name) come
+      // out A -> Z by name, so the list is never in the server's arbitrary order.
+      return sign * byColumn || compareNames(a.name, b.name);
     });
-  }, [allGroups, filters, sortKey, sortDir]);
+  }, [allGroups, filters, activeSortKey, activeSortDir]);
 
   const handleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("asc"); }
+    setSortKey(key);
+    setSortDir(activeSortKey === key && activeSortDir === "asc" ? "desc" : "asc");
   };
 
   const handleExportExcel = async () => {
@@ -895,6 +933,7 @@ export const Groups = () => {
     setEditingId(null);
     setEditingOrigin(null);
     setPickedBranchId(null);
+    setRemembered({ source: undefined, byId: {} });
     setForm(EMPTY_FORM);
     setDaysMode("");
     setFormErrors({});
@@ -909,6 +948,7 @@ export const Groups = () => {
       teachers: group.teacherIds.map((id, i) => ({ id, name: group.teacherNames[i] ?? id })),
     });
     setPickedBranchId(null);
+    setRemembered({ source: undefined, byId: {} });
     setForm({
       name: group.name,
       courseId: group.courseId,
@@ -1333,20 +1373,20 @@ export const Groups = () => {
                 <TableCell sx={{ width: 40 }} />
                 <TableCell>
                   <TableSortLabel
-                    active={sortKey === "name"}
-                    direction={sortDir}
+                    active={activeSortKey === "name"}
+                    direction={activeSortDir}
                     onClick={() => handleSort("name")}
                   >
                     {t("groups.table.group")}
                   </TableSortLabel>
                 </TableCell>
-                {col("course")       && <TableCell><TableSortLabel active={sortKey === "course"}       direction={sortDir} onClick={() => handleSort("course")}>{t("groups.table.course")}</TableSortLabel></TableCell>}
-                {col("teacher")      && <TableCell><TableSortLabel active={sortKey === "teacher"}      direction={sortDir} onClick={() => handleSort("teacher")}>{t("groups.table.teacher")}</TableSortLabel></TableCell>}
-                {col("days")         && <TableCell><TableSortLabel active={sortKey === "days"}         direction={sortDir} onClick={() => handleSort("days")}>{t("groups.table.days")}</TableSortLabel></TableCell>}
-                {col("training")     && <TableCell><TableSortLabel active={sortKey === "startDate"}    direction={sortDir} onClick={() => handleSort("startDate")}>{t("groups.table.trainingDates")}</TableSortLabel></TableCell>}
+                {col("course")       && <TableCell><TableSortLabel active={activeSortKey === "course"}       direction={activeSortDir} onClick={() => handleSort("course")}>{t("groups.table.course")}</TableSortLabel></TableCell>}
+                {col("teacher")      && <TableCell><TableSortLabel active={activeSortKey === "teacher"}      direction={activeSortDir} onClick={() => handleSort("teacher")}>{t("groups.table.teacher")}</TableSortLabel></TableCell>}
+                {col("days")         && <TableCell><TableSortLabel active={activeSortKey === "days"}         direction={activeSortDir} onClick={() => handleSort("days")}>{t("groups.table.days")}</TableSortLabel></TableCell>}
+                {col("training")     && <TableCell><TableSortLabel active={activeSortKey === "startDate"}    direction={activeSortDir} onClick={() => handleSort("startDate")}>{t("groups.table.trainingDates")}</TableSortLabel></TableCell>}
                 {col("week")         && <TableCell>{t("groups.table.weekOfStudy")}</TableCell>}
                 {col("room")         && <TableCell>{t("groups.table.room")}</TableCell>}
-                {col("studentCount") && <TableCell><TableSortLabel active={sortKey === "studentCount"} direction={sortDir} onClick={() => handleSort("studentCount")}>{t("groups.table.students")}</TableSortLabel></TableCell>}
+                {col("studentCount") && <TableCell><TableSortLabel active={activeSortKey === "studentCount"} direction={activeSortDir} onClick={() => handleSort("studentCount")}>{t("groups.table.students")}</TableSortLabel></TableCell>}
                 <TableCell align="right">{t("groups.table.actions")}</TableCell>
               </TableRow>
             </TableHead>
@@ -1497,7 +1537,9 @@ export const Groups = () => {
             >
               {courseChoices.length === 0 && (
                 <MenuItem disabled sx={{ fontSize: 13 }}>
-                  {coursesLoading ? t("groups.form.coursesLoading") : t("groups.form.coursesEmpty")}
+                  {coursesLoading
+                    ? t("groups.form.coursesLoading")
+                    : coursesFailed ? t("groups.form.coursesError") : t("groups.form.coursesEmpty")}
                 </MenuItem>
               )}
               {courseChoices.map((c) => (

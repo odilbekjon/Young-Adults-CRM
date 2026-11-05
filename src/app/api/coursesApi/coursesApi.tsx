@@ -41,10 +41,13 @@ export const coursesApi = baseApi.injectEndpoints({
         //  - a branch id: that branch's courses - named in the query AND in this
         //    request's x-branch-id (same belt-and-braces as students/teachers),
         //  - "all": every branch's courses whatever the header says (an explicit
-        //    x-branch-id: all, as groupsApi's by-course does) - for the group
-        //    forms and for looking a course up by id, which must see courses of
-        //    any branch,
-        //  - omitted: whatever the header alone decides (baseApi attaches it).
+        //    x-branch-id: all, as groupsApi's by-course does) - for looking a
+        //    course up by id, which must see courses of any branch. Only an
+        //    account that may see every branch (CEO) can rely on being answered:
+        //    the group forms therefore name the branch the group belongs to
+        //    instead (Groups.tsx), so a branch director / admin gets courses too,
+        //  - omitted: whatever the header alone decides (baseApi attaches it, and
+        //    attaches nothing on "All branches").
         // Each course carries its branchId, so a caller can narrow the answer
         // again itself (utils/groupBranch.ts) and not trust the server to have done it.
         allCourses: builder.query<CoursesResponse, AllCoursesRequest | void>({

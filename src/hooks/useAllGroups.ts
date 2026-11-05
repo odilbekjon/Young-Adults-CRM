@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAllGroupsQuery, useLazyAllGroupsQuery } from "../app/api/groupsApi";
 import type { Group } from "../app/api/groupsApi/types";
+import { sortByName } from "../utils/compareNames";
 
 const PAGE_LIMIT = 100;
 // A safety valve, not a real limit (10 000 groups): a backend that pages in
@@ -16,6 +17,9 @@ const MAX_PAGES = 100;
 // meta.totalPages says there are any — a group past page 1 would otherwise be
 // silently missing. A page that fails ends the walk: the pages read so far still
 // count, and the next visit asks again.
+//
+// The groups come back A -> Z by name (every page together, not page by page), so
+// every filter or picker built on them is alphabetical.
 //
 // isLoading is true until the whole walk is over, so a caller that filters by
 // what the groups say does not briefly show "nothing matches".
@@ -47,7 +51,7 @@ export const useAllGroups = ({ skip = false }: { skip?: boolean } = {}): { group
   }, [first.data, totalPages, key, fetchPage]);
 
   const groups = useMemo(
-    () => [...(first.data?.data ?? []), ...(more?.key === key ? more.groups : [])],
+    () => sortByName([...(first.data?.data ?? []), ...(more?.key === key ? more.groups : [])]),
     [first.data, more, key],
   );
   const walking = Boolean(first.data) && totalPages > 1 && more?.key !== key;

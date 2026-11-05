@@ -1,4 +1,5 @@
 import { baseApi } from "../baseApi";
+import { sortByName } from "../../../utils/compareNames";
 import { PATHS } from "./paths";
 import {
     groupsRequest,
@@ -476,6 +477,12 @@ const buildGroupsExcelQueryString = (args: GroupsExcelQueryArgs = {}): string =>
 
 export const groupsApi = baseApi.injectEndpoints({
     endpoints: (builder) =>  ({
+        // No sort parameter is documented for GET /groups here (the app only ever
+        // sends page, limit, tagId and teacherId), so each page is put A -> Z by name
+        // on this side, for every list and picker built on it. Pages are not merged
+        // into one alphabet: the order is across the groups of the page that was
+        // read (the hooks that read every page - useAllGroups, useActiveGroups -
+        // sort the whole set).
         allGroups: builder.query<groupsResponse, groupsRequest>({
             query: ({ page = 1, limit = 10, tagId, teacherId } = {}) => {
                 const params = new URLSearchParams();
@@ -489,7 +496,7 @@ export const groupsApi = baseApi.injectEndpoints({
             },
             transformResponse: (response: groupsResponse) => ({
                 ...response,
-                data: normalizeList<groupsResponse["data"][number]>(response.data),
+                data: sortByName(normalizeList<groupsResponse["data"][number]>(response.data)),
             }),
             providesTags: ["group"],
         }),

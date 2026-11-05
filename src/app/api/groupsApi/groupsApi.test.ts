@@ -105,6 +105,17 @@ describe("groupsApi.allGroups", () => {
     expect(data?.data).toEqual([{ id: "g1", status: "ACTIVE" }]);
     expect(data?.meta).toEqual({ totalPages: 3 });
   });
+
+  it("puts the page A to Z by name (case-insensitive, numbers as numbers), whatever order the server sends", async () => {
+    const store = createTestStore();
+    stubFetch(() =>
+      jsonResponse({ data: [{ id: "1", name: "beta 10" }, { id: "2", name: "Zulu" }, { id: "3", name: "alpha" }, { id: "4", name: "Beta 2" }] }),
+    );
+
+    const { data } = await store.dispatch(groupsApi.endpoints.allGroups.initiate({}));
+
+    expect(data?.data.map((g) => g.name)).toEqual(["alpha", "Beta 2", "beta 10", "Zulu"]);
+  });
 });
 
 describe("groupsApi.groupsByCourse", () => {

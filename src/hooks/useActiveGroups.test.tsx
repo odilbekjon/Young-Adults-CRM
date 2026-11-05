@@ -92,6 +92,18 @@ describe("useActiveGroups", () => {
     expect(idsOf(result.current)).toEqual(["p1", "p2"]);
   });
 
+  it("lists the groups A to Z by name across all pages, not page by page", async () => {
+    const named = (id: string, name: string) => ({ id, name, status: "ACTIVE" });
+    const pages: Record<number, ReturnType<typeof named>[]> = {
+      1: [named("a", "Zulu"), named("b", "beta 10")],
+      2: [named("c", "alpha"), named("d", "Beta 2")],
+    };
+    const { result } = setup((request) => jsonResponse({ data: pages[pageOf(request)], meta: { totalPages: 2 } }));
+
+    await waitFor(() => expect(result.current).toHaveLength(4));
+    expect(result.current.map((g) => g.name)).toEqual(["alpha", "Beta 2", "beta 10", "Zulu"]);
+  });
+
   it("sends no request and returns nothing when skipped", async () => {
     const { requests, result } = setup(() => jsonResponse({ data: [group("g1", "ACTIVE")] }), { skip: true });
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAllGroupsQuery, useLazyAllGroupsQuery } from "../app/api/groupsApi";
 import type { Group } from "../app/api/groupsApi/types";
+import { sortByName } from "../utils/compareNames";
 
 const PAGE_LIMIT = 100;
 // A backend that pages in tiny chunks must not turn one visit into hundreds of
@@ -16,7 +17,8 @@ export const isActiveGroup = (g: { status?: string | null }): boolean => g.statu
 // that nobody archived is still its teacher's active group (the Groups page's
 // "Active" filter would call it completed), and archived/deleted groups are out.
 // The teacher's profile list and the Teachers page count both come from here, so
-// they cannot disagree.
+// they cannot disagree. The groups come back A -> Z by name (every page together,
+// not page by page), so every picker and list built on them is alphabetical.
 //
 // Page 1 is a plain cached query (the one the Groups page reads when no teacher
 // is given). GET /groups is paged, so the later pages are read too when
@@ -50,7 +52,7 @@ export const useActiveGroups = ({ teacherId, skip = false }: { teacherId?: strin
   }, [first.data, totalPages, teacherId, key, fetchPage]);
 
   return useMemo(
-    () => [...(first.data?.data ?? []), ...(more?.key === key ? more.groups : [])].filter(isActiveGroup),
+    () => sortByName([...(first.data?.data ?? []), ...(more?.key === key ? more.groups : [])].filter(isActiveGroup)),
     [first.data, more, key],
   );
 };

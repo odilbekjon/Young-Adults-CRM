@@ -83,6 +83,18 @@ describe("useAllGroups", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 
+  it("lists the groups A to Z by name across all pages, archived ones included", async () => {
+    const named = (id: string, name: string, status = "ACTIVE") => ({ id, name, status });
+    const pages: Record<number, ReturnType<typeof named>[]> = {
+      1: [named("a", "Zulu"), named("b", "beta 10", "ARCHIVE")],
+      2: [named("c", "alpha"), named("d", "Beta 2")],
+    };
+    const { result } = setup((request) => jsonResponse({ data: pages[pageOf(request)], meta: { totalPages: 2 } }));
+
+    await waitFor(() => expect(result.current.groups).toHaveLength(4));
+    expect(result.current.groups.map((g) => g.name)).toEqual(["alpha", "Beta 2", "beta 10", "Zulu"]);
+  });
+
   it("sends no request and returns nothing when skipped", async () => {
     const { requests, result } = setup(() => jsonResponse({ data: [group("g1")] }), { skip: true });
 

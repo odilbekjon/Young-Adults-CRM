@@ -50,6 +50,11 @@ export const useAuth = () => {
 
   const user = token ? meQuery.data?.data ?? null : null;
   const isMeLoading = meQuery.isLoading;
+  // /auth/me answered with an error and there is no earlier answer to fall back
+  // on: the app doesn't know who is signed in. Callers say so (the header offers a
+  // retry) instead of silently showing an empty app.
+  const isMeError = !!token && meQuery.isError && !meQuery.data;
+  const refetchMe = meQuery.refetch;
   const meRole = user?.role;
   const role = meRole || storedRole;
 
@@ -116,7 +121,18 @@ export const useAuth = () => {
   const backendAllAccess = sidebar?.allAccess === true;
   const isAdminFallback = isAdmin && isPermissionsReady && !backendAllAccess && sidebarLabels.length === 0;
   const hasFullAccess = !isTeacher && !isStudent && (isCeo || backendAllAccess || isAdminFallback);
-  const branchIds = user?.branchIds ?? [];
+  // Every branch the account belongs to, whichever way /auth/me spells it (the
+  // `branchIds` list, the `branchId` shortcut, or the `branches` refs) - an account
+  // that has any must never be treated as having none. Stable between renders so
+  // effects and memos keyed on it don't re-run needlessly.
+  const branchIds = useMemo<string[]>(() => {
+    const ids = [
+      ...(user?.branchIds ?? []),
+      user?.branchId,
+      ...(user?.branches ?? []).map((ref) => ref?.branchId || ref?.branch?.id),
+    ];
+    return [...new Set(ids.filter((id): id is string => typeof id === "string" && id !== ""))];
+  }, [user]);
 
   const hasPermission = (label: PermissionLabel, action: PermissionAction) =>
     hasFullAccess || hasPermissionUtil(user, label, action);
@@ -136,6 +152,8 @@ export const useAuth = () => {
     isAdmin,
     user,
     isMeLoading,
+    isMeError,
+    refetchMe,
     // `sidebarAllAccess` means "may see everything" (see header comment), not
     // just the raw backend flag.
     sidebarAllAccess: hasFullAccess,

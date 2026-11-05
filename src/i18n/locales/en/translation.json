@@ -28,7 +28,9 @@
     "lightMode": "Light mode",
     "account": "Account",
     "signOut": "Sign out",
-    "hamburgerMenu": "Menu"
+    "hamburgerMenu": "Menu",
+    "accountLoadFailed": "Account not loaded",
+    "retryAccount": "Retry loading account"
   },
   "quickAdd": {
     "addStudent": "Add student",
@@ -254,6 +256,8 @@
     "error": "Incorrect login or password. Please try again.",
     "networkError": "Network error. Please check your connection and try again.",
     "requiredFields": "Please enter your email/phone and password.",
+    "serverError": "The server could not process the login. Please try again in a moment.",
+    "sessionError": "You were signed in, but the session could not be started. Please reload the page and try again.",
     "submit": "Login"
   },
   "sidebar": {
@@ -564,6 +568,9 @@
       "hidePasswordToggle": "− Hide password",
       "setPasswordToggle": "+ Set password",
       "passwordPlaceholder": "Enter password",
+      "passwordHint": "The teacher logs in with this phone number and password (at least 6 characters). Without a password they cannot log in.",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "submit": "Submit"
     },
     "deleteDialog": {
@@ -578,6 +585,8 @@
       "nameRequired": "Name is required",
       "dobRequired": "Date of birth is required",
       "genderRequired": "Gender is required",
+      "phoneInvalid": "Enter the 9 digits of the phone number after +998",
+      "passwordTooShort": "Password must be at least 6 characters — the teacher could not log in with a shorter one",
       "branchRequired": "Select a branch in the header before adding a teacher"
     },
     "toast": {
@@ -856,6 +865,7 @@
       "branchNoCourses": "{{branch}} has no active courses yet. Create one first: Settings → Courses → ADD NEW, and choose {{branch}} in the Branch field.",
       "coursesLoading": "Loading courses...",
       "coursesEmpty": "No active courses in this branch",
+      "coursesError": "Courses could not be loaded. Close and reopen the form to try again.",
       "courseBranchNotice": "The group will be created in the branch of this course: {{branch}}",
       "teacher": "Select teacher",
       "teachersLoading": "Loading teachers...",
@@ -1941,6 +1951,8 @@
       "debtor": "Debtor",
       "debt": "Debt",
       "balance": "Balance",
+      "balanceStatus": "Balance status",
+      "noDebt": "No debt",
       "frozenAt": "Frozen at",
       "recentPayments": "Recent payments",
       "noPayments": "No payments",

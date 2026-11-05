@@ -34,7 +34,7 @@ import { IoSearchOutline } from "react-icons/io5";
 import { GoPlus } from "react-icons/go";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { PiMicrosoftExcelLogoFill } from "react-icons/pi";
-import { MdClose, MdDelete } from "react-icons/md";
+import { MdClose, MdDelete, MdVisibility, MdVisibilityOff } from "react-icons/md";
 import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -48,7 +48,8 @@ import { extractApiError } from "../../utils/extractApiError";
 import { downloadExcelBlob } from "../../utils/downloadExcel";
 import { compressImage } from "../../utils/compressImage";
 import { submitOnEnter } from "../../utils/submitOnEnter";
-import { formatPhoneSpaced } from "../../utils/formatPhone";
+import { formatPhoneSpaced, toPhoneInput } from "../../utils/formatPhone";
+import { teacherPhoneForRequest, validateTeacherPassword, validateTeacherPhone } from "../../utils/teacherCredentials";
 import {
   useAllTeachersQuery,
   useCreateTeacherMutation,
@@ -63,6 +64,7 @@ import { usePersistedState } from "../../hooks/usePersistedState";
 
 const EMPTY_FORM = {
   name: "",
+  // The digits after the fixed "+998" box (see toPhoneInput / teacherPhoneForRequest).
   phone: "",
   password: "",
   dob: "",
@@ -122,6 +124,11 @@ export const Teachers = () => {
   const [editBranchIds, setEditBranchIds]         = useState<string[]>([]);
   const [smsOpen, setSmsOpen]                     = useState(false);
   const [showPassword, setShowPassword]           = useState(false);
+  // Whether the typed password is readable: it is handed to the teacher, so the
+  // admin must be able to check what they typed.
+  const [revealPassword, setRevealPassword]       = useState(false);
+  // The phone the teacher being edited has saved (before any change in the form).
+  const [savedPhone, setSavedPhone]               = useState<string | null>(null);
   const [photoPreview, setPhotoPreview]           = useState<string | null>(null);
   const fileInputRef                              = useRef<HTMLInputElement>(null);
   const [errors, setErrors]                       = useState<Record<string, string>>({});
@@ -142,8 +149,10 @@ export const Teachers = () => {
     setIsEdit(false);
     setSelectedTeacherId(null);
     setForm(EMPTY_FORM);
+    setSavedPhone(null);
     setPhotoPreview(null);
     setShowPassword(false);
+    setRevealPassword(false);
     setErrors({});
     setOpen(true);
   };
@@ -165,9 +174,10 @@ export const Teachers = () => {
     const rawBranchIds = (teacher as Teacher & { branchIds?: string[] }).branchIds;
     setIsEdit(true);
     setEditBranchIds(rawBranchIds ?? teacher.branches?.map((b) => b.id) ?? listRow.branches?.map((b) => b.id) ?? []);
+    setSavedPhone(teacher.phone ?? null);
     setForm({
       name: teacher.name,
-      phone: teacher.phone ?? "",
+      phone: toPhoneInput(teacher.phone),
       password: "",
       dob: teacher.birthdate?.slice(0, 10) ?? "",
       gender: teacher.gender ?? "",
@@ -175,6 +185,7 @@ export const Teachers = () => {
     });
     setPhotoPreview(null);
     setShowPassword(false);
+    setRevealPassword(false);
     setErrors({});
     setOpen(true);
   };
@@ -196,8 +207,15 @@ export const Teachers = () => {
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.name.trim())  e.name  = t("teachers.validation.nameRequired");
-    if (!form.phone.trim()) e.phone = t("teachers.validation.phoneRequired");
+    const phoneError = validateTeacherPhone(form.phone, isEdit ? savedPhone : null);
+    if (phoneError) e.phone = t(`teachers.validation.${phoneError}`);
+    // The teacher logs in with this password, so one the backend (and the login)
+    // would refuse must be caught here, before it is handed over.
+    const passwordError = validateTeacherPassword(form.password);
+    if (passwordError) e.password = t(`teachers.validation.${passwordError}`);
     setErrors(e);
+    // The password box is folded away by default - open it so the error is seen.
+    if (e.password) setShowPassword(true);
     return Object.keys(e).length === 0;
   };
 
@@ -213,7 +231,9 @@ export const Teachers = () => {
     if (!validate()) return;
     const payload = {
       name: form.name,
-      phone: form.phone || undefined,
+      // Saved as +998 and 9 digits, the shape the login looks the teacher up by.
+      phone: teacherPhoneForRequest(form.phone),
+      // Exactly as typed: no trimming, so what the admin hands over is what works.
       password: form.password || undefined,
       birthdate: form.dob || undefined,
       gender: form.gender || undefined,
@@ -231,6 +251,7 @@ export const Teachers = () => {
       }
       setErrors({});
       setForm(EMPTY_FORM);
+      setSavedPhone(null);
       setOpen(false);
       setSelectedTeacherId(null);
     } catch (err) {
@@ -423,6 +444,7 @@ export const Teachers = () => {
               <Typography fontSize={13} fontWeight={500} color="var(--color-text-secondary)" mb={0.8}>{t("teachers.form.phone")}</Typography>
               <TextField name="phone" value={form.phone} onChange={handleChange}
                 fullWidth size="small" placeholder={t("teachers.form.phonePlaceholder")}
+                inputProps={{ inputMode: "tel", autoComplete: "off" }}
                 error={Boolean(errors.phone)} helperText={errors.phone}
                 InputProps={{
                   startAdornment: (
@@ -499,10 +521,26 @@ export const Teachers = () => {
                   "&:hover": { background: "none", textDecoration: "underline" } }}>
                 {showPassword ? t("teachers.form.hidePasswordToggle") : t("teachers.form.setPasswordToggle")}
               </Button>
+              {/* A new teacher can only log in once a password is set - said here, where it is seen even while the box is folded away. */}
+              {!isEdit && (
+                <Typography fontSize={12} color="var(--color-text-muted)" mt={0.5}>{t("teachers.form.passwordHint")}</Typography>
+              )}
               <Collapse in={showPassword}>
                 {/* new-password: stops the browser filling the admin's own saved login into a new teacher's password. */}
-                <TextField name="password" type="password" autoComplete="new-password" value={form.password} onChange={handleChange}
-                  fullWidth size="small" placeholder={t("teachers.form.passwordPlaceholder")} sx={{ ...inputSx, mt: 1.5 }} />
+                <TextField name="password" type={revealPassword ? "text" : "password"} autoComplete="new-password" value={form.password} onChange={handleChange}
+                  fullWidth size="small" placeholder={t("teachers.form.passwordPlaceholder")} sx={{ ...inputSx, mt: 1.5 }}
+                  error={Boolean(errors.password)}
+                  helperText={errors.password}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton size="small" edge="end" onClick={() => setRevealPassword((v) => !v)}
+                          aria-label={revealPassword ? t("teachers.form.hidePassword") : t("teachers.form.showPassword")}>
+                          {revealPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }} />
               </Collapse>
             </Box>
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { API_BASE_URL } from "../baseApi";
 import { teachersApi } from "./teachersApi";
 import { createTestStore } from "../../../test/testStore";
-import { jsonResponse, stubFetch } from "../../../test/fetchStub";
+import { jsonResponse, readFormData, stubFetch } from "../../../test/fetchStub";
 
 const path = (url: string) => url.replace(API_BASE_URL, "");
 const API_ORIGIN = new URL(API_BASE_URL).origin;
@@ -159,5 +159,33 @@ describe("teachersApi.teacherHistory", () => {
     const { data } = await store.dispatch(teachersApi.endpoints.teacherHistory.initiate("t1"));
 
     expect(data).toEqual([]);
+  });
+});
+
+describe("teachersApi - the login a teacher is created or edited with", () => {
+  const send = async (call: "create" | "update", data: Record<string, unknown>) => {
+    const store = createTestStore();
+    const { requests } = stubFetch(() => jsonResponse({ success: true, data: { id: "t1" } }));
+    if (call === "create") await store.dispatch(teachersApi.endpoints.createTeacher.initiate(data as never));
+    else await store.dispatch(teachersApi.endpoints.updateTeacher.initiate({ id: "t1", ...data } as never));
+    return { request: requests[0], fields: Object.fromEntries(await readFormData(requests[0])) };
+  };
+
+  it("sends the phone as given and the password exactly as typed - spaces and all", async () => {
+    const created = await send("create", { name: "Aziz", phone: "+998901234567", password: " pass 123 ", branchIds: ["b1"] });
+    expect(created.request.method).toBe("POST");
+    expect(created.fields).toMatchObject({ phone: "+998901234567", password: " pass 123 ", branchIds: "b1" });
+
+    const updated = await send("update", { phone: "+998901234567", password: "  x y z  " });
+    expect(updated.request.method).toBe("PATCH");
+    expect(updated.fields).toMatchObject({ phone: "+998901234567", password: "  x y z  " });
+  });
+
+  it("leaves the password out when none is set, so an edit keeps the current one", async () => {
+    const created = await send("create", { name: "Aziz", phone: "+998901234567", password: undefined });
+    expect(created.fields).not.toHaveProperty("password");
+
+    const updated = await send("update", { name: "Aziz B", password: "" });
+    expect(updated.fields).not.toHaveProperty("password");
   });
 });

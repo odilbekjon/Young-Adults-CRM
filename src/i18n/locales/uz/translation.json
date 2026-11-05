@@ -28,7 +28,9 @@
     "lightMode": "Kunduzgi rejim",
     "account": "Hisob",
     "signOut": "Chiqish",
-    "hamburgerMenu": "Menyu"
+    "hamburgerMenu": "Menyu",
+    "accountLoadFailed": "Hisob yuklanmadi",
+    "retryAccount": "Hisobni qayta yuklash"
   },
   "quickAdd": {
     "addStudent": "O'quvchi qo'shish",
@@ -254,6 +256,8 @@
     "error": "Login yoki parol noto'g'ri. Qaytadan urinib ko'ring.",
     "networkError": "Tarmoq xatosi. Internet aloqasini tekshirib, qaytadan urinib ko'ring.",
     "requiredFields": "Email/telefon raqam va parolni kiriting.",
+    "serverError": "Server kirishni bajara olmadi. Birozdan so'ng qaytadan urinib ko'ring.",
+    "sessionError": "Siz tizimga kirdingiz, lekin sessiyani boshlab bo'lmadi. Sahifani yangilab, qaytadan urinib ko'ring.",
     "submit": "Kirish"
   },
   "sidebar": {
@@ -564,6 +568,9 @@
       "hidePasswordToggle": "− Parolni yashirish",
       "setPasswordToggle": "+ Parol o'rnatish",
       "passwordPlaceholder": "Parolni kiriting",
+      "passwordHint": "O'qituvchi shu telefon raqam va parol (kamida 6 ta belgi) bilan tizimga kiradi. Parolsiz kira olmaydi.",
+      "showPassword": "Parolni ko'rsatish",
+      "hidePassword": "Parolni yashirish",
       "submit": "Yuborish"
     },
     "deleteDialog": {
@@ -578,6 +585,8 @@
       "nameRequired": "Ism kiritilishi shart",
       "dobRequired": "Tug'ilgan sana kiritilishi shart",
       "genderRequired": "Jinsi kiritilishi shart",
+      "phoneInvalid": "Telefon raqamning +998 dan keyingi 9 ta raqamini kiriting",
+      "passwordTooShort": "Parol kamida 6 ta belgidan iborat bo'lishi kerak — qisqaroq parol bilan o'qituvchi tizimga kira olmaydi",
       "branchRequired": "O'qituvchi qo'shishdan oldin headerda filialni tanlang"
     },
     "toast": {
@@ -856,6 +865,7 @@
       "branchNoCourses": "{{branch}} filialida hali faol kurs yo'q. Avval kurs yarating: Sozlamalar → Kurslar → QO'SHISH, «Filial» maydonida {{branch}} ni tanlang.",
       "coursesLoading": "Kurslar yuklanmoqda...",
       "coursesEmpty": "Bu filialda faol kurs yo'q",
+      "coursesError": "Kurslarni yuklab bo'lmadi. Formani yopib, qayta oching.",
       "courseBranchNotice": "Guruh shu kursning filialida yaratiladi: {{branch}}",
       "teacher": "O'qituvchini tanlang",
       "teachersLoading": "O'qituvchilar yuklanmoqda...",
@@ -1941,6 +1951,8 @@
       "debtor": "Qarzdor",
       "debt": "Qarzdorlik",
       "balance": "Balans",
+      "balanceStatus": "Balans holati",
+      "noDebt": "Qarzi yo'q",
       "frozenAt": "Muzlatilgan",
       "recentPayments": "So'nggi to'lovlar",
       "noPayments": "To'lovlar yo'q",

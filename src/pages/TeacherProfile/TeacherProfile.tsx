@@ -5,7 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { IconButton, Button, CircularProgress } from "@mui/material";
 import { IoArrowBack } from "react-icons/io5";
-import { MdEdit, MdClose } from "react-icons/md";
+import { MdEdit, MdClose, MdVisibility, MdVisibilityOff } from "react-icons/md";
 import { BsFlag, BsPerson } from "react-icons/bs";
 import { useTeacherByIdQuery, useTeacherForEditQuery, useUpdateTeacherMutation, useTeacherHistoryQuery } from "../../app/api/teachersApi";
 import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
@@ -13,7 +13,8 @@ import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useActiveGroups } from "../../hooks/useActiveGroups";
 import { useStudentByIdQuery, useStudentGroupMembershipsQuery } from "../../app/api/studentsApi";
 import { BALANCE_STATUS_COLOR, classifyBalance } from "../../utils/balance";
-import { formatPhone } from "../../utils/formatPhone";
+import { formatPhone, toPhoneInput } from "../../utils/formatPhone";
+import { teacherPhoneForRequest, validateTeacherPassword, validateTeacherPhone } from "../../utils/teacherCredentials";
 import { useTeacherSalariesQuery } from "../../app/api/salariesApi";
 import { useToast } from "../../Context/ToastContext";
 import { DatePickerField } from "../SingleGroup/DatePickerField";
@@ -91,7 +92,7 @@ const TOOLTIP_HEIGHT = 470; // conservative estimate, only used to keep the card
 type TabType = "profile" | "history" | "salary";
 
 /* ── Edit Drawer ── */
-const EditDrawer = ({
+export const EditDrawer = ({
   teacher, open, onClose, branches, onSave, isSaving,
 }: {
   teacher: Teacher;
@@ -101,7 +102,10 @@ const EditDrawer = ({
   onSave: (data: { name: string; phone: string; gender: TeacherGender | undefined; birthdate: string; branchIds: string[]; photo?: File; password?: string }) => void;
   isSaving: boolean;
 }) => {
-  const [phone, setPhone] = useState(teacher.phone ?? "");
+  const { t } = useTranslation();
+  // The digits after the fixed "+998" box; sent back as +998 and 9 digits, the
+  // shape the teacher's login looks the account up by.
+  const [phone, setPhone] = useState(toPhoneInput(teacher.phone));
   const [name, setName] = useState(teacher.name ?? "");
   const [gender, setGender] = useState<TeacherGender | "">(teacher.gender ?? "");
   const [dob, setDob] = useState(teacher.birthdate ?? "");
@@ -115,10 +119,13 @@ const EditDrawer = ({
   // empty value is never sent, so the current password stays untouched.
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
+  // The password is handed to the teacher, so it can be read back before saving.
+  const [revealPassword, setRevealPassword] = useState(false);
+  const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
 
   useEffect(() => {
     if (open) {
-      setPhone(teacher.phone ?? "");
+      setPhone(toPhoneInput(teacher.phone));
       setName(teacher.name ?? "");
       setGender(teacher.gender ?? "");
       setDob(teacher.birthdate ?? "");
@@ -126,6 +133,8 @@ const EditDrawer = ({
       setPhoto(undefined);
       setShowPassword(false);
       setPassword("");
+      setRevealPassword(false);
+      setErrors({});
     }
   }, [open, teacher]);
 
@@ -141,8 +150,28 @@ const EditDrawer = ({
     fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 6, display: "block",
   };
 
-  const handleSubmit = () =>
-    onSave({ name, phone, gender: gender || undefined, birthdate: dob, branchIds: selectedBranches, photo, password: password.trim() || undefined });
+  const handleSubmit = () => {
+    // A number the teacher can't log in with, or a password the backend / login
+    // would refuse, is caught here - before it is handed to the teacher.
+    const phoneError = validateTeacherPhone(phone, teacher.phone);
+    const passwordError = validateTeacherPassword(password);
+    setErrors({
+      phone: phoneError ? t(`teachers.validation.${phoneError}`) : undefined,
+      password: passwordError ? t(`teachers.validation.${passwordError}`) : undefined,
+    });
+    if (passwordError) setShowPassword(true);
+    if (phoneError || passwordError) return;
+    onSave({
+      name,
+      phone: teacherPhoneForRequest(phone) ?? "",
+      gender: gender || undefined,
+      birthdate: dob,
+      branchIds: selectedBranches,
+      photo,
+      // Exactly as typed - a password with a leading or trailing space is a different password.
+      password: password || undefined,
+    });
+  };
 
   return (
     <>
@@ -157,8 +186,9 @@ const EditDrawer = ({
             <label style={labelStyle}>Phone</label>
             <div style={{ display: "flex", gap: 8 }}>
               <div style={{ ...inputStyle, width: 72, flexShrink: 0, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", justifyContent: "center" }}>+998</div>
-              <input style={{ ...inputStyle, flex: 1 }} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="93 986 66 76" />
+              <input style={{ ...inputStyle, flex: 1, ...(errors.phone ? { borderColor: "var(--color-danger)" } : {}) }} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="93 986 66 76" inputMode="tel" autoComplete="off" />
             </div>
+            {errors.phone && <div style={{ fontSize: 12, color: "var(--color-danger)", marginTop: 4 }}>{errors.phone}</div>}
           </div>
           <div>
             <label style={labelStyle}>Name</label>
@@ -204,20 +234,31 @@ const EditDrawer = ({
           </div>
           <div>
             <span
-              onClick={() => { setShowPassword((p) => !p); setPassword(""); }}
+              onClick={() => { setShowPassword((p) => !p); setPassword(""); setErrors((prev) => ({ ...prev, password: undefined })); }}
               style={{ fontSize: 13, color: "var(--color-text-secondary)", cursor: "pointer", userSelect: "none" }}
             >
               {showPassword ? "− Set password" : "+ Set password"}
             </span>
             {showPassword && (
-              <input
-                type="password"
-                autoComplete="new-password"
-                style={{ ...inputStyle, marginTop: 8 }}
-                placeholder="New password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div style={{ position: "relative", marginTop: 8 }}>
+                <input
+                  type={revealPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  style={{ ...inputStyle, paddingRight: 40, ...(errors.password ? { borderColor: "var(--color-danger)" } : {}) }}
+                  placeholder="New password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <span
+                  role="button"
+                  aria-label={revealPassword ? t("teachers.form.hidePassword") : t("teachers.form.showPassword")}
+                  onClick={() => setRevealPassword((v) => !v)}
+                  style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "var(--color-text-muted)", display: "flex" }}
+                >
+                  {revealPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
+                </span>
+                {errors.password && <div style={{ fontSize: 12, color: "var(--color-danger)", marginTop: 4 }}>{errors.password}</div>}
+              </div>
             )}
           </div>
           <button

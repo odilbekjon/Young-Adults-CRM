@@ -1,6 +1,6 @@
 // src/components/Header/Header.tsx
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Avatar, Typography, Menu, MenuItem, CircularProgress, useMediaQuery } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
@@ -9,7 +9,7 @@ import { useBranch, type BranchId } from "../../Context/BranchContext";
 import { useSidebar } from "../../Context/SidebarContext";
 import { useThemeMode } from "../../Context/ThemeContext";
 import { useAuth } from "../../hooks/useAuth";
-import { activeOwnBranches, pickAccessibleBranches } from "../../hooks/useAccessibleBranches";
+import { activeOwnBranches, pickAccessibleBranches, resolveBranchSelection } from "../../hooks/useAccessibleBranches";
 
 import { HEADER_HEIGHT, useSidebarWidth } from "../Sidebar/Sidebar";
 import { AddStudent } from "../../components/AddStudent/AddStudent";
@@ -69,7 +69,7 @@ const IconBtn = ({ children, onClick, active, title }: {
 );
 
 /* ─── Branch Dropdown ─── */
-const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b: BranchId) => void }) => {
+export const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b: BranchId) => void }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch<AppDispatch>();
@@ -77,64 +77,76 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
   // This dropdown mounts again with every page, so the list is not re-checked
   // when the cache window ends; Settings > Branches invalidates it when it changes.
   const { data: branchesData, isLoading: branchesLoading } = useAllBranchesQuery(undefined, { refetchOnMountOrArgChange: false });
-  const { isCeo, user, branchIds } = useAuth();
+  const { isCeo, user, branchIds, isMeError } = useAuth();
 
   // Only SUPERADMIN / a CEO-position account sees every branch / the "All branches" shortcut —
   // everyone else (staff and teachers alike) is scoped to the branches their own
   // account was assigned (AUTH_ROLE_DOCS.md's branchIds), so they can't select
   // their way into a branch's data they don't otherwise have access to. Those
   // branches come with their names from GET /auth/me; GET /branches is only the
-  // fallback, since not every role may read it.
+  // fallback, since not every role may read it - and for an account whose branches
+  // neither can name, the bare branchIds still give it a branch to work in.
   // (the rule itself lives in useAccessibleBranches, which the forms that ask
   // "which branch?" share)
   const ownBranches = activeOwnBranches(user?.branches);
-  const scopedBranches = pickAccessibleBranches({ isCeo, allBranches: branchesData?.data ?? [], ownBranches, branchIds });
+  const scopedBranches = pickAccessibleBranches({
+    isCeo,
+    allBranches: branchesData?.data ?? [],
+    ownBranches,
+    branchIds,
+    idsOnlyFallback: !branchesLoading,
+  });
 
   const waitingForBranches = branchesLoading && (isCeo || ownBranches.length === 0);
 
   const options: { value: BranchId; label: string; id: string | null }[] = isCeo
     ? [{ value: "all", label: "All branches", id: null }, ...scopedBranches.map((b) => ({ value: b.name, label: b.name, id: b.id }))]
     : scopedBranches.map((b) => ({ value: b.name, label: b.name, id: b.id }));
-  const current = options.find((o) => o.value === branch);
+  // The label follows the branch that is really selected (the one sent as
+  // x-branch-id), not a separate piece of state that could say something else.
+  const current = options.find((o) => o.id === selectedBranchId);
+  // While the branch list is being fetched again (after any change of branch) the
+  // last known name stays on screen instead of flashing a placeholder.
+  const branchLabel = current?.label ?? (selectedBranchId && branch !== "all" ? branch : "Branch");
 
-  // Anyone but a CEO works inside one of their own branches: a missing selection
-  // (a fresh login) or one that isn't theirs (left over from an earlier session on
-  // this browser) is replaced by their first branch, so the header never reads
-  // "All branches" for them and their requests are scoped to it.
-  const firstOwnBranch = isCeo ? undefined : scopedBranches[0];
-  const firstOwnId = firstOwnBranch?.id;
-  const firstOwnName = firstOwnBranch?.name;
-  const ownsSelection = scopedBranches.some((b) => b.id === selectedBranchId);
+  // Keeps the selected branch valid for whoever is signed in (see
+  // resolveBranchSelection): anyone but a CEO works inside one of their own
+  // branches, so a missing selection (a fresh login) or one that isn't theirs (left
+  // over from an earlier session on this browser) is replaced by their first
+  // branch - the header never reads "All branches" for them and their requests are
+  // scoped to it; a CEO's selection that no longer exists is cleared.
+  const listedBranchIds = useMemo(
+    () => (branchesData ? new Set((branchesData.data ?? []).map((b) => b.id)) : undefined),
+    [branchesData],
+  );
+  const fix = resolveBranchSelection({
+    isCeo,
+    accountLoaded: !!user,
+    accountFailed: isMeError,
+    branchListSettled: !branchesLoading,
+    selectedBranchId,
+    accessible: scopedBranches,
+    listedBranchIds,
+  });
+  const fixType = fix?.type;
+  const fixId = fix?.type === "select" ? fix.id : undefined;
+  const fixName = fix?.type === "select" ? fix.name : undefined;
   useEffect(() => {
-    if (!firstOwnId || !firstOwnName || ownsSelection) return;
-    setBranch(firstOwnName);
-    dispatch(changeSelectedBranch(firstOwnId));
-  }, [firstOwnId, firstOwnName, ownsSelection, setBranch, dispatch]);
+    if (fixType === "select" && fixId && fixName) {
+      setBranch(fixName);
+      dispatch(changeSelectedBranch(fixId));
+    } else if (fixType === "clear") {
+      dispatch(changeSelectedBranch(null));
+    }
+  }, [fixType, fixId, fixName, setBranch, dispatch]);
 
   // Restores the visible selection after a page reload: the real branch id
   // persists in Redux/localStorage, but the label state (`branch`) resets to
-  // "all" on mount, so once branches load we re-sync the label to match.
-  //
-  // Also clears a *stale* selectedBranchId — one that doesn't match any
-  // branch this backend actually has (e.g. left over in localStorage from
-  // before baseApi's baseUrl pointed at a different backend/database, whose
-  // branch UUIDs don't exist here). Left uncleared, every request kept
-  // silently sending `x-branch-id: <dead-id>` — the header still read "All
-  // branches" (since `branch` itself only ever falls back to "all", never
-  // resolving a match), but branch-scoped endpoints (courses, groups, ...)
-  // came back empty against a branch that doesn't exist.
+  // "all" on mount, so once the branches are known we re-sync the label to match.
+  const currentValue = current?.value;
   useEffect(() => {
-    if (!selectedBranchId || !branchesData) return;
-    const knownBranchIds = new Set((branchesData.data ?? []).map((b) => b.id));
-    if (!knownBranchIds.has(selectedBranchId)) {
-      dispatch(changeSelectedBranch(null));
-      return;
-    }
-    if (branch !== "all") return;
-    const match = options.find((o) => o.id === selectedBranchId);
-    if (match) setBranch(match.value);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranchId, branchesData]);
+    if (currentValue !== undefined && currentValue !== branch) setBranch(currentValue);
+  }, [currentValue, branch, setBranch]);
 
   const handleSelect = (opt: { value: BranchId; id: string | null }) => {
     setBranch(opt.value);
@@ -169,7 +181,7 @@ const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBranch: (b
         onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "none")}
       >
         <span style={{ maxWidth: smallScreen ? 96 : undefined, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {current?.label ?? "Branch"}
+          {branchLabel}
         </span>
         <MdKeyboardArrowDown
           size={16} color="var(--color-text-secondary)"
@@ -620,8 +632,13 @@ export const Header = () => {
   // those are admin actions, and the /students, /finance etc. endpoints behind
   // them aren't theirs to call. Language/theme/fullscreen/help/history/
   // notifications/account stay.
-  const { isTeacher, user: currentUser } = useAuth();
-  const displayName = currentUser?.name || currentUser?.email || t("header.account");
+  const { isTeacher, user: currentUser, isMeError, refetchMe } = useAuth();
+  // /auth/me is the only source of the name; if it never answered (the account is
+  // unknown to the app) say so and offer a retry instead of a bare "Account".
+  const accountUnknown = isMeError && !currentUser;
+  const displayName =
+    currentUser?.name || currentUser?.email || currentUser?.phone ||
+    (accountUnknown ? t("header.accountLoadFailed") : t("header.account"));
   const avatarInitial = displayName.charAt(0).toUpperCase();
 
   const handleSignOut = () => {
@@ -727,7 +744,7 @@ export const Header = () => {
             onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "var(--color-surface-hover)")}
             onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "none")}
           >
-            <Typography sx={{ display: { xs: "none", lg: "block" }, fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>
+            <Typography sx={{ display: { xs: "none", lg: "block" }, fontSize: 13, fontWeight: 500, color: accountUnknown ? "var(--color-danger)" : "var(--color-text-primary)" }}>
               {displayName}
             </Typography>
             <Avatar
@@ -766,6 +783,11 @@ export const Header = () => {
           anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
           PaperProps={{ sx: { borderRadius: 2, mt: 1, minWidth: 160, boxShadow: "0 8px 24px var(--color-shadow)" } }}
         >
+          {accountUnknown && (
+            <MenuItem sx={{ fontSize: 13, color: "var(--color-danger)" }} onClick={() => { setUserMenuAnchor(null); void refetchMe(); }}>
+              {t("header.retryAccount")}
+            </MenuItem>
+          )}
           <MenuItem sx={{ fontSize: 13 }} onClick={() => { setUserMenuAnchor(null); navigate("/profile"); }}>
             {t("header.account")}
           </MenuItem>

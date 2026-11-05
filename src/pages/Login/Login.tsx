@@ -7,6 +7,7 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import logo from "../../assets/logo_ya.png";
 import blackLogo from "../../assets/logo_ya_black.png"
 import { useLoginMutation } from "../../app/api/authApi";
+import type { LoginResponse } from "../../app/api/authApi/types";
 import { loginSuccess } from "../../app/store/authSlice";
 import type { AppDispatch } from "../../app/store";
 import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
@@ -45,6 +46,19 @@ const LoginPage = () => {
 
   const canSubmit = !loading && identifier.trim() !== "" && password !== "";
 
+  // Why a login attempt was refused, in words for the person typing:
+  //  - no answer at all            -> network problem
+  //  - the server broke (5xx)      -> not their credentials, say so
+  //  - anything else               -> the backend's own message (a 401 carries
+  //    "wrong login or password", a blocked account says so), or the stock
+  //    wrong-credentials text when it sent none
+  const describeLoginError = (err: unknown): string => {
+    const status = (err as FetchBaseQueryError | undefined)?.status;
+    if (status === "FETCH_ERROR" || status === "TIMEOUT_ERROR") return t("login.networkError");
+    if (typeof status === "number" && status >= 500) return extractApiError(err) || t("login.serverError");
+    return extractApiError(err) || t("login.error");
+  };
+
   const handleLogin = async () => {
     if (loading) return;
     if (!identifier.trim() || !password) {
@@ -52,19 +66,25 @@ const LoginPage = () => {
       return;
     }
     setError("");
+    // Only the request itself can mean "wrong login or password". What happens
+    // after the server has accepted the credentials is reported separately below.
+    let res: LoginResponse;
     try {
-      const res = await login({ identifier: identifier.trim(), password }).unwrap();
+      // The password goes as typed; the identifier is normalized in authApi's login.
+      res = await login({ identifier, password }).unwrap();
+    } catch (err: unknown) {
+      setError(describeLoginError(err));
+      return;
+    }
+    try {
+      if (!res?.data?.token) throw new Error("The login response carries no token");
       // No manual navigate() here: PublicRoute reacts to the auth state
       // change and redirects to the originally-requested page (or
       // /dashboard for staff, /portal for a STUDENT-role user).
       dispatch(loginSuccess(res.data.token, res.data.refreshToken, res.data.user?.role));
     } catch (err: unknown) {
-      const fetchError = err as FetchBaseQueryError;
-      if (fetchError?.status === "FETCH_ERROR" || fetchError?.status === "TIMEOUT_ERROR") {
-        setError(t("login.networkError"));
-        return;
-      }
-      setError(extractApiError(err) || t("login.error"));
+      console.error("[login] signed in, but the session could not be started", err);
+      setError(t("login.sessionError"));
     }
   };
 

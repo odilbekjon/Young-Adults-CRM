@@ -23,22 +23,44 @@ import { logout, setToken } from "../../store/authSlice";
 
 export const API_BASE_URL = "https://api.youngadults-crm.uz/api/v1";
 
+// The path of a request ("/auth/me?x=1" -> "auth/me").
+const pathOf = (arg: string | FetchArgs | undefined): string => {
+  const url = typeof arg === "string" ? arg : arg?.url ?? "";
+  return url.split("?")[0].replace(/^\/+/, "");
+};
+
+// These answer for the account behind the credentials, not for a branch: who is
+// signed in, what the menu shows, how to sign in and how to renew a session. They
+// are sent without the selected branch (x-branch-id), so a branch left selected by
+// an earlier session on this browser - or one this account doesn't own - can't
+// make the backend refuse the very call that tells the app who the user is (which
+// leaves the header on "Account", the branch picker without branches and every
+// page empty, with no way out).
+const BRANCH_AGNOSTIC_PATHS = new Set(["auth/login", "auth/refresh", "auth/me", "auth/sidebar"]);
+
+export const isBranchAgnosticRequest = (arg: string | FetchArgs | undefined): boolean =>
+  BRANCH_AGNOSTIC_PATHS.has(pathOf(arg));
+
+const isLoginRequest = (arg: string | FetchArgs | undefined): boolean => pathOf(arg) === "auth/login";
+
 const fetchQuery = fetchBaseQuery({
   // Fixed on purpose: a stale VITE_API_URL left in the hosting dashboard
   // (Vercel) kept builds pointing at the old Render backend.
   baseUrl: API_BASE_URL,
   credentials: 'include',
-  prepareHeaders: (headers, { getState }) => {
+  prepareHeaders: (headers, { getState, arg }) => {
     const token = useStorage.getTokens()?.accessToken;
-    if (token) {
+    // Signing in presents no credentials yet: a token left over from an earlier
+    // session (possibly expired) must not ride along with it.
+    if (token && !isLoginRequest(arg)) {
       headers.set("Authorization", `Bearer ${token}`);
     }
-  
+
     const state = getState() as { branch?: { selectedBranchId?: string | null } };
     const branchId = state.branch?.selectedBranchId;
     // A request that names its own branch keeps it (coursesApi's branchHeader, or
     // "all" for a read that needs every branch whatever the header says).
-    if (branchId && !headers.has("x-branch-id")) {
+    if (branchId && !headers.has("x-branch-id") && !isBranchAgnosticRequest(arg)) {
       headers.set("x-branch-id", branchId);
     }
     headers.set("x-lang", i18n.language);
@@ -289,7 +311,10 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 ) => {
   let result = await rawBaseQuery(args, api, extraOptions);
 
-  if (result.error?.status === 401) {
+  // A 401 from POST /auth/login means wrong credentials - not an expired session.
+  // There is no session to renew yet, and renewing a stale one (or logging out)
+  // here would only muddy a plain "wrong login or password".
+  if (result.error?.status === 401 && !isLoginRequest(args)) {
     if (!refreshPromise) {
       refreshPromise = requestTokenRefresh(api, extraOptions).finally(() => {
         refreshPromise = null;

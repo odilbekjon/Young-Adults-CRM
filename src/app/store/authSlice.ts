@@ -1,8 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { useStorage } from "../../utils/store/store";
 import { baseApi } from "../api/baseApi";
-import { normalizeRole } from "../../utils/permissions";
-import { changeSelectedBranch } from "./branchSlice";
+import { clearSelectedBranch } from "./branchSlice";
 import type { AppDispatch } from "./index";
 
 interface AuthState {
@@ -41,22 +40,19 @@ export const authReducer = authSlice.reducer;
 // localStorage) so it isn't visible in Redux DevTools/inspectable global
 // state — only baseApi's reauth wrapper reads it back via useStorage.
 export const loginSuccess = (token: string, refreshToken?: string, role?: string) => (dispatch: AppDispatch) => {
+  // Every login starts with no branch selected, whoever logs in. The selection
+  // is persisted in localStorage and attached to requests centrally (baseApi),
+  // so one left behind by an earlier session on this browser - a CEO who picked
+  // a branch, a branch this account doesn't own - would otherwise scope (or get
+  // refused) the new account's very first requests, GET /auth/me included. It
+  // goes before the token is stored so no request can be sent with it. Staff
+  // then get their own branch from the header's branch picker (Header.tsx); a
+  // STUDENT's /student-portal/* identity comes purely from the token, and a
+  // TEACHER is scoped the same way as staff.
+  dispatch(clearSelectedBranch());
   useStorage.setCredentials({ token, refreshToken, role });
   dispatch(setToken(token));
   if (role) dispatch(setRole(role));
-  // A STUDENT-role session must never inherit a branch some earlier staff
-  // session on this same browser had selected — /student-portal/* endpoints
-  // take no branchId/studentId of their own (identity comes purely from the
-  // token), but x-branch-id is still attached to every request centrally
-  // (baseApi), so a stale selection could otherwise scope their own data to
-  // the wrong branch.
-  // Same for TEACHER: a branch left selected by an earlier admin session would
-  // keep scoping their requests; the header's branch picker then selects one of
-  // the teacher's own branches (see Header.tsx).
-  const normalizedRole = normalizeRole(role);
-  if (normalizedRole === "STUDENT" || normalizedRole === "TEACHER") {
-    dispatch(changeSelectedBranch(null));
-  }
 };
 
 // Corrects the persisted role when GET /auth/me reports a different one than
@@ -71,6 +67,9 @@ export const logout = () => (dispatch: AppDispatch) => {
   useStorage.removeCredentials();
   dispatch(setToken(null));
   dispatch(setRole(null));
+  // The next login on this browser may be a different account, and a branch that
+  // was selected here is not necessarily one it owns (see loginSuccess).
+  dispatch(clearSelectedBranch());
   // Otherwise a cached /auth/me, /auth/sidebar, or any other query from this
   // session lingers in the store and can flash stale data (or a previous
   // account's data) for whoever logs in next on this same browser tab —

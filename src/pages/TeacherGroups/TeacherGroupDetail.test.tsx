@@ -142,6 +142,22 @@ describe("TeacherGroupDetail roster (TEACHER session)", () => {
     expect(screen.queryByText(/profile/i)).toBeNull();
   });
 
+  it("keeps a frozen student in the roster panel but out of the Attendance grid", async () => {
+    await renderPage([
+      ...roster.slice(0, 2),
+      { id: "s4", name: "Frozen Farida", phone: "+998904445566", studentGroupStatus: "FROZEN" },
+    ]);
+
+    // the left panel still names the frozen member...
+    expect(rosterItem("Frozen Farida")).toBeTruthy();
+    // ...but the roll call lists only the others
+    await waitFor(() => expect(document.querySelectorAll("tbody tr")).toHaveLength(2));
+    const inGrid = (name: string) => screen.getAllByText(name).some((el) => el.closest("tr"));
+    expect(inGrid("Debtor Dilnoza")).toBe(true);
+    expect(inGrid("Settled Farhod")).toBe(true);
+    expect(inGrid("Frozen Farida")).toBe(false);
+  });
+
   it("asks nothing from the staff endpoints (students, finance, student-groups)", async () => {
     const { requests } = await renderPage();
     fireEvent.mouseEnter(rosterItem("Debtor Dilnoza"));

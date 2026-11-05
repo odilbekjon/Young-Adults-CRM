@@ -165,3 +165,81 @@ describe("Attendance grid: a day that has not come yet is locked", () => {
     expect(cellsOf().some(isEditable)).toBe(false);
   });
 });
+
+describe("Attendance grid: a frozen member is not in the roll call", () => {
+  type Member = (typeof students)[number] & { groupStatus?: "ACTIVE" | "PROBATION" | "FROZEN" };
+  const member = (id: number, name: string, groupStatus?: Member["groupStatus"]): Member => ({
+    id, realId: `s${id}`, name, phone: "", active: true, ...(groupStatus && { groupStatus }),
+  });
+  const roster = [
+    member(1, "Active Ali", "ACTIVE"),
+    member(2, "Frozen Vali", "FROZEN"),
+    member(3, "Trial Sami", "PROBATION"),
+    member(4, "Unknown Anvar"),
+  ];
+
+  // The students' rows (the header row is in <thead>).
+  const rowCount = () => document.querySelectorAll("tbody tr").length;
+
+  const renderRoster = async (members: Member[], restrictToToday = false) => {
+    stubFetch(november);
+    const view = renderWithStore(
+      <ToastProvider>
+        <Attendance groupId="g1" students={members} restrictToToday={restrictToToday} />
+      </ToastProvider>,
+    );
+    await screen.findByText("Active Ali");
+    return view;
+  };
+
+  it("lists everyone but the frozen member, on the staff page", async () => {
+    await renderRoster(roster);
+
+    expect(screen.queryByText("Frozen Vali")).toBeNull();
+    for (const name of ["Active Ali", "Trial Sami", "Unknown Anvar"]) expect(screen.getByText(name)).toBeTruthy();
+    expect(rowCount()).toBe(3);
+  });
+
+  it("does the same on the teacher page, where only today can be marked", async () => {
+    await renderRoster(roster, true);
+
+    expect(screen.queryByText("Frozen Vali")).toBeNull();
+    expect(screen.getByText("Trial Sami")).toBeTruthy();
+    expect(rowCount()).toBe(3);
+  });
+
+  it("draws no cells for the frozen member, so nothing can be marked for them", async () => {
+    await renderRoster(roster);
+
+    // three listed members x the four lesson days of November
+    await waitFor(() => expect(document.querySelectorAll("tbody .att-cell")).toHaveLength(3 * 4));
+  });
+
+  it("brings the member back once they are unfrozen", async () => {
+    const { rerender } = await renderRoster(roster);
+    expect(screen.queryByText("Frozen Vali")).toBeNull();
+
+    rerender(
+      <ToastProvider>
+        <Attendance groupId="g1" students={roster.map((m) => (m.groupStatus === "FROZEN" ? { ...m, groupStatus: "ACTIVE" as const } : m))} />
+      </ToastProvider>,
+    );
+
+    expect(await screen.findByText("Frozen Vali")).toBeTruthy();
+    expect(rowCount()).toBe(4);
+  });
+
+  it("shows an empty grid, not an error, when every member is frozen", async () => {
+    stubFetch(november);
+    renderWithStore(
+      <ToastProvider>
+        <Attendance groupId="g1" students={[member(1, "Only Frozen", "FROZEN")]} />
+      </ToastProvider>,
+    );
+    await screen.findByText("Attendance");
+
+    expect(screen.queryByText("Only Frozen")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(rowCount()).toBe(0);
+  });
+});

@@ -49,7 +49,8 @@ import type { StudentGroupStatus } from "../../../app/api/groupsApi/types";
 // status dot and the struck-through name); the teacher view leaves them out and
 // passes `debtor` instead (whether the student owes — never the amount).
 // `groupStatus` (the student's status in this group) tints the name of a trial
-// lesson / frozen member exactly like the roster next to it does.
+// lesson exactly like the roster next to it does, and a FROZEN member is left
+// out of the grid altogether (see `rollCall`).
 type AttendanceStudent = Student & {
   realId: string; archived?: boolean; balance?: number; debtor?: boolean; groupStatus?: StudentGroupStatus;
 };
@@ -344,9 +345,9 @@ const sameRow = (prev: RowProps, next: RowProps) =>
 const AttendanceRow = memo(function AttendanceRow({
   studentId, name, active, archived, balance, debtor, groupStatus, vals, columns, wasLabel, notLabel, futureLabel, restrictToToday, onSet, onRemove,
 }: RowProps) {
-  // The roster's own colours: a trial lesson is light sky-blue, a freeze dark
-  // blue, and neither gets the green "billed" dot.
-  const pill = groupStatus === "PROBATION" || groupStatus === "FROZEN" ? GROUP_STATUS_STYLE[groupStatus] : undefined;
+  // The roster's own colour: a trial lesson is light sky-blue and gets no green
+  // "billed" dot.
+  const pill = groupStatus === "PROBATION" ? GROUP_STATUS_STYLE.PROBATION : undefined;
   return (
     // Every cell gets the hover tint (not MUI's `hover` prop): the
     // sticky name cell is opaque, so only an explicit background
@@ -585,6 +586,12 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
     })),
     [days, isCurrentMonth, today, year, month, nowYear, nowMonth, isDayEditable, dateFor, todayIso],
   );
+  // Who the roll call lists. A frozen member is on a pause - no lessons are
+  // held for them and none can be marked - so they are not in the grid (the
+  // roster beside it still lists them, where they are unfrozen). This is the one
+  // place the filter lives: the staff page and the teacher page both render this
+  // grid.
+  const rollCall = useMemo(() => students.filter((s) => s.groupStatus !== "FROZEN"), [students]);
   const wasLabel = t(`singleGroup.tabs.attendance.${ATT_VAL_LABEL_KEYS.Was}`);
   const notLabel = t(`singleGroup.tabs.attendance.${ATT_VAL_LABEL_KEYS.Not}`);
 
@@ -773,7 +780,7 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
           </TableHead>
 
           <TableBody>
-            {students.map((student) => (
+            {rollCall.map((student) => (
               <AttendanceRow
                 key={student.id}
                 studentId={student.realId}

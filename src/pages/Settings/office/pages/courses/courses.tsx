@@ -18,8 +18,8 @@ import {
 } from "@mui/material";
 import { MdOutlineEdit, MdDeleteOutline, MdRefresh, MdArchive, MdUnarchive } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
+import { useEveryBranchCourses } from "../../../../../hooks/useEveryBranchCourses";
 import {
-  useAllCoursesQuery,
   useToggleCourseStatusMutation,
   useDeleteCourseMutation,
   useBulkToggleCourseStatusMutation,
@@ -73,10 +73,7 @@ export const Courses = () => {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   // The form can create a course in any branch, so its archived-twin check needs
   // the courses of every branch, not just the header's (read only once it opens).
-  const { currentData: everyBranchData } = useAllCoursesQuery(
-    { branchId: "all" },
-    { skip: !drawerOpen || !headerBranchId },
-  );
+  const { data: everyBranchData } = useEveryBranchCourses({ skip: !drawerOpen || !headerBranchId });
 
   const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);

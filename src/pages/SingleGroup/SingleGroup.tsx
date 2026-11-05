@@ -41,7 +41,7 @@ import {
   useLazyStudentByIdQuery,
 } from "../../app/api/studentsApi";
 import type { StudentDetail } from "../../app/api/studentsApi/types";
-import { useAllCoursesQuery } from "../../app/api/coursesApi";
+import { useEveryBranchCourses } from "../../hooks/useEveryBranchCourses";
 import { useAllRoomsQuery } from "../../app/api/roomsApi";
 import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
 import { useTeacherOptions } from "../../hooks/useTeacherOptions";
@@ -194,10 +194,12 @@ export const SingleGroup = () => {
   const moveTargetGroups = useActiveGroups({ skip: !moveOpen });
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { data: allStudentsData } = useAllStudentsQuery({ page: 1, limit: 100, branchId: selectedBranchId ?? undefined });
-  // Courses of every branch: the group's own course (name, branch) is looked up
-  // by id and may sit in another branch than the header's, and the edit form's
-  // "move to another branch" needs the target branch's courses.
-  const { data: allCoursesData } = useAllCoursesQuery({ branchId: "all" });
+  // Courses of every branch the account works in: the group's own course (name,
+  // branch) is looked up by id and may sit in another branch than the header's,
+  // and the edit form's "move to another branch" needs the target branch's
+  // courses. Read branch by branch - never with "x-branch-id: all", which a branch
+  // director or an admin may not send (see useEveryBranchCourses).
+  const { data: allCoursesData } = useEveryBranchCourses();
   const { data: allRoomsData } = useAllRoomsQuery(undefined, { skip: !editOpen });
   const { data: allBranchesData } = useAllBranchesQuery();
   const { branches: accessibleBranches } = useAccessibleBranches();

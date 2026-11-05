@@ -18,10 +18,10 @@ import {
 } from "@mui/material";
 import { MdEdit, MdArchive, MdUnarchive, MdDeleteOutline, MdArrowBack } from "react-icons/md";
 import {
-  useAllCoursesQuery,
   useToggleCourseStatusMutation,
   useDeleteCourseMutation,
 } from "../../app/api/coursesApi/coursesApi";
+import { useEveryBranchCourses } from "../../hooks/useEveryBranchCourses";
 import { CourseFormDrawer } from "../Settings/office/pages/courses/CourseFormDrawer";
 import { useGroupsByCourseQuery } from "../../app/api/groupsApi/groupsApi";
 import type { CourseGroup } from "../../app/api/groupsApi/types";
@@ -110,9 +110,11 @@ export const SingleCourse = () => {
   const [confirmAction, setConfirmAction] = useState<CourseAction>("archive");
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
-  // Courses of every branch: this page opens a course by id, also one of another
-  // branch than the header's (a direct link, or from a group of that branch).
-  const { data, isLoading } = useAllCoursesQuery({ branchId: "all" });
+  // Courses of every branch the account works in: this page opens a course by id,
+  // also one of another branch than the header's (a direct link, or from a group of
+  // that branch). Read branch by branch - never with "x-branch-id: all", which a
+  // branch director or an admin may not send (see useEveryBranchCourses).
+  const { data, isLoading } = useEveryBranchCourses();
   const [toggleCourseStatus, { isLoading: isToggling }] = useToggleCourseStatusMutation();
   const [deleteCourse, { isLoading: isDeleting }] = useDeleteCourseMutation();
   const isActing = isToggling || isDeleting;

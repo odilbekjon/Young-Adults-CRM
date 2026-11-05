@@ -11,9 +11,10 @@ import { filterByBranch, singleBranchId } from "../utils/groupBranch";
 // could not leak another branch's courses into the screen.
 //
 // Not for finding a course by id (a course of any branch may be asked for, so
-// that reads `useAllCoursesQuery({ branchId: "all" })`, which only an account
-// allowed to see every branch can rely on), and not for the group forms, which
-// ask for the branch the group belongs to (Groups.tsx), whatever the header says.
+// that reads useEveryBranchCourses: one explicit request per branch, never the
+// "x-branch-id: all" that only an account allowed to see every branch can rely
+// on), and not for the group forms, which ask for the branch the group belongs
+// to (Groups.tsx), whatever the header says.
 export const useBranchCourses = (options?: {
   skip?: boolean;
   // A branch of the screen's own (a report's branch select) that goes before the header's.

@@ -14,17 +14,14 @@ import {
   useDashboardTeacherPerformanceQuery,
 } from "../../app/api/dashboardApi/dashboardApi";
 import type { ScheduleItem } from "../../app/api/dashboardApi/types";
-import { useAllLeadsQuery } from "../../app/api/leadsApi";
 import { useAllGroupsQuery, useStudentGroupsQuery } from "../../app/api/groupsApi";
 import type { Group } from "../../app/api/groupsApi/types";
-import { useDebtorsQuery, usePaymentsListQuery, useFinanceChartQuery } from "../../app/api/financeApi";
-import { useReportLeftStudentsQuery } from "../../app/api/reportsApi";
+import { useFinanceChartQuery } from "../../app/api/financeApi";
 import { SCHEDULE_COLORS, DEFAULT_LESSON_DURATION } from "../../constants/DashboardData";
 import { STATS } from "../../constants/DashboardStats";
-import { useActiveStudentCount } from "../../hooks/useActiveStudentCount";
 import { lazyNamed } from "../../utils/lazyPage";
 import { useNearViewport } from "./useNearViewport";
-import { activeStudentsStat } from "./activeStudentsStat";
+import { statCounts } from "./dashboardStats";
 import { ScheduleCard } from "./ScheduleCard";
 
 // recharts is the biggest library in the app, so the chart is a chunk of its own:
@@ -33,12 +30,6 @@ import { ScheduleCard } from "./ScheduleCard";
 // download of every page.
 const loadRevenueChart = () => import("./RevenueChart");
 const RevenueChart = lazyNamed(loadRevenueChart, "RevenueChart");
-
-// "This month" as [firstOfMonth, today] in the plain YYYY-MM-DD format every
-// finance list endpoint expects (same format the date-range filters on the
-// Finance pages already send).
-const pad2 = (n: number) => String(n).padStart(2, "0");
-const toISODate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
 // -1 = the backend has no start time for this group (it can't be placed on the
 // time axis; it's listed under the grid instead).
@@ -149,13 +140,10 @@ export const Dashboard = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
-  // Branch-scoped everywhere below, same as Students/Groups/Teachers/Finance —
-  // baseApi already attaches this as the `x-branch-id` header on every
-  // request, and switching branches resets the whole RTK Query cache
-  // (changeSelectedBranch → baseApi.util.resetApiState()), but the list/report
-  // endpoints below also accept `branchId` explicitly (matching how the other
-  // pages that already call them pass it), and reports/left-students in
-  // particular documents branchId as a distinct filter from the header.
+  // Branch-scoped: baseApi attaches the selected branch as the `x-branch-id`
+  // header on every request (and switching branches resets the whole RTK Query
+  // cache), which is all the /dashboard/* endpoints read; the chart and the
+  // schedule's membership lists below also name it explicitly.
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const branchId = selectedBranchId ?? undefined;
 
@@ -169,63 +157,19 @@ export const Dashboard = () => {
   // affected entries (the dashboard queries provide the tags of the data they
   // are computed from, see dashboardApi).
   //
-  // Requests start in the order the hooks are declared and baseApi caps how many
-  // run at once, so what the page waits on longest goes first: the big lists
-  // behind "Active students" (several MB, and a page count that is only known once
-  // the first page is in) right after the cheap /dashboard/stats call, then the
-  // cheap counts behind the other stat tiles, and the cards further down the page
-  // last — those only start once they are about to scroll into view.
+  // All eight stat cards are read from the ONE GET /dashboard/stats answer (see
+  // statCounts): they appear together, and nothing is downloaded just to be
+  // counted. They used to be assembled from nine other requests - the leads,
+  // debtors, payments and left-students lists, and every page of the active
+  // memberships plus the accounts list for "Active students" (several MB) - which
+  // is what made the page slow and filled the cards in one by one. The cards
+  // further down the page start only once they are about to scroll into view.
   const { data: statsData, isLoading: statsLoading } = useDashboardStatsQuery();
-
-  // "Active students": a group AND an ACTIVE status in it (see the hook).
-  const activeStudents = useActiveStudentCount(branchId);
-
-  // "Active leads" — GET /leads?status=ACTIVE (leadsApi's own definition of
-  // an active lead, same enum the Leads Kanban board and Reports use). Only the
-  // count is shown, so a one-row page is requested and meta.total is read.
-  const { data: activeLeadsData, isFetching: activeLeadsLoading } =
-    useAllLeadsQuery({ status: "ACTIVE", page: 1, limit: 1, branchId });
-
-  // "Left after trial period" — there's no dedicated backend flag for this,
-  // but the lead pipeline itself models it: a lead only leaves leadsApi's
-  // domain by either being CANCELLED or CONVERTED (a CONVERTED lead becomes
-  // a real Student, tracked separately from here on via studentsApi/
-  // groupsApi). A CANCELLED lead is therefore, by construction, someone who
-  // never made it past the lead/trial stage — the closest real, non-invented
-  // proxy for "left after trial period" the API actually supports. Counted from
-  // meta.total of a one-row page, like the active leads above.
-  const { data: cancelledLeadsData, isFetching: leftTrialLoading } =
-    useAllLeadsQuery({ status: "CANCELLED", page: 1, limit: 1, branchId });
-
-  // "Debtors" — same GET /finance/debtors list the Debtors page itself reads
-  // its count from (meta.total), not the separate /finance/debtors/total
-  // (which is a currency sum, not a row count).
-  const { data: debtorsData, isFetching: debtorsLoading } =
-    useDebtorsQuery({ page: 1, limit: 1, branchId });
-
-  // "In a trial lesson" — a PROBATION student-group membership is exactly
-  // what graduate-trial (PROBATION → ACTIVE) confirms trial students are
-  // modeled as.
-  const { data: trialGroupsData, isFetching: trialLoading } =
-    useStudentGroupsQuery({ status: "PROBATION", page: 1, limit: 1, branchId });
-
-  // "Paid during the month" — count of payments recorded this month (GET
-  // /finance/payments date-filtered), matching what the card originally
-  // showed (a small integer, not a currency sum like finance/stats' income).
-  const now = new Date();
-  const monthStart = toISODate(new Date(now.getFullYear(), now.getMonth(), 1));
-  const monthEnd = toISODate(now);
-  const { data: paymentsThisMonthData, isFetching: paidLoading } =
-    usePaymentsListQuery({ startDate: monthStart, endDate: monthEnd, page: 1, limit: 1, branchId });
-
-  // "Left active group" — the backend's own left-students report, which is
-  // exactly students who had an actual (non-trial) group membership end.
-  const { data: leftStudentsData, isFetching: leftActiveLoading } =
-    useReportLeftStudentsQuery({ branchId });
+  const statValues = statCounts(statsData?.data);
 
   // Revenue chart — GET /finance/chart for the current year, the same
   // endpoint AllPayments' own chart already uses.
-  const currentYear = now.getFullYear();
+  const currentYear = new Date().getFullYear();
   const { data: chartMonths, isLoading: chartLoading, isError: chartIsError } =
     useFinanceChartQuery({ year: currentYear, branchId });
 
@@ -252,25 +196,6 @@ export const Dashboard = () => {
   // used on the Groups list page — see realStudentCount's own comment.
   const { data: inactiveMembershipsData } = useStudentGroupsQuery({ status: "INACTIVE", branchId, limit: 1000 }, { skip: !scheduleNear });
   const { data: deletedMembershipsData } = useStudentGroupsQuery({ status: "DELETED", branchId, limit: 1000 }, { skip: !scheduleNear });
-
-  // The exact count once it is known; until then an estimate that is marked as
-  // one (see activeStudentsStat) - never an unmarked number that later changes.
-  const activeStudentsTile = activeStudentsStat(activeStudents, {
-    count: statsData?.data.activeStudentsCount,
-    isLoading: statsLoading,
-  });
-
-  // `approximate`/`refining` are only ever set by the Active students tile.
-  const liveStatValues: Record<string, { value: number; loading: boolean; approximate?: boolean; refining?: boolean }> = {
-    leads:      { value: activeLeadsData?.meta?.total ?? 0, loading: activeLeadsLoading },
-    students:   activeStudentsTile,
-    groups:     { value: statsData?.data.activeGroupsCount ?? 0, loading: !statsData },
-    debtors:    { value: debtorsData?.meta.total ?? 0, loading: debtorsLoading },
-    trial:      { value: trialGroupsData?.meta.total ?? 0, loading: trialLoading },
-    paid:       { value: paymentsThisMonthData?.meta.total ?? 0, loading: paidLoading },
-    leftActive: { value: leftStudentsData?.total ?? 0, loading: leftActiveLoading },
-    leftTrial:  { value: cancelledLeadsData?.meta?.total ?? 0, loading: leftTrialLoading },
-  };
 
   const attendance = attendanceData?.data;
   const activities = activitiesData?.data ?? [];
@@ -322,7 +247,7 @@ export const Dashboard = () => {
         "@media(max-width:640px)":  { gridTemplateColumns: "repeat(2,1fr)" },
       }}>
         {STATS.map(({ key, labelKey, route, filter, icon }) => {
-          const stat = liveStatValues[key];
+          const value = statValues[key];
           return (
           <Tooltip key={key} title={t("dashboard.stats.goToPage", { label: t(labelKey) })} placement="top" arrow>
             <Paper
@@ -358,14 +283,7 @@ export const Dashboard = () => {
                 {t(labelKey)}
               </Typography>
               <Typography sx={{ fontSize: 32,  color: "var(--color-primary)", lineHeight: 1 }}>
-                {stat.loading ? <CircularProgress size={20} /> : stat.approximate ? (
-                  // An estimate: "≈", and dimmed with a small spinner (which takes
-                  // no room, so nothing moves) while the exact figure is coming.
-                  <Box component="span" aria-busy={stat.refining} sx={{ position: "relative", opacity: stat.refining ? 0.55 : 1, transition: "opacity 0.2s ease" }}>
-                    ≈ {stat.value}
-                    {stat.refining && <CircularProgress size={10} thickness={6} sx={{ position: "absolute", top: 2, right: -14 }} />}
-                  </Box>
-                ) : stat.value}
+                {statsLoading ? <CircularProgress size={20} /> : value ?? "—"}
               </Typography>
             </Paper>
           </Tooltip>

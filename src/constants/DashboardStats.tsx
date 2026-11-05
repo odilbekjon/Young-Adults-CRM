@@ -3,9 +3,9 @@ import {
   FiPlayCircle, FiDollarSign, FiUserMinus, FiUserX,
 } from "react-icons/fi";
 
-// Every card's number now comes from a real backend-backed query in
-// Dashboard.tsx (see STAT_SOURCES there) — this array only holds the
-// per-card display metadata (label/route/icon), not any data.
+// Every card's number comes from GET /dashboard/stats (see statCounts in
+// pages/Dashboard/dashboardStats.ts) — this array only holds the per-card
+// display metadata (label/route/icon), not any data.
 //
 // "debtors" routes straight to the dedicated page that already backs its
 // count (/finance/debtors). "paid" goes to Finance > All Payments;

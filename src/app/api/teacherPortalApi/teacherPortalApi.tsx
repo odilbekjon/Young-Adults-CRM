@@ -102,6 +102,30 @@ const normalizeDashboard = (r: Row): TeacherPortalDashboard => ({
     activeGroupsCount: countOrNull(r.activeGroupsCount, r.groupsCount, r.activeGroups, r.totalGroupsCount) ?? 0,
 });
 
+const boolOrNull = (...candidates: unknown[]): boolean | null => {
+    for (const value of candidates) {
+        if (typeof value === "boolean") return value;
+    }
+    return null;
+};
+
+const hasDebtorLabel = (...candidates: unknown[]): boolean =>
+    candidates.some((value) => typeof value === "string" && value.trim().toUpperCase() === "DEBTOR");
+
+// Whether a roster row says its student is in debt. A TEACHER session may only
+// call /teacher-portal/*, so the row is the one source there is: its signed
+// balance wins (negative = in debt, the same rule the staff roster applies),
+// then an explicit boolean flag, then a DEBTOR finance/account status. null =
+// the row carries none of these, i.e. it is NOT known whether the student owes.
+const debtorOf = (raw: Row, r: Row, balance: number | null): boolean | null => {
+    if (balance !== null) return balance < 0;
+    const flag = boolOrNull(r.isDebtor, raw.isDebtor, r.debtor, raw.debtor, r.hasDebt, raw.hasDebt);
+    if (flag !== null) return flag;
+    return hasDebtorLabel(r.financeStatus, raw.financeStatus, r.studentStatus, raw.studentStatus, r.status, raw.status)
+        ? true
+        : null;
+};
+
 // The roster endpoint may return plain students or membership rows that wrap
 // one ({ student: {...}, status }) or carry flat `studentId` / `studentName` /
 // `studentPhone` fields (same as GET /student-groups rows) — all are flattened
@@ -110,6 +134,7 @@ const normalizeDashboard = (r: Row): TeacherPortalDashboard => ({
 const normalizeGroupStudent = (raw: Row): TeacherPortalGroupStudent => {
     const inner = raw.student && typeof raw.student === "object" ? (raw.student as Row) : null;
     const r = inner ? { ...raw, ...inner } : raw;
+    const balance = [r.balance, raw.balance].map(decimalToNumber).find((n) => n !== null) ?? null;
     return {
         id: str(inner?.id, raw.studentId, r.id, r._id),
         name: str(r.name, r.fullName, raw.studentName),
@@ -118,11 +143,15 @@ const normalizeGroupStudent = (raw: Row): TeacherPortalGroupStudent => {
         // DELETED) wins over the plain `status`, which on a flat student row can
         // be the account's own status (ACTIVE even while the trial lasts).
         status: str(raw.studentGroupStatus, r.studentGroupStatus, raw.membershipStatus, raw.status, r.status).toUpperCase(),
-        balance: [r.balance, raw.balance].map(decimalToNumber).find((n) => n !== null) ?? null,
+        balance,
+        debtor: debtorOf(raw, r, balance),
         // Account creation date (the nested student's own createdAt wins over
         // the membership row's), then the date the student started in the group.
         createdAt: strOrNull(inner?.createdAt, r.createdAt, r.addedAt),
         activatedAt: strOrNull(r.groupsStart, raw.paymentStartDate, raw.joinedAt),
+        // This group's own dates only (no account-wide fallback).
+        joinedAt: strOrNull(raw.joinedAt, r.joinedAt),
+        paymentStartDate: strOrNull(raw.paymentStartDate, r.paymentStartDate),
         comment: strOrNull(r.comment, r.comments),
     };
 };

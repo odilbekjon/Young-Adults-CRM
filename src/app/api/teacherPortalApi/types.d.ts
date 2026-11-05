@@ -27,6 +27,17 @@ export interface TeacherPortalGroupStudent {
   createdAt: string | null;
   activatedAt: string | null;
   comment: string | null;
+  // Whether the student is in debt, as far as the roster row itself says so
+  // (a negative `balance`, an `isDebtor`-style flag, or a DEBTOR status): true =
+  // in debt, false = not in debt, null = the row says nothing either way. This is
+  // all a teacher-facing screen may use — the amount itself is never shown.
+  debtor: boolean | null;
+  // The day the student joined THIS group (membership `joinedAt`), and the day
+  // billing in this group became active (membership `paymentStartDate`; absent
+  // for a trial lesson). Unlike `activatedAt` above, neither falls back to the
+  // account-wide `groupsStart`.
+  joinedAt: string | null;
+  paymentStartDate: string | null;
 }
 
 // GET /teacher-portal/groups — "O'qituvchi o'qitayotgan barcha guruhlar

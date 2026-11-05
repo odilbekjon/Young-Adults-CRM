@@ -10,7 +10,8 @@
 // Attendance / Grade / Online lessons tabs — no Discount prices, Exams,
 // History or Comments, no freeze/remove/move/payment/edit actions, and no
 // per-student profile links (StudentProfile is outside ProtectedRoute's
-// teacher allowlist anyway, so the rows simply aren't clickable).
+// teacher allowlist anyway, so a row opens a small info card — see RosterRow —
+// and goes nowhere).
 import { useEffect, useMemo, useState } from "react";
 import {
   Box, Paper, Typography, CircularProgress, Stack, Button, Divider, List, ListItem, ListItemText, Tabs, Tab,
@@ -27,15 +28,80 @@ import {
   useTeacherPortalGroupStudentsQuery,
   useTeacherPortalScheduleQuery,
 } from "../../app/api/teacherPortalApi";
+import type { TeacherPortalGroupStudent } from "../../app/api/teacherPortalApi/types";
 import { formatTrainingDate } from "../../utils/formatTrainingDate";
 import { useAuth } from "../../hooks/useAuth";
 import { StudentStatusDot, GROUP_STATUS_STYLE, toGroupStatus } from "../SingleGroup/StudentStatusDot";
+// Imported from its own file (not the folder index) so the staff hover card stays out of this chunk.
+import { TeacherStudentHoverCard } from "../SingleGroup/StudentHoverCard/TeacherStudentHoverCard";
+import { useStudentCardTrigger } from "../SingleGroup/StudentHoverCard/useStudentCardTrigger";
 import { Attendance } from "../SingleGroup/tabs/Attendance";
 import { Grade } from "../SingleGroup/tabs/Grade";
 import { OnlineLessons } from "../SingleGroup/tabs/OnlineLessons";
 
 // Tabs a TEACHER gets on a group page (keys of singleGroup.tabs.*).
 const TEACHER_TAB_KEYS = ["attendance", "grade", "onlineLessons"] as const;
+
+// One roster row. The status dot is red for a student in debt and green for an
+// active one who is not (see StudentStatusDot); a trial lesson and a freeze show as
+// the tinted name instead, same colours as the admin roster (GROUP_STATUS_STYLE),
+// and hovering the name names the status. Hovering — or focusing, or tapping — the
+// row opens the teacher card: balance status (never the amount), phone, the day
+// the student joined the group and the day billing became active. The row is not a
+// link: a teacher gets no student profile.
+const RosterRow = ({ student, index }: { student: TeacherPortalGroupStudent; index: number }) => {
+  const { t } = useTranslation();
+  const { open, triggerProps, cardProps, anchorRef } = useStudentCardTrigger<HTMLLIElement>();
+  const groupStatus = toGroupStatus(student.status);
+  const pill = groupStatus === "PROBATION" || groupStatus === "FROZEN" ? GROUP_STATUS_STYLE[groupStatus] : undefined;
+  return (
+    <>
+      <ListItem
+        disablePadding
+        {...triggerProps}
+        sx={{
+          py: 0.6,
+          pl: 0.5,
+          borderRadius: 1.5,
+          transition: "background 0.15s",
+          "&:hover": { backgroundColor: "var(--color-surface-alt)" },
+        }}
+      >
+        <Typography fontSize={12} color="text.secondary" sx={{ minWidth: 22, flexShrink: 0 }}>{index + 1}</Typography>
+        <Box sx={{ mx: 1, display: "flex" }}>
+          <StudentStatusDot active={!groupStatus || groupStatus === "ACTIVE"} debtor={student.debtor === true} />
+        </Box>
+        <ListItemText
+          primary={
+            <Typography
+              component="span"
+              fontSize={13}
+              fontWeight={500}
+              title={groupStatus ? t(GROUP_STATUS_STYLE[groupStatus].labelKey) : undefined}
+              sx={{
+                display: "inline-block",
+                px: pill ? 1 : 0,
+                py: pill ? 0.35 : 0,
+                borderRadius: pill ? "6px" : 0,
+                backgroundColor: pill ? pill.background : "transparent",
+                color: pill ? pill.color : "var(--color-text-primary)",
+              }}
+            >
+              {student.name}
+            </Typography>
+          }
+          secondary={
+            <Typography fontSize={12} color="text.secondary" component="span" display="block">
+              {student.phone || t("teacherGroups.noPhone")}
+            </Typography>
+          }
+          sx={{ my: 0 }}
+        />
+      </ListItem>
+      <TeacherStudentHoverCard student={student} open={open} anchorRef={anchorRef} {...cardProps} />
+    </>
+  );
+};
 
 export const TeacherGroupDetail = () => {
   const { t } = useTranslation();
@@ -78,14 +144,16 @@ export const TeacherGroupDetail = () => {
     [rosterData, rosterError, group],
   );
   // The status dot is green only for a member who is billed (ACTIVE, or no
-  // status sent); a trial lesson and a freeze show as the tinted name instead.
+  // status sent) and owes nothing — red when the roster row says the student is in
+  // debt (only that flag is passed on, never an amount); a trial lesson and a
+  // freeze show as the tinted name instead.
   const attendanceStudents = useMemo(
     () =>
       students.map((s, i) => {
         const groupStatus = toGroupStatus(s.status);
         return {
           id: i + 1, realId: s.id, name: s.name, phone: s.phone ?? "",
-          active: !groupStatus || groupStatus === "ACTIVE", groupStatus,
+          active: !groupStatus || groupStatus === "ACTIVE", groupStatus, debtor: s.debtor === true,
         };
       }),
     [students],
@@ -201,47 +269,7 @@ export const TeacherGroupDetail = () => {
             <Typography fontSize={13} color="text.secondary">{t("teacherGroups.rosterEmpty")}</Typography>
           ) : (
             <List dense disablePadding>
-              {students.map((s, i) => {
-                // Same colours as the admin roster (see GROUP_STATUS_STYLE): a
-                // trial lesson is light sky-blue, a freeze dark blue; hovering the
-                // name names the status.
-                const groupStatus = toGroupStatus(s.status);
-                const pill = groupStatus === "PROBATION" || groupStatus === "FROZEN" ? GROUP_STATUS_STYLE[groupStatus] : undefined;
-                return (
-                  <ListItem key={s.id} disablePadding sx={{ py: 0.6 }}>
-                    <Typography fontSize={12} color="text.secondary" sx={{ minWidth: 22, flexShrink: 0 }}>{i + 1}</Typography>
-                    <Box sx={{ mx: 1, display: "flex" }}>
-                      <StudentStatusDot active={!groupStatus || groupStatus === "ACTIVE"} />
-                    </Box>
-                    <ListItemText
-                      primary={
-                        <Typography
-                          component="span"
-                          fontSize={13}
-                          fontWeight={500}
-                          title={groupStatus ? t(GROUP_STATUS_STYLE[groupStatus].labelKey) : undefined}
-                          sx={{
-                            display: "inline-block",
-                            px: pill ? 1 : 0,
-                            py: pill ? 0.35 : 0,
-                            borderRadius: pill ? "6px" : 0,
-                            backgroundColor: pill ? pill.background : "transparent",
-                            color: pill ? pill.color : "var(--color-text-primary)",
-                          }}
-                        >
-                          {s.name}
-                        </Typography>
-                      }
-                      secondary={
-                        <Typography fontSize={12} color="text.secondary" component="span" display="block">
-                          {s.phone || t("teacherGroups.noPhone")}
-                        </Typography>
-                      }
-                      sx={{ my: 0 }}
-                    />
-                  </ListItem>
-                );
-              })}
+              {students.map((s, i) => <RosterRow key={s.id} student={s} index={i} />)}
             </List>
           )}
         </Paper>

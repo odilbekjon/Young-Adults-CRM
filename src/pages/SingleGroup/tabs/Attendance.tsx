@@ -46,11 +46,12 @@ import { StudentStatusDot, GROUP_STATUS_STYLE } from "../StudentStatusDot";
 import type { StudentGroupStatus } from "../../../app/api/groupsApi/types";
 
 // `archived`/`balance` only come from the admin page's roster (they drive the
-// status dot and the struck-through name); the teacher view leaves them out.
+// status dot and the struck-through name); the teacher view leaves them out and
+// passes `debtor` instead (whether the student owes — never the amount).
 // `groupStatus` (the student's status in this group) tints the name of a trial
 // lesson / frozen member exactly like the roster next to it does.
 type AttendanceStudent = Student & {
-  realId: string; archived?: boolean; balance?: number; groupStatus?: StudentGroupStatus;
+  realId: string; archived?: boolean; balance?: number; debtor?: boolean; groupStatus?: StudentGroupStatus;
 };
 
 interface Props {
@@ -318,6 +319,7 @@ interface RowProps {
   active: boolean;
   archived?: boolean;
   balance?: number;
+  debtor?: boolean;
   groupStatus?: StudentGroupStatus;
   // The student's mark for each column of `columns`, in the same order.
   vals: AttVal[];
@@ -340,7 +342,7 @@ const sameRow = (prev: RowProps, next: RowProps) =>
   );
 
 const AttendanceRow = memo(function AttendanceRow({
-  studentId, name, active, archived, balance, groupStatus, vals, columns, wasLabel, notLabel, futureLabel, restrictToToday, onSet, onRemove,
+  studentId, name, active, archived, balance, debtor, groupStatus, vals, columns, wasLabel, notLabel, futureLabel, restrictToToday, onSet, onRemove,
 }: RowProps) {
   // The roster's own colours: a trial lesson is light sky-blue, a freeze dark
   // blue, and neither gets the green "billed" dot.
@@ -365,7 +367,7 @@ const AttendanceRow = memo(function AttendanceRow({
           <Avatar sx={{ width: 28, height: 28, fontSize: 12, flexShrink: 0 }}>
             {name[0]}
           </Avatar>
-          <StudentStatusDot active={active && groupStatus !== "PROBATION"} archived={archived} balance={balance} />
+          <StudentStatusDot active={active && groupStatus !== "PROBATION"} archived={archived} balance={balance} debtor={debtor} />
           <Tooltip title={name} placement="top-start" enterDelay={400} disableInteractive>
             <Typography
               fontSize={13}
@@ -779,6 +781,7 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
                 active={student.active}
                 archived={student.archived}
                 balance={student.balance}
+                debtor={student.debtor}
                 groupStatus={student.groupStatus}
                 vals={valsFor(student.realId)}
                 columns={columns}

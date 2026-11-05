@@ -2,11 +2,13 @@
 // server-side to this teacher). Rendered in place of the full admin `Groups`
 // page by `src/routes/RoleGroupsRoute.tsx`. The lesson schedule lives on the
 // teacher Dashboard (TeacherDashboard), not here.
+import { useMemo } from "react";
 import { Box, Paper, Typography, CircularProgress, Chip, Stack, Button } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { TbUsers } from "react-icons/tb";
 import { useTeacherPortalGroupsQuery } from "../../app/api/teacherPortalApi";
+import { sortByName } from "../../utils/compareNames";
 
 const formatDaysType = (daysType: string | null, t: (k: string, o?: Record<string, unknown>) => string) => {
   if (!daysType) return "";
@@ -20,7 +22,8 @@ export const TeacherGroups = () => {
   const { data, isLoading, isError, refetch } = useTeacherPortalGroupsQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
-  const groups = data ?? [];
+  // The teacher's groups, A -> Z by name.
+  const groups = useMemo(() => sortByName(data ?? []), [data]);
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>

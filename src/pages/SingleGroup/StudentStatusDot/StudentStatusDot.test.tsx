@@ -36,6 +36,34 @@ describe("StudentStatusDot", () => {
     expect(isEmptySlot(dotOf({ active: true, archived: true, balance: -100 }))).toBe(true);
   });
 
+  describe("when only a debtor flag is known (a TEACHER session is never sent the amount)", () => {
+    it("is red for a student flagged as a debtor, even an active one", () => {
+      expect(dotOf({ active: true, debtor: true }).backgroundColor).toBe(RED);
+    });
+
+    it("is red for a flagged debtor who is on a trial lesson or frozen (not billed)", () => {
+      expect(dotOf({ active: false, debtor: true }).backgroundColor).toBe(RED);
+    });
+
+    it("is green for an active student flagged as not in debt", () => {
+      expect(dotOf({ active: true, debtor: false }).backgroundColor).toBe(GREEN);
+    });
+
+    it("stays an empty slot for a trial or frozen student who is not in debt", () => {
+      expect(isEmptySlot(dotOf({ active: false, debtor: false }))).toBe(true);
+    });
+
+    it("never draws a dot for an archived student, flagged or not", () => {
+      expect(isEmptySlot(dotOf({ active: true, archived: true, debtor: true }))).toBe(true);
+    });
+
+    it("lets the flag decide over a balance, and falls back to the balance when there is no flag", () => {
+      expect(dotOf({ active: true, balance: 5000, debtor: true }).backgroundColor).toBe(RED);
+      expect(dotOf({ active: true, balance: -5000, debtor: false }).backgroundColor).toBe(GREEN);
+      expect(dotOf({ active: true, balance: -5000, debtor: undefined }).backgroundColor).toBe(RED);
+    });
+  });
+
   it("keeps the same 8px size in every state so names stay aligned across rows", () => {
     const states = [
       { active: true },

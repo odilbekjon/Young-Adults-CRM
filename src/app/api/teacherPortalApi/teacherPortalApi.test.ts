@@ -481,6 +481,63 @@ describe("teacherPortalGroupStudents", () => {
     });
   });
 
+  describe("debtor flag", () => {
+    const debtorOf = async (row: Record<string, unknown>) =>
+      (await loadGroupStudents({ data: [{ id: "s1", name: "Ali", ...row }] })).students[0].debtor;
+
+    it("is true for a negative balance, false for zero or a positive one (number, string or decimal.js)", async () => {
+      expect(await debtorOf({ balance: -1 })).toBe(true);
+      expect(await debtorOf({ balance: "-150000" })).toBe(true);
+      expect(await debtorOf({ balance: { s: -1, e: 6, d: [1200000] } })).toBe(true);
+      expect(await debtorOf({ balance: 0 })).toBe(false);
+      expect(await debtorOf({ balance: 25000 })).toBe(false);
+    });
+
+    it("reads an explicit boolean flag when there is no balance", async () => {
+      expect(await debtorOf({ isDebtor: true })).toBe(true);
+      expect(await debtorOf({ debtor: true })).toBe(true);
+      expect(await debtorOf({ hasDebt: true })).toBe(true);
+      expect(await debtorOf({ isDebtor: false })).toBe(false);
+    });
+
+    it("reads a DEBTOR status (finance, student or account status) when there is nothing more exact", async () => {
+      expect(await debtorOf({ financeStatus: "DEBTOR" })).toBe(true);
+      expect(await debtorOf({ studentStatus: "debtor", studentGroupStatus: "ACTIVE" })).toBe(true);
+      expect(await debtorOf({ status: "DEBTOR" })).toBe(true);
+      expect(await debtorOf({ financeStatus: "DEBT_FREE" })).toBeNull();
+    });
+
+    it("lets the signed balance decide over a flag or a status", async () => {
+      expect(await debtorOf({ balance: 5000, isDebtor: true, studentStatus: "DEBTOR" })).toBe(false);
+      expect(await debtorOf({ balance: -5000, isDebtor: false })).toBe(true);
+    });
+
+    it("reads the balance of a nested student row", async () => {
+      const { students } = await loadGroupStudents({ data: [{ id: "m1", student: { id: "s1", name: "Ali", balance: -10 } }] });
+      expect(students[0].debtor).toBe(true);
+    });
+
+    it("is null (unknown, NOT 'no debt') when the row says nothing about money", async () => {
+      expect(await debtorOf({})).toBeNull();
+      expect(await debtorOf({ status: "ACTIVE", studentGroupStatus: "ACTIVE" })).toBeNull();
+    });
+  });
+
+  describe("this group's own dates", () => {
+    it("reads joinedAt and paymentStartDate separately, with no account-wide fallback", async () => {
+      const { students } = await loadGroupStudents({
+        data: [
+          { id: "a", name: "A", groupsStart: "2026-01-01", joinedAt: "2026-09-10", paymentStartDate: "2026-09-05" },
+          { id: "b", name: "B", groupsStart: "2026-01-01", joinedAt: "2026-09-10" },
+          { id: "c", name: "C", groupsStart: "2026-01-01" },
+        ],
+      });
+
+      expect(students.map((s) => s.joinedAt)).toEqual(["2026-09-10", "2026-09-10", null]);
+      expect(students.map((s) => s.paymentStartDate)).toEqual(["2026-09-05", null, null]);
+    });
+  });
+
   describe("response shapes", () => {
     it("accepts a bare array, data or students", async () => {
       expect(ids((await loadGroupStudents([{ id: "a" }])).students)).toEqual(["a"]);

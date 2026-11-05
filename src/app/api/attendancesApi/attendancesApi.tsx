@@ -7,6 +7,8 @@ import {
   SaveAttendanceResponse,
   AttendanceRecord,
   AttendanceStatus,
+  FreezeRange,
+  GroupAttendance,
   GroupAttendanceQueryArgs,
   AttendanceReportQueryArgs,
   AttendanceReportRow,
@@ -32,16 +34,17 @@ const asId = (raw: unknown): string => {
 };
 
 // Confirmed live (2026-09): GET /attendances/group/{id} returns
-// { dates: string[], table: [{ studentId, studentName, ..., attendances:
+// { dates: string[], table: [{ studentId, studentName, photo, freezeRanges:
+// [{ id, startDate, endDate, reason, status }], attendances:
 // [{ date, status, reason, attendance }] }] } — the `table` field wasn't in
 // any of the previously-guessed candidates below, so every response parsed
 // to an empty list and a freshly-saved mark would vanish from the grid on
 // reload even though it was genuinely persisted server-side (confirmed via
 // a direct GET right after save). The other candidates are kept as a
 // fallback in case the shape varies by endpoint version.
-const normalizeRecords = (raw: unknown): AttendanceRecord[] => {
+const tableRows = (raw: unknown): unknown[] => {
   const container = (raw ?? {}) as Record<string, unknown>;
-  const list: unknown[] = Array.isArray(raw)
+  return Array.isArray(raw)
     ? raw
     : Array.isArray(container.table)
     ? container.table
@@ -54,6 +57,10 @@ const normalizeRecords = (raw: unknown): AttendanceRecord[] => {
     : Array.isArray(container.data)
     ? container.data
     : [];
+};
+
+const normalizeRecords = (raw: unknown): AttendanceRecord[] => {
+  const list = tableRows(raw);
 
   const result: AttendanceRecord[] = [];
 
@@ -91,6 +98,32 @@ const normalizeRecords = (raw: unknown): AttendanceRecord[] => {
     });
   });
 
+  return result;
+};
+
+// Each student's `freezeRanges` ([{ id, startDate, endDate, reason, status }]),
+// keyed by student id. Only rows that carry the field get an entry, so "never
+// frozen" ([]) stays apart from "the backend did not say" (no entry).
+const normalizeFreezeRanges = (raw: unknown): Record<string, FreezeRange[]> => {
+  const result: Record<string, FreezeRange[]> = {};
+  tableRows(raw).forEach((item) => {
+    const obj = (item ?? {}) as Record<string, unknown>;
+    const studentId = asId(obj.studentId ?? obj.student ?? obj.id);
+    if (!studentId || !Array.isArray(obj.freezeRanges)) return;
+    result[studentId] = (obj.freezeRanges as unknown[]).flatMap((entry, index) => {
+      const range = (entry ?? {}) as Record<string, unknown>;
+      const startDate = String(range.startDate ?? "").slice(0, 10);
+      if (!startDate) return [];
+      const endDate = range.endDate ? String(range.endDate).slice(0, 10) : null;
+      return [{
+        id: range.id ? String(range.id) : `${studentId}-${index}`,
+        startDate,
+        endDate,
+        reason: range.reason ? String(range.reason) : null,
+        status: typeof range.status === "string" ? range.status.toUpperCase() : null,
+      }];
+    });
+  });
   return result;
 };
 
@@ -248,12 +281,15 @@ export const attendancesApi = baseApi.injectEndpoints({
       transformResponse: (response: { data: unknown }) => normalizeDates(response?.data),
       providesTags: ["attendance"],
     }),
-    groupAttendance: builder.query<AttendanceRecord[], GroupAttendanceQueryArgs>({
+    groupAttendance: builder.query<GroupAttendance, GroupAttendanceQueryArgs>({
       query: ({ groupId, month }) => ({
         url: `${PATHS.ATTENDANCES}/group/${groupId}?month=${month}`,
         method: "GET",
       }),
-      transformResponse: (response: { data: unknown }) => normalizeRecords(response?.data),
+      transformResponse: (response: { data: unknown }): GroupAttendance => ({
+        records: normalizeRecords(response?.data),
+        freezeRanges: normalizeFreezeRanges(response?.data),
+      }),
       providesTags: ["attendance"],
     }),
     attendanceReport: builder.query<AttendanceReportResult, AttendanceReportQueryArgs>({

@@ -93,3 +93,62 @@ describe("attendancesApi.saveAttendance", () => {
     subscription.unsubscribe();
   });
 });
+
+describe("attendancesApi.groupAttendance", () => {
+  // GET /attendances/group/{id}, as Swagger shows it.
+  const answer = {
+    data: {
+      dates: ["2026-11-02"],
+      table: [
+        {
+          studentId: "s1", studentName: "Qayumova Dilnura", photo: null,
+          freezeRanges: [
+            { id: "f1", startDate: "2026-09-01T00:00:00+05:00", endDate: "2026-09-01T23:59:59+05:00", reason: null, status: "EXPIRED" },
+          ],
+          attendances: [{ date: "2026-11-02", status: "PRESENT", reason: null, attendance: null }],
+        },
+        { studentId: "s2", studentName: "Never Frozen", freezeRanges: [], attendances: [{ date: "2026-11-02", status: null, reason: null }] },
+        { studentId: "s3", studentName: "No Field", attendances: [] },
+        {
+          studentId: "s4", studentName: "Open Freeze",
+          freezeRanges: [{ id: "f4", startDate: "2026-10-20T00:00:00+05:00", endDate: null, reason: "Trip", status: "ACTIVE" }, { id: "bad" }],
+          attendances: [],
+        },
+      ],
+    },
+  };
+
+  const load = async () => {
+    const store = createTestStore();
+    stubFetch(() => jsonResponse(answer));
+    const subscription = store.dispatch(attendancesApi.endpoints.groupAttendance.initiate({ groupId: "g1", month: "2026-11" }));
+    const result = await subscription;
+    subscription.unsubscribe();
+    return result.data!;
+  };
+
+  it("keeps the marks, as it always did", async () => {
+    const { records } = await load();
+
+    expect(records).toContainEqual({ studentId: "s1", date: "2026-11-02", status: "PRESENT", reason: null });
+    expect(records).toContainEqual({ studentId: "s2", date: "2026-11-02", status: null, reason: null });
+  });
+
+  it("reads each student's freezes as calendar days, keyed by student", async () => {
+    const { freezeRanges } = await load();
+
+    expect(freezeRanges.s1).toEqual([
+      { id: "f1", startDate: "2026-09-01", endDate: "2026-09-01", reason: null, status: "EXPIRED" },
+    ]);
+    expect(freezeRanges.s4).toEqual([
+      { id: "f4", startDate: "2026-10-20", endDate: null, reason: "Trip", status: "ACTIVE" },
+    ]);
+  });
+
+  it("tells 'never frozen' ([]) from 'the answer did not say' (no entry)", async () => {
+    const { freezeRanges } = await load();
+
+    expect(freezeRanges.s2).toEqual([]);
+    expect("s3" in freezeRanges).toBe(false);
+  });
+});

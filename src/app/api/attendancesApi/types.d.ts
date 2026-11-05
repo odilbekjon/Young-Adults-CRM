@@ -27,6 +27,28 @@ export interface AttendanceRecord {
   reason?: string | null;
 }
 
+// One freeze of a student in this group, as GET /attendances/group/{id} lists it
+// under the student's `freezeRanges`. Dates are the calendar days written in the
+// backend's own timestamps ("2026-09-01T00:00:00+05:00" -> "2026-09-01").
+export interface FreezeRange {
+  id: string;
+  // First frozen day.
+  startDate: string;
+  // Last frozen day; null while the freeze has no end yet.
+  endDate: string | null;
+  reason: string | null;
+  // ACTIVE while the freeze is in force, EXPIRED once it has ended.
+  status: string | null;
+}
+
+// What the Attendance grid reads out of GET /attendances/group/{id}: every mark,
+// and - for each student whose row carries the field - their freezes (an empty
+// list means "never frozen"; no entry means the backend did not say).
+export interface GroupAttendance {
+  records: AttendanceRecord[];
+  freezeRanges: Record<string, FreezeRange[]>;
+}
+
 export interface GroupAttendanceQueryArgs {
   groupId: string;
   month: string;

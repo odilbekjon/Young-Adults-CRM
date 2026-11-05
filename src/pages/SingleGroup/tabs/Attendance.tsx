@@ -36,12 +36,13 @@ import {
   useSaveAttendanceMutation,
   useLazyGroupAttendanceExcelQuery,
 } from "../../../app/api/attendancesApi";
-import type { AttendanceRecord, AttendanceStatus } from "../../../app/api/attendancesApi/types";
+import type { AttendanceRecord, AttendanceStatus, FreezeRange } from "../../../app/api/attendancesApi/types";
 import { useToast } from "../../../Context/ToastContext";
 import { downloadExcelBlob } from "../../../utils/downloadExcel";
 import { extractApiError } from "../../../utils/extractApiError";
 import { isAfterDay, isFutureAttendanceDate } from "../../../utils/attendanceDates";
 import { toLocalISODate } from "../../../utils/localDate";
+import { isFrozenOn, rollCallDay } from "../../../utils/freezeRanges";
 import { StudentStatusDot, GROUP_STATUS_STYLE } from "../StudentStatusDot";
 import type { StudentGroupStatus } from "../../../app/api/groupsApi/types";
 
@@ -408,6 +409,7 @@ const AttendanceRow = memo(function AttendanceRow({
 // Stand-ins for "no answer yet" that keep the same identity between renders.
 const NO_DATES: string[] = [];
 const NO_RECORDS: AttendanceRecord[] = [];
+const NO_FREEZES: Record<string, FreezeRange[]> = {};
 
 export const Attendance = memo(function Attendance({ groupId, students, restrictToToday, groupName, branchName }: Props) {
   const { t } = useTranslation();
@@ -431,8 +433,10 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
     data: lessonDates = NO_DATES, isFetching: datesLoading, isError: datesError, error: datesErr, refetch: refetchDates,
   } = useGroupAttendanceDatesQuery({ groupId, month: monthStr }, { skip: !groupId });
   const {
-    data: records = NO_RECORDS, isFetching: recordsLoading, isError: recordsError, error: recordsErr, refetch: refetchRecords,
+    data: attendance, isFetching: recordsLoading, isError: recordsError, error: recordsErr, refetch: refetchRecords,
   } = useGroupAttendanceQuery({ groupId, month: monthStr }, { skip: !groupId });
+  const records = attendance?.records ?? NO_RECORDS;
+  const freezeRanges = attendance?.freezeRanges ?? NO_FREEZES;
   const loadFailed = datesError || recordsError;
   const [saveAttendance] = useSaveAttendanceMutation();
   const [fetchExcel, { isFetching: isExporting }] = useLazyGroupAttendanceExcelQuery();
@@ -591,7 +595,23 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
   // roster beside it still lists them, where they are unfrozen). This is the one
   // place the filter lives: the staff page and the teacher page both render this
   // grid.
-  const rollCall = useMemo(() => students.filter((s) => s.groupStatus !== "FROZEN"), [students]);
+  //
+  // "Frozen" is judged on one day of the month on screen (rollCallDay: today for
+  // the current month): by the freezes the attendance answer lists for the
+  // student, which also know the past - a student frozen only since this month
+  // still shows in last month's grid, and one whose freeze has ended (EXPIRED) is
+  // back in. For the current and later months the roster's own FROZEN status
+  // counts as well, and where the answer lists no freezes for a student it is all
+  // there is.
+  const rollCall = useMemo(() => {
+    const day = rollCallDay(`${monthStr}-01`, `${monthStr}-${pad2(totalDays)}`, todayIso);
+    return students.filter((s) => {
+      const ranges = freezeRanges[s.realId];
+      const frozenByRanges = ranges ? isFrozenOn(ranges, day, todayIso) : undefined;
+      const frozenNow = s.groupStatus === "FROZEN";
+      return !(day < todayIso ? (frozenByRanges ?? frozenNow) : frozenByRanges === true || frozenNow);
+    });
+  }, [students, freezeRanges, monthStr, totalDays, todayIso]);
   const wasLabel = t(`singleGroup.tabs.attendance.${ATT_VAL_LABEL_KEYS.Was}`);
   const notLabel = t(`singleGroup.tabs.attendance.${ATT_VAL_LABEL_KEYS.Not}`);
 

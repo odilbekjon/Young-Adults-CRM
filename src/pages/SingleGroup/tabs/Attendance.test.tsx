@@ -243,3 +243,131 @@ describe("Attendance grid: a frozen member is not in the roll call", () => {
     expect(rowCount()).toBe(0);
   });
 });
+
+// The attendance answer lists each student's own freezes (`freezeRanges`), which say
+// when they were frozen - the roster's current status cannot.
+describe("Attendance grid: freezes listed by the attendance answer", () => {
+  type Status = "ACTIVE" | "FROZEN";
+  const member = (id: number, name: string, groupStatus: Status = "ACTIVE") => ({
+    id, realId: `s${id}`, name, phone: "", active: true, groupStatus,
+  });
+  // A freeze as GET /attendances/group/{id} writes it.
+  const freeze = (from: string, to: string | null, status: "ACTIVE" | "EXPIRED") => ({
+    id: `f-${from}`, startDate: `${from}T00:00:00+05:00`, endDate: to ? `${to}T23:59:59+05:00` : null, reason: null, status,
+  });
+  const row = (studentId: string, freezeRanges?: unknown[]) => ({
+    studentId, studentName: studentId, photo: null, ...(freezeRanges && { freezeRanges }), attendances: [],
+  });
+
+  const answering = (table: unknown[]): FetchHandler => (request) => {
+    if (request.url.includes("/dates?")) return jsonResponse({ data: [] });
+    return jsonResponse({ data: { dates: [], table } });
+  };
+
+  const rowCount = () => document.querySelectorAll("tbody tr").length;
+  const PREV_MONTH = 2;
+
+  // Renders the grid and waits until the attendance answer has been asked for and
+  // taken in, so what is asserted next is the grid with the freezes applied.
+  const renderWith = async (table: unknown[], members: ReturnType<typeof member>[], firstRow: string) => {
+    const { requests } = stubFetch(answering(table));
+    renderWithStore(
+      <ToastProvider>
+        <Attendance groupId="g1" students={members} />
+      </ToastProvider>,
+    );
+    await screen.findByText(firstRow);
+    await waitFor(() => expect(requests.some((r) => r.url.includes("/attendances/group/g1?month="))).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  };
+
+  it("leaves out a student whose freeze is in force today, whatever the roster says", async () => {
+    await renderWith(
+      [row("s1", []), row("s2", [freeze("2026-10-20", null, "ACTIVE")])],
+      [member(1, "Active Ali"), member(2, "Frozen Vali")],
+      "Active Ali",
+    );
+
+    expect(screen.queryByText("Frozen Vali")).toBeNull();
+    expect(rowCount()).toBe(1);
+  });
+
+  it("keeps a student whose freeze has ended (EXPIRED)", async () => {
+    // the freeze of Qayumova Dilnura in the Swagger response: one day in September
+    await renderWith(
+      [row("s1", [freeze("2026-09-01", "2026-09-01", "EXPIRED")])],
+      [member(1, "Qayumova Dilnura")],
+      "Qayumova Dilnura",
+    );
+
+    expect(rowCount()).toBe(1);
+  });
+
+  it("keeps a student whose freeze was lifted today, although its end date is today", async () => {
+    await renderWith(
+      [row("s1", [freeze("2026-10-20", "2026-11-03", "EXPIRED")])],
+      [member(1, "Back Bobur")],
+      "Back Bobur",
+    );
+
+    expect(rowCount()).toBe(1);
+  });
+
+  it("keeps the roster's FROZEN status in force for the current month, even when the freezes say nothing", async () => {
+    await renderWith(
+      [row("s1", []), row("s2", [])],
+      [member(1, "Active Ali"), member(2, "Frozen Vali", "FROZEN")],
+      "Active Ali",
+    );
+
+    await waitFor(() => expect(screen.queryByText("Frozen Vali")).toBeNull());
+  });
+
+  it("relies on the roster's status alone for a student the answer lists no freezes for", async () => {
+    await renderWith(
+      [row("s1")],
+      [member(1, "Active Ali"), member(2, "Frozen Vali", "FROZEN")],
+      "Active Ali",
+    );
+
+    await waitFor(() => expect(screen.queryByText("Frozen Vali")).toBeNull());
+    expect(rowCount()).toBe(1);
+  });
+
+  it("shows last month's grid with a student who was not frozen yet then", async () => {
+    // frozen since 2 November and still frozen: out of November's grid, but in October's
+    const { requests } = stubFetch(answering([row("s1", [freeze("2026-11-02", null, "ACTIVE")])]));
+    renderWithStore(
+      <ToastProvider>
+        <Attendance groupId="g1" students={[member(1, "Frozen Vali", "FROZEN")]} />
+      </ToastProvider>,
+    );
+    await screen.findByText("Attendance");
+    await waitFor(() => expect(requests.some((r) => r.url.includes("/attendances/group/g1?month=2026-11"))).toBe(true));
+    expect(screen.queryByText("Frozen Vali")).toBeNull();
+
+    press(PREV_MONTH);
+
+    expect(await screen.findByText("Frozen Vali")).toBeTruthy();
+    expect(rowCount()).toBe(1);
+  });
+
+  it("leaves out of a past month a student who was still frozen on its last day, and keeps one whose freeze ended before", async () => {
+    await renderWith(
+      [
+        row("s1", [freeze("2026-09-15", "2026-10-31", "EXPIRED")]),
+        row("s2", [freeze("2026-09-15", "2026-10-20", "EXPIRED")]),
+      ],
+      [member(1, "Frozen Vali"), member(2, "Other Sami")],
+      "Frozen Vali",
+    );
+    // today (3 November) both freezes are over
+    expect(rowCount()).toBe(2);
+
+    press(PREV_MONTH);
+
+    await waitFor(() => expect(rowCount()).toBe(1));
+    expect(screen.getByText("Other Sami")).toBeTruthy();
+    expect(screen.queryByText("Frozen Vali")).toBeNull();
+  });
+});

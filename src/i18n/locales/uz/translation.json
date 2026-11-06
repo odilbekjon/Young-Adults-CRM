@@ -955,6 +955,9 @@
         "netProfitHint": "Faqat to'liq oylar uchun, boshqa filtrlarsiz ko'rsatiladi.",
         "byMethod": "To'lov usullari bo'yicha",
         "details": "Batafsil",
+        "salaries": "Maoshlar",
+        "other": "Boshqa",
+        "detailsError": "Batafsil ma'lumotni yuklab bo'lmadi.",
         "thisMonth": {
           "title": "Joriy oy",
           "income": "Daromad",

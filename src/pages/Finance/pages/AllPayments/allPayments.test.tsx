@@ -723,3 +723,153 @@ describe("AllPayments: teacher and course filters over every group", () => {
     expect(screen.getByText("Student own")).toBeTruthy();
   });
 });
+
+
+// ─── Details under Total Net Profit ──────────────────────────────────────────
+
+describe("AllPayments: net profit details", () => {
+  const METHODS = [{ id: "m1", name: "Cash" }, { id: "m2", name: "Click" }, { id: "m3", name: "UZCARD" }, { id: "m4", name: "Humo" }];
+  const listOf = (rows: unknown[]) =>
+    jsonResponse({ success: true, data: rows, meta: { total: rows.length, page: 1, limit: 1000, totalPages: 1 } });
+  const outflow = (id: string, amount: number, methodId: string, methodName: string) => ({ id, amount, paymentMethod: { id: methodId, name: methodName } });
+
+  // Cash took 400 000 and paid 50 000 out; Click took 250 000 and paid 100 000 out; UZCARD only paid 50 000 out.
+  // 650 000 in, 150 000 of expenses, 50 000 of withdrawals: 450 000 of net profit.
+  const backend = (chart: Record<string, unknown> = {}, expenses?: () => Response) => (request: SentRequest) => {
+    const { pathname } = new URL(request.url);
+    if (pathname.endsWith("/finance/payment-methods")) return jsonResponse({ success: true, data: METHODS });
+    if (pathname.endsWith("/finance/chart")) {
+      return jsonResponse({
+        success: true,
+        data: [{ month: "Nov", monthNumber: 11, totalPayments: 650_000, totalExpenses: 150_000, totalSalaries: 0, totalWithdrawals: 50_000, netProfit: 450_000, ...chart }],
+      });
+    }
+    if (pathname.endsWith("/finance/expenses")) {
+      return expenses ? expenses() : listOf([outflow("e1", 100_000, "m2", "Click"), outflow("e2", 50_000, "m3", "UZCARD")]);
+    }
+    if (pathname.endsWith("/finance/withdrawals")) return listOf([outflow("w1", 50_000, "m1", "Cash")]);
+    return answer(request);
+  };
+
+  const outflowRequests = (requests: SentRequest[]) =>
+    requests.filter((r) => /\/finance\/(expenses|withdrawals)$/.test(new URL(r.url).pathname));
+  const detailsButton = () => within(netProfitCard()).getByRole("button", { name: "Details" });
+  const lines = () => within(netProfitCard()).queryAllByTestId("net-profit-line").map((li) => (li.textContent ?? "").replace(/\s/g, " "));
+  const open = async () => {
+    await within(netProfitCard()).findByText(money(450_000));
+    fireEvent.click(detailsButton());
+  };
+
+  it("has a Details dropdown under Total Net Profit, closed until it is asked for", async () => {
+    const { requests } = stubFetch(backend());
+    renderPage();
+    await within(netProfitCard()).findByText(money(450_000));
+
+    expect(detailsButton().getAttribute("aria-expanded")).toBe("false");
+    expect(lines()).toEqual([]);
+    // Nothing is read for it before it is opened.
+    expect(outflowRequests(requests)).toEqual([]);
+    // It sits below the figure and the period, inside the net profit card only.
+    const figure = within(netProfitCard()).getByText(/Total Net Profit/);
+    expect(figure.compareDocumentPosition(detailsButton()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(revenueCard()).queryByRole("button", { name: "Details" })).toBeNull();
+  });
+
+  it("opens to the net of every payment method: what it took in minus what went out through it", async () => {
+    stubFetch(backend());
+    renderPage();
+    await open();
+
+    await waitFor(() => expect(lines()).toHaveLength(4));
+    expect(detailsButton().getAttribute("aria-expanded")).toBe("true");
+    expect(lines()).toEqual([
+      `Cash: ${money(350_000)} UZS`,
+      `Click: ${money(150_000)} UZS`,
+      `UZCARD: ${money(-50_000)} UZS`,
+      `Humo: 0 UZS`,
+    ]);
+    // Together they are the Total Net Profit above.
+    expect(350_000 + 150_000 - 50_000).toBe(450_000);
+  });
+
+  it("closes again on a second click", async () => {
+    stubFetch(backend());
+    renderPage();
+    await open();
+    await waitFor(() => expect(lines()).toHaveLength(4));
+
+    fireEvent.click(detailsButton());
+
+    await waitFor(() => expect(lines()).toEqual([]));
+    expect(detailsButton().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("reads the expenses and withdrawals of the period on screen, once", async () => {
+    const { requests } = stubFetch(backend());
+    renderPage();
+    await open();
+    await waitFor(() => expect(lines()).toHaveLength(4));
+
+    const asked = outflowRequests(requests);
+    expect(asked.map((r) => new URL(r.url).pathname.split("/").pop())).toEqual(["expenses", "withdrawals"]);
+    asked.forEach((r) => {
+      const params = new URL(r.url).searchParams;
+      expect(params.get("startDate")).toBe("2026-11-01");
+      expect(params.get("endDate")).toBe("2026-11-30");
+    });
+
+    // Closing and opening it again does not ask again.
+    fireEvent.click(detailsButton());
+    await waitFor(() => expect(lines()).toEqual([]));
+    fireEvent.click(detailsButton());
+    await waitFor(() => expect(lines()).toHaveLength(4));
+    expect(outflowRequests(requests)).toHaveLength(2);
+  });
+
+  it("shows the salaries as a line of their own, as money out", async () => {
+    stubFetch(backend({ totalSalaries: 30_000, netProfit: 420_000 }));
+    renderPage();
+    await within(netProfitCard()).findByText(money(420_000));
+    fireEvent.click(detailsButton());
+
+    await waitFor(() => expect(lines()).toHaveLength(5));
+    expect(lines()[4]).toBe(`Salaries: ${money(-30_000)} UZS`);
+    expect(lines().some((l) => l.startsWith("Other"))).toBe(false);
+  });
+
+  it("shows what no method explains as 'Other', so the lines add up to the figure above", async () => {
+    stubFetch(backend({ netProfit: 460_000 }));
+    renderPage();
+    await within(netProfitCard()).findByText(money(460_000));
+    fireEvent.click(detailsButton());
+
+    await waitFor(() => expect(lines()).toHaveLength(5));
+    expect(lines()[4]).toBe(`Other: ${money(10_000)} UZS`);
+  });
+
+  it("says so, and can try again, when the expenses cannot be read", async () => {
+    let broken = true;
+    stubFetch(backend({}, () => (broken ? jsonResponse({ success: false, error: ["Boom"] }, { status: 500 }) : listOf([outflow("e1", 100_000, "m2", "Click"), outflow("e2", 50_000, "m3", "UZCARD")]))));
+    renderPage();
+    await open();
+
+    expect(await within(netProfitCard()).findByText("Could not load the details.")).toBeTruthy();
+    expect(lines()).toEqual([]);
+
+    broken = false;
+    fireEvent.click(within(netProfitCard()).getByRole("button", { name: "Retry" }));
+
+    await waitFor(() => expect(lines()).toHaveLength(4));
+    expect(within(netProfitCard()).queryByText("Could not load the details.")).toBeNull();
+  });
+
+  it("is not offered where there is no net profit to explain (a partial month)", async () => {
+    const { requests } = stubFetch(backend());
+    renderPage("/finance/payments?startDate=2026-11-01&endDate=2026-11-03");
+    await within(revenueCard()).findByText(money(650_000));
+
+    expect(within(netProfitCard()).getByText("—")).toBeTruthy();
+    expect(within(netProfitCard()).queryByRole("button", { name: "Details" })).toBeNull();
+    expect(outflowRequests(requests)).toEqual([]);
+  });
+});

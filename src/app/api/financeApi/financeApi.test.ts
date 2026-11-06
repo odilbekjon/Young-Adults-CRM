@@ -249,6 +249,89 @@ describe("financeApi.paymentsRange", () => {
   });
 });
 
+const outflowJson = (id: string, amount: number, methodId: string | null, methodName = "") => ({
+  id, amount, paymentMethod: methodId ? { id: methodId, name: methodName } : null,
+});
+
+describe("financeApi.financeOutflows", () => {
+  const lists = (expenses: unknown[], withdrawals: unknown[]) => (request: SentRequest) => {
+    const rows = path(request) === "/finance/expenses" ? expenses : withdrawals;
+    const page = Number(query(request).get("page"));
+    const limit = Math.min(Number(query(request).get("limit")), 2);
+    return jsonResponse({ success: true, data: rows.slice((page - 1) * limit, page * limit), meta: meta(rows.length, page, limit) });
+  };
+
+  it("adds up the expenses and the withdrawals of the period, per payment method", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch(lists(
+      [outflowJson("e1", 100_000, "m2", "Click"), outflowJson("e2", 50_000, "m3", "UZCARD"), outflowJson("e3", 25_000, "m2", "Click")],
+      [outflowJson("w1", 70_000, "m1", "Cash"), outflowJson("w2", 5_000, "m2", "Click")],
+    ));
+
+    const result = await store.dispatch(financeApi.endpoints.financeOutflows.initiate(NOVEMBER));
+
+    expect(result.data?.rows).toEqual([
+      { id: "m2", name: "Click", amount: 130_000 },
+      { id: "m3", name: "UZCARD", amount: 50_000 },
+      { id: "m1", name: "Cash", amount: 70_000 },
+    ]);
+    // every page of both lists (two rows a page here), for the period and branch asked for
+    expect(requests.filter((r) => path(r) === "/finance/expenses")).toHaveLength(2);
+    expect(requests.filter((r) => path(r) === "/finance/withdrawals")).toHaveLength(1);
+    requests.forEach((r) => {
+      expect(query(r).get("startDate")).toBe("2026-11-01");
+      expect(query(r).get("endDate")).toBe("2026-11-30");
+      expect(query(r).get("branchId")).toBe("b1");
+    });
+  });
+
+  it("keeps a row that names no method id apart, by its name", async () => {
+    const store = createTestStore();
+    stubFetch(lists([{ id: "e1", amount: 10, paymentMethodName: "Cash" }], []));
+
+    const result = await store.dispatch(financeApi.endpoints.financeOutflows.initiate(NOVEMBER));
+
+    expect(result.data?.rows).toEqual([{ id: null, name: "Cash", amount: 10 }]);
+  });
+
+  it("is an empty list for a period with nothing paid out", async () => {
+    const store = createTestStore();
+    stubFetch(lists([], []));
+
+    const result = await store.dispatch(financeApi.endpoints.financeOutflows.initiate(NOVEMBER));
+
+    expect(result.data?.rows).toEqual([]);
+  });
+
+  it("fails as a whole when one of the lists cannot be read (never a shortened sum)", async () => {
+    const store = createTestStore();
+    stubFetch((request) =>
+      path(request) === "/finance/withdrawals"
+        ? jsonResponse({ success: false, error: ["Boom"] }, { status: 500 })
+        : lists([outflowJson("e1", 100, "m1", "Cash")], [])(request),
+    );
+
+    const result = await store.dispatch(financeApi.endpoints.financeOutflows.initiate(NOVEMBER));
+
+    expect(result.data).toBeUndefined();
+    expect(result.error).toMatchObject({ status: 500 });
+  });
+
+  it("asks again with a smaller page when the backend refuses the big one", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch((request) =>
+      Number(query(request).get("limit")) > 100
+        ? jsonResponse({ success: false, error: ["limit must not be greater than 100"] }, { status: 400 })
+        : jsonResponse({ success: true, data: [outflowJson("x", 5, "m1", "Cash")], meta: meta(1, 1, 100) }),
+    );
+
+    const result = await store.dispatch(financeApi.endpoints.financeOutflows.initiate(NOVEMBER));
+
+    expect(result.data?.rows).toEqual([{ id: "m1", name: "Cash", amount: 10 }]);
+    expect(requests.map((r) => query(r).get("limit"))).toEqual(["1000", "100", "1000", "100"]);
+  });
+});
+
 describe("getTooManyPaymentsTotal", () => {
   it("reads the count off the 'too many' error and nothing else", () => {
     expect(getTooManyPaymentsTotal({ status: "CUSTOM_ERROR", error: "TOO_MANY_PAYMENTS", data: { total: 30_000 } })).toBe(30_000);

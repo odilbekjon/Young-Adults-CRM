@@ -943,6 +943,9 @@
         "netProfitHint": "Shown for whole months with no other filters.",
         "byMethod": "By payment method",
         "details": "Details",
+        "salaries": "Salaries",
+        "other": "Other",
+        "detailsError": "Could not load the details.",
         "thisMonth": {
           "title": "This month",
           "income": "Income",

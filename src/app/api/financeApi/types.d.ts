@@ -407,6 +407,23 @@ export interface FinanceStats {
   netProfitThisMonth: number;
 }
 
+// Money that LEFT the cashbox in a period, per payment method: every expense plus
+// every withdrawal (GET /finance/expenses and GET /finance/withdrawals, all pages).
+// `id` is null when the row names no method id (it is then told apart by `name`).
+// The All payments page sets it against the payments of each method to break the
+// net profit down by method.
+export type FinanceOutflowsQueryArgs = Pick<FinanceListQueryArgs, "branchId" | "startDate" | "endDate">;
+
+export interface FinanceOutflow {
+  id: string | null;
+  name: string;
+  amount: number;
+}
+
+export interface FinanceOutflowsResult {
+  rows: FinanceOutflow[];
+}
+
 // POST /finance/withdrawals — cashbox withdrawal / dividend payout
 export interface CreateWithdrawalRequest {
   recipientName: string;

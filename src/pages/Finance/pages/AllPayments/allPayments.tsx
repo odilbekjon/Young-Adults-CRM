@@ -6,7 +6,7 @@ import {
   TableHead, TableRow, Collapse, Pagination, CircularProgress,
   IconButton, Tooltip as MuiTooltip,
 } from "@mui/material";
-import { FiAlertCircle, FiCalendar, FiDownload, FiRotateCcw, FiSliders, FiX } from "react-icons/fi";
+import { FiAlertCircle, FiCalendar, FiChevronDown, FiDownload, FiInfo, FiRotateCcw, FiSliders, FiX } from "react-icons/fi";
 import { FaCoins } from "react-icons/fa";
 import { TiArrowSortedDown, TiArrowSortedUp, TiArrowUnsorted } from "react-icons/ti";
 import { useTranslation } from "react-i18next";
@@ -14,6 +14,7 @@ import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, B
 
 import {
   useFinanceChartQuery,
+  useFinanceOutflowsQuery,
   usePaymentsRangeQuery,
   useLazyPaymentsExcelQuery,
   useDeletePaymentMutation,
@@ -31,6 +32,7 @@ import { usePersistedState } from "../../../../hooks/usePersistedState";
 import { todayLocalISO } from "../../../../utils/localDate";
 import { PaymentsChart } from "./PaymentsChart";
 import { fmt } from "./format";
+import { netProfitDetails } from "./netProfitDetails";
 import {
   DEFAULT_SORT, EMPTY_FILTERS, buildGroupDirectory, countedPayments, createdLocalDate, createdLocalDateTime,
   filterPayments, hasClientFilters, hasPaymentFilters, sortPayments, staffKeyOf, sumAmounts, teacherNamesOf,
@@ -88,8 +90,9 @@ const Select = ({ value, onChange, options, placeholder }: {
 );
 
 // The look of a statistics card: white, with a coloured edge on the left.
-const statCardCls =
-  "flex items-start justify-between gap-3 rounded-xl border border-gray-200 dark:border-gray-700 border-l-[5px] bg-white dark:bg-[var(--color-surface)] px-6 py-5 shadow-sm";
+const statCardShellCls =
+  "rounded-xl border border-gray-200 dark:border-gray-700 border-l-[5px] bg-white dark:bg-[var(--color-surface)] px-6 py-5 shadow-sm";
+const statCardCls = `flex items-start justify-between gap-3 ${statCardShellCls}`;
 const statCardStyle = { borderLeftColor: "var(--color-primary)" };
 const statTitleCls = "text-[22px] leading-tight text-gray-800 dark:text-gray-100";
 const statDateCls = "mt-2 flex flex-wrap items-center gap-x-1.5 text-[13px] text-gray-400 dark:text-gray-500";
@@ -228,10 +231,33 @@ export const AllPayments = () => {
   const {
     data: chartMonths, isError: netProfitError,
   } = useFinanceChartQuery({ year: wholeMonths?.year ?? 0, branchId: branchId ?? undefined }, { skip: !netProfitApplies });
-  const netProfit = netProfitApplies && chartMonths && wholeMonths
-    ? chartMonths.filter((m) => wholeMonths.months.includes(m.monthNumber)).reduce((sum, m) => sum + m.netProfit, 0)
+  const periodMonths = netProfitApplies && chartMonths && wholeMonths
+    ? chartMonths.filter((m) => wholeMonths.months.includes(m.monthNumber))
     : null;
+  const netProfit = periodMonths ? periodMonths.reduce((sum, m) => sum + m.netProfit, 0) : null;
   const netProfitLoading = netProfitApplies && !chartMonths && !netProfitError;
+
+  // "Details" under the net profit: the same figure split by payment method. What each
+  // method took in is already on this page (the period's payments, which carry no filter
+  // when the net profit applies); what went out through it (expenses and withdrawals) is
+  // asked for only once the dropdown is opened.
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const {
+    data: outflowsData, isError: outflowsError, refetch: refetchOutflows,
+  } = useFinanceOutflowsQuery(
+    { startDate: applied.startDate || undefined, endDate: applied.endDate || undefined, branchId: branchId ?? undefined },
+    { skip: !detailsOpen || netProfit === null },
+  );
+  const details = useMemo(() => {
+    if (netProfit === null || !periodMonths || !outflowsData || !paymentMethodsData) return null;
+    return netProfitDetails({
+      methods: paymentMethodsData,
+      payments: counted,
+      outflows: outflowsData.rows,
+      salaries: periodMonths.reduce((sum, m) => sum + m.totalSalaries, 0),
+      netProfit,
+    });
+  }, [netProfit, periodMonths, outflowsData, paymentMethodsData, counted]);
 
   // ── Dropdown options ─────────────────────────────────────────────────────
   // Built from every group and from the payments on screen (a payment can carry
@@ -403,22 +429,64 @@ export const AllPayments = () => {
           </div>
 
           {/* Total Net Profit (the backend's figure for the same whole month(s)) */}
-          <div data-testid="net-profit-card" className={statCardCls} style={statCardStyle}>
-            <div className="min-w-0">
-              <p className={statTitleCls}>
-                <span>{t("finance.allPayments.stats.totalNetProfit")}</span>{" "}
-                <span className="font-bold">{netProfitLoading ? "…" : netProfit === null ? dash : fmt(netProfit)}</span>
-                {netProfit !== null && <span className="ml-1.5 text-[17px] font-semibold text-gray-500 dark:text-gray-400">UZS</span>}
-              </p>
-              <p className={statDateCls}>
-                <FiCalendar size={13} className="shrink-0" />
-                <span>{periodLabel}</span>
-              </p>
-              {netProfit === null && !netProfitLoading && (
-                <p className="mt-1 text-[12px] text-gray-400 dark:text-gray-500">{t("finance.allPayments.stats.netProfitHint")}</p>
-              )}
+          <div data-testid="net-profit-card" className={statCardShellCls} style={statCardStyle}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className={statTitleCls}>
+                  <span>{t("finance.allPayments.stats.totalNetProfit")}</span>{" "}
+                  <span className="font-bold">{netProfitLoading ? "…" : netProfit === null ? dash : fmt(netProfit)}</span>
+                  {netProfit !== null && <span className="ml-1.5 text-[17px] font-semibold text-gray-500 dark:text-gray-400">UZS</span>}
+                </p>
+                <p className={statDateCls}>
+                  <FiCalendar size={13} className="shrink-0" />
+                  <span>{periodLabel}</span>
+                </p>
+                {netProfit === null && !netProfitLoading && (
+                  <p className="mt-1 text-[12px] text-gray-400 dark:text-gray-500">{t("finance.allPayments.stats.netProfitHint")}</p>
+                )}
+              </div>
+              <FaCoins size={34} className="mt-1 shrink-0 text-[var(--color-primary)] opacity-80" />
             </div>
-            <FaCoins size={34} className="mt-1 shrink-0 text-[var(--color-primary)] opacity-80" />
+
+            {/* Details: the net profit by payment method, closed until asked for. */}
+            {netProfit !== null && (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setDetailsOpen((open) => !open)}
+                  aria-expanded={detailsOpen}
+                  aria-controls="net-profit-details"
+                  className="flex w-full items-center justify-between gap-2 py-1 text-[13px] text-gray-500 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-100"
+                >
+                  <span className="inline-flex items-center gap-2"><FiInfo size={13} className="shrink-0" />{t("finance.allPayments.stats.details")}</span>
+                  <FiChevronDown size={16} className={`shrink-0 transition-transform ${detailsOpen ? "rotate-180" : ""}`} />
+                </button>
+                <Collapse in={detailsOpen} unmountOnExit>
+                  <div id="net-profit-details" className="pt-3">
+                    {outflowsError ? (
+                      <div className="flex items-center gap-3 text-[13px] text-gray-500 dark:text-gray-400">
+                        <FiAlertCircle size={15} className="shrink-0 text-red-400" />
+                        <span>{t("finance.allPayments.stats.detailsError")}</span>
+                        <button onClick={() => refetchOutflows()} className="rounded border border-gray-200 dark:border-gray-700 px-3 py-1 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-800">
+                          {t("finance.allPayments.chart.retry")}
+                        </button>
+                      </div>
+                    ) : !details ? (
+                      <CircularProgress size={18} aria-label={t("finance.allPayments.stats.details")} />
+                    ) : (
+                      <ul className="list-disc space-y-1.5 pl-8 text-[15px] font-semibold text-gray-900 dark:text-gray-100">
+                        {details.map((line) => (
+                          <li key={line.key} data-testid="net-profit-line">
+                            {line.kind === "method" ? line.name : t(`finance.allPayments.stats.${line.kind}`)}: {fmt(line.amount)} UZS
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="mt-4 border-t border-gray-200 dark:border-gray-700" />
+                  </div>
+                </Collapse>
+              </div>
+            )}
           </div>
         </div>
 

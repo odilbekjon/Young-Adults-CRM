@@ -31,6 +31,9 @@ import {
     PaymentDetail,
     PaymentReceipt,
     FinanceStats,
+    FinanceOutflow,
+    FinanceOutflowsQueryArgs,
+    FinanceOutflowsResult,
     WithdrawalRow,
     WithdrawalsResult,
     CreateExpenseCategoryRequest,
@@ -830,6 +833,55 @@ export const financeApi = baseApi.injectEndpoints({
             },
             providesTags: ["payment"],
         }),
+        // What LEFT the cashbox in a period, per payment method: all the expenses and all
+        // the withdrawals of it (every page of both lists). The All payments page sets
+        // it against each method's payments to break the net profit down, and asks only
+        // when that breakdown is opened. A list that cannot be read in full is an error,
+        // never a silently shortened sum.
+        financeOutflows: builder.query<FinanceOutflowsResult, FinanceOutflowsQueryArgs>({
+            queryFn: async (args, _api, _extra, fetchWithBQ) => {
+                type PageBody = { data?: unknown; meta?: unknown } | undefined;
+                const byMethod = new Map<string, FinanceOutflow>();
+                const sources = [
+                    { path: PATHS.EXPENSES, normalize: normalizeExpenseRows },
+                    { path: PATHS.WITHDRAWALS, normalize: normalizeWithdrawalRows },
+                ];
+
+                for (const { path, normalize } of sources) {
+                    let limit = PAYMENTS_RANGE_PAGE_SIZES[0];
+                    const fetchPage = (page: number) =>
+                        fetchWithBQ({ url: `${path}?${buildFinanceListQueryString({ ...args, page, limit })}`, method: "GET" });
+
+                    let first = await fetchPage(1);
+                    for (const smaller of PAYMENTS_RANGE_PAGE_SIZES.slice(1)) {
+                        if (!isPageSizeRejection(first.error)) break;
+                        limit = smaller;
+                        first = await fetchPage(1);
+                    }
+                    if (first.error) return { error: first.error };
+
+                    const firstBody = first.data as PageBody;
+                    const meta = normalizeListMeta(firstBody?.meta);
+                    const rows: Array<ExpenseRow | WithdrawalRow> = [...normalize(firstBody?.data)];
+                    const lastPage = meta.totalPages || Math.ceil(meta.total / limit);
+                    for (let page = 2; page <= lastPage; page += 1) {
+                        const next = await fetchPage(page);
+                        if (next.error) return { error: next.error };
+                        rows.push(...normalize((next.data as PageBody)?.data));
+                    }
+                    if (rows.length < meta.total) return { error: { status: "CUSTOM_ERROR", error: INCOMPLETE_PAYMENTS } };
+
+                    rows.forEach((row) => {
+                        const key = row.paymentMethodId || row.paymentMethodName || "";
+                        const entry = byMethod.get(key) ?? { id: row.paymentMethodId, name: row.paymentMethodName, amount: 0 };
+                        entry.amount += row.amount;
+                        byMethod.set(key, entry);
+                    });
+                }
+                return { data: { rows: [...byMethod.values()] } };
+            },
+            providesTags: ["payment"],
+        }),
         paymentById: builder.query<PaymentDetail, string>({
             query: (id) => ({
                 url: `${PATHS.PAYMENTS}/${id}`,
@@ -975,6 +1027,7 @@ export const {
     useLazyPaymentsExcelQuery,
     useDeletePaymentMutation,
     useFinanceStatsQuery,
+    useFinanceOutflowsQuery,
     useWithdrawalsQuery,
     useWithdrawalsTotalQuery,
     useLazyWithdrawalsExcelQuery,

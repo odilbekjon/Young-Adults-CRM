@@ -18,7 +18,6 @@ import {
   useLazyPaymentsExcelQuery,
   useDeletePaymentMutation,
   usePaymentMethodsQuery,
-  useFinanceStatsQuery,
   getTooManyPaymentsTotal,
   isCompletedPaymentStatus,
 } from "../../../../app/api/financeApi";
@@ -35,7 +34,7 @@ import { fmt } from "./format";
 import {
   DEFAULT_SORT, EMPTY_FILTERS, buildGroupDirectory, countedPayments, createdLocalDate, createdLocalDateTime,
   filterPayments, hasClientFilters, hasPaymentFilters, sortPayments, staffKeyOf, sumAmounts, teacherNamesOf,
-  toOptions, totalsByMethod,
+  toOptions,
   type Option, type PaymentFilters, type PaymentSort, type SortKey,
 } from "./clientFilters";
 import {
@@ -97,7 +96,8 @@ const statDateCls = "mt-2 flex flex-wrap items-center gap-x-1.5 text-[13px] text
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const PAGE_LIMIT = 20;
+// Rows per page; more than that are paged.
+const PAGE_LIMIT = 50;
 
 // Columns are laid out by percentage (the table keeps a minimum width and scrolls
 // sideways below it), so they sit close to their content on any screen. The
@@ -195,8 +195,6 @@ export const AllPayments = () => {
   // The period holds more payments than are loaded into the browser at once.
   const tooManyPayments = paymentsError ? getTooManyPaymentsTotal(paymentsErrorValue) : null;
   const [fetchPaymentsExcel, { isFetching: isExporting }] = useLazyPaymentsExcelQuery();
-  // Current-month summary (GET /finance/stats).
-  const { data: monthStats } = useFinanceStatsQuery();
   const [deletePayment, { isLoading: isRefunding }] = useDeletePaymentMutation();
   const [refundTarget, setRefundTarget] = useState<string | null>(null);
   const [refundError, setRefundError] = useState<string | null>(null);
@@ -207,7 +205,6 @@ export const AllPayments = () => {
   // Refunded/cancelled payments stay in the table (flagged) but are not money received.
   const counted = useMemo(() => countedPayments(filteredRows), [filteredRows]);
   const revenue = useMemo(() => sumAmounts(counted), [counted]);
-  const methodTotals = useMemo(() => totalsByMethod(counted), [counted]);
 
   const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
@@ -334,11 +331,11 @@ export const AllPayments = () => {
 
   const headCellSx = {
     fontWeight: 700,
-    fontSize: 13,
+    fontSize: 12,
     color: "var(--color-text-primary)",
     whiteSpace: "nowrap",
     borderBottom: "1px solid var(--color-border)",
-    py: 1.75,
+    py: 1.1,
   } as const;
   const sortableHead = (key: SortKey, label: string) => {
     const active = sort.key === key;
@@ -453,55 +450,6 @@ export const AllPayments = () => {
           )}
         </div>
       </div>
-
-      {/* ── Current-month summary (real data: GET /finance/stats) ── */}
-      {monthStats && (
-        <>
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{t("finance.allPayments.stats.thisMonth.title")}</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-          {[
-            { label: t("finance.allPayments.stats.thisMonth.income"), value: monthStats.totalIncomeThisMonth },
-            { label: t("finance.allPayments.stats.thisMonth.expenses"), value: monthStats.totalExpensesThisMonth },
-            { label: t("finance.allPayments.stats.thisMonth.salaries"), value: monthStats.totalSalariesThisMonth },
-            { label: t("finance.allPayments.stats.thisMonth.withdrawals"), value: monthStats.totalWithdrawalsThisMonth },
-            { label: t("finance.allPayments.stats.thisMonth.netProfit"), value: monthStats.netProfitThisMonth },
-          ].map((s) => (
-            <div key={s.label} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] px-4 py-3 shadow-sm">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{s.label}</p>
-              <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{fmt(s.value)} <span className="text-xs font-normal text-gray-400">UZS</span></p>
-            </div>
-          ))}
-        </div>
-        </>
-      )}
-
-      {/* One card per payment method: its share of the filtered result above. */}
-      {!paymentsLoading && !paymentsError && methodTotals.length > 0 && (
-        <div className="mb-5">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
-            {t("finance.allPayments.stats.byMethod", "By payment method")}
-          </p>
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))" }}>
-            {methodTotals.map((m) => {
-              const share = revenue > 0 ? Math.min(100, Math.round((m.amount / revenue) * 100)) : 0;
-              return (
-                <div key={m.id} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[var(--color-surface)] px-4 py-3 shadow-sm">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 truncate">{m.name}</p>
-                    <span className="text-[11px] font-semibold text-[#003366] dark:text-[var(--color-nav-active)]">{share}%</span>
-                  </div>
-                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                    {fmt(m.amount)} <span className="text-xs font-normal text-gray-400">UZS</span>
-                  </p>
-                  <div className="mt-2 h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                    <div className="h-full rounded-full bg-[#003366] transition-all" style={{ width: `${share}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* ── Filters, laid out flat under the statistics (a label above every
             control); every field narrows the table, the cards and the chart together ── */}
@@ -652,44 +600,44 @@ export const AllPayments = () => {
                         opacity: paymentsFetching ? 0.6 : 1,
                       }}
                     >
-                      <TableCell sx={{ py: 1.1, whiteSpace: "nowrap", borderBottom: "1px solid var(--color-border-subtle)" }}>
-                        <span className="mr-2 align-top text-[11px] text-gray-400 dark:text-gray-500">{rowNum}.</span>
-                        <span className="text-[13px] font-medium text-gray-700 dark:text-gray-200">{fmtDate(p.date)}</span>
+                      <TableCell sx={{ py: 0.55, whiteSpace: "nowrap", borderBottom: "1px solid var(--color-border-subtle)" }}>
+                        <span className="mr-2 align-top text-[10px] text-gray-400 dark:text-gray-500">{rowNum}.</span>
+                        <span className="text-[12px] font-medium text-gray-700 dark:text-gray-200">{fmtDate(p.date)}</span>
                       </TableCell>
-                      <TableCell sx={{ py: 1.1, borderBottom: "1px solid var(--color-border-subtle)" }}>
-                        <span className="break-words text-[15px] text-gray-900 dark:text-gray-100">{p.studentName || "—"}</span>
+                      <TableCell sx={{ py: 0.55, borderBottom: "1px solid var(--color-border-subtle)" }}>
+                        <span className="break-words text-[13px] text-gray-900 dark:text-gray-100">{p.studentName || "—"}</span>
                       </TableCell>
-                      <TableCell sx={{ py: 1.1, borderBottom: "1px solid var(--color-border-subtle)" }}>
+                      <TableCell sx={{ py: 0.55, borderBottom: "1px solid var(--color-border-subtle)" }}>
                         <span className="whitespace-nowrap">
-                          <span className={voided ? "text-[15px] text-gray-400 dark:text-gray-500 line-through" : "text-[15px] text-gray-900 dark:text-gray-100"}>{fmt(p.amount)}</span>
-                          <span className="ml-1 text-[12px] text-gray-500 dark:text-gray-400">UZS</span>
+                          <span className={voided ? "text-[13px] text-gray-400 dark:text-gray-500 line-through" : "text-[13px] text-gray-900 dark:text-gray-100"}>{fmt(p.amount)}</span>
+                          <span className="ml-1 text-[10px] text-gray-500 dark:text-gray-400">UZS</span>
                         </span>
                         {voided && p.status && (
-                          <span className="ml-2 inline-block rounded px-2 py-0.5 text-[12px] font-medium" style={{ background: "#fee2e2", color: "#b91c1c" }}>
+                          <span className="ml-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ background: "#fee2e2", color: "#b91c1c" }}>
                             {p.status.toLowerCase()}
                           </span>
                         )}
                       </TableCell>
-                      <TableCell sx={{ py: 1.1, fontSize: 13, color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-subtle)" }}>
+                      <TableCell sx={{ py: 0.55, fontSize: 12, color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-subtle)" }}>
                         {p.paymentMethodName || "—"}
                       </TableCell>
-                      <TableCell sx={{ py: 1.1, fontSize: 13, color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-subtle)" }}>
+                      <TableCell sx={{ py: 0.55, fontSize: 12, color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-subtle)" }}>
                         {teachers || (groupsLoading ? "…" : "—")}
                       </TableCell>
-                      <TableCell sx={{ py: 1.1, borderBottom: "1px solid var(--color-border-subtle)" }}>
+                      <TableCell sx={{ py: 0.55, borderBottom: "1px solid var(--color-border-subtle)" }}>
                         {p.notes ? (
-                          <span className="inline-block max-w-full break-words rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:text-gray-300">
+                          <span className="inline-block max-w-full break-words rounded-md bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] font-medium text-gray-700 dark:text-gray-300">
                             {p.notes}
                           </span>
                         ) : "—"}
                       </TableCell>
-                      <TableCell sx={{ py: 1.1, borderBottom: "1px solid var(--color-border-subtle)" }}>
-                        <span className="block break-words text-[13px] text-gray-800 dark:text-gray-200">{p.createdBy || "—"}</span>
+                      <TableCell sx={{ py: 0.55, borderBottom: "1px solid var(--color-border-subtle)" }}>
+                        <span className="block break-words text-[12px] text-gray-800 dark:text-gray-200">{p.createdBy || "—"}</span>
                         {createdAt && (
-                          <span className="block whitespace-nowrap text-[12px] text-gray-400 dark:text-gray-500">{createdAt}</span>
+                          <span className="block whitespace-nowrap text-[10px] text-gray-400 dark:text-gray-500">{createdAt}</span>
                         )}
                       </TableCell>
-                      <TableCell sx={{ py: 1.1, borderBottom: "1px solid var(--color-border-subtle)" }} onClick={(e) => e.stopPropagation()}>
+                      <TableCell sx={{ py: 0.55, borderBottom: "1px solid var(--color-border-subtle)" }} onClick={(e) => e.stopPropagation()}>
                         {!voided && (
                           <MuiTooltip title={t("finance.allPayments.table.refund")} placement="top" arrow>
                             <IconButton size="small" onClick={() => { setRefundError(null); setRefundTarget(p.id); }}>

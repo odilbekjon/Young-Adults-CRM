@@ -98,14 +98,12 @@ describe("AllPayments: monthly view", () => {
     const revenue = revenueCard();
     const netProfit = netProfitCard();
     const chart = await screen.findByText("Payments per day");
-    const thisMonth = await screen.findByText("This month");
-    const byMethod = await screen.findByText("By payment method");
     const firstFilter = screen.getByText("Date from");
     const filtersToggle = screen.getByRole("button", { name: "Filters" });
     const tableHead = screen.getByRole("columnheader", { name: "Date" });
 
     const before = (a: Element, b: Element) => expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    [title, revenue, netProfit, chart, thisMonth, byMethod, firstFilter, filtersToggle, tableHead].reduce((previous, next) => {
+    [title, revenue, netProfit, chart, firstFilter, filtersToggle, tableHead].reduce((previous, next) => {
       before(previous, next);
       return next;
     });
@@ -117,6 +115,22 @@ describe("AllPayments: monthly view", () => {
     ["Date from", "Date to", "Name or Phone", "Select group", "Course", "Teacher", "Payment type", "Sum", "Staff Name", "From created date", "To created date"].forEach((label) => {
       expect(within(form).getByText(label)).toBeTruthy();
     });
+  });
+
+  it("has no 'This month' summary or per-method cards between the statistics and the filters", async () => {
+    const { requests } = stubFetch(answer);
+    renderPage();
+    await within(revenueCard()).findByText(money(650_000));
+
+    expect(screen.queryByText("This month")).toBeNull();
+    expect(screen.queryByText("By payment method")).toBeNull();
+    expect(screen.queryByText("62%")).toBeNull();
+    // The summary's own request is not made any more.
+    expect(requests.some((r) => new URL(r.url).pathname.endsWith("/finance/stats"))).toBe(false);
+    // What stays: the revenue and net-profit cards, the chart, the filters, the table.
+    expect(screen.getByText("Payments per day")).toBeTruthy();
+    expect(screen.getByText("Date from")).toBeTruthy();
+    expect(screen.getByText("Student p1")).toBeTruthy();
   });
 
   it("has a Filters button above the table that hides and shows the filters (shown by default)", async () => {
@@ -150,9 +164,6 @@ describe("AllPayments: monthly view", () => {
     expect(screen.getByText("Showing", { exact: false }).textContent).toContain("3");
     // The chart is the per-day view of the month.
     expect(screen.getByText("Payments per day")).toBeTruthy();
-    // One card per payment method, from the same rows: Cash 400 000 of 650 000, Click 250 000.
-    expect(screen.getByText("62%")).toBeTruthy();
-    expect(screen.getByText("38%")).toBeTruthy();
   });
 
   it("shows the backend's net profit for a whole month", async () => {
@@ -531,27 +542,57 @@ describe("AllPayments: sorting", () => {
   });
 
   it("goes back to page 1 when the order changes, and sorts every page, not just the one on screen", async () => {
-    const many = Array.from({ length: 25 }, (_, i) => {
+    const many = Array.from({ length: 120 }, (_, i) => {
       const n = i + 1;
-      // q1 is the oldest and the cheapest; q25 the newest and the dearest.
-      return payment(`q${n}`, { amount: n * 1000, createdAt: `2026-11-03T08:${String(n).padStart(2, "0")}:00.000Z` });
+      // q1 is the oldest and the cheapest; q120 the newest and the dearest.
+      return payment(`q${n}`, { amount: n * 1000, createdAt: `2026-11-03T08:${String(n % 60).padStart(2, "0")}:00.000Z`, date: `2026-11-${String(1 + Math.floor((n - 1) / 6)).padStart(2, "0")}` });
     });
     stubFetch(serve({ payments: many }));
     renderPage();
-    await screen.findByText("Student q25");
+    await screen.findByText("Student q120");
 
-    expect(studentOrder()[0]).toBe("Student q25");
-    fireEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
+    // Newest first, fifty to a page: 120 payments are three pages.
+    expect(studentOrder()).toHaveLength(50);
+    fireEvent.click(screen.getByRole("button", { name: "Go to page 3" }));
     expect(await screen.findByText("Student q1")).toBeTruthy();
-    expect(studentOrder()).toHaveLength(5);
+    expect(studentOrder()).toHaveLength(20);
 
     fireEvent.click(headerButton("Sum"));
-    expect(screen.getByText("Showing", { exact: false }).textContent).toContain("1–20");
+    expect(screen.getByText("Showing", { exact: false }).textContent).toContain("1–50");
     expect(studentOrder()[0]).toBe("Student q1");
-    expect(studentOrder()).toHaveLength(20);
+    expect(studentOrder()).toHaveLength(50);
     // The dearest payment is on the last page, not lost.
+    fireEvent.click(screen.getByRole("button", { name: "Go to page 3" }));
+    expect(await screen.findByText("Student q120")).toBeTruthy();
+  });
+});
+
+describe("AllPayments: fifty rows a page", () => {
+  const rowsOf = (n: number) => Array.from({ length: n }, (_, i) => payment(`r${i + 1}`, { createdAt: `2026-11-03T08:${String(i % 60).padStart(2, "0")}:00.000Z` }));
+
+  it("lists up to fifty payments on a page and pages the rest", async () => {
+    stubFetch(serve({ payments: rowsOf(55) }));
+    renderPage();
+    // Newest first, so r55 is on page 1 and r1 (the oldest) is among the last five.
+    await screen.findByText("Student r55");
+
+    expect(studentOrder()).toHaveLength(50);
+    expect(screen.getByText("Showing", { exact: false }).textContent).toContain("1–50");
+    expect(screen.getByText("Showing", { exact: false }).textContent).toContain("55");
+    expect(screen.getByRole("button", { name: "Go to page 2" })).toBeTruthy();
+
     fireEvent.click(screen.getByRole("button", { name: "Go to page 2" }));
-    expect(await screen.findByText("Student q25")).toBeTruthy();
+    await waitFor(() => expect(studentOrder()).toHaveLength(5));
+    expect(screen.getByText("Showing", { exact: false }).textContent).toContain("51–55");
+  });
+
+  it("shows no pagination for fifty payments or fewer", async () => {
+    stubFetch(serve({ payments: rowsOf(50) }));
+    renderPage();
+    await screen.findByText("Student r1");
+
+    expect(studentOrder()).toHaveLength(50);
+    expect(screen.queryByRole("button", { name: "Go to page 2" })).toBeNull();
   });
 });
 

@@ -1859,8 +1859,10 @@
       }
     },
     "moveStudentDialog": {
-      "title": "Move",
+      "title": "Move student to group",
       "selectGroup": "Select group",
+      "dateFrom": "Date from",
+      "dateHint": "Payment in this group ends the day before. In the new group the student starts on a trial lesson (not billed) until you activate them there.",
       "reasonPlaceholder": "Reason for moving (required)",
       "move": "Move",
       "cancel": "Cancel",

@@ -2,9 +2,11 @@
 import { useEffect, useState } from "react";
 import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
-import { inputStyle, submitBtn, cancelBtn } from "../styles";
+import { inputStyle, labelStyle, submitBtn, cancelBtn } from "../styles";
 import { GroupStudent } from "../types";
+import { DatePickerField } from "../DatePickerField";
 import { submitOnEnter } from "../../../utils/submitOnEnter";
+import { todayLocalISO } from "../../../utils/localDate";
 
 interface GroupOption {
   id: string;
@@ -18,24 +20,27 @@ export const MoveStudentDialog = ({
   onClose: () => void;
   student: GroupStudent | null;
   groups: GroupOption[];
-  onMove: (groupId: string, reason: string) => void;
+  // `moveFrom` (YYYY-MM-DD) is the day the student leaves this group: payment here
+  // ends the day before (see transferEndDate).
+  onMove: (groupId: string, reason: string, moveFrom: string) => void;
   isSubmitting?: boolean;
 }) => {
   const { t } = useTranslation();
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [reason, setReason] = useState("");
+  const [moveFrom, setMoveFrom] = useState(todayLocalISO());
 
   useEffect(() => {
-    if (!open) { setSelectedGroupId(""); setReason(""); }
+    if (!open) { setSelectedGroupId(""); setReason(""); setMoveFrom(todayLocalISO()); }
   }, [open]);
 
   if (!open) return null;
 
-  const canSubmit = selectedGroupId && reason.trim() && !isSubmitting;
+  const canSubmit = selectedGroupId && moveFrom && reason.trim() && !isSubmitting;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
-    onMove(selectedGroupId, reason.trim());
+    onMove(selectedGroupId, reason.trim(), moveFrom);
   };
 
   return (
@@ -63,6 +68,15 @@ export const MoveStudentDialog = ({
             <option key={g.id} value={g.id}>{g.name}</option>
           ))}
         </select>
+        {/* From when the student is out of this group (payment here ends the day
+            before). In the new group they start on a trial lesson, unbilled. */}
+        <div>
+          <label style={labelStyle}>{t("singleGroup.moveStudentDialog.dateFrom")}</label>
+          <DatePickerField value={moveFrom} onChange={setMoveFrom} disabled={isSubmitting} shortcuts />
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 6 }}>
+            {t("singleGroup.moveStudentDialog.dateHint")}
+          </div>
+        </div>
         <input
           style={inputStyle}
           value={reason}

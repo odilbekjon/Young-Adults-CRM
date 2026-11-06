@@ -645,12 +645,24 @@ export const groupsApi = baseApi.injectEndpoints({
             // 400s with "reason should not be empty" + "reason must be a
             // string" — both class-validator's messages for a missing field,
             // not an empty-string one), so it's always sent.
-            query: ({ id, studentId, newGroupId, reason }) => ({
+            // The dates (see TransferStudentRequest) are only sent when given.
+            query: ({ id, studentId, newGroupId, reason, paymentStartDate, paymentEndDate, keepCustomPrice }) => ({
                 url: `${PATHS.GROUPS}/${id}/students/transfer`,
                 method: "POST",
-                body: { studentId, newGroupId, reason },
+                body: {
+                    studentId,
+                    newGroupId,
+                    reason,
+                    ...(paymentStartDate && { paymentStartDate }),
+                    ...(paymentEndDate && { paymentEndDate }),
+                    ...(keepCustomPrice !== undefined && { keepCustomPrice }),
+                },
             }),
-            invalidatesTags: ["group", "studentGroup"],
+            // "student": a transfer closes billing in one group and opens it in
+            // another, so the student's balance (profile, group rosters, Students
+            // and debtors lists, Dashboard figures) is stale until it is read
+            // again - like every other membership change (assign, freeze, remove).
+            invalidatesTags: ["group", "studentGroup", "student"],
         }),
         assignTeachersToGroup: builder.mutation<AssignTeachersResponse, AssignTeachersRequest>({
             query: ({ id, teacherIds }) => ({

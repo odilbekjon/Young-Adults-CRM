@@ -80,6 +80,7 @@ import { AddPayment } from "../../components/AddPayment";
 import { MoveStudentDialog } from "./MoveStudentDialog";
 import { RemoveStudentDialog } from "./RemoveStudentDialog";
 import { decimalToNumber } from "../../utils/decimal";
+import { transferEndDate } from "../../utils/transferDates";
 import { useStudentBalances } from "../../hooks/useStudentBalances";
 import { useArchiveStudent } from "../../hooks/useArchiveStudent";
 import { useAllStudentGroups } from "../../hooks/useAllStudentGroups";
@@ -990,10 +991,29 @@ export const SingleGroup = () => {
     }
   };
 
-  const handleMoveStudent = async (newGroupId: string, reason: string) => {
+  // `moveFrom` is the day the student leaves this group. Payment here is closed on
+  // the day before it (paymentEndDate, see transferEndDate), so a move dated in the
+  // past is not billed here up to today as well.
+  //
+  // The new group gets NO paymentStartDate: sending one would start billing there
+  // from the move. The student lands there on a trial lesson (PROBATION) instead -
+  // payment is not calculated while it lasts - and billing starts when staff
+  // activate them in the new group ("Finish trial lesson"), from the day they pick
+  // (today by default, any earlier day if they say so). The days in between are
+  // billed in neither group.
+  const handleMoveStudent = async (newGroupId: string, reason: string, moveFrom: string) => {
     if (!selectedStudent || !id) return;
     try {
-      await transferStudent({ id, studentId: selectedStudent.realId, newGroupId, reason }).unwrap();
+      // The day payment began here: this group's own billing start, else the day they joined.
+      const oldStart = membershipByStudentId.get(selectedStudent.realId)?.paymentStartDate ?? selectedStudent.joinedAt;
+      const paymentEndDate = transferEndDate(moveFrom, oldStart);
+      await transferStudent({
+        id,
+        studentId: selectedStudent.realId,
+        newGroupId,
+        reason,
+        ...(paymentEndDate && { paymentEndDate }),
+      }).unwrap();
       toast.success(t("singleGroup.moveStudentDialog.toast.success"));
       // Business rule (same as a freshly added member): a transferred student
       // must NOT land ACTIVE in the new group — the backend creates the new

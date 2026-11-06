@@ -1859,8 +1859,10 @@
       }
     },
     "moveStudentDialog": {
-      "title": "Ko'chirish",
+      "title": "O'quvchini guruhga ko'chirish",
       "selectGroup": "Guruhni tanlang",
+      "dateFrom": "Sanadan",
+      "dateHint": "Bu guruhda to'lov bir kun oldin tugaydi. Yangi guruhda o'quvchi sinov darsida bo'ladi (to'lov hisoblanmaydi) — siz uni u yerda faollashtirmaguningizcha.",
       "reasonPlaceholder": "Ko'chirish sababi (majburiy)",
       "move": "Ko'chirish",
       "cancel": "Bekor qilish",

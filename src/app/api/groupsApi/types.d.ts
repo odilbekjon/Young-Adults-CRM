@@ -205,16 +205,29 @@ export interface RemoveStudentFromGroupResponse {
   message?: string;
 }
 
-// POST /groups/{id}/students/transfer — Swagger's example body lists
-// {studentId, newGroupId, reason} together, and the live backend rejects a
-// request that omits reason with "reason should not be empty" + "reason
+// POST /groups/{id}/students/transfer — Swagger's body is {studentId, newGroupId,
+// reason, paymentEndDate, paymentStartDate, keepCustomPrice}. The live backend
+// rejects a request that omits reason with "reason should not be empty" + "reason
 // must be a string" (both class-validator messages for a missing/undefined
 // field), so it's required here, not optional.
+//
+// The two dates are optional; left out, the backend picks the day itself (today):
+//   - paymentEndDate: the last day payment is calculated in the OLD group (the day
+//     before the student moves, see transferEndDate). The UI sends it.
+//   - paymentStartDate: the first day payment is calculated in the NEW group, which
+//     would start billing there from the move. The UI does NOT send it: a moved
+//     student joins the new group on a trial lesson (PROBATION, payment not
+//     calculated) and billing starts when staff activate them, from the day they pick.
 export interface TransferStudentRequest {
   id: string;
   studentId: string;
   newGroupId: string;
   reason: string;
+  paymentStartDate?: string;
+  paymentEndDate?: string;
+  // Swagger also takes keepCustomPrice (carry the student's custom price to the
+  // new group); not sent - the base price of the other group may differ.
+  keepCustomPrice?: boolean;
 }
 
 export interface TransferStudentResponse {

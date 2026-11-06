@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { API_BASE_URL } from "../baseApi";
 import { extractHistoryList, groupsApi, normalizeHistory } from "./groupsApi";
+import { studentsApi } from "../studentsApi";
 import { setSelectedBranchId } from "../../store/branchSlice";
 import { createTestStore } from "../../../test/testStore";
 import { jsonResponse, readFormData, stubFetch } from "../../../test/fetchStub";
@@ -416,6 +417,55 @@ describe("groupsApi membership writes", () => {
 
     expect(path(requests[0].url)).toBe("/groups/g1/students/transfer");
     expect(JSON.parse(requests[0].body)).toEqual({ studentId: "s1", newGroupId: "g2", reason: "Level up" });
+  });
+
+  it("sends the payment start and end dates of the move when given", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch(() => jsonResponse({ success: true }));
+
+    await store.dispatch(
+      groupsApi.endpoints.transferStudent.initiate({
+        id: "g1", studentId: "s1", newGroupId: "g2", reason: "Level up",
+        paymentStartDate: "2026-11-02", paymentEndDate: "2026-11-01",
+      }),
+    );
+
+    expect(JSON.parse(requests[0].body)).toEqual({
+      studentId: "s1", newGroupId: "g2", reason: "Level up", paymentStartDate: "2026-11-02", paymentEndDate: "2026-11-01",
+    });
+  });
+
+  it("sends only the start date when there is no end date to give", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch(() => jsonResponse({ success: true }));
+
+    await store.dispatch(
+      groupsApi.endpoints.transferStudent.initiate({
+        id: "g1", studentId: "s1", newGroupId: "g2", reason: "Level up", paymentStartDate: "2026-11-02",
+      }),
+    );
+
+    const body = JSON.parse(requests[0].body);
+    expect(body.paymentStartDate).toBe("2026-11-02");
+    expect("paymentEndDate" in body).toBe(false);
+    expect("keepCustomPrice" in body).toBe(false);
+  });
+
+  it("refreshes the student's balance afterwards: a move opens billing in one group and closes it in another", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch(() => jsonResponse({ success: true, data: { id: "s1", balance: -100000 } }));
+
+    const subscription = store.dispatch(studentsApi.endpoints.studentById.initiate("s1"));
+    await subscription;
+    const reads = () => requests.filter((r) => r.method === "GET" && path(r.url) === "/students/s1");
+    expect(reads()).toHaveLength(1);
+
+    await store.dispatch(
+      groupsApi.endpoints.transferStudent.initiate({ id: "g1", studentId: "s1", newGroupId: "g2", reason: "Level up", paymentStartDate: "2026-11-02" }),
+    );
+
+    await vi.waitFor(() => expect(reads()).toHaveLength(2));
+    subscription.unsubscribe();
   });
 
   it("removes a student with DELETE /groups/{id}/students/{studentId}", async () => {

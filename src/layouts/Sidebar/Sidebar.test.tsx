@@ -64,6 +64,22 @@ describe("Sidebar: Finance", () => {
     }
   });
 
+  it("stays lit on the Debtors page, which belongs to Finance but has no entry of its own", () => {
+    renderSidebar("/finance/debtors");
+
+    // The lit entry's label is bold; every other one is regular.
+    expect(railEntry("Finance").style.fontWeight).toBe("600");
+    expect(railEntry("Reports").style.fontWeight).toBe("400");
+    expect(linkTo("/finance/debtors")).toBeNull();
+    expect(screen.queryByText(en.sidebar.finance.debtors)).toBeNull();
+  });
+
+  it("is not lit away from Finance", () => {
+    renderSidebar("/dashboard");
+
+    expect(railEntry("Finance").style.fontWeight).toBe("400");
+  });
+
   it("starts with no panel open when the page itself is under /finance", () => {
     renderSidebar("/finance/all-payments");
 

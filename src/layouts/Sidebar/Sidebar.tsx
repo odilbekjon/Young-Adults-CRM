@@ -204,7 +204,19 @@ interface NavEntry {
   icon: React.ReactNode;
   // Single-line ellipsis instead of wrapping (long group names).
   truncate?: boolean;
+  // The entry is lit on every page under this path too, not only on its own `path`
+  // (Finance opens All payments, but Debtors is a Finance page as well).
+  activeUnder?: string;
 }
+
+// Whether a rail entry is the current page: its own path, a path below it when it
+// has a submenu, or a page under the `activeUnder` path it names.
+const isNavActive = (item: NavEntry, pathname: string, hasSubmenu: boolean): boolean => {
+  const own = hasSubmenu
+    ? pathname === item.path || pathname.startsWith(item.path + "/")
+    : pathname === item.path;
+  return own || (!!item.activeUnder && (pathname === item.activeUnder || pathname.startsWith(item.activeUnder + "/")));
+};
 
 const NAV_ITEMS: NavEntry[] = [
   { labelKey: "sidebar.nav.dashboard",          path: "/dashboard",                  icon: <FiHome size={40}  /> },
@@ -217,8 +229,9 @@ const NAV_ITEMS: NavEntry[] = [
   // Temporarily hidden: the Attendance reports page (its route is commented out in Router.tsx).
   // { labelKey: "sidebar.nav.attendanceReports",  path: "/attendance-reports",         icon: <FaRegCalendarAlt size={40} /> },
   // { labelKey: "sidebar.nav.teacherAttendanceReports", path: "/teacher-attendance-reports", icon: <FaRegCalendarAlt size={40} /> },
-  // Finance opens All payments directly: no submenu beside the rail.
-  { labelKey: "sidebar.nav.finance",             path: "/finance/all-payments",       icon: <AiOutlineDollar size={40} /> },
+  // Finance opens All payments directly: no submenu beside the rail. It stays lit on
+  // Debtors (/finance/debtors) too, which the Dashboard links to.
+  { labelKey: "sidebar.nav.finance",             path: "/finance/all-payments",       activeUnder: "/finance", icon: <AiOutlineDollar size={40} /> },
   { labelKey: "sidebar.nav.reports",             path: "/reports",                    icon: <AiOutlinePieChart size={40} /> },
   { labelKey: "sidebar.nav.settings",            path: "/settings",                   icon: <IoMdSettings size={40} /> },
 ];
@@ -687,9 +700,7 @@ export const Sidebar = () => {
           {navItems.map((item) => {
             const hasSubmenu = !!visibleSubmenus[item.path]?.length;
             const submenuOpen = openSubmenu === item.path;
-            const isActive = hasSubmenu
-              ? pathname === item.path || pathname.startsWith(item.path + "/")
-              : pathname === item.path;
+            const isActive = isNavActive(item, pathname, hasSubmenu);
 
             return (
               <NavItem
@@ -734,9 +745,7 @@ export const Sidebar = () => {
         <Box sx={{ width: COMPACT_SIDEBAR_WIDTH, flexShrink: 0, pt: 1, pb: 4, overflowY: "auto", scrollbarWidth: "none", "&::-webkit-scrollbar": { display: "none" } }}>
           {navItems.map((item) => {
             const hasSubmenu = !!visibleSubmenus[item.path]?.length;
-            const isActive = hasSubmenu
-              ? pathname === item.path || pathname.startsWith(item.path + "/")
-              : pathname === item.path;
+            const isActive = isNavActive(item, pathname, hasSubmenu);
             return (
               <NavItem
                 key={item.path}

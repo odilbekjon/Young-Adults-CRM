@@ -246,13 +246,13 @@ export const Dashboard = () => {
         "@media(max-width:1280px)": { gridTemplateColumns: "repeat(4,1fr)" },
         "@media(max-width:640px)":  { gridTemplateColumns: "repeat(2,1fr)" },
       }}>
-        {STATS.map(({ key, labelKey, route, filter, icon, disabled }) => {
+        {STATS.map(({ key, labelKey, route, filter, icon }) => {
           const value = statValues[key];
           return (
-          <Tooltip key={key} title={disabled ? "" : t("dashboard.stats.goToPage", { label: t(labelKey) })} placement="top" arrow>
+          <Tooltip key={key} title={t("dashboard.stats.goToPage", { label: t(labelKey) })} placement="top" arrow>
             <Paper
               elevation={0}
-              onClick={disabled ? undefined : () => goTo(key, route, filter)}
+              onClick={() => goTo(key, route, filter)}
               sx={{
                 px: 1.5, py: 2,
                 borderRadius: "12px",
@@ -263,17 +263,15 @@ export const Dashboard = () => {
                 alignItems: "center",
                 textAlign: "center",
                 gap: 0.5,
-                cursor: disabled ? "default" : "pointer",
+                cursor: "pointer",
                 userSelect: "none",
                 transition: "all 0.18s ease",
-                ...(!disabled && {
-                  "&:hover": {
-                    borderColor: "#f97316",
-                    boxShadow: "0 4px 20px rgba(249,115,22,0.14)",
-                    transform: "translateY(-2px)",
-                  },
-                  "&:active": { transform: "translateY(0)" },
-                }),
+                "&:hover": {
+                  borderColor: "#f97316",
+                  boxShadow: "0 4px 20px rgba(249,115,22,0.14)",
+                  transform: "translateY(-2px)",
+                },
+                "&:active": { transform: "translateY(0)" },
               }}
             >
               <Box sx={{ color: "#f97316", mb: 0.25 }}>{icon}</Box>

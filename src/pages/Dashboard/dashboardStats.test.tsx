@@ -167,16 +167,16 @@ describe("Dashboard stat cards: where they lead", () => {
     expect(screen.getByTestId("where").textContent).toBe("/groups");
   });
 
-  it("leaves the Debtors card where it is: its page (Finance > Debtors) is hidden for now", async () => {
+  it("opens the Debtors page from the Debtors card", async () => {
     stubFetch(makeBackend());
     renderWithRoutes();
     await waitFor(() => expect(valueOf("Debtors")).toBe("1649"));
+    expect(getComputedStyle(card("Debtors")).cursor).toBe("pointer");
 
     fireEvent.click(card("Debtors"));
 
-    expect(screen.getByTestId("where").textContent).toBe("/dashboard");
-    expect(screen.queryByText("ANOTHER PAGE")).toBeNull();
-    expect(getComputedStyle(card("Debtors")).cursor).toBe("default");
+    expect(await screen.findByText("ANOTHER PAGE")).toBeTruthy();
+    expect(screen.getByTestId("where").textContent).toBe("/finance/debtors");
   });
 });
 

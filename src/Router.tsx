@@ -67,13 +67,14 @@ const WhatsNew = lazyNamed(() => import("./pages/Settings/blog/pages"), "WhatsNe
 const BlogAdd = lazyNamed(() => import("./pages/Settings/blog/pages/wahts-new/add"), "BlogAdd");
 const Finance = lazyNamed(() => import("./pages/Finance/Finance"), "Finance");
 const AllPayments = lazyNamed(() => import("./pages/Finance/pages/AllPayments"), "AllPayments");
-// Temporarily hidden: Finance now holds only All payments. The other pages stay in
+// Finance holds All payments and Debtors for now. The other pages stay in
 // pages/Finance/pages; restore these imports, their routes below and their entries
-// in Sidebar.tsx to bring them back.
+// in Sidebar.tsx to bring them back. (Debtors has no rail entry of its own: the
+// Dashboard's Debtors card opens it.)
 // const Withdraw = lazyNamed(() => import("./pages/Finance/pages/Withdraw"), "Withdraw");
 // const TotalExpenses = lazyNamed(() => import("./pages/Finance/pages/TotalExpenses"), "TotalExpenses");
 // const Salaries = lazyNamed(() => import("./pages/Finance/pages/Salaries"), "Salaries");
-// const Debtors = lazyNamed(() => import("./pages/Finance/pages/Debtors"), "Debtors");
+const Debtors = lazyNamed(() => import("./pages/Finance/pages/Debtors"), "Debtors");
 const Reports = lazyNamed(() => import("./pages/Reports/Reports"), "Reports");
 const AttendanceReports = lazyNamed(() => import("./pages/Reports/pages/AttendenceReports"), "AttendanceReports");
 const ConversionReports = lazyNamed(() => import("./pages/Reports/pages/ConversationReports"), "ConversionReports");
@@ -201,19 +202,19 @@ export const AppRouter = () => {
             <Route path="/profile/:id" element={<Shell><Profile/></Shell>} />
             </Route>
 
-            {/* Finance is All payments only for now: the sidebar entry opens it
-                directly (no submenu), and /finance itself lands on it. Entry
-                needs FINANCE or PAYMENTS - the pages that EXPENSES / SALARIES
-                opened are hidden. */}
+            {/* Finance is All payments (and Debtors, reached from the Dashboard) for
+                now: the sidebar entry opens All payments directly (no submenu), and
+                /finance itself lands on it. Entry needs FINANCE or PAYMENTS - the
+                pages that EXPENSES / SALARIES opened are hidden. */}
             <Route element={<PermissionRoute label={["FINANCE", "PAYMENTS"]} />}>
             <Route path="/finance" element={<Shell><Finance/></Shell>}>
                 <Route index element={<Navigate to="all-payments" replace />} />
                 <Route path="all-payments"   element={<Page><AllPayments /></Page>} />
+                <Route path="debtors"        element={<Page><Debtors /></Page>} />
                 {/* Temporarily hidden (see the imports above):
                 <Route path="withdraw"       element={<Page><Withdraw /></Page>} />
                 <Route path="total-expenses" element={<Page><TotalExpenses /></Page>} />
                 <Route path="salaries"       element={<Page><Salaries /></Page>} />
-                <Route path="debtors"        element={<Page><Debtors /></Page>} />
                 */}
             </Route>
             </Route>

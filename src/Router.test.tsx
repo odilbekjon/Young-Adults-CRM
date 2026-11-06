@@ -22,6 +22,7 @@ vi.mock("./layouts/StudentPortalLayout/StudentPortalLayout", () => ({ StudentPor
 vi.mock("./pages/Login/Login", () => ({ default: () => <div>LOGIN</div> }));
 vi.mock("./pages/NotFound", () => ({ NotFound: () => <div>NOT FOUND</div> }));
 vi.mock("./pages/Finance/pages/AllPayments", () => ({ AllPayments: () => <div>ALL PAYMENTS PAGE</div> }));
+vi.mock("./pages/Finance/pages/Debtors", () => ({ Debtors: () => <div>DEBTORS PAGE</div> }));
 vi.mock("./pages/Reports/Reports", () => ({ Reports: () => <Outlet /> }));
 vi.mock("./pages/Reports/pages/AttendenceReports", () => ({ AttendanceReports: () => <div>REPORTS ATTENDANCE PAGE</div> }));
 vi.mock("./pages/TeacherAddanceReport", () => ({ TeacherAttendanceReport: () => <div>TEACHER ATTENDANCE REPORT</div> }));
@@ -50,7 +51,22 @@ describe("Router: Finance", () => {
     expect(screen.getByTestId("where").textContent).toBe("/finance/all-payments");
   });
 
-  it.each(["/finance/withdraw", "/finance/total-expenses", "/finance/salaries", "/finance/debtors"])(
+  it("opens Debtors at /finance/debtors", async () => {
+    open("/finance/debtors");
+
+    expect(await screen.findByText("DEBTORS PAGE")).toBeTruthy();
+    expect(screen.queryByText("ALL PAYMENTS PAGE")).toBeNull();
+    expect(screen.getByTestId("where").textContent).toBe("/finance/debtors");
+  });
+
+  it("enters Debtors with the same permission as All payments (FINANCE or PAYMENTS)", async () => {
+    open("/finance/debtors");
+    await screen.findByText("DEBTORS PAGE");
+
+    expect(JSON.parse(screen.getByTestId("permission").getAttribute("data-labels") as string)).toEqual(["FINANCE", "PAYMENTS"]);
+  });
+
+  it.each(["/finance/withdraw", "/finance/total-expenses", "/finance/salaries"])(
     "no longer has %s",
     async (path) => {
       open(path);

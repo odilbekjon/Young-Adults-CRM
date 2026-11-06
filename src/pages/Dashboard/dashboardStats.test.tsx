@@ -1,5 +1,5 @@
-import { configure, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { configure, fireEvent, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse, stubFetch, type SentRequest } from "../../test/fetchStub";
 import { renderWithStore } from "../../test/renderWithStore";
@@ -140,6 +140,43 @@ describe("Dashboard stat cards", () => {
 
     await waitFor(() => expect(LABELS.some(hasSpinner)).toBe(false));
     expect(LABELS.map(valueOf)).toEqual(Array(8).fill("—"));
+  });
+});
+
+describe("Dashboard stat cards: where they lead", () => {
+  const Where = () => <span data-testid="where">{useLocation().pathname}</span>;
+  const renderWithRoutes = () =>
+    renderWithStore(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="*" element={<div>ANOTHER PAGE</div>} />
+        </Routes>
+        <Where />
+      </MemoryRouter>,
+    );
+
+  it("opens the page of a card that has one", async () => {
+    stubFetch(makeBackend());
+    renderWithRoutes();
+    await waitFor(() => expect(valueOf("Groups")).toBe("108"));
+
+    fireEvent.click(card("Groups"));
+
+    expect(await screen.findByText("ANOTHER PAGE")).toBeTruthy();
+    expect(screen.getByTestId("where").textContent).toBe("/groups");
+  });
+
+  it("leaves the Debtors card where it is: its page (Finance > Debtors) is hidden for now", async () => {
+    stubFetch(makeBackend());
+    renderWithRoutes();
+    await waitFor(() => expect(valueOf("Debtors")).toBe("1649"));
+
+    fireEvent.click(card("Debtors"));
+
+    expect(screen.getByTestId("where").textContent).toBe("/dashboard");
+    expect(screen.queryByText("ANOTHER PAGE")).toBeNull();
+    expect(getComputedStyle(card("Debtors")).cursor).toBe("default");
   });
 });
 

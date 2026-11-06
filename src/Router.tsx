@@ -37,7 +37,10 @@ const Notifications = lazyNamed(() => import("./pages/Notifications/Notification
 const TeacherProfile = lazyNamed(() => import("./pages/TeacherProfile"), "TeacherProfile");
 const Rating = lazyNamed(() => import("./pages/Rating"), "Rating");
 const TeacherAttendanceReport = lazyNamed(() => import("./pages/TeacherAddanceReport"), "TeacherAttendanceReport");
-const AttendanceReport = lazyNamed(() => import("./pages/AttandanceReport"), "AttendanceReport");
+// Temporarily hidden: the Attendance reports page (/attendance-reports). Its code
+// stays in pages/AttandanceReport; restore this import, the route below and the
+// "Attendance reports" entry in Sidebar.tsx to bring it back.
+// const AttendanceReport = lazyNamed(() => import("./pages/AttandanceReport"), "AttendanceReport");
 const Settings = lazyNamed(() => import("./pages/Settings/Settings"), "Settings");
 const SettingsSms = lazyNamed(() => import("./pages/Settings/pages/sms"), "SettingsSms");
 const Grade = lazyNamed(() => import("./pages/Settings/pages/grade"), "Grade");
@@ -64,10 +67,13 @@ const WhatsNew = lazyNamed(() => import("./pages/Settings/blog/pages"), "WhatsNe
 const BlogAdd = lazyNamed(() => import("./pages/Settings/blog/pages/wahts-new/add"), "BlogAdd");
 const Finance = lazyNamed(() => import("./pages/Finance/Finance"), "Finance");
 const AllPayments = lazyNamed(() => import("./pages/Finance/pages/AllPayments"), "AllPayments");
-const Withdraw = lazyNamed(() => import("./pages/Finance/pages/Withdraw"), "Withdraw");
-const TotalExpenses = lazyNamed(() => import("./pages/Finance/pages/TotalExpenses"), "TotalExpenses");
-const Salaries = lazyNamed(() => import("./pages/Finance/pages/Salaries"), "Salaries");
-const Debtors = lazyNamed(() => import("./pages/Finance/pages/Debtors"), "Debtors");
+// Temporarily hidden: Finance now holds only All payments. The other pages stay in
+// pages/Finance/pages; restore these imports, their routes below and their entries
+// in Sidebar.tsx to bring them back.
+// const Withdraw = lazyNamed(() => import("./pages/Finance/pages/Withdraw"), "Withdraw");
+// const TotalExpenses = lazyNamed(() => import("./pages/Finance/pages/TotalExpenses"), "TotalExpenses");
+// const Salaries = lazyNamed(() => import("./pages/Finance/pages/Salaries"), "Salaries");
+// const Debtors = lazyNamed(() => import("./pages/Finance/pages/Debtors"), "Debtors");
 const Reports = lazyNamed(() => import("./pages/Reports/Reports"), "Reports");
 const AttendanceReports = lazyNamed(() => import("./pages/Reports/pages/AttendenceReports"), "AttendanceReports");
 const ConversionReports = lazyNamed(() => import("./pages/Reports/pages/ConversationReports"), "ConversionReports");
@@ -138,7 +144,8 @@ export const AppRouter = () => {
             <Route path="/rating" element={<Shell><Rating/></Shell>} />
             <Route path="/budget" element={<Shell><Budget/></Shell>} />
             <Route path="/profile" element={<Shell><Profile/></Shell>} />
-            <Route path="/attendance-reports" element={<Shell><AttendanceReport/></Shell>} />
+            {/* Temporarily hidden (see the import above). */}
+            {/* <Route path="/attendance-reports" element={<Shell><AttendanceReport/></Shell>} /> */}
             <Route path="/teacher-attendance-reports" element={<Shell><TeacherAttendanceReport/></Shell>} />
             <Route path="/notifications" element={<Shell><Notifications/></Shell>} />
 
@@ -194,16 +201,20 @@ export const AppRouter = () => {
             <Route path="/profile/:id" element={<Shell><Profile/></Shell>} />
             </Route>
 
-            {/* FINANCE bundles FINANCE/PAYMENTS/EXPENSES/SALARIES — entry only
-                requires ANY one of them, since e.g. a Manager may hold only
-                PAYMENTS; Sidebar.tsx narrows which sub-tabs are then visible. */}
-            <Route element={<PermissionRoute label={["FINANCE", "PAYMENTS", "EXPENSES", "SALARIES"]} />}>
+            {/* Finance is All payments only for now: the sidebar entry opens it
+                directly (no submenu), and /finance itself lands on it. Entry
+                needs FINANCE or PAYMENTS - the pages that EXPENSES / SALARIES
+                opened are hidden. */}
+            <Route element={<PermissionRoute label={["FINANCE", "PAYMENTS"]} />}>
             <Route path="/finance" element={<Shell><Finance/></Shell>}>
+                <Route index element={<Navigate to="all-payments" replace />} />
                 <Route path="all-payments"   element={<Page><AllPayments /></Page>} />
+                {/* Temporarily hidden (see the imports above):
                 <Route path="withdraw"       element={<Page><Withdraw /></Page>} />
                 <Route path="total-expenses" element={<Page><TotalExpenses /></Page>} />
                 <Route path="salaries"       element={<Page><Salaries /></Page>} />
                 <Route path="debtors"        element={<Page><Debtors /></Page>} />
+                */}
             </Route>
             </Route>
 

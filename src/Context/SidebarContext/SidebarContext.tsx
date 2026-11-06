@@ -3,7 +3,8 @@ import { useLocation } from "react-router-dom";
 
 // ─── Submenu paths that have children ────────────────────────────────────────
 
-const SUBMENU_PATHS = ["/finance", "/reports", "/settings"];
+// ("/finance" is not one for now: Finance opens All payments directly, with no submenu.)
+const SUBMENU_PATHS = ["/reports", "/settings"];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

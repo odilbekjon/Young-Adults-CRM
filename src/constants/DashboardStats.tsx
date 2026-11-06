@@ -7,8 +7,9 @@ import {
 // pages/Dashboard/dashboardStats.ts) — this array only holds the per-card
 // display metadata (label/route/icon), not any data.
 //
-// "debtors" routes straight to the dedicated page that already backs its
-// count (/finance/debtors). "paid" goes to Finance > All Payments;
+// "debtors" would route to the Debtors page (/finance/debtors), which is hidden for
+// now (see Router.tsx), so its card is `disabled`: it shows the figure but opens
+// nothing. Drop `disabled` when the page is back. "paid" goes to Finance > All Payments;
 // Dashboard.tsx's click handler adds the current month's startDate/endDate
 // query params (that page already reads and applies them) so the list opens
 // pre-filtered — a real filter, not a fake one.
@@ -30,7 +31,7 @@ export const STATS = [
   { key: "leads",      labelKey: "dashboard.stats.activeLeads",     route: "/leads",               icon: <FiUsers size={35} /> },
   { key: "students",   labelKey: "dashboard.stats.activeStudents",  route: "/students",             icon: <FiUserCheck size={35} /> },
   { key: "groups",     labelKey: "dashboard.stats.groups",          route: "/groups",               icon: <FiLayers size={35} /> },
-  { key: "debtors",    labelKey: "dashboard.stats.debtors",         route: "/finance/debtors",      icon: <FiAlertTriangle size={35} /> },
+  { key: "debtors",    labelKey: "dashboard.stats.debtors",         route: "/finance/debtors", disabled: true, icon: <FiAlertTriangle size={35} /> },
   { key: "trial",      labelKey: "dashboard.stats.inTrialLesson",   route: "/students", filter: "trial",       icon: <FiPlayCircle size={35} /> },
   { key: "paid",       labelKey: "dashboard.stats.paidDuringMonth", route: "/finance/all-payments", icon: <FiDollarSign size={35} /> },
   { key: "leftActive", labelKey: "dashboard.stats.leftActiveGroup", route: "/settings/office/students-left-group", icon: <FiUserMinus size={35} /> },

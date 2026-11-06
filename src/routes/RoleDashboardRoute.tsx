@@ -23,12 +23,11 @@ export const DashboardRoute = () => {
 
 // `/salary` is the Salary tab of the teacher's Account page (same page as
 // /profile — see TeacherAccount). For staff the equivalent lives
-// under Finance → Salaries, so they're sent there (PermissionRoute still
-// applies to it). Renders its own Layout because only the teacher variant
-// needs one.
+// under Finance → Salaries - hidden for now, so they're sent to the Dashboard.
+// Renders its own Layout because only the teacher variant needs one.
 export const SalaryRoute = () => {
   const { isTeacher } = useAuth();
-  if (!isTeacher) return <Navigate to="/finance/salaries" replace />;
+  if (!isTeacher) return <Navigate to="/dashboard" replace />;
   return (
     <Layout>
       <LazyPage>

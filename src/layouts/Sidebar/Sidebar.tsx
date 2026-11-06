@@ -14,7 +14,7 @@ import { MdOutlineDiamond, MdOutlinePaid } from "react-icons/md";
 import { PiStudentDuotone } from "react-icons/pi";
 import { IoMdSettings } from "react-icons/io";
 // import { IoTrophyOutline } from "react-icons/io5";
-import { FaRegCalendarAlt } from "react-icons/fa";
+// import { FaRegCalendarAlt } from "react-icons/fa"; // used by the hidden Attendance reports entry
 import { AiOutlineDollar, AiOutlinePieChart } from "react-icons/ai";
 import { HiBuildingLibrary } from "react-icons/hi2";
 import { useSidebar } from "../../Context/SidebarContext";
@@ -81,13 +81,18 @@ export interface SubMenuItem {
 // ─── SUBMENUS config ──────────────────────────────────────────────────────────
 
 const SUBMENUS: Record<string, SubMenuItem[]> = {
-  "/finance": [
-    { labelKey: "sidebar.finance.allPayments",   path: "/finance/all-payments",   icon: "file" },
-    { labelKey: "sidebar.finance.withdraw",       path: "/finance/withdraw",        icon: "file" },
-    { labelKey: "sidebar.finance.totalExpenses", path: "/finance/total-expenses",  icon: "file" },
-    { labelKey: "sidebar.finance.salaries",       path: "/finance/salaries",        icon: "brief" },
-    { labelKey: "sidebar.finance.debtors",        path: "/finance/debtors",         icon: "user", dividerBefore: true },
-  ],
+  // Temporarily hidden: Finance has only All payments for now, so its rail entry
+  // opens that page directly (see NAV_ITEMS) instead of a submenu. Restore this
+  // list, the SUBMENU_ITEM_LABELS entries below, "/finance" in
+  // SidebarContext's SUBMENU_PATHS and the routes in Router.tsx to bring the
+  // other pages back (and point the Finance rail entry at "/finance" again).
+  // "/finance": [
+  //   { labelKey: "sidebar.finance.allPayments",   path: "/finance/all-payments",   icon: "file" },
+  //   { labelKey: "sidebar.finance.withdraw",       path: "/finance/withdraw",        icon: "file" },
+  //   { labelKey: "sidebar.finance.totalExpenses", path: "/finance/total-expenses",  icon: "file" },
+  //   { labelKey: "sidebar.finance.salaries",       path: "/finance/salaries",        icon: "brief" },
+  //   { labelKey: "sidebar.finance.debtors",        path: "/finance/debtors",         icon: "user", dividerBefore: true },
+  // ],
   "/reports": [
     { labelKey: "sidebar.reports.conversion",    path: "/reports/conversation",       icon: "userCheck" },
     { labelKey: "sidebar.reports.attendance",    path: "/reports/attendance",       icon: "userCheck" },
@@ -169,17 +174,19 @@ const NAV_ITEM_LABELS: Record<string, PermissionLabel[]> = {
   "/teachers":  ["TEACHERS"],
   "/groups":    ["GROUPS"],
   "/students":  ["STUDENTS"],
-  "/finance":   ["FINANCE", "PAYMENTS", "EXPENSES", "SALARIES"],
+  // All payments only: the pages EXPENSES / SALARIES opened are hidden for now.
+  "/finance/all-payments": ["FINANCE", "PAYMENTS"],
   "/settings":  ["SETTINGS", "USERS", "BRANCHES", "COURSES", "ROOMS"],
 };
 
 // Leaf submenu items with a specific documented label.
 const SUBMENU_ITEM_LABELS: Record<string, PermissionLabel> = {
-  "/finance/all-payments":     "PAYMENTS",
-  "/finance/withdraw":         "EXPENSES",
-  "/finance/total-expenses":   "EXPENSES",
-  "/finance/salaries":         "SALARIES",
-  "/finance/debtors":          "FINANCE",
+  // (the Finance submenu is hidden for now - see SUBMENUS)
+  // "/finance/all-payments":     "PAYMENTS",
+  // "/finance/withdraw":         "EXPENSES",
+  // "/finance/total-expenses":   "EXPENSES",
+  // "/finance/salaries":         "SALARIES",
+  // "/finance/debtors":          "FINANCE",
   "/settings/ceo/staff":       "USERS",
   "/settings/ceo/branches":    "BRANCHES",
   "/settings/office/courses":  "COURSES",
@@ -207,9 +214,11 @@ const NAV_ITEMS: NavEntry[] = [
   { labelKey: "sidebar.nav.students",            path: "/students",                   icon: <PiStudentDuotone size={40} /> },
   // { labelKey: "sidebar.nav.reminders",           path: "/reminders",                  icon: <FiClock size={40}  /> },
   // { labelKey: "sidebar.nav.rating",              path: "/rating",                     icon: <IoTrophyOutline size={40} /> },
-  { labelKey: "sidebar.nav.attendanceReports",  path: "/attendance-reports",         icon: <FaRegCalendarAlt size={40} /> },
+  // Temporarily hidden: the Attendance reports page (its route is commented out in Router.tsx).
+  // { labelKey: "sidebar.nav.attendanceReports",  path: "/attendance-reports",         icon: <FaRegCalendarAlt size={40} /> },
   // { labelKey: "sidebar.nav.teacherAttendanceReports", path: "/teacher-attendance-reports", icon: <FaRegCalendarAlt size={40} /> },
-  { labelKey: "sidebar.nav.finance",             path: "/finance",                    icon: <AiOutlineDollar size={40} /> },
+  // Finance opens All payments directly: no submenu beside the rail.
+  { labelKey: "sidebar.nav.finance",             path: "/finance/all-payments",       icon: <AiOutlineDollar size={40} /> },
   { labelKey: "sidebar.nav.reports",             path: "/reports",                    icon: <AiOutlinePieChart size={40} /> },
   { labelKey: "sidebar.nav.settings",            path: "/settings",                   icon: <IoMdSettings size={40} /> },
 ];

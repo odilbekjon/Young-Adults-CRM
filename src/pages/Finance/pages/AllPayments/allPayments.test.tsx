@@ -729,15 +729,20 @@ describe("AllPayments: teacher and course filters over every group", () => {
 
 describe("AllPayments: net profit details", () => {
   const METHODS = [{ id: "m1", name: "Cash" }, { id: "m2", name: "Click" }, { id: "m3", name: "UZCARD" }, { id: "m4", name: "Humo" }];
+  // The same methods as the backend can send them: Click listed three times (a copy per branch).
+  const REPEATED_METHODS = [
+    { id: "m1", name: "Cash" }, { id: "m2", name: "Click" }, { id: "m2b", name: "click" }, { id: "m3", name: "UZCARD" },
+    { id: "m2c", name: "Click" }, { id: "m4", name: "Humo" },
+  ];
   const listOf = (rows: unknown[]) =>
     jsonResponse({ success: true, data: rows, meta: { total: rows.length, page: 1, limit: 1000, totalPages: 1 } });
   const outflow = (id: string, amount: number, methodId: string, methodName: string) => ({ id, amount, paymentMethod: { id: methodId, name: methodName } });
 
   // Cash took 400 000 and paid 50 000 out; Click took 250 000 and paid 100 000 out; UZCARD only paid 50 000 out.
   // 650 000 in, 150 000 of expenses, 50 000 of withdrawals: 450 000 of net profit.
-  const backend = (chart: Record<string, unknown> = {}, expenses?: () => Response) => (request: SentRequest) => {
+  const backend = (chart: Record<string, unknown> = {}, expenses?: () => Response, methods: unknown[] = METHODS) => (request: SentRequest) => {
     const { pathname } = new URL(request.url);
-    if (pathname.endsWith("/finance/payment-methods")) return jsonResponse({ success: true, data: METHODS });
+    if (pathname.endsWith("/finance/payment-methods")) return jsonResponse({ success: true, data: methods });
     if (pathname.endsWith("/finance/chart")) {
       return jsonResponse({
         success: true,
@@ -790,6 +795,20 @@ describe("AllPayments: net profit details", () => {
     ]);
     // Together they are the Total Net Profit above.
     expect(350_000 + 150_000 - 50_000).toBe(450_000);
+  });
+
+  it("lists a payment method once, even when the backend lists it several times", async () => {
+    stubFetch(backend({}, undefined, REPEATED_METHODS));
+    renderPage();
+    await open();
+
+    await waitFor(() => expect(lines()).toHaveLength(4));
+    expect(lines()).toEqual([
+      `Cash: ${money(350_000)} UZS`,
+      `Click: ${money(150_000)} UZS`,
+      `UZCARD: ${money(-50_000)} UZS`,
+      `Humo: 0 UZS`,
+    ]);
   });
 
   it("closes again on a second click", async () => {

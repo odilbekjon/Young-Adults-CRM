@@ -48,6 +48,32 @@ describe("netProfitDetails", () => {
     expect(lines.find((l) => l.name === "Cash")?.amount).toBe(70);
   });
 
+  it("lists a method once, however many times the backend lists it: same-named methods are one line", () => {
+    const methods = [method("m1", "Cash"), method("c1", "click"), method("c2", "click"), method("c3", "Click"), method("m2", "Card")];
+    const lines = netProfitDetails({
+      methods,
+      // money in through two of the copies, money out through a third and, by name only, through none of the ids
+      payments: [payment(1_280_000, "c2"), payment(300_000, "c1"), payment(2_142_000, "m1")],
+      outflows: [{ id: "c3", name: "Click", amount: 80_000 }, { id: null, name: "CLICK", amount: 20_000 }],
+      salaries: 0,
+      netProfit: 2_142_000 + 1_280_000 + 300_000 - 100_000,
+    });
+
+    // in the place of the first copy, named as it is, with every copy's figures added up
+    expect(lines.map((l) => [l.name, l.amount])).toEqual([["Cash", 2_142_000], ["click", 1_480_000], ["Card", 0]]);
+    expect(lines.filter((l) => l.kind !== "method")).toEqual([]);
+    expect(new Set(lines.map((l) => l.key)).size).toBe(lines.length);
+  });
+
+  it("keeps a same-named line while any of its copies is still in use", () => {
+    const methods = [method("c1", "Click", { status: "INACTIVE" }), method("c2", "Click")];
+
+    expect(netProfitDetails({ methods, payments: [], outflows: [], salaries: 0, netProfit: 0 }).map((l) => l.name)).toEqual(["Click"]);
+    expect(
+      netProfitDetails({ methods: [method("c1", "Click", { status: "INACTIVE" }), method("c2", "Click", { deletedAt: "2026-01-01T00:00:00Z" })], payments: [], outflows: [], salaries: 0, netProfit: 0 }),
+    ).toEqual([]);
+  });
+
   it("gives the salaries one line of their own, as money out", () => {
     const lines = netProfitDetails({ ...DESIGN, salaries: 2_000_000, netProfit: 16_722_000 });
 

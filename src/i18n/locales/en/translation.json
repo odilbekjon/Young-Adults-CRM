@@ -1858,6 +1858,7 @@
       },
       "toast": {
         "success": "Student frozen",
+        "notRecalculated": "Student frozen, but the balance was not recalculated: the server does not support this yet",
         "error": "Failed to freeze the student"
       }
     },

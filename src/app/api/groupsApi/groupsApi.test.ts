@@ -620,3 +620,219 @@ describe("normalizeHistory", () => {
     expect(normalizeHistory([null, 5, { id: "ok" }]).map((r) => r.id)).toEqual(["ok"]);
   });
 });
+
+describe("groupsApi freeze: the recalculate-balance checkbox", () => {
+  it("sends recalculateBalance=true when it is ticked, and nothing when it is not", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const store = createTestStore();
+    const { requests } = stubFetch(() => jsonResponse({ success: true }));
+
+    await store.dispatch(
+      groupsApi.endpoints.freezeStudentGroup.initiate({ id: "sg1", startDate: "2026-06-01", recalculateBalance: true }),
+    );
+    await store.dispatch(
+      groupsApi.endpoints.freezeStudentGroup.initiate({ id: "sg1", startDate: "2026-06-01", recalculateBalance: false }),
+    );
+
+    expect(await readFormData(requests[0])).toEqual([
+      ["startDate", "2026-06-01"],
+      ["recalculateBalance", "true"],
+    ]);
+    expect(await readFormData(requests[1])).toEqual([["startDate", "2026-06-01"]]);
+  });
+});
+
+describe("groupsApi.activateTrialStudentGroup", () => {
+  it("graduates the trial, then records the billing start date", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch(() => jsonResponse({ success: true }));
+
+    const result = await store.dispatch(
+      groupsApi.endpoints.activateTrialStudentGroup.initiate({ id: "sg1", paymentStartDate: "2026-06-05" }),
+    );
+
+    expect(result).toEqual({ data: { dateError: undefined } });
+    expect(requests.map((r) => `${r.method} ${path(r.url)}`)).toEqual([
+      "POST /student-groups/sg1/graduate-trial",
+      "PATCH /student-groups/sg1",
+    ]);
+    expect(await readFormData(requests[1])).toEqual([["paymentStartDate", "2026-06-05"]]);
+  });
+
+  it("resolves with the date error - the student is active by then - when only the date step fails", async () => {
+    const store = createTestStore();
+    stubFetch((req) => (req.method === "PATCH" ? jsonResponse({ error: "Bad date" }, { status: 400 }) : jsonResponse({ success: true })));
+
+    const result = await store.dispatch(
+      groupsApi.endpoints.activateTrialStudentGroup.initiate({ id: "sg1", paymentStartDate: "2026-06-05" }),
+    );
+
+    expect("error" in result).toBe(false);
+    expect(result).toMatchObject({ data: { dateError: { status: 400, data: { error: "Bad date" } } } });
+  });
+
+  it("rejects, and sends no date, when the activation itself fails", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch(() => jsonResponse({ error: "Not a trial" }, { status: 409 }));
+
+    const result = await store.dispatch(
+      groupsApi.endpoints.activateTrialStudentGroup.initiate({ id: "sg1", paymentStartDate: "2026-06-05" }),
+    );
+
+    expect(result).toMatchObject({ error: { status: 409 } });
+    expect(requests).toHaveLength(1);
+  });
+});
+
+describe("groupsApi.activateFrozenStudentGroup", () => {
+  const freezeRecord = { id: "f1", studentId: "s1", groupId: "g1", studentGroupId: "sg1", startDate: "2026-06-10", status: "ACTIVE" };
+  const answerGetWith = (freezes: unknown) => (req: { method: string }) =>
+    req.method === "GET" ? jsonResponse(freezes) : jsonResponse({ success: true });
+
+  it("never ends the freeze before it began, but records the date that was picked", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch(answerGetWith({ data: [freezeRecord] }));
+
+    await store.dispatch(
+      groupsApi.endpoints.activateFrozenStudentGroup.initiate({
+        id: "sg1", studentId: "s1", groupId: "g1", paymentStartDate: "2026-06-01", fallbackFreezeStart: "2026-05-20",
+      }),
+    );
+
+    expect(requests.map((r) => `${r.method} ${path(r.url).split("?")[0]}`)).toEqual([
+      "GET /student-freezes",
+      "POST /student-groups/sg1/unfreeze",
+      "PATCH /student-groups/sg1",
+    ]);
+    const lookup = new URL(requests[0].url).searchParams;
+    expect(lookup.get("studentId")).toBe("s1");
+    expect(lookup.get("groupId")).toBe("g1");
+    expect(lookup.get("status")).toBe("ACTIVE");
+    expect(await readFormData(requests[1])).toEqual([["endDate", "2026-06-10"]]);
+    expect(await readFormData(requests[2])).toEqual([["paymentStartDate", "2026-06-01"]]);
+  });
+
+  it("ends the freeze on the picked date when that is after the freeze began", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch(answerGetWith({ data: [freezeRecord] }));
+
+    await store.dispatch(
+      groupsApi.endpoints.activateFrozenStudentGroup.initiate({ id: "sg1", studentId: "s1", groupId: "g1", paymentStartDate: "2026-06-15" }),
+    );
+
+    expect(await readFormData(requests[1])).toEqual([["endDate", "2026-06-15"]]);
+  });
+
+  it("falls back to the join date when no running freeze is found", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch(answerGetWith({ data: [] }));
+
+    await store.dispatch(
+      groupsApi.endpoints.activateFrozenStudentGroup.initiate({
+        id: "sg1", studentId: "s1", groupId: "g1", paymentStartDate: "2026-06-01", fallbackFreezeStart: "2026-06-03",
+      }),
+    );
+
+    expect(await readFormData(requests[1])).toEqual([["endDate", "2026-06-03"]]);
+  });
+
+  it("still unfreezes when the freeze lookup fails", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch((req) => (req.method === "GET" ? jsonResponse({ error: "boom" }, { status: 500 }) : jsonResponse({ success: true })));
+
+    const result = await store.dispatch(
+      groupsApi.endpoints.activateFrozenStudentGroup.initiate({ id: "sg1", studentId: "s1", groupId: "g1", paymentStartDate: "2026-06-01" }),
+    );
+
+    expect(result).toEqual({ data: { dateError: undefined } });
+    expect(await readFormData(requests[1])).toEqual([["endDate", "2026-06-01"]]);
+  });
+
+  it("rejects, and records no date, when the unfreeze is refused", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch((req) => {
+      if (req.method === "GET") return jsonResponse({ data: [] });
+      return jsonResponse({ error: "End before start" }, { status: 400 });
+    });
+
+    const result = await store.dispatch(
+      groupsApi.endpoints.activateFrozenStudentGroup.initiate({ id: "sg1", studentId: "s1", groupId: "g1", paymentStartDate: "2026-06-01" }),
+    );
+
+    expect(result).toMatchObject({ error: { status: 400, data: { error: "End before start" } } });
+    expect(requests.filter((r) => r.method === "PATCH")).toHaveLength(0);
+  });
+
+  it("leaves no lingering subscription that would read the freezes again after the next freeze", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const store = createTestStore();
+    const { requests } = stubFetch(answerGetWith({ data: [] }));
+    const getsOfFreezes = () => requests.filter((r) => r.method === "GET" && path(r.url).startsWith("/student-freezes")).length;
+
+    await store.dispatch(
+      groupsApi.endpoints.activateFrozenStudentGroup.initiate({ id: "sg1", studentId: "s1", groupId: "g1", paymentStartDate: "2026-06-01" }),
+    );
+    expect(getsOfFreezes()).toBe(1);
+
+    await store.dispatch(groupsApi.endpoints.freezeStudentGroup.initiate({ id: "sg1", startDate: "2026-06-20" }));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(getsOfFreezes()).toBe(1);
+  });
+});
+
+describe("groupsApi: what a freeze or an activation makes the app read again", () => {
+  // The group page keeps the live roster and the two archived rosters (INACTIVE,
+  // DELETED) on screen. A freeze/activation cannot change an archived row, so
+  // only the live roster may be requested again.
+  const setup = async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const store = createTestStore();
+    const { requests } = stubFetch((req) => (req.method === "GET" ? jsonResponse({ data: [] }) : jsonResponse({ success: true })));
+    const live = store.dispatch(groupsApi.endpoints.studentGroups.initiate({ groupId: "g1", limit: 500 }));
+    const inactive = store.dispatch(groupsApi.endpoints.studentGroups.initiate({ status: "INACTIVE", limit: 500 }));
+    const deleted = store.dispatch(groupsApi.endpoints.studentGroups.initiate({ status: "DELETED", limit: 500 }));
+    await Promise.all([live, inactive, deleted]);
+    const reads = (status?: string) =>
+      requests.filter((r) => r.method === "GET" && path(r.url).startsWith("/student-groups?")
+        && new URL(r.url).searchParams.get("status") === (status ?? null)).length;
+    return { store, reads, unsubscribe: () => [live, inactive, deleted].forEach((s) => s.unsubscribe()) };
+  };
+
+  it("freezing reads the live roster again and leaves the archived ones alone", async () => {
+    const { store, reads, unsubscribe } = await setup();
+
+    await store.dispatch(groupsApi.endpoints.freezeStudentGroup.initiate({ id: "sg1", startDate: "2026-06-01" }));
+
+    await vi.waitFor(() => expect(reads()).toBe(2));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(reads("INACTIVE")).toBe(1);
+    expect(reads("DELETED")).toBe(1);
+    unsubscribe();
+  });
+
+  it("activating a trial student reads the live roster ONCE for both steps", async () => {
+    const { store, reads, unsubscribe } = await setup();
+
+    await store.dispatch(groupsApi.endpoints.activateTrialStudentGroup.initiate({ id: "sg1", paymentStartDate: "2026-06-05" }));
+
+    await vi.waitFor(() => expect(reads()).toBe(2));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(reads()).toBe(2);
+    expect(reads("INACTIVE")).toBe(1);
+    expect(reads("DELETED")).toBe(1);
+    unsubscribe();
+  });
+
+  it("ending a membership still reads every roster again", async () => {
+    const { store, reads, unsubscribe } = await setup();
+
+    await store.dispatch(groupsApi.endpoints.deleteStudentGroup.initiate("sg1"));
+
+    await vi.waitFor(() => {
+      expect(reads()).toBe(2);
+      expect(reads("INACTIVE")).toBe(2);
+      expect(reads("DELETED")).toBe(2);
+    });
+    unsubscribe();
+  });
+});

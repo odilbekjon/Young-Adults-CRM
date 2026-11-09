@@ -1,3 +1,4 @@
+import type { BaseQueryApi } from "@reduxjs/toolkit/query";
 import { baseApi } from "../baseApi";
 import { PATHS } from "./paths";
 import {
@@ -171,6 +172,33 @@ export const studentFreezesApi = baseApi.injectEndpoints({
         }),
     }),
 });
+
+// Start date (YYYY-MM-DD) of a membership's currently running freeze -
+// GET /student-freezes?studentId&groupId&status=ACTIVE, narrowed to the
+// membership when the record names one; undefined when there is none or the
+// lookup fails. Read once, without a cache subscription: a lazy hook's
+// subscription would linger and read the list again after every later freeze or
+// unfreeze (both invalidate "studentFreeze").
+export const findRunningFreezeStart = async (
+    dispatch: BaseQueryApi["dispatch"],
+    { studentId, groupId, studentGroupId }: { studentId: string; groupId: string; studentGroupId: string },
+): Promise<string | undefined> => {
+    try {
+        const { rows } = await dispatch(
+            studentFreezesApi.endpoints.studentFreezes.initiate(
+                { studentId, groupId, status: "ACTIVE", limit: 50 },
+                { subscribe: false, forceRefetch: true },
+            ),
+        ).unwrap();
+        return rows
+            .filter((r) => r.startDate && (!r.studentGroupId || r.studentGroupId === studentGroupId))
+            .map((r) => r.startDate.slice(0, 10))
+            .sort()
+            .pop();
+    } catch {
+        return undefined;
+    }
+};
 
 export const {
     useStudentFreezesQuery,

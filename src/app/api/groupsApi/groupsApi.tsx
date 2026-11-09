@@ -1,4 +1,5 @@
 import { baseApi } from "../baseApi";
+import { findRunningFreezeStart } from "../studentFreezesApi";
 import { sortByName } from "../../../utils/compareNames";
 import { PATHS } from "./paths";
 import {
@@ -33,11 +34,26 @@ import {
     FreezeStudentGroupRequest,
     UnfreezeStudentGroupRequest,
     StudentGroupActionResponse,
+    ActivateStudentGroupResult,
+    ActivateTrialStudentGroupRequest,
+    ActivateFrozenStudentGroupRequest,
     UpdateStudentGroupRequest,
     UpdateStudentGroupStatusRequest,
     CourseGroup,
     GroupDay,
 } from "./types";
+
+// Cache tag of the memberships that are still part of a group (PROBATION /
+// ACTIVE / FROZEN). Every /student-groups read except the INACTIVE/DELETED lists
+// carries it next to "studentGroup". Freezing, unfreezing and activating a student
+// change a live membership only, so they invalidate this tag instead of
+// "studentGroup" and the two archived-roster lists (up to 500 rows each, plus
+// their further pages, on every group page) are not downloaded again for nothing.
+// Anything that can move a membership in or out of the archive keeps invalidating
+// "studentGroup", which every list carries.
+export const LIVE_MEMBERSHIPS = "studentGroupLive" as const;
+
+const isArchivedStatus = (status: string | undefined): boolean => status === "INACTIVE" || status === "DELETED";
 
 // Swagger (POST /api/v1/groups) declares the request body as multipart/
 // form-data explicitly — this is the only content type the endpoint
@@ -701,7 +717,10 @@ export const groupsApi = baseApi.injectEndpoints({
                 priority: args?.priority,
             }),
             transformResponse: (response: unknown) => normalizeStudentGroupsList(response),
-            providesTags: ["studentGroup"],
+            // The INACTIVE/DELETED lists are the only ones a freeze/activation
+            // cannot change (see LIVE_MEMBERSHIPS).
+            providesTags: (_result, _error, arg) =>
+                isArchivedStatus(arg?.status) ? ["studentGroup"] : ["studentGroup", LIVE_MEMBERSHIPS],
         }),
         studentGroupById: builder.query<StudentGroupRecord, string>({
             query: (id) => ({
@@ -709,7 +728,7 @@ export const groupsApi = baseApi.injectEndpoints({
                 method: "GET",
             }),
             transformResponse: (response: unknown) => normalizeStudentGroupRecord(pickStudentGroupRow(response), 0),
-            providesTags: ["studentGroup"],
+            providesTags: ["studentGroup", LIVE_MEMBERSHIPS],
         }),
         // GET /student-groups/{id}/for-edit — same envelope as GET
         // /student-groups/{id}, used specifically to prefill the edit form
@@ -720,22 +739,29 @@ export const groupsApi = baseApi.injectEndpoints({
                 method: "GET",
             }),
             transformResponse: (response: unknown) => normalizeStudentGroupRecord(pickStudentGroupRow(response), 0),
-            providesTags: ["studentGroup"],
+            providesTags: ["studentGroup", LIVE_MEMBERSHIPS],
         }),
+        // POST /student-groups/{id}/freeze. `recalculateBalance` (the dialog's
+        // checkbox) rides along as a multipart field when it is ticked: the
+        // backend must then bill only the days BEFORE startDate and drop the
+        // charge of the frozen days (a student frozen on the day billing began
+        // owes nothing). Until the backend reads it, ticking it changes nothing.
         freezeStudentGroup: builder.mutation<StudentGroupActionResponse, FreezeStudentGroupRequest>({
-            query: ({ id, startDate, endDate, reason }) => ({
+            query: ({ id, ...fields }) => ({
                 url: `${PATHS.STUDENT_GROUPS}/${id}/freeze`,
                 method: "POST",
-                body: appendStudentGroupFormData({ startDate, endDate, reason }),
+                body: appendStudentGroupFormData(fields),
             }),
-            onQueryStarted: ({ id, startDate, endDate, reason }, { queryFulfilled }) =>
+            onQueryStarted: ({ id, ...fields }, { queryFulfilled }) =>
                 logStudentGroupAction(
                     "freezeStudentGroup",
                     `${PATHS.STUDENT_GROUPS}/${id}/freeze`,
-                    describeFormFields(appendStudentGroupFormData({ startDate, endDate, reason })),
+                    describeFormFields(appendStudentGroupFormData(fields)),
                     queryFulfilled,
                 ),
-            invalidatesTags: ["studentGroup", "group", "student", "studentFreeze"],
+            // A freeze only touches a LIVE membership, so the INACTIVE/DELETED
+            // roster lists are not read again (see LIVE_MEMBERSHIPS).
+            invalidatesTags: [LIVE_MEMBERSHIPS, "group", "student", "studentFreeze"],
         }),
         // POST /student-groups/{id}/unfreeze — Swagger: multipart/form-data
         // with `endDate` (YYYY-MM-DD, when the freeze ends). Accepts a bare
@@ -761,7 +787,7 @@ export const groupsApi = baseApi.injectEndpoints({
                     queryFulfilled,
                 );
             },
-            invalidatesTags: ["studentGroup", "group", "student", "studentFreeze"],
+            invalidatesTags: [LIVE_MEMBERSHIPS, "group", "student", "studentFreeze"],
         }),
         // POST /student-groups/{id}/graduate-trial — PROBATION -> ACTIVE.
         graduateTrialStudentGroup: builder.mutation<StudentGroupActionResponse, string>({
@@ -769,7 +795,56 @@ export const groupsApi = baseApi.injectEndpoints({
                 url: `${PATHS.STUDENT_GROUPS}/${id}/graduate-trial`,
                 method: "POST",
             }),
-            invalidatesTags: ["studentGroup", "group", "student"],
+            invalidatesTags: [LIVE_MEMBERSHIPS, "group", "student"],
+        }),
+        // PROBATION -> ACTIVE with the billing start date, as ONE mutation: POST
+        // .../graduate-trial, then PATCH /student-groups/{id} {paymentStartDate}
+        // (graduate-trial takes no body). Run as two separate mutations each one
+        // made the app read the whole roster again; here the screen is refreshed
+        // once, after both. A failed date step does not fail the mutation - the
+        // student IS active by then - it comes back as `dateError` so the caller
+        // can say "activated, but the date was not saved".
+        activateTrialStudentGroup: builder.mutation<ActivateStudentGroupResult, ActivateTrialStudentGroupRequest>({
+            async queryFn({ id, paymentStartDate }, _api, _extra, baseQuery) {
+                const graduated = await baseQuery({ url: `${PATHS.STUDENT_GROUPS}/${id}/graduate-trial`, method: "POST" });
+                if (graduated.error) return { error: graduated.error };
+                const dated = await baseQuery({
+                    url: `${PATHS.STUDENT_GROUPS}/${id}`,
+                    method: "PATCH",
+                    body: appendStudentGroupFormData({ paymentStartDate }),
+                });
+                return { data: { dateError: dated.error } };
+            },
+            invalidatesTags: [LIVE_MEMBERSHIPS, "group", "student"],
+        }),
+        // FROZEN -> ACTIVE with the billing start date, as ONE mutation (same
+        // reasoning as activateTrialStudentGroup): finds when the running freeze
+        // began (GET /student-freezes, else `fallbackFreezeStart` - the join date),
+        // POST .../unfreeze {endDate}, then PATCH /student-groups/{id}
+        // {paymentStartDate}. The freeze must END on the day billing should START
+        // - but never before the freeze's own start (the backend refuses an end
+        // before the start) - so a billing start picked earlier than the freeze
+        // becomes the freeze's start date for the unfreeze call only; the PATCH
+        // still records the date that was picked.
+        activateFrozenStudentGroup: builder.mutation<ActivateStudentGroupResult, ActivateFrozenStudentGroupRequest>({
+            async queryFn({ id, studentId, groupId, paymentStartDate, fallbackFreezeStart }, api, _extra, baseQuery) {
+                const freezeStart = (await findRunningFreezeStart(api.dispatch, { studentId, groupId, studentGroupId: id }))
+                    ?? fallbackFreezeStart;
+                const endDate = freezeStart && paymentStartDate < freezeStart ? freezeStart : paymentStartDate;
+                const unfrozen = await baseQuery({
+                    url: `${PATHS.STUDENT_GROUPS}/${id}/unfreeze`,
+                    method: "POST",
+                    body: appendStudentGroupFormData({ endDate }),
+                });
+                if (unfrozen.error) return { error: unfrozen.error };
+                const dated = await baseQuery({
+                    url: `${PATHS.STUDENT_GROUPS}/${id}`,
+                    method: "PATCH",
+                    body: appendStudentGroupFormData({ paymentStartDate }),
+                });
+                return { data: { dateError: dated.error } };
+            },
+            invalidatesTags: [LIVE_MEMBERSHIPS, "group", "student", "studentFreeze"],
         }),
         updateStudentGroup: builder.mutation<StudentGroupActionResponse, UpdateStudentGroupRequest>({
             query: ({ id, ...data }) => ({
@@ -829,6 +904,8 @@ export const {
     useFreezeStudentGroupMutation,
     useUnfreezeStudentGroupMutation,
     useGraduateTrialStudentGroupMutation,
+    useActivateTrialStudentGroupMutation,
+    useActivateFrozenStudentGroupMutation,
     useUpdateStudentGroupMutation,
     useUpdateStudentGroupStatusMutation,
     useDeleteStudentGroupMutation,

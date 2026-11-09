@@ -279,7 +279,11 @@ export const attendancesApi = baseApi.injectEndpoints({
         method: "GET",
       }),
       transformResponse: (response: { data: unknown }) => normalizeDates(response?.data),
-      providesTags: ["attendance"],
+      // No tag on purpose: the lesson days of a month are the group's schedule,
+      // which saving a mark never changes. With the "attendance" tag every cell
+      // click (one POST per mark) made the grid download the month's dates again
+      // next to the marks.
+      providesTags: [],
     }),
     groupAttendance: builder.query<GroupAttendance, GroupAttendanceQueryArgs>({
       query: ({ groupId, month }) => ({

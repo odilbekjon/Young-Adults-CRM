@@ -92,6 +92,26 @@ describe("attendancesApi.saveAttendance", () => {
     await vi.waitFor(() => expect(requests.filter((r) => r.method === "GET")).toHaveLength(2));
     subscription.unsubscribe();
   });
+
+  it("reads the marks again but not the month's lesson dates, which a mark cannot change", async () => {
+    const store = createTestStore();
+    const { requests } = stubFetch(() => jsonResponse({ data: [] }));
+    const gets = (suffix: string) => requests.filter((r) => r.method === "GET" && path(r.url).startsWith(`/attendances/group/g1${suffix}`)).length;
+
+    const marks = store.dispatch(attendancesApi.endpoints.groupAttendance.initiate({ groupId: "g1", month: "2026-11" }));
+    const dates = store.dispatch(attendancesApi.endpoints.groupAttendanceDates.initiate({ groupId: "g1", month: "2026-11" }));
+    await Promise.all([marks, dates]);
+    expect(gets("?month")).toBe(1);
+    expect(gets("/dates")).toBe(1);
+
+    await store.dispatch(attendancesApi.endpoints.saveAttendance.initiate({ records: [record("2026-11-03")] }));
+
+    await vi.waitFor(() => expect(gets("?month")).toBe(2));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(gets("/dates")).toBe(1);
+    marks.unsubscribe();
+    dates.unsubscribe();
+  });
 });
 
 describe("attendancesApi.groupAttendance", () => {

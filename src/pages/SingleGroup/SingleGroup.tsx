@@ -29,10 +29,10 @@ import {
   useStudentGroupsQuery,
   useLazyStudentGroupsQuery,
   useFreezeStudentGroupMutation,
-  useUnfreezeStudentGroupMutation,
+  useActivateFrozenStudentGroupMutation,
+  useActivateTrialStudentGroupMutation,
   useUpdateStudentGroupStatusMutation,
   useUpdateStudentGroupMutation,
-  useGraduateTrialStudentGroupMutation,
 } from "../../app/api/groupsApi";
 import type { GroupDetail, StudentGroupRecord, StudentGroupStatus, UpdateGroupRequest } from "../../app/api/groupsApi/types";
 import {
@@ -69,7 +69,7 @@ import { StudentHoverCard } from "./StudentHoverCard";
 import { StudentStatusDot, GROUP_STATUS_STYLE, toGroupStatus } from "./StudentStatusDot";
 import { StudentActionsMenu } from "./StudentActionsMenu";
 import { FreezeModal } from "./FreezeModal";
-import { useLazyStudentFreezesQuery } from "../../app/api/studentFreezesApi";
+import { freezeMembership } from "./freezeMembership";
 import { ActivateModal } from "./ActivateModal";
 import { GraduateTrialModal } from "./GraduateTrialModal";
 import { EditGroupDrawer } from "./EditGroupDrawer";
@@ -237,15 +237,14 @@ export const SingleGroup = () => {
   const { rows: deletedRows, isLoading: deletedLoading } = useAllStudentGroups("DELETED", 500, !id, readAllPages);
   const [assignStudentsToGroup, { isLoading: isAssigning }] = useAssignStudentsToGroupMutation();
   const [fetchNewMembership] = useLazyStudentGroupsQuery();
-  const [fetchStudentFreezes] = useLazyStudentFreezesQuery();
   const [transferStudent, { isLoading: isTransferring }] = useTransferStudentMutation();
   const [updateGroup, { isLoading: isSavingGroup }] = useUpdateGroupMutation();
   const [toggleGroupStatus] = useToggleGroupStatusMutation();
   const [freezeStudentGroup, { isLoading: isFreezing }] = useFreezeStudentGroupMutation();
-  const [unfreezeStudentGroup, { isLoading: isUnfreezing }] = useUnfreezeStudentGroupMutation();
-  const [updateStudentGroupStatus, { isLoading: isChangingMembershipStatus }] = useUpdateStudentGroupStatusMutation();
+  const [activateFrozenStudentGroup, { isLoading: isActivatingFrozen }] = useActivateFrozenStudentGroupMutation();
+  const [activateTrialStudentGroup, { isLoading: isActivatingTrial }] = useActivateTrialStudentGroupMutation();
+  const [updateStudentGroupStatus] = useUpdateStudentGroupStatusMutation();
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
-  const [graduateTrialStudentGroup] = useGraduateTrialStudentGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const { leaveGroup, archiveStudent: archiveStudentFlow, deleteStudent: deleteStudentFlow } = useArchiveStudent();
   const [fetchStudentDetail] = useLazyStudentByIdQuery();
@@ -647,7 +646,11 @@ export const SingleGroup = () => {
       setHoverStudent(buildHoverData(student));
       setHoverAnchorEl(target);
       hoverRequestId.current = student.realId;
-      fetchStudentDetail(student.realId)
+      // `true`: a student already read (hovered before, or read for the balance
+      // column) is shown from the cache instead of being requested on every
+      // hover. Any change to a student invalidates the "student" tag, so the
+      // cached answer is never older than the last change.
+      fetchStudentDetail(student.realId, true)
         .then((res) => {
           if (hoverRequestId.current !== student.realId || !res.data) return;
           setHoverStudent(buildHoverData(student, res.data.data));
@@ -710,18 +713,21 @@ export const SingleGroup = () => {
     try {
       // POST /student-groups/{id}/freeze (Swagger): {id} is the membership's
       // own id (StudentGroupRecord.id), not the student id — startDate is
-      // required. `recalculateBalance` isn't part of the documented request
-      // body, so it isn't sent — the checkbox stays purely local until the
-      // backend documents support for it. The membership's real status
-      // (FROZEN) comes back through the studentGroup/group tag invalidation
-      // below and combinedStudents' overlay — no local optimistic patch,
+      // required. The "Recalculate the balance" checkbox goes along as
+      // `recalculateBalance` (only when ticked): the backend has to bill just
+      // the days before startDate and drop the frozen days' charge, so a student
+      // frozen on the day billing began owes nothing. The membership's real
+      // status (FROZEN) comes back through the studentGroup/group tag
+      // invalidation and combinedStudents' overlay — no local optimistic patch,
       // same pattern as handleRestoreConfirm/handleBackToTrialLesson.
-      await freezeStudentGroup({
+      const { recalculateIgnored } = await freezeMembership(freezeStudentGroup, {
         id: studentGroupId,
         startDate: data.startDate,
         reason: data.reason.trim() || undefined,
-      }).unwrap();
-      toast.success(t("singleGroup.freezeModal.toast.success"));
+        recalculateBalance: data.recalculateBalance || undefined,
+      });
+      if (recalculateIgnored) toast.showToast(t("singleGroup.freezeModal.toast.notRecalculated"), "warning");
+      else toast.success(t("singleGroup.freezeModal.toast.success"));
       setFreezeOpen(false);
     } catch (err) {
       // Backend message + HTTP status (the request/response itself is also in
@@ -732,66 +738,51 @@ export const SingleGroup = () => {
     }
   };
 
-  // Start date (YYYY-MM-DD) of the membership's currently running freeze —
-  // GET /student-freezes?studentId&groupId&status=ACTIVE, matched to the
-  // membership id when the record carries one. Falls back to the date the
-  // student joined; undefined when neither is known.
-  const findFreezeStart = async (student: RealGroupStudent, studentGroupId: string): Promise<string | undefined> => {
-    if (id) {
-      try {
-        const res = await fetchStudentFreezes({ studentId: student.realId, groupId: id, status: "ACTIVE", limit: 50 }).unwrap();
-        const rows = res.rows.filter((r) => r.startDate && (!r.studentGroupId || r.studentGroupId === studentGroupId));
-        const latest = rows.map((r) => r.startDate.slice(0, 10)).sort().pop();
-        if (latest) return latest;
-      } catch {
-        // Fall through to the join date.
-      }
-    }
-    return student.joinedAt;
-  };
-
   const handleActivateConfirm = async (paymentStartDate: string) => {
-    if (!selectedStudent) return;
+    if (!selectedStudent || !id) return;
     const studentGroupId = await resolveLiveMembershipId(selectedStudent);
     if (!studentGroupId) {
       toast.error(t("singleGroup.activateModal.toast.notFound"));
       return;
     }
-    // POST /student-groups/{id}/unfreeze — same membership id as freeze,
-    // multipart body {endDate} (the date the freeze ends) (FROZEN -> ACTIVE).
-    // Followed by PATCH /student-groups/{id} {paymentStartDate} — the same
-    // combo handleGraduateTrialConfirm uses to record which date the backend
-    // should calculate this membership's payment/debt accounting from (per
-    // PATCH .../status's own doc comment: "Agar ACTIVE qilinsa, to'lov hisobi
-    // boshlanadi").
+    // FROZEN -> ACTIVE: POST /student-groups/{id}/unfreeze {endDate} followed by
+    // PATCH /student-groups/{id} {paymentStartDate} — the same combo
+    // handleGraduateTrialConfirm uses to record which date the backend should
+    // calculate this membership's payment/debt accounting from (per PATCH
+    // .../status's own doc comment: "Agar ACTIVE qilinsa, to'lov hisobi
+    // boshlanadi"). Both go out as ONE mutation (see activateFrozenStudentGroup),
+    // so the roster is read again once, not once per step.
     //
     // The freeze must END on the date billing should START. It used to end
     // "today", which made the whole [freeze start .. today] stretch a frozen
     // (non-billable) period — a student added on the 1st and activated on the
     // 10th with "since 1st" was still billed only from the 10th. The end date
     // is therefore the picked date, but never before the freeze's own start
-    // (the backend rejects an end before the start): that start is read from
-    // the membership's ACTIVE freeze record, falling back to the join date.
-    const freezeStart = await findFreezeStart(selectedStudent, studentGroupId);
-    const unfreezeEnd = freezeStart && paymentStartDate < freezeStart ? freezeStart : paymentStartDate;
-    // The two steps are reported separately: once the unfreeze has gone
-    // through the student IS active, so a failure of the date step alone must
-    // not read as "activation failed".
+    // (the backend rejects an end before the start): the mutation reads that
+    // start from the membership's ACTIVE freeze record, falling back to the
+    // join date.
+    //
+    // Once the unfreeze has gone through the student IS active, so a failure of
+    // the date step alone (`dateError`) must not read as "activation failed".
     try {
-      await unfreezeStudentGroup({ id: studentGroupId, endDate: unfreezeEnd }).unwrap();
+      const { dateError } = await activateFrozenStudentGroup({
+        id: studentGroupId,
+        studentId: selectedStudent.realId,
+        groupId: id,
+        paymentStartDate,
+        fallbackFreezeStart: selectedStudent.joinedAt,
+      }).unwrap();
+      setActivateOpen(false);
+      if (dateError) {
+        const detail = describeApiError(dateError);
+        const generic = t("singleGroup.activateModal.toast.dateError");
+        toast.error(detail ? `${generic}: ${detail}` : generic);
+      } else {
+        toast.success(t("singleGroup.activateModal.toast.success"));
+      }
     } catch (err) {
       const detail = describeApiError(err);
       const generic = t("singleGroup.activateModal.toast.error");
-      toast.error(detail ? `${generic}: ${detail}` : generic);
-      return;
-    }
-    setActivateOpen(false);
-    try {
-      await updateStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
-      toast.success(t("singleGroup.activateModal.toast.success"));
-    } catch (err) {
-      const detail = describeApiError(err);
-      const generic = t("singleGroup.activateModal.toast.dateError");
       toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
@@ -869,23 +860,23 @@ export const SingleGroup = () => {
       toast.error(t("singleGroup.graduateTrialModal.toast.error"));
       return;
     }
+    // Both calls are ONE mutation (see activateTrialStudentGroup), so the roster
+    // is read again once. Reported separately: once the promotion went through
+    // the student IS active, so a failure of the date step alone (`dateError`)
+    // must not read as "activation failed" (staff would retry, and the billing
+    // date would never be set).
     try {
-      await graduateTrialStudentGroup(target.studentGroupId).unwrap();
+      const { dateError } = await activateTrialStudentGroup({ id: target.studentGroupId, paymentStartDate }).unwrap();
+      if (dateError) {
+        const detail = extractApiError(dateError);
+        const generic = t("singleGroup.graduateTrialModal.toast.dateError");
+        toast.error(detail ? `${generic}: ${detail}` : generic);
+      } else {
+        toast.success(t("singleGroup.graduateTrialModal.toast.success"));
+      }
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("singleGroup.graduateTrialModal.toast.error");
-      toast.error(detail ? `${generic}: ${detail}` : generic);
-      return;
-    }
-    // Reported separately: once the promotion went through the student IS
-    // active, so a failure of the date step alone must not read as "activation
-    // failed" (staff would retry, and the billing date would never be set).
-    try {
-      await updateStudentGroup({ id: target.studentGroupId, paymentStartDate }).unwrap();
-      toast.success(t("singleGroup.graduateTrialModal.toast.success"));
-    } catch (err) {
-      const detail = extractApiError(err);
-      const generic = t("singleGroup.graduateTrialModal.toast.dateError");
       toast.error(detail ? `${generic}: ${detail}` : generic);
     }
   };
@@ -1470,7 +1461,7 @@ export const SingleGroup = () => {
         open={activateOpen}
         onClose={() => setActivateOpen(false)}
         onConfirm={handleActivateConfirm}
-        isSaving={isUnfreezing || isSavingMembershipDates}
+        isSaving={isActivatingFrozen}
         defaultDate={selectedStudent?.joinedAt}
       />
 
@@ -1486,7 +1477,7 @@ export const SingleGroup = () => {
         open={graduateTrialOpen}
         onClose={() => setGraduateTrialOpen(false)}
         onConfirm={handleGraduateTrialConfirm}
-        isSaving={isChangingMembershipStatus || isSavingMembershipDates}
+        isSaving={isActivatingTrial}
         joinedAt={selectedStudent?.joinedAt}
       />
 

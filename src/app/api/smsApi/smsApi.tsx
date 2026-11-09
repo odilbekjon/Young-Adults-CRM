@@ -175,7 +175,10 @@ export const smsApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: ["student", "smsHistory"],
+            // Sending changes the SMS lists only (the student's own SMS tab carries
+            // "smsHistory" too). "student" is not touched: it would make the
+            // profile or the 100-student list of a group page read everything again.
+            invalidatesTags: ["smsHistory"],
         }),
         // POST /sms/send/teachers — same JSON body as the students one, with
         // `teacherIds`.

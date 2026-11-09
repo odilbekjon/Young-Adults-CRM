@@ -35,11 +35,11 @@ import type {
 } from "../../app/api/studentsApi/types";
 import {
   useAllGroupsQuery, useAssignStudentsToGroupMutation, useStudentGroupsQuery,
-  useFreezeStudentGroupMutation, useUnfreezeStudentGroupMutation,
-  useUpdateStudentGroupMutation, useGraduateTrialStudentGroupMutation, useLazyStudentGroupsQuery,
+  useFreezeStudentGroupMutation, useActivateFrozenStudentGroupMutation,
+  useUpdateStudentGroupMutation, useActivateTrialStudentGroupMutation, useLazyStudentGroupsQuery,
 } from "../../app/api/groupsApi";
 import type { Group, StudentGroupRecord } from "../../app/api/groupsApi/types";
-import { useLazyStudentFreezesQuery } from "../../app/api/studentFreezesApi";
+import { freezeMembership } from "../SingleGroup/freezeMembership";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useAttendanceReportQuery } from "../../app/api/attendancesApi";
 import { useSendSmsToStudentsMutation } from "../../app/api/smsApi";
@@ -1395,11 +1395,10 @@ export const StudentProfile = () => {
   const [assignStudentsToGroup, { isLoading: isAddingToGroup }] = useAssignStudentsToGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [freezeStudentGroup, { isLoading: isFreezingGroup }] = useFreezeStudentGroupMutation();
-  const [unfreezeStudentGroup, { isLoading: isUnfreezingGroup }] = useUnfreezeStudentGroupMutation();
+  const [activateFrozenStudentGroup, { isLoading: isUnfreezingGroup }] = useActivateFrozenStudentGroupMutation();
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
-  const [graduateTrialStudentGroup, { isLoading: isGraduatingTrial }] = useGraduateTrialStudentGroupMutation();
+  const [activateTrialStudentGroup, { isLoading: isGraduatingTrial }] = useActivateTrialStudentGroupMutation();
   const [fetchMemberships] = useLazyStudentGroupsQuery();
-  const [fetchStudentFreezes] = useLazyStudentFreezesQuery();
 
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
   const groupsById = useMemo(() => {
@@ -1653,7 +1652,7 @@ export const StudentProfile = () => {
   // POST /student-groups/{id}/freeze — same call SingleGroup's FreezeModal
   // makes, just targeting a membership reached from the student's own
   // profile instead of that group's roster.
-  const handleFreezeGroupConfirm = async (freezeData: { reason: string; startDate: string }) => {
+  const handleFreezeGroupConfirm = async (freezeData: { reason: string; startDate: string; recalculateBalance: boolean }) => {
     if (!freezeTarget) return;
     // freezeTarget.id is the group's id (see realStudentGroupIdByGroupId's
     // comment above), not the membership row id this call needs.
@@ -1663,12 +1662,16 @@ export const StudentProfile = () => {
       return;
     }
     try {
-      await freezeStudentGroup({
+      // The dialog's "Recalculate the balance" checkbox is sent as
+      // `recalculateBalance` (only when ticked) - see freezeMembership.
+      const { recalculateIgnored } = await freezeMembership(freezeStudentGroup, {
         id: realId,
         startDate: freezeData.startDate,
         reason: freezeData.reason.trim() || undefined,
-      }).unwrap();
-      toast.success("Group membership frozen");
+        recalculateBalance: freezeData.recalculateBalance || undefined,
+      });
+      if (recalculateIgnored) toast.showToast("Group membership frozen, but the balance was not recalculated: the server does not support this yet", "warning");
+      else toast.success("Group membership frozen");
       setFreezeTarget(null);
     } catch (err) {
       const detail = extractApiError(err);
@@ -1699,27 +1702,12 @@ export const StudentProfile = () => {
 
   const dateOnly = (iso?: string | null) => (iso ? iso.slice(0, 10) : undefined);
 
-  // Start date of the membership's running freeze (GET /student-freezes), else
-  // the day the student joined the group.
-  const findFreezeStart = async (membership: StudentGroupMembership, studentGroupId: string) => {
-    try {
-      const res = await fetchStudentFreezes({ studentId: student.uid, groupId: membership.id, status: "ACTIVE", limit: 50 }).unwrap();
-      const latest = res.rows
-        .filter((r) => r.startDate && (!r.studentGroupId || r.studentGroupId === studentGroupId))
-        .map((r) => r.startDate.slice(0, 10))
-        .sort()
-        .pop();
-      if (latest) return latest;
-    } catch {
-      /* fall through to the join date */
-    }
-    return dateOnly(membership.joinedAt);
-  };
-
   // FROZEN -> ACTIVE: POST /student-groups/{id}/unfreeze {endDate}, then PATCH
   // /student-groups/{id} {paymentStartDate} - payment accounting starts on the
-  // picked date. The freeze must END on the day billing starts (never before
-  // the freeze's own start).
+  // picked date. Both go out as ONE mutation (activateFrozenStudentGroup), so
+  // the lists are read again once instead of once per step. The freeze must END
+  // on the day billing starts (never before the freeze's own start, which the
+  // mutation looks up in GET /student-freezes, else uses the join date).
   const handleUnfreezeConfirm = async (paymentStartDate: string) => {
     if (!activateTarget) return;
     const studentGroupId = await resolveLiveMembershipId(activateTarget.id);
@@ -1727,28 +1715,31 @@ export const StudentProfile = () => {
       toast.error("Failed to activate: membership not found");
       return;
     }
-    const freezeStart = await findFreezeStart(activateTarget, studentGroupId);
-    const unfreezeEnd = freezeStart && paymentStartDate < freezeStart ? freezeStart : paymentStartDate;
     try {
-      await unfreezeStudentGroup({ id: studentGroupId, endDate: unfreezeEnd }).unwrap();
+      const { dateError } = await activateFrozenStudentGroup({
+        id: studentGroupId,
+        studentId: student.uid,
+        groupId: activateTarget.id,
+        paymentStartDate,
+        fallbackFreezeStart: dateOnly(activateTarget.joinedAt),
+      }).unwrap();
+      setActivateTarget(null);
+      // Reported separately: the student IS active once the unfreeze went through.
+      if (dateError) {
+        const detail = extractApiError(dateError);
+        toast.error(detail ? `Activated, but the payment start date was not saved: ${detail}` : "Activated, but the payment start date was not saved");
+      } else {
+        toast.success("Group membership activated");
+      }
     } catch (err) {
       const detail = extractApiError(err);
       toast.error(detail ? `Failed to activate: ${detail}` : "Failed to activate");
-      return;
-    }
-    setActivateTarget(null);
-    // Reported separately: the student IS active once the unfreeze went through.
-    try {
-      await updateStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
-      toast.success("Group membership activated");
-    } catch (err) {
-      const detail = extractApiError(err);
-      toast.error(detail ? `Activated, but the payment start date was not saved: ${detail}` : "Activated, but the payment start date was not saved");
     }
   };
 
   // PROBATION (trial) -> ACTIVE: POST /student-groups/{id}/graduate-trial, then
-  // PATCH {paymentStartDate} with the picked date.
+  // PATCH {paymentStartDate} with the picked date - one mutation
+  // (activateTrialStudentGroup), one refresh of the lists.
   const handleGraduateConfirm = async (paymentStartDate: string) => {
     const target = graduateTarget;
     setGraduateTarget(null);
@@ -1759,19 +1750,17 @@ export const StudentProfile = () => {
       return;
     }
     try {
-      await graduateTrialStudentGroup(studentGroupId).unwrap();
+      const { dateError } = await activateTrialStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
+      // Reported separately: the student IS active once the promotion went through.
+      if (dateError) {
+        const detail = extractApiError(dateError);
+        toast.error(detail ? `Activated, but the payment start date was not saved: ${detail}` : "Activated, but the payment start date was not saved");
+      } else {
+        toast.success("Group membership activated");
+      }
     } catch (err) {
       const detail = extractApiError(err);
       toast.error(detail ? `Failed to activate: ${detail}` : "Failed to activate");
-      return;
-    }
-    // Reported separately: the student IS active once the promotion went through.
-    try {
-      await updateStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
-      toast.success("Group membership activated");
-    } catch (err) {
-      const detail = extractApiError(err);
-      toast.error(detail ? `Activated, but the payment start date was not saved: ${detail}` : "Activated, but the payment start date was not saved");
     }
   };
 

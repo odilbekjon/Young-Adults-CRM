@@ -644,7 +644,7 @@ export const studentsApi = baseApi.injectEndpoints({
                 method: "GET",
             }),
             transformResponse: (response: unknown) => normalizeStudentComments((response as { data?: unknown })?.data ?? response),
-            providesTags: ["student"],
+            providesTags: ["student", "studentComment"],
         }),
         // POST /students/{id}/comments — JSON body, not multipart (see
         // CreateStudentCommentRequest's doc comment).
@@ -654,7 +654,11 @@ export const studentsApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: { comment },
             }),
-            invalidatesTags: ["student"],
+            // Only the comment list (and the history timeline) change. Invalidating
+            // "student" made a profile, or the group page's 100-student list, read
+            // the student, their payments, groups and finance history again to add
+            // one note.
+            invalidatesTags: ["studentComment"],
         }),
         studentHistory: builder.query<StudentHistoryEntry[], string>({
             query: (id) => ({
@@ -663,8 +667,8 @@ export const studentsApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response: unknown) => normalizeStudentHistory((response as { data?: unknown })?.data ?? response),
             // The timeline records group joins/removals too, so a membership
-            // change refreshes it like a profile change does.
-            providesTags: ["student", "studentGroup"],
+            // change refreshes it like a profile change does, and a new note.
+            providesTags: ["student", "studentGroup", "studentComment"],
         }),
         studentSmsHistory: builder.query<StudentSmsEntry[], StudentSmsHistoryRequest>({
             query: ({ id, ...args }) => {
@@ -680,7 +684,8 @@ export const studentsApi = baseApi.injectEndpoints({
                 };
             },
             transformResponse: (response: unknown) => normalizeStudentSmsHistory((response as { data?: unknown })?.data ?? response),
-            providesTags: ["student"],
+            // "smsHistory": what sendSmsToStudents invalidates (see smsApi).
+            providesTags: ["student", "smsHistory"],
         }),
         // GET /students/{id}/payments — the student's own payment registry
         // plus totals (totalPaid/totalCharged/balance/totalDebt), scoped

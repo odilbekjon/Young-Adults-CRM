@@ -79,14 +79,14 @@ describe("Dashboard stat cards", () => {
     stubFetch(makeBackend());
     renderDashboard();
 
-    await waitFor(() => expect(valueOf("Active students")).toBe("1830"));
-    expect(LABELS.map(valueOf)).toEqual(["0", "1830", "108", "1649", "67", "155", "52", "76"]);
+    await waitFor(() => expect(valueOf("Active students")).toBe("1706"));
+    expect(LABELS.map(valueOf)).toEqual(["0", "1706", "108", "1649", "67", "155", "52", "76"]);
   });
 
   it("asks for those figures once, and downloads no list to count them", async () => {
     const { requests } = stubFetch(makeBackend());
     renderDashboard();
-    await waitFor(() => expect(valueOf("Active students")).toBe("1830"));
+    await waitFor(() => expect(valueOf("Active students")).toBe("1706"));
     // let every other card on the page finish asking as well
     await waitFor(() => expect(requests.some((r) => pathOf(r) === "dashboard/schedule")).toBe(true));
 
@@ -110,9 +110,9 @@ describe("Dashboard stat cards", () => {
     await waitFor(() => expect(LABELS.every(hasSpinner)).toBe(true));
 
     stats.open();
-    await waitFor(() => expect(valueOf("Active students")).toBe("1830"));
+    await waitFor(() => expect(valueOf("Active students")).toBe("1706"));
     expect(LABELS.some(hasSpinner)).toBe(false);
-    expect(LABELS.map(valueOf)).toEqual(["0", "1830", "108", "1649", "67", "155", "52", "76"]);
+    expect(LABELS.map(valueOf)).toEqual(["0", "1706", "108", "1649", "67", "155", "52", "76"]);
   });
 
   it("reads the short names when that is all the answer carries", async () => {
@@ -184,6 +184,11 @@ describe("statCounts", () => {
   it("prefers the long name and falls back to the alias", () => {
     expect(statCounts({ activeStudentsCount: 5, students: 9, activeGroupsCount: 1, groups: 2 })).toMatchObject({ students: 5, groups: 1 });
     expect(statCounts({ activeStudentsCount: 5, activeGroupsCount: 1, debtors: 7 })).toMatchObject({ debtors: 7 });
+  });
+
+  it("shows the active memberships as the active students, not the account count", () => {
+    expect(statCounts({ activeStudentsCount: 966, students: 966, activeStudentGroupsCount: 861, activeGroupsCount: 51 }).students).toBe(861);
+    expect(statCounts({ activeStudentsCount: 966, activeStudentGroupsCount: 0, activeGroupsCount: 51 }).students).toBe(0);
   });
 
   it("counts the payments of the month, whichever of its three names the backend used", () => {

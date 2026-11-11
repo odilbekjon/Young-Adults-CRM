@@ -11,6 +11,7 @@ import { useTeacherByIdQuery, useTeacherForEditQuery, useUpdateTeacherMutation, 
 import type { Teacher, TeacherGender } from "../../app/api/teachersApi/types";
 import { useAllBranchesQuery } from "../../app/api/branchesApi";
 import { useActiveGroups } from "../../hooks/useActiveGroups";
+import { useLiveGroupRosters } from "../../hooks/useLiveGroupRosters";
 import { useStudentByIdQuery, useStudentGroupMembershipsQuery } from "../../app/api/studentsApi";
 import { BALANCE_STATUS_COLOR, classifyBalance } from "../../utils/balance";
 import { formatPhone, toPhoneInput } from "../../utils/formatPhone";
@@ -772,6 +773,11 @@ export const TeacherProfile = () => {
   // filtered by this teacher on the server (useActiveGroups). Every ACTIVE
   // group is listed, whether or not its training end date has passed — the
   // Teachers page count reads the same hook.
+  //
+  // A group's own `students` list still names members who left it or were
+  // archived, so the roster (and the number on the card) is the corrected one
+  // from useLiveGroupRosters - the people the group's own page shows as members.
+  const rosters = useLiveGroupRosters(activeGroups, !id);
   const teacherGroups: ProfileGroup[] = useMemo(() => {
     return activeGroups.map((g) => ({
       id: g.id,
@@ -781,9 +787,9 @@ export const TeacherProfile = () => {
       endDate: g.trainingEnd,
       schedule: `${g.daysType === "EVEN" ? "Even days" : g.daysType === "ODD" ? "Odd days" : g.daysType ?? "—"} • ${g.time ?? ""}`,
       room: g.room?.name ?? "—",
-      students: g.students.map((s) => ({ id: s.id, name: s.name, phone: s.phone })),
+      students: rosters.get(g.id) ?? [],
     }));
-  }, [activeGroups]);
+  }, [activeGroups, rosters]);
 
   const handleSaveTeacher = async (data: { name: string; phone: string; gender: TeacherGender | undefined; birthdate: string; branchIds: string[]; photo?: File; password?: string }) => {
     if (!id) return;

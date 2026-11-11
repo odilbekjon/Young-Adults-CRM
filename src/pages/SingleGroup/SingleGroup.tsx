@@ -39,6 +39,7 @@ import {
   useAllStudentsQuery,
   useTransferStudentBranchMutation,
   useLazyStudentByIdQuery,
+  useStudentCommentsQuery,
 } from "../../app/api/studentsApi";
 import type { StudentDetail } from "../../app/api/studentsApi/types";
 import { useEveryBranchCourses } from "../../hooks/useEveryBranchCourses";
@@ -84,6 +85,9 @@ import { transferEndDate } from "../../utils/transferDates";
 import { useStudentBalances } from "../../hooks/useStudentBalances";
 import { useArchiveStudent } from "../../hooks/useArchiveStudent";
 import { useAllStudentGroups } from "../../hooks/useAllStudentGroups";
+
+// How many of a student's newest notes the hover card lists.
+const HOVER_NOTES_SHOWN = 3;
 
 const TAB_KEYS = [
   "attendance", "grade", "onlineLessons",
@@ -525,6 +529,18 @@ export const SingleGroup = () => {
 
   // Student hover card
   const [hoverStudent, setHoverStudent] = useState<ReturnType<typeof buildHoverData> | null>(null);
+  // The notes added with "Add new note" (POST /students/{id}/comments) of the
+  // student the card is open for - read only while it is open. A note saved
+  // from this page invalidates the list, so the next hover shows it.
+  const { currentData: hoverComments } = useStudentCommentsQuery(hoverStudent?.uid ?? "", { skip: !hoverStudent });
+  const hoverNotes = useMemo(
+    () => [...(hoverComments ?? [])]
+      .filter((c) => c.text.trim())
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, HOVER_NOTES_SHOWN)
+      .map((c) => ({ id: c.id, text: c.text, date: c.createdAt ? formatDate(c.createdAt).replace("—", "") : "" })),
+    [hoverComments],
+  );
   const [hoverAnchorEl, setHoverAnchorEl] = useState<HTMLElement | null>(null);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1418,6 +1434,7 @@ export const SingleGroup = () => {
       <div onMouseEnter={handleHoverCardMouseEnter} onMouseLeave={handleHoverCardMouseLeave}>
         <StudentHoverCard
           student={hoverStudent}
+          notes={hoverNotes}
           anchorEl={hoverAnchorEl}
           onClose={() => { setHoverStudent(null); setHoverAnchorEl(null); }}
           onGoToProfile={() => {

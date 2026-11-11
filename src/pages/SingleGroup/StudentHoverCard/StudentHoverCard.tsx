@@ -7,11 +7,14 @@ import { GROUP_STATUS_STYLE } from "../StudentStatusDot";
 
 export const StudentHoverCard = ({
   student,
+  notes = [],
   anchorEl,
   onClose,
   onGoToProfile,
 }: {
   student: StudentCardData | null;
+  // The student's newest notes ("Add new note"), newest first - listed last on the card.
+  notes?: { id: string; text: string; date: string }[];
   anchorEl: HTMLElement | null;
   onClose: () => void;
   onGoToProfile: () => void;
@@ -35,12 +38,13 @@ export const StudentHoverCard = ({
     // near the end of a long list. cardRef isn't mounted yet on this first
     // measurement, so a conservative estimate of its full (frozen-student)
     // height is used for the clamp.
+    // Re-measured when the notes arrive: they make the card taller.
     const estimatedCardHeight = cardRef.current?.offsetHeight ?? 440;
     const maxTop = window.innerHeight - estimatedCardHeight - 12;
     const top = Math.max(12, Math.min(rect.top, maxTop));
 
     setPos({ top, left, width: cardWidth });
-  }, [anchorEl, student]);
+  }, [anchorEl, student, notes.length]);
 
   useEffect(() => {
     if (!student) return;
@@ -200,12 +204,20 @@ export const StudentHoverCard = ({
         ) : null
       )}
 
-      {student.note && (
+      {(student.note || notes.length > 0) && (
         <>
           <hr style={{ border: "none", borderTop: "1px solid var(--color-border-subtle)", margin: "0 0 10px" }} />
           <div style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 2 }}>{t("singleGroup.studentHoverCard.note")}</div>
-            <div style={{ fontSize: 13, color: "var(--color-text-primary)", whiteSpace: "pre-wrap" }}>{student.note}</div>
+            {student.note && (
+              <div style={{ fontSize: 13, color: "var(--color-text-primary)", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{student.note}</div>
+            )}
+            {notes.map((n) => (
+              <div key={n.id} style={{ marginTop: 4 }}>
+                <div style={{ fontSize: 13, color: "var(--color-text-primary)", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{n.text}</div>
+                {n.date && <div style={{ fontSize: 11, color: "var(--color-text-muted)" }}>{n.date}</div>}
+              </div>
+            ))}
           </div>
         </>
       )}

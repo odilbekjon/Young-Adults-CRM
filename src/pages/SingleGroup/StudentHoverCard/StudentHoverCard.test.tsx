@@ -34,4 +34,29 @@ describe("StudentHoverCard (staff)", () => {
     fireEvent.click(screen.getByText("Go to profile →"));
     expect(onGoToProfile).toHaveBeenCalledTimes(1);
   });
+  it("lists the student's notes last, after the dates", () => {
+    renderWithStore(
+      <StudentHoverCard
+        student={student}
+        notes={[{ id: "n1", text: "Called the parents", date: "11.11.2026" }, { id: "n2", text: "Asked for a discount", date: "" }]}
+        anchorEl={document.createElement("div")}
+        onClose={vi.fn()}
+        onGoToProfile={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Note")).toBeTruthy();
+    const text = document.body.textContent ?? "";
+    expect(text.indexOf("Called the parents")).toBeGreaterThan(text.indexOf("05.09.2026"));
+    expect(text.indexOf("Asked for a discount")).toBeGreaterThan(text.indexOf("Called the parents"));
+    expect(text.indexOf("Go to profile")).toBeGreaterThan(text.indexOf("Asked for a discount"));
+    expect(screen.getByText("11.11.2026")).toBeTruthy();
+  });
+
+  it("shows no note section when there is no note", () => {
+    renderWithStore(
+      <StudentHoverCard student={student} anchorEl={document.createElement("div")} onClose={vi.fn()} onGoToProfile={vi.fn()} />,
+    );
+    expect(screen.queryByText("Note")).toBeNull();
+  });
 });

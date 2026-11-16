@@ -106,6 +106,17 @@ describe("resolveBranchSelection", () => {
       expect(resolveBranchSelection({ ...base, accessible: [grammar, ielts], selectedBranchId: ielts.id })).toBeNull();
     });
 
+    it("goes back to the branch they last worked in, when it is still one of theirs", () => {
+      const two = { ...base, accessible: [grammar, ielts] };
+      expect(resolveBranchSelection({ ...two, preferredBranchId: ielts.id })).toEqual({ type: "select", id: ielts.id, name: ielts.name });
+      // nothing remembered, "All branches", or a branch that is no longer theirs -> the first one
+      for (const preferredBranchId of [undefined, null, closed.id]) {
+        expect(resolveBranchSelection({ ...two, preferredBranchId })).toEqual({ type: "select", id: grammar.id, name: grammar.name });
+      }
+      // and a selection that is already theirs is not pulled over to it
+      expect(resolveBranchSelection({ ...two, selectedBranchId: grammar.id, preferredBranchId: ielts.id })).toBeNull();
+    });
+
     it("waits while the account is loading - a valid persisted choice survives a reload", () => {
       expect(resolveBranchSelection({ ...base, accountLoaded: false, accessible: [], selectedBranchId: ielts.id })).toBeNull();
     });

@@ -61,6 +61,22 @@ describe("Login page", () => {
     expect(localStorage.getItem("selectedBranchId")).toBeNull();
   });
 
+  it("opens the session on the branch this account had selected when it last left this browser", async () => {
+    localStorage.setItem("ya-crm:lastBranch", JSON.stringify({ u1: "branch-of-u1", "someone-else": "another-branch" }));
+    localStorage.setItem("selectedBranchId", "branch-of-an-earlier-ceo");
+    store.dispatch(setSelectedBranchId("branch-of-an-earlier-ceo"));
+    stubFetch(() => jsonResponse(LOGIN_OK("ADMIN")));
+    renderWithStore(<LoginPage />);
+
+    fill("director@ya.uz", "secret1");
+    submit();
+
+    await waitFor(() => expect(store.getState().auth.token).toBe("tok-1"));
+    expect(store.getState().branch.selectedBranchId).toBe("branch-of-u1");
+    expect(localStorage.getItem("selectedBranchId")).toBe("branch-of-u1");
+    expect(store.getState().auth.userId).toBe("u1");
+  });
+
   it("shows the backend's wrong-credentials message for a 401, after trying the equivalent spellings", async () => {
     const { requests } = stubFetch(() =>
       jsonResponse({ success: false, error: ["Login yoki parol noto'g'ri"], statusCode: 401 }, { status: 401 }),

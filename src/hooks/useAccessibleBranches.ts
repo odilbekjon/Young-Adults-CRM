@@ -60,7 +60,9 @@ export type BranchSelectionFix = { type: "select"; id: string; name: string } | 
 //     (a deleted branch, one from another backend) is cleared back to "All branches"
 //   - anyone else works inside one of their own branches: a selection that is not
 //     one of theirs - none yet, or left over from an earlier session on this
-//     browser - becomes their first branch, and is never left in place just because
+//     browser - becomes the branch they last worked in on this browser
+//     (`preferredBranchId`, see utils/branchMemory) when that is still one of
+//     theirs, else their first branch, and is never left in place just because
 //     GET /branches happens to list it
 //   - an account that is known (or failed to load) but has no branch at all - once
 //     GET /branches, the fallback that may still name its branches, has answered -
@@ -76,6 +78,7 @@ export const resolveBranchSelection = ({
   selectedBranchId,
   accessible,
   listedBranchIds,
+  preferredBranchId,
 }: {
   isCeo: boolean;
   accountLoaded: boolean;
@@ -84,13 +87,15 @@ export const resolveBranchSelection = ({
   selectedBranchId: string | null;
   accessible: readonly { id: string; name: string }[];
   listedBranchIds?: ReadonlySet<string>;
+  preferredBranchId?: string | null;
 }): BranchSelectionFix => {
   if (isCeo) {
     return selectedBranchId && listedBranchIds && !listedBranchIds.has(selectedBranchId) ? { type: "clear" } : null;
   }
   if (accessible.length > 0) {
     if (accessible.some((b) => b.id === selectedBranchId)) return null;
-    return { type: "select", id: accessible[0].id, name: accessible[0].name };
+    const pick = accessible.find((b) => b.id === preferredBranchId) ?? accessible[0];
+    return { type: "select", id: pick.id, name: pick.name };
   }
   return selectedBranchId && branchListSettled && (accountLoaded || accountFailed) ? { type: "clear" } : null;
 };

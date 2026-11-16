@@ -3,7 +3,8 @@ import { act, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_BASE_URL } from "../../app/api/baseApi";
 import { store } from "../../app/store";
-import { logout, setRole, setToken } from "../../app/store/authSlice";
+import { loginSuccess, logout, setRole, setToken } from "../../app/store/authSlice";
+import { rememberBranch } from "../../utils/branchMemory";
 import { setSelectedBranchId } from "../../app/store/branchSlice";
 import { jsonResponse, stubFetch, type SentRequest } from "../../test/fetchStub";
 import { renderWithStore } from "../../test/renderWithStore";
@@ -154,6 +155,127 @@ describe("header branch picker - a branch director on a browser that had another
     await waitFor(() => expect(store.getState().branch.selectedBranchId).toBe(GRAMMAR.id));
     await waitFor(() => expect(label()).toBe(GRAMMAR.name));
     expect(meCalls).toBeGreaterThan(1);
+  });
+});
+
+// Signing out and back in: the header opens on the branch the account left with,
+// not on the default ("All branches" for a CEO, the first own branch otherwise).
+describe("header branch picker - signing in again", () => {
+  const TWO_BRANCH_DIRECTOR = {
+    ...DIRECTOR, id: "u-two", branchId: GRAMMAR.id, branchIds: [GRAMMAR.id, IELTS.id],
+    branches: [{ branchId: GRAMMAR.id, branch: GRAMMAR }, { branchId: IELTS.id, branch: IELTS }],
+  };
+  const pick = (name: string) => {
+    act(() => screen.getByRole("button").click());
+    act(() => screen.getByText(name).click());
+  };
+
+  it("brings a CEO back to the branch they had selected, instead of 'All branches'", async () => {
+    stubFetch(backend(CEO));
+    act(() => { store.dispatch(loginSuccess("tok", "ref", "SUPERADMIN", CEO.id)); });
+    const first = renderWithStore(<Picker />);
+    await waitFor(() => expect(label()).toBe("All branches"));
+    pick(GRAMMAR.name);
+    await waitFor(() => expect(label()).toBe(GRAMMAR.name));
+
+    first.unmount();
+    act(() => { store.dispatch(logout()); });
+    expect(store.getState().branch.selectedBranchId).toBeNull();
+
+    const { requests } = stubFetch(backend(CEO));
+    act(() => { store.dispatch(loginSuccess("tok-2", "ref-2", "SUPERADMIN", CEO.id)); });
+    renderWithStore(<Picker />);
+
+    await waitFor(() => expect(label()).toBe(GRAMMAR.name));
+    expect(store.getState().branch.selectedBranchId).toBe(GRAMMAR.id);
+    // the new session's branch-scoped requests never went out as "All branches"
+    const scoped = requests.filter((r) => path(r).startsWith("/branches") && (r.headers.get("authorization") ?? "").includes("tok-2"));
+    expect(scoped.length).toBeGreaterThan(0);
+    expect(scoped.map((r) => r.headers.get("x-branch-id"))).toEqual(scoped.map(() => GRAMMAR.id));
+  });
+
+  it("keeps a CEO on 'All branches' when they chose it before leaving", async () => {
+    stubFetch(backend(CEO));
+    act(() => { store.dispatch(loginSuccess("tok", "ref", "SUPERADMIN", CEO.id)); });
+    const first = renderWithStore(<Picker />);
+    await waitFor(() => expect(label()).toBe("All branches"));
+    pick(GRAMMAR.name);
+    await waitFor(() => expect(label()).toBe(GRAMMAR.name));
+    pick("All branches");
+    await waitFor(() => expect(store.getState().branch.selectedBranchId).toBeNull());
+
+    first.unmount();
+    act(() => { store.dispatch(logout()); });
+    stubFetch(backend(CEO));
+    act(() => { store.dispatch(loginSuccess("tok-2", "ref-2", "SUPERADMIN", CEO.id)); });
+    renderWithStore(<Picker />);
+
+    await waitFor(() => expect(label()).toBe("All branches"));
+    expect(store.getState().branch.selectedBranchId).toBeNull();
+  });
+
+  it("brings a director with two branches back to the second one, not the first", async () => {
+    stubFetch(backend(TWO_BRANCH_DIRECTOR));
+    act(() => { store.dispatch(loginSuccess("tok", "ref", "ADMIN", TWO_BRANCH_DIRECTOR.id)); });
+    const first = renderWithStore(<Picker />);
+    await waitFor(() => expect(label()).toBe(GRAMMAR.name)); // the first own branch, by default
+    pick(IELTS.name);
+    await waitFor(() => expect(label()).toBe(IELTS.name));
+
+    first.unmount();
+    act(() => { store.dispatch(logout()); });
+    stubFetch(backend(TWO_BRANCH_DIRECTOR));
+    act(() => { store.dispatch(loginSuccess("tok-2", "ref-2", "ADMIN", TWO_BRANCH_DIRECTOR.id)); });
+    renderWithStore(<Picker />);
+
+    await waitFor(() => expect(label()).toBe(IELTS.name));
+    expect(store.getState().branch.selectedBranchId).toBe(IELTS.id);
+  });
+
+  it("does not hand the CEO's branch to the director who signs in next on the same browser", async () => {
+    stubFetch(backend(CEO));
+    act(() => { store.dispatch(loginSuccess("tok", "ref", "SUPERADMIN", CEO.id)); });
+    const first = renderWithStore(<Picker />);
+    await waitFor(() => expect(label()).toBe("All branches"));
+    pick(IELTS.name);
+    await waitFor(() => expect(label()).toBe(IELTS.name));
+
+    first.unmount();
+    act(() => { store.dispatch(logout()); });
+    stubFetch(backend(DIRECTOR));
+    act(() => { store.dispatch(loginSuccess("tok-2", "ref-2", "ADMIN", DIRECTOR.id)); });
+    renderWithStore(<Picker />);
+
+    await waitFor(() => expect(label()).toBe(GRAMMAR.name));
+    expect(store.getState().branch.selectedBranchId).toBe(GRAMMAR.id);
+  });
+
+  it("falls back to the default when the remembered branch has been deleted meanwhile", async () => {
+    rememberBranch(CEO.id, "deleted-branch");
+    stubFetch(backend(CEO));
+    act(() => { store.dispatch(loginSuccess("tok", "ref", "SUPERADMIN", CEO.id)); });
+
+    renderWithStore(<Picker />);
+
+    await waitFor(() => expect(store.getState().branch.selectedBranchId).toBeNull());
+    await waitFor(() => expect(label()).toBe("All branches"));
+  });
+
+  it("starts remembering for a session that was signed in before (no account id on record), and restores it next time", async () => {
+    signIn("SUPERADMIN"); // token only, as sessions were stored before
+    leaveBranchSelected(IELTS.id);
+    stubFetch(backend(CEO));
+    const first = renderWithStore(<Picker />);
+    await waitFor(() => expect(label()).toBe(IELTS.name));
+    await waitFor(() => expect(store.getState().auth.userId).toBe(CEO.id));
+
+    first.unmount();
+    act(() => { store.dispatch(logout()); });
+    stubFetch(backend(CEO));
+    act(() => { store.dispatch(loginSuccess("tok-2", "ref-2", "SUPERADMIN", CEO.id)); });
+    renderWithStore(<Picker />);
+
+    await waitFor(() => expect(label()).toBe(IELTS.name));
   });
 });
 

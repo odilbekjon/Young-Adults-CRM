@@ -14,7 +14,8 @@ import { activeOwnBranches, pickAccessibleBranches, resolveBranchSelection } fro
 import { HEADER_HEIGHT, useSidebarWidth } from "../Sidebar/Sidebar";
 import { AddStudent } from "../../components/AddStudent/AddStudent";
 import { AddPayment } from "../../components/AddPayment/AddPayment";
-import { logout } from "../../app/store/authSlice";
+import { adoptSessionUser, logout } from "../../app/store/authSlice";
+import { recallBranch } from "../../utils/branchMemory";
 import { changeSelectedBranch } from "../../app/store/branchSlice";
 import type { AppDispatch, RootState } from "../../app/store";
 import { useAllBranchesQuery } from "../../app/api/branchesApi/branchesApi";
@@ -119,6 +120,17 @@ export const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBra
     () => (branchesData ? new Set((branchesData.data ?? []).map((b) => b.id)) : undefined),
     [branchesData],
   );
+  // Whose session this is, as the session itself has it on record (the login
+  // response's user id). GET /auth/me names the account for a session that
+  // doesn't know yet - one already signed in before the branch was remembered per
+  // account - so its branch is remembered from here on (see adoptSessionUser).
+  // Declared before the correction below so it runs first.
+  const sessionUserId = useSelector((s: RootState) => s.auth.userId);
+  const userId = user?.id;
+  useEffect(() => {
+    if (userId && sessionUserId !== userId) dispatch(adoptSessionUser(userId));
+  }, [userId, sessionUserId, dispatch]);
+
   const fix = resolveBranchSelection({
     isCeo,
     accountLoaded: !!user,
@@ -127,6 +139,8 @@ export const BranchDropdown = ({ branch, setBranch }: { branch: BranchId; setBra
     selectedBranchId,
     accessible: scopedBranches,
     listedBranchIds,
+    // The branch this account last worked in on this browser, if any.
+    preferredBranchId: userId ? recallBranch(userId) : undefined,
   });
   const fixType = fix?.type;
   const fixId = fix?.type === "select" ? fix.id : undefined;

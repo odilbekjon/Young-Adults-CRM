@@ -21,6 +21,18 @@ class Storage {
     localStorage.removeItem(AuthStorageKeys.ACCESS_TOKEN);
     localStorage.removeItem(AuthStorageKeys.REFRESH_TOKEN);
     localStorage.removeItem(AuthStorageKeys.ROLE);
+    localStorage.removeItem(AuthStorageKeys.USER_ID);
+  }
+
+  // The signed-in account's id (null clears it) — kept next to the token so a
+  // page refresh still knows whose branch and filters to remember.
+  public setUserId(userId: string | null) {
+    if (userId) localStorage.setItem(AuthStorageKeys.USER_ID, userId);
+    else localStorage.removeItem(AuthStorageKeys.USER_ID);
+  }
+
+  public getUserId(): string | null {
+    return localStorage.getItem(AuthStorageKeys.USER_ID);
   }
 
   public getTokens(): { accessToken: string | null; refreshToken: string | null } {

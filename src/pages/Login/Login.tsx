@@ -80,8 +80,9 @@ const LoginPage = () => {
       if (!res?.data?.token) throw new Error("The login response carries no token");
       // No manual navigate() here: PublicRoute reacts to the auth state
       // change and redirects to the originally-requested page (or
-      // /dashboard for staff, /portal for a STUDENT-role user).
-      dispatch(loginSuccess(res.data.token, res.data.refreshToken, res.data.user?.role));
+      // /dashboard for staff, /portal for a STUDENT-role user). The account's id
+      // lets the session open with the branch and filters it last had.
+      dispatch(loginSuccess(res.data.token, res.data.refreshToken, res.data.user?.role, res.data.user?.id));
     } catch (err: unknown) {
       console.error("[login] signed in, but the session could not be started", err);
       setError(t("login.sessionError"));

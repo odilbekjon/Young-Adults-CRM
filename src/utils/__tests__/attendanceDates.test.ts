@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { findFutureAttendanceDate, isAfterDay, isFutureAttendanceDate } from "../attendanceDates";
+import { attendanceStartDay, calendarDayOf, findFutureAttendanceDate, isAfterDay, isFutureAttendanceDate } from "../attendanceDates";
 
 // The suite runs in Asia/Tashkent (UTC+5, see vitest.config.ts), so every `now`
 // below is a LOCAL moment: new Date(y, m - 1, d, h, min).
@@ -194,5 +194,47 @@ describe("findFutureAttendanceDate", () => {
 
   it("counts an unreadable date as future", () => {
     expect(findFutureAttendanceDate(["2026-11-01", "garbage"], now)).toBe("garbage");
+  });
+});
+
+describe("calendarDayOf", () => {
+  it("reads a plain day and a timestamp with its own offset as written", () => {
+    expect(calendarDayOf("2026-11-14")).toBe("2026-11-14");
+    expect(calendarDayOf("2026-11-14T00:00:00+05:00")).toBe("2026-11-14");
+    expect(calendarDayOf("2026-11-14T23:30:00+05:00")).toBe("2026-11-14");
+  });
+
+  it("reads a UTC timestamp in the viewer's calendar (Tashkent)", () => {
+    // local midnight of the 14th, written in UTC
+    expect(calendarDayOf("2026-11-13T19:00:00.000Z")).toBe("2026-11-14");
+    // a day stored as UTC midnight
+    expect(calendarDayOf("2026-11-14T00:00:00.000Z")).toBe("2026-11-14");
+  });
+
+  it.each([[undefined], [null], [""], ["garbage"], ["14.11.2026"]])("gives nothing for %j", (raw) => {
+    expect(calendarDayOf(raw)).toBeUndefined();
+  });
+});
+
+describe("attendanceStartDay", () => {
+  it("is the join day for a trial lesson, which has no billing day yet", () => {
+    expect(attendanceStartDay("2026-11-14T00:00:00+05:00", null)).toBe("2026-11-14");
+  });
+
+  it("is the earlier of the join day and the billing day", () => {
+    // joined on a trial on the 10th, activated from the 14th
+    expect(attendanceStartDay("2026-11-10", "2026-11-14")).toBe("2026-11-10");
+    // entered into the system on the 14th, billing started from the 3rd
+    expect(attendanceStartDay("2026-11-14", "2026-11-03")).toBe("2026-11-03");
+  });
+
+  it("falls back to the one day that is known", () => {
+    expect(attendanceStartDay(null, "2026-11-14")).toBe("2026-11-14");
+    expect(attendanceStartDay("not a date", "2026-11-14")).toBe("2026-11-14");
+  });
+
+  it("is unknown when neither day is, so nothing gets closed on a guess", () => {
+    expect(attendanceStartDay(null, undefined)).toBeUndefined();
+    expect(attendanceStartDay()).toBeUndefined();
   });
 });

@@ -1578,7 +1578,8 @@
         "retry": "Retry",
         "notLessonDay": "Today is not a lesson day for this group — attendance can only be marked on a lesson day.",
         "futureDate": "Cannot mark attendance for a future date",
-        "futureMonth": "This month has not started yet — attendance cannot be marked for future dates."
+        "futureMonth": "This month has not started yet — attendance cannot be marked for future dates.",
+        "beforeJoin": "Not in the group yet — attendance opens on {{date}}"
       },
       "grade": {
         "tabLabel": "Grade",

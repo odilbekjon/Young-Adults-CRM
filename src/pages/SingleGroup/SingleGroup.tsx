@@ -82,6 +82,7 @@ import { MoveStudentDialog } from "./MoveStudentDialog";
 import { RemoveStudentDialog } from "./RemoveStudentDialog";
 import { decimalToNumber } from "../../utils/decimal";
 import { transferEndDate } from "../../utils/transferDates";
+import { attendanceStartDay } from "../../utils/attendanceDates";
 import { useStudentBalances } from "../../hooks/useStudentBalances";
 import { useArchiveStudent } from "../../hooks/useArchiveStudent";
 import { useAllStudentGroups } from "../../hooks/useAllStudentGroups";
@@ -104,7 +105,11 @@ const TAB_KEYS = [
 // GET /groups/{id} itself names for them (see toRealStudents) are kept.
 // groupStatus is the member's status in this group; active/archived derive from
 // it (see groupStatusFlags).
-type RealGroupStudent = GroupStudent & { realId: string; studentGroupId?: string; groupStatus?: StudentGroupStatus; joinedAt?: string };
+// attendanceFrom is the first day the member's attendance here may be marked (see
+// attendanceStartDay): the Attendance tab closes the days before it.
+type RealGroupStudent = GroupStudent & {
+  realId: string; studentGroupId?: string; groupStatus?: StudentGroupStatus; joinedAt?: string; attendanceFrom?: string;
+};
 
 const toLegacyGroup = (d: GroupDetail): LegacyGroup => ({
   id: 0,
@@ -154,6 +159,7 @@ const toRealStudents = (d: GroupDetail): RealGroupStudent[] =>
       ...groupStatusFlags(s.studentGroupStatus),
       joinedAt: s.joinedAt?.slice(0, 10),
     }),
+    attendanceFrom: attendanceStartDay(s.joinedAt, s.paymentStartDate),
   }));
 
 // A student is archived-in-this-group if their /student-groups membership
@@ -438,6 +444,9 @@ export const SingleGroup = () => {
           // "since when" for activation, so billing runs from the arrival day
           // to the end of the month rather than from whenever staff click.
           joinedAt: membership.joinedAt ? membership.joinedAt.slice(0, 10) : undefined,
+          // The membership's own dates decide since when attendance can be
+          // marked; what GET /groups/{id} named stays when it carries neither.
+          attendanceFrom: attendanceStartDay(membership.joinedAt, membership.paymentStartDate) ?? s.attendanceFrom,
         }),
         ...(!membership && removedIds.has(s.realId) && groupStatusFlags("INACTIVE")),
         ...(realBalance !== undefined && { balance: realBalance }),

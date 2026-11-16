@@ -30,6 +30,7 @@ import {
 } from "../../app/api/teacherPortalApi";
 import type { TeacherPortalGroupStudent } from "../../app/api/teacherPortalApi/types";
 import { formatTrainingDate } from "../../utils/formatTrainingDate";
+import { attendanceStartDay } from "../../utils/attendanceDates";
 import { useAuth } from "../../hooks/useAuth";
 import { StudentStatusDot, GROUP_STATUS_STYLE, toGroupStatus } from "../SingleGroup/StudentStatusDot";
 // Imported from its own file (not the folder index) so the staff hover card stays out of this chunk.
@@ -154,6 +155,8 @@ export const TeacherGroupDetail = () => {
         return {
           id: i + 1, realId: s.id, name: s.name, phone: s.phone ?? "",
           active: !groupStatus || groupStatus === "ACTIVE", groupStatus, debtor: s.debtor === true,
+          // The days before the student came into the group stay closed.
+          attendanceFrom: attendanceStartDay(s.joinedAt, s.paymentStartDate),
         };
       }),
     [students],

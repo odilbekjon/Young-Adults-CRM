@@ -28,3 +28,30 @@ export const findFutureAttendanceDate = (dates: string[], now: Date = new Date()
   const today = toLocalISODate(now);
   return dates.find((date) => isAfterDay(date, today));
 };
+
+// The calendar day (YYYY-MM-DD) a date sent by the backend stands for. A plain
+// day, or a timestamp that carries its own offset ("2026-11-14T00:00:00+05:00"),
+// is read as written. A UTC timestamp ("...Z") is read in the viewer's calendar:
+// "2026-11-13T19:00:00.000Z" is midnight of the 14th in Tashkent, and cutting it
+// at the "T" would name the 13th. Anything unreadable gives undefined.
+export const calendarDayOf = (raw?: string | null): string | undefined => {
+  if (!raw) return undefined;
+  if (/Z$/i.test(raw)) {
+    const moment = new Date(raw);
+    if (!Number.isNaN(moment.getTime())) return toLocalISODate(moment);
+  }
+  const day = raw.slice(0, 10);
+  return ISO_DAY.test(day) ? day : undefined;
+};
+
+// The first day a student's attendance in a group may be marked: the day they
+// came into the group (membership joinedAt) or the day their billing there starts
+// (paymentStartDate), whichever is earlier. A student added in the middle of the
+// month was not in the lessons before that, so those days stay closed; a trial
+// lesson (joined, not yet billed) is open from the day it began, and billing that
+// staff started on an earlier day than the join opens the days since then.
+// Undefined when neither day is known - nothing is closed on a guess.
+export const attendanceStartDay = (...dates: Array<string | null | undefined>): string | undefined => {
+  const days = dates.map(calendarDayOf).filter((d): d is string => !!d).sort();
+  return days[0];
+};

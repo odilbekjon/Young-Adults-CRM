@@ -1578,7 +1578,8 @@
         "retry": "Qayta urinish",
         "notLessonDay": "Bugun bu guruhning dars kuni emas — davomat faqat dars kunida belgilanadi.",
         "futureDate": "Kelajakdagi sana uchun davomat belgilab bo'lmaydi",
-        "futureMonth": "Bu oy hali boshlanmagan — kelajakdagi sanalar uchun davomat belgilab bo'lmaydi."
+        "futureMonth": "Bu oy hali boshlanmagan — kelajakdagi sanalar uchun davomat belgilab bo'lmaydi.",
+        "beforeJoin": "Hali guruhda bo'lmagan — davomat {{date}} dan boshlab belgilanadi"
       },
       "grade": {
         "tabLabel": "Baho",

@@ -371,3 +371,116 @@ describe("Attendance grid: freezes listed by the attendance answer", () => {
     expect(screen.queryByText("Frozen Vali")).toBeNull();
   });
 });
+
+describe("Attendance grid: the days before a student came into the group are closed", () => {
+  const BEFORE_JOIN = "Not in the group yet — attendance opens on 14.11.2026";
+  // Lessons of November 2026 up to today, Monday the 16th.
+  const LESSONS = ["2026-11-03", "2026-11-05", "2026-11-07", "2026-11-10", "2026-11-12", "2026-11-14", "2026-11-16"];
+  const backend = (table: unknown[] = []): FetchHandler => (request) => {
+    if (request.url.includes("/dates?month=2026-11")) return jsonResponse({ data: LESSONS });
+    if (request.url.includes("/dates?")) return jsonResponse({ data: [] });
+    return jsonResponse({ data: { table } });
+  };
+  // Umida was added on 14 November; Ali has been in the group all along.
+  const roster = [
+    { id: 1, realId: "s-umida", name: "Umida Abduqodirova", phone: "", active: true, attendanceFrom: "2026-11-14" },
+    { id: 2, realId: "s-ali", name: "Ali Valiyev", phone: "", active: true },
+  ];
+
+  const renderRoster = async (handler: FetchHandler, restrictToToday = false) => {
+    setNow(2026, 11, 16);
+    const stub = stubFetch(handler);
+    renderWithStore(
+      <ToastProvider>
+        <Attendance groupId="g1" students={roster} restrictToToday={restrictToToday} />
+      </ToastProvider>,
+    );
+    const rowOf = async (name: string) => (await screen.findByText(name)).closest("tr") as HTMLElement;
+    const umida = await rowOf("Umida Abduqodirova");
+    const ali = await rowOf("Ali Valiyev");
+    await waitFor(() => expect(umida.querySelectorAll(".att-cell")).toHaveLength(LESSONS.length));
+    const cellsOf = (row: HTMLElement) => Array.from(row.querySelectorAll<HTMLElement>(".att-cell"));
+    return { ...stub, umida: cellsOf(umida), ali: cellsOf(ali) };
+  };
+
+  it("closes the lessons before the join day and opens the join day and the ones after it", async () => {
+    const { umida } = await renderRoster(backend());
+
+    // 3, 5, 7, 10 and 12 November: she was not in the group yet
+    for (const cell of umida.slice(0, 5)) {
+      expect(isEditable(cell)).toBe(false);
+      expect(cell.getAttribute("aria-disabled")).toBe("true");
+      expect(cell.getAttribute("title")).toBe(BEFORE_JOIN);
+      expect(cell.querySelector(".cell-value")?.classList.contains("before-join")).toBe(true);
+    }
+    // 14 (the day she was added) and 16 (today)
+    for (const cell of umida.slice(5)) {
+      expect(isEditable(cell)).toBe(true);
+      expect(cell.hasAttribute("aria-disabled")).toBe(false);
+      expect(cell.hasAttribute("title")).toBe(false);
+    }
+  });
+
+  it("offers no was/not buttons on a closed day, and sends nothing", async () => {
+    const { umida, requests } = await renderRoster(backend());
+
+    fireEvent.mouseEnter(umida[3]); // 10 November
+    fireEvent.click(umida[3]);
+
+    expect(within(umida[3]).queryByRole("button")).toBeNull();
+    expect(posts(requests)).toHaveLength(0);
+  });
+
+  it("marks the join day itself", async () => {
+    const { umida, requests } = await renderRoster(backend());
+
+    fireEvent.mouseEnter(umida[5]);
+    fireEvent.click(await within(umida[5]).findByRole("button", { name: "Was" }));
+
+    await waitFor(() => expect(posts(requests)).toHaveLength(1));
+    expect(JSON.parse(posts(requests)[0].body).records[0]).toMatchObject({
+      studentId: "s-umida", date: "2026-11-14", status: "PRESENT",
+    });
+  });
+
+  it("leaves every past day open for a student whose join day is before the month, or not known", async () => {
+    const { ali } = await renderRoster(backend());
+
+    expect(ali.every(isEditable)).toBe(true);
+  });
+
+  it("still shows a mark that was saved on a day now closed, without letting it be changed", async () => {
+    const { umida } = await renderRoster(
+      backend([{ studentId: "s-umida", attendances: [{ date: "2026-11-12", status: "PRESENT" }] }]),
+    );
+
+    await waitFor(() => expect(umida[4].textContent).toBe("Was"));
+    expect(isEditable(umida[4])).toBe(false);
+  });
+
+  it("keeps a teacher to today only, for the newcomer as for everyone", async () => {
+    const { umida, ali } = await renderRoster(backend(), true);
+
+    expect(umida.map(isEditable)).toEqual([false, false, false, false, false, false, true]);
+    expect(ali.map(isEditable)).toEqual([false, false, false, false, false, false, true]);
+    // a day the teacher may not mark anyway still says why it is closed for her
+    expect(umida[0].getAttribute("title")).toBe(BEFORE_JOIN);
+  });
+
+  it("closes today too for a student who only joins tomorrow", async () => {
+    setNow(2026, 11, 16);
+    stubFetch(backend());
+    renderWithStore(
+      <ToastProvider>
+        <Attendance
+          groupId="g1"
+          students={[{ id: 1, realId: "s-new", name: "Yangi Talaba", phone: "", active: true, attendanceFrom: "2026-11-17" }]}
+        />
+      </ToastProvider>,
+    );
+    const row = (await screen.findByText("Yangi Talaba")).closest("tr") as HTMLElement;
+    await waitFor(() => expect(row.querySelectorAll(".att-cell")).toHaveLength(LESSONS.length));
+
+    expect(Array.from(row.querySelectorAll(".att-cell")).some(isEditable)).toBe(false);
+  });
+});

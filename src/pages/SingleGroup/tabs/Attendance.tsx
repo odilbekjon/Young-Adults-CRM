@@ -52,8 +52,11 @@ import type { StudentGroupStatus } from "../../../app/api/groupsApi/types";
 // `groupStatus` (the student's status in this group) tints the name of a trial
 // lesson exactly like the roster next to it does, and a FROZEN member is left
 // out of the grid altogether (see `rollCall`).
+// `attendanceFrom` (YYYY-MM-DD, see attendanceStartDay) is the first day the
+// student was in this group: the days before it cannot be marked for them.
 type AttendanceStudent = Student & {
   realId: string; archived?: boolean; balance?: number; debtor?: boolean; groupStatus?: StudentGroupStatus;
+  attendanceFrom?: string;
 };
 
 interface Props {
@@ -115,6 +118,8 @@ type AttVal = "Was" | "Not" | null;
 // own column or mark changes.
 interface DayColumn {
   day: number;
+  // The column's calendar day, YYYY-MM-DD.
+  date: string;
   isToday: boolean;
   isPast: boolean;
   // A day that has not come yet: locked for everyone (CEO and teachers alike).
@@ -154,11 +159,15 @@ const CELL_STYLES = {
   "& .att-cell .cell-value.today": { border: "2px solid var(--color-primary)" },
   "& .att-cell .cell-value.past": { backgroundColor: "var(--color-surface-alt)" },
   "& .att-cell .cell-value.was": { backgroundColor: "#00897b", color: "#fff" },
-  "& .att-cell .cell-value.not": { backgroundColor: "#ef5350", color: "#fff" },
+  // "Not" is a light blue, not an alarming red: it only has to stand apart from
+  // the green "Was". Dark text keeps it readable in both themes.
+  "& .att-cell .cell-value.not": { backgroundColor: "#90caf9", color: "#0d2b4e" },
   "& .att-cell:hover .cell-value": { opacity: 1 },
   // A future day is locked for good, so unlike a frozen one it stays dimmed on
   // hover too (same specificity as the hover rule, hence placed after it).
   "& .att-cell .cell-value.future": { opacity: 0.4, borderStyle: "dashed" },
+  // So is a day before the student came into the group.
+  "& .att-cell .cell-value.before-join": { opacity: 0.4, borderStyle: "dashed" },
   "& .att-cell.editable:hover .cell-value": { opacity: 0 },
   "& .att-cell .att-picker": { opacity: 0, pointerEvents: "none", transition: "opacity 0.12s" },
   "& .att-cell.editable:hover .att-picker": { opacity: 1, pointerEvents: "auto" },
@@ -174,15 +183,20 @@ interface CellProps {
   notLabel: string;
   // Why a future day can't be marked — the cell's native tooltip.
   futureLabel: string;
+  // The day lies before the student came into the group: locked like a future
+  // day, with `beforeJoinLabel` as the reason.
+  beforeJoin: boolean;
+  beforeJoinLabel?: string;
   restrictToToday?: boolean;
   onSet: (studentId: string, day: number, val: "Was" | "Not") => void;
   onRemove: (e: React.MouseEvent, studentId: string, day: number) => void;
 }
 
 const AttendanceCell = memo(function AttendanceCell({
-  studentId, column, val, wasLabel, notLabel, futureLabel, restrictToToday, onSet, onRemove,
+  studentId, column, val, wasLabel, notLabel, futureLabel, beforeJoin, beforeJoinLabel, restrictToToday, onSet, onRemove,
 }: CellProps) {
-  const { day, isToday, isPast, isFuture, isEditable } = column;
+  const { day, isToday, isPast, isFuture } = column;
+  const isEditable = column.isEditable && !beforeJoin;
   // The was/not picker (two tooltips and buttons) and the remove button are only
   // built while the pointer is over the cell and for the fade-out after it —
   // a month of 30 students would otherwise carry ~1000 of them that are almost
@@ -204,8 +218,9 @@ const AttendanceCell = memo(function AttendanceCell({
     isToday && "today",
     isEditable && "editable",
     // Frozen (read-only) day for a TEACHER session.
-    restrictToToday && !isEditable && !isFuture && "frozen",
+    restrictToToday && !isEditable && !isFuture && !beforeJoin && "frozen",
     isFuture && "future",
+    beforeJoin && !isFuture && "before-join",
     val === "Was" ? "was" : val === "Not" ? "not" : isPast && "past",
   ].filter(Boolean).join(" ");
 
@@ -213,8 +228,8 @@ const AttendanceCell = memo(function AttendanceCell({
     <TableCell align="center" className={isToday ? "att-day today" : "att-day"}>
       <div
         className={isEditable ? "att-cell editable" : "att-cell"}
-        title={isFuture ? futureLabel : undefined}
-        aria-disabled={isFuture || undefined}
+        title={isFuture ? futureLabel : beforeJoin ? beforeJoinLabel : undefined}
+        aria-disabled={isFuture || beforeJoin || undefined}
         onMouseEnter={isEditable ? handleEnter : undefined}
         onMouseLeave={isEditable ? handleLeave : undefined}
       >
@@ -329,6 +344,10 @@ interface RowProps {
   wasLabel: string;
   notLabel: string;
   futureLabel: string;
+  // First day the student may be marked (YYYY-MM-DD) and what the closed days
+  // before it say on hover; both undefined when that day is not known.
+  attendanceFrom?: string;
+  beforeJoinLabel?: string;
   restrictToToday?: boolean;
   onSet: CellProps["onSet"];
   onRemove: CellProps["onRemove"];
@@ -344,7 +363,8 @@ const sameRow = (prev: RowProps, next: RowProps) =>
   );
 
 const AttendanceRow = memo(function AttendanceRow({
-  studentId, name, active, archived, balance, debtor, groupStatus, vals, columns, wasLabel, notLabel, futureLabel, restrictToToday, onSet, onRemove,
+  studentId, name, active, archived, balance, debtor, groupStatus, vals, columns, wasLabel, notLabel, futureLabel,
+  attendanceFrom, beforeJoinLabel, restrictToToday, onSet, onRemove,
 }: RowProps) {
   // The roster's own colour: a trial lesson is light sky-blue and gets no green
   // "billed" dot.
@@ -396,6 +416,8 @@ const AttendanceRow = memo(function AttendanceRow({
           wasLabel={wasLabel}
           notLabel={notLabel}
           futureLabel={futureLabel}
+          beforeJoin={!!attendanceFrom && column.date < attendanceFrom}
+          beforeJoinLabel={beforeJoinLabel}
           restrictToToday={restrictToToday}
           onSet={onSet}
           onRemove={onRemove}
@@ -525,6 +547,23 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
   const showNotLessonDay =
     !!restrictToToday && !loadFailed && !datesLoading && isCurrentMonth && !isDayEditable(today);
 
+  // Each student's first markable day, for the click handlers: read from a ref so
+  // they stay the same functions when the roster refreshes.
+  const attendanceFromRef = useRef<Record<string, string | undefined>>({});
+  useEffect(() => {
+    attendanceFromRef.current = Object.fromEntries(students.map((s) => [s.realId, s.attendanceFrom]));
+  }, [students]);
+  const isBeforeJoin = useCallback((studentId: string, date: string) => {
+    const from = attendanceFromRef.current[studentId];
+    return !!from && date < from;
+  }, []);
+  // "Not in the group yet - attendance opens on 14.11.2026".
+  const beforeJoinLabelOf = useCallback(
+    (from?: string) =>
+      from ? t("singleGroup.tabs.attendance.beforeJoin", { date: from.split("-").reverse().join(".") }) : undefined,
+    [t],
+  );
+
   const handleSet = useCallback((studentId: string, day: number, val: "Was" | "Not") => {
     const date = dateFor(day);
     // The grid never offers a future day; this is the second lock, read off the
@@ -534,6 +573,12 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
       return;
     }
     if (!isDayEditable(day)) return;
+    // Same for a day before the student came into the group.
+    if (isBeforeJoin(studentId, date)) {
+      const reason = beforeJoinLabelOf(attendanceFromRef.current[studentId]);
+      if (reason) toastError(reason);
+      return;
+    }
     setOverrides((prev) => ({
       ...prev,
       [studentId]: { ...(prev[studentId] || {}), [date]: val },
@@ -562,7 +607,7 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
         const generic = t("singleGroup.tabs.attendance.saveError");
         toastError(detail ? `${generic} ${detail}` : generic);
       });
-  }, [dateFor, isDayEditable, saveAttendance, groupId, restrictToToday, toastSuccess, toastError, futureLabel, t]);
+  }, [dateFor, isDayEditable, isBeforeJoin, beforeJoinLabelOf, saveAttendance, groupId, restrictToToday, toastSuccess, toastError, futureLabel, t]);
 
   // Remove (X) button on hover — clears the mark locally; the API contract
   // doesn't expose a delete/clear endpoint, so a removed mark reappears
@@ -573,16 +618,17 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
     day: number
   ) => {
     e.stopPropagation();
-    if (!isDayEditable(day) || restrictToToday) return;
+    if (!isDayEditable(day) || restrictToToday || isBeforeJoin(studentId, dateFor(day))) return;
     setOverrides((prev) => ({
       ...prev,
       [studentId]: { ...(prev[studentId] || {}), [dateFor(day)]: null },
     }));
-  }, [isDayEditable, restrictToToday, dateFor]);
+  }, [isDayEditable, restrictToToday, isBeforeJoin, dateFor]);
 
   const columns = useMemo<DayColumn[]>(
     () => days.map((d) => ({
       day: d,
+      date: dateFor(d),
       isToday: isCurrentMonth && d === today,
       isPast: year < nowYear || (year === nowYear && month < nowMonth) || (isCurrentMonth && d < today),
       isFuture: isAfterDay(dateFor(d), todayIso),
@@ -815,6 +861,8 @@ export const Attendance = memo(function Attendance({ groupId, students, restrict
                 wasLabel={wasLabel}
                 notLabel={notLabel}
                 futureLabel={futureLabel}
+                attendanceFrom={student.attendanceFrom}
+                beforeJoinLabel={beforeJoinLabelOf(student.attendanceFrom)}
                 restrictToToday={restrictToToday}
                 onSet={handleSet}
                 onRemove={handleRemove}

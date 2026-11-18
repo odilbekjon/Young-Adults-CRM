@@ -3097,14 +3097,11 @@
       "brand": "CRM"
     },
     "serverPayment": {
-      "title": "Server to'lovi yaqinlashmoqda",
+      "title": "Diqqat!",
       "soon": "Server to'lov muddati yaqin",
-      "today": "Server to'lovi bugun!",
-      "daysLeft": "To'lovgacha {{days}} kun qoldi",
-      "description": "To'lov sanasi: {{date}}. Muddat tugasa tizim to'xtab qolishi mumkin — iltimos, serverni oldindan to'lang.",
-      "descriptionNoDate": "Muddat tugasa tizim to'xtab qolishi mumkin — iltimos, serverni oldindan to'lang.",
-      "understood": "Tushunarli",
-      "close": "Yopish"
+      "today": "Server to'lovi bugun",
+      "daysLeft": "Server to'lovigacha {{days}} kun qoldi",
+      "description": "Muddat tugasa tizim to'xtab qolishi mumkin — iltimos, serverni oldindan to'lang."
     }
   }
 }

@@ -3097,14 +3097,11 @@
       "brand": "CRM"
     },
     "serverPayment": {
-      "title": "Server payment is coming up",
+      "title": "Attention!",
       "soon": "The server payment is due soon",
-      "today": "The server payment is due today!",
-      "daysLeft": "{{days}} day(s) left until the payment",
-      "description": "Payment date: {{date}}. If the term runs out the system may stop working — please pay for the server in advance.",
-      "descriptionNoDate": "If the term runs out the system may stop working — please pay for the server in advance.",
-      "understood": "Got it",
-      "close": "Close"
+      "today": "The server payment is due today",
+      "daysLeft": "{{days}} day(s) left until the server payment",
+      "description": "If the term runs out the system may stop working — please pay for the server in advance."
     }
   }
 }

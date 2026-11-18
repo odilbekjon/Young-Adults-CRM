@@ -69,11 +69,11 @@ const LayoutInner = ({ children }: Props) => {
             flexDirection: "column",
           }}
         >
+          <ServerPaymentWarning />
           <Box sx={{ flex: 1 }}>{children}</Box>
           <PageFooter />
         </Box>
       </Box>
-      <ServerPaymentWarning />
     </Box>
   );
 };

@@ -1,44 +1,26 @@
 // src/pages/groups/ActivateModal.tsx
-// Unfreezes a FROZEN membership (POST /student-groups/{id}/unfreeze, no
-// request body) and lets staff pick the date payment calculation should
-// start from — PATCH /student-groups/{id} {paymentStartDate} as a follow-up
-// (see handleActivateConfirm in SingleGroup.tsx), same combo GraduateTrialModal
-// already uses for PROBATION -> ACTIVE.
-import { useEffect, useState } from "react";
+// Confirms bringing a member back to ACTIVE: a FROZEN one (POST
+// /student-groups/{id}/unfreeze) or an archived one (PATCH /student-groups/{id}
+// {status: "ACTIVE"}). No billing start date is asked for or sent - the backend
+// decides where payment accounting starts - so this is a plain confirmation.
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton, Button } from "@mui/material";
 import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
-import { DatePickerField } from "../DatePickerField";
 import { submitOnEnter } from "../../../utils/submitOnEnter";
 
-// Local calendar date — toISOString() is UTC, which is still "yesterday" for
-// the first hours after midnight in UTC+5.
-const todayISO = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
-
 export const ActivateModal = ({
-  open, onClose, onConfirm, isSaving, defaultDate,
+  open, onClose, onConfirm, isSaving,
 }: {
   open: boolean;
   onClose: () => void;
-  onConfirm: (paymentStartDate: string) => void;
+  onConfirm: () => void;
   isSaving?: boolean;
-  // Pre-filled "since when" (the day the student joined the group); falls
-  // back to today when the membership carries no join date.
-  defaultDate?: string;
 }) => {
   const { t } = useTranslation();
-  const [paymentStartDate, setPaymentStartDate] = useState(todayISO());
-
-  useEffect(() => {
-    if (open) setPaymentStartDate(defaultDate || todayISO());
-  }, [open, defaultDate]);
 
   const handleSubmit = () => {
-    if (!paymentStartDate) return;
-    onConfirm(paymentStartDate);
+    if (isSaving) return;
+    onConfirm();
   };
 
   return (
@@ -58,28 +40,27 @@ export const ActivateModal = ({
       </DialogTitle>
 
       <DialogContent sx={{ px: 2.5, pt: 1, pb: 2 }}>
-        <Typography fontSize={13} color="var(--color-text-secondary)" mb={1.5}>
+        <Typography fontSize={13} color="var(--color-text-secondary)">
           {t("singleGroup.activateModal.description")}
         </Typography>
-        <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} shortcuts />
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: "center", pb: 3, px: 2.5 }}>
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={!paymentStartDate || isSaving}
+          disabled={isSaving}
           sx={{
             borderRadius: 999,
             textTransform: "none",
-            bgcolor: paymentStartDate ? "#7a8fa6" : "#c5cdd8",
+            bgcolor: "#7a8fa6",
             fontSize: 14,
             fontWeight: 600,
             px: 5,
             py: 1.2,
             minWidth: 140,
             boxShadow: "none",
-            "&:hover": { bgcolor: paymentStartDate ? "#6b7f96" : "#c5cdd8", boxShadow: "none" },
+            "&:hover": { bgcolor: "#6b7f96", boxShadow: "none" },
           }}
         >
           {isSaving ? t("singleGroup.activateModal.saving") : t("singleGroup.activateModal.submit")}

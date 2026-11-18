@@ -29,8 +29,8 @@ import {
   useStudentGroupsQuery,
   useLazyStudentGroupsQuery,
   useFreezeStudentGroupMutation,
-  useActivateFrozenStudentGroupMutation,
-  useActivateTrialStudentGroupMutation,
+  useUnfreezeStudentGroupMutation,
+  useGraduateTrialStudentGroupMutation,
   useUpdateStudentGroupStatusMutation,
   useUpdateStudentGroupMutation,
 } from "../../app/api/groupsApi";
@@ -83,6 +83,7 @@ import { RemoveStudentDialog } from "./RemoveStudentDialog";
 import { decimalToNumber } from "../../utils/decimal";
 import { transferEndDate } from "../../utils/transferDates";
 import { attendanceStartDay } from "../../utils/attendanceDates";
+import { readGroupDebtor } from "../../utils/groupDebt";
 import { useStudentBalances } from "../../hooks/useStudentBalances";
 import { useArchiveStudent } from "../../hooks/useArchiveStudent";
 import { useAllStudentGroups } from "../../hooks/useAllStudentGroups";
@@ -107,8 +108,11 @@ const TAB_KEYS = [
 // it (see groupStatusFlags).
 // attendanceFrom is the first day the member's attendance here may be marked (see
 // attendanceStartDay): the Attendance tab closes the days before it.
+// debtor: whether the member owes for THIS group, as GET /groups/{id} says (buQarzmi);
+// undefined when the backend sent no verdict, and the signed balance decides then.
 type RealGroupStudent = GroupStudent & {
   realId: string; studentGroupId?: string; groupStatus?: StudentGroupStatus; joinedAt?: string; attendanceFrom?: string;
+  debtor?: boolean;
 };
 
 const toLegacyGroup = (d: GroupDetail): LegacyGroup => ({
@@ -160,6 +164,7 @@ const toRealStudents = (d: GroupDetail): RealGroupStudent[] =>
       joinedAt: s.joinedAt?.slice(0, 10),
     }),
     attendanceFrom: attendanceStartDay(s.joinedAt, s.paymentStartDate),
+    debtor: readGroupDebtor(s) ?? undefined,
   }));
 
 // A student is archived-in-this-group if their /student-groups membership
@@ -204,7 +209,6 @@ export const SingleGroup = () => {
   // group would be offered as a target).
   const moveTargetGroups = useActiveGroups({ skip: !moveOpen });
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
-  const { data: allStudentsData } = useAllStudentsQuery({ page: 1, limit: 100, branchId: selectedBranchId ?? undefined });
   // Courses of every branch the account works in: the group's own course (name,
   // branch) is looked up by id and may sit in another branch than the header's,
   // and the edit form's "move to another branch" needs the target branch's
@@ -251,8 +255,8 @@ export const SingleGroup = () => {
   const [updateGroup, { isLoading: isSavingGroup }] = useUpdateGroupMutation();
   const [toggleGroupStatus] = useToggleGroupStatusMutation();
   const [freezeStudentGroup, { isLoading: isFreezing }] = useFreezeStudentGroupMutation();
-  const [activateFrozenStudentGroup, { isLoading: isActivatingFrozen }] = useActivateFrozenStudentGroupMutation();
-  const [activateTrialStudentGroup, { isLoading: isActivatingTrial }] = useActivateTrialStudentGroupMutation();
+  const [unfreezeStudentGroup, { isLoading: isActivatingFrozen }] = useUnfreezeStudentGroupMutation();
+  const [graduateTrialStudentGroup, { isLoading: isActivatingTrial }] = useGraduateTrialStudentGroupMutation();
   const [updateStudentGroupStatus] = useUpdateStudentGroupStatusMutation();
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
@@ -393,24 +397,26 @@ export const SingleGroup = () => {
     if (hasUnaccountedMember) setReadAllPages(true);
   }, [hasUnaccountedMember]);
 
-  // GroupDetail.students has no balance field (see toRealStudents above,
-  // which defaults everyone to 0) — GET /students does carry the real
-  // balance, and allStudentsData is already fetched (first 100 of the branch)
-  // for exactly this, so it's reused here rather than firing a second request. Without
-  // this overlay the roster's debt dot (bgcolor keyed off s.balance) always
-  // read the placeholder 0 and rendered green even for actual debtors.
-  //
-  // That list only covers the first 100 students of the branch, so a roster
-  // member outside it would still read 0 (green). The balance of each such
-  // member (GET /students/{id} — the figure the student profile shows) is
-  // therefore fetched too, and wins over the list value once it arrives.
+  // The roster's debt dot is about THIS group: GET /groups/{id} says per member
+  // whether they owe here (`buQarzmi`, see toRealStudents), which is all the dot
+  // needs - so a group page reads no student list and no per-student profile for it.
+  // Only when some member carries no such verdict (an older backend, or a member
+  // listed from /student-groups alone) does the signed balance decide instead, and
+  // only then is GET /students (first 100 of the branch) read for it, with a
+  // GET /students/{id} for each member outside that page (the figure the student
+  // profile shows). Without that fallback the dot would read the placeholder 0 and
+  // render green even for actual debtors.
   const rosterIds = useMemo(
     () => [...students, ...extraStudents].map((s) => s.realId).filter(Boolean),
     [students, extraStudents]
   );
+  const rosterJudged = [...students, ...extraStudents].every((s) => s.debtor !== undefined);
+  const { data: allStudentsData } = useAllStudentsQuery(
+    { page: 1, limit: 100, branchId: selectedBranchId ?? undefined },
+    { skip: !groupDetailData || rosterJudged },
+  );
   // Only roster members GET /students (above) didn't return are fetched one by
-  // one — and not before that list has arrived — instead of one request per
-  // member on every visit.
+  // one - and not before that list has arrived.
   const ownBalances = useStudentBalances(
     rosterIds.filter((rid) => !(allStudentsData?.data ?? []).some((s) => s.id === rid)),
     !allStudentsData,
@@ -763,48 +769,20 @@ export const SingleGroup = () => {
     }
   };
 
-  const handleActivateConfirm = async (paymentStartDate: string) => {
+  // FROZEN -> ACTIVE: one POST /student-groups/{id}/unfreeze. No billing start
+  // date is asked for or sent (no follow-up PATCH {paymentStartDate}): the backend
+  // decides where payment accounting starts.
+  const handleActivateConfirm = async () => {
     if (!selectedStudent || !id) return;
     const studentGroupId = await resolveLiveMembershipId(selectedStudent);
     if (!studentGroupId) {
       toast.error(t("singleGroup.activateModal.toast.notFound"));
       return;
     }
-    // FROZEN -> ACTIVE: POST /student-groups/{id}/unfreeze {endDate} followed by
-    // PATCH /student-groups/{id} {paymentStartDate} — the same combo
-    // handleGraduateTrialConfirm uses to record which date the backend should
-    // calculate this membership's payment/debt accounting from (per PATCH
-    // .../status's own doc comment: "Agar ACTIVE qilinsa, to'lov hisobi
-    // boshlanadi"). Both go out as ONE mutation (see activateFrozenStudentGroup),
-    // so the roster is read again once, not once per step.
-    //
-    // The freeze must END on the date billing should START. It used to end
-    // "today", which made the whole [freeze start .. today] stretch a frozen
-    // (non-billable) period — a student added on the 1st and activated on the
-    // 10th with "since 1st" was still billed only from the 10th. The end date
-    // is therefore the picked date, but never before the freeze's own start
-    // (the backend rejects an end before the start): the mutation reads that
-    // start from the membership's ACTIVE freeze record, falling back to the
-    // join date.
-    //
-    // Once the unfreeze has gone through the student IS active, so a failure of
-    // the date step alone (`dateError`) must not read as "activation failed".
     try {
-      const { dateError } = await activateFrozenStudentGroup({
-        id: studentGroupId,
-        studentId: selectedStudent.realId,
-        groupId: id,
-        paymentStartDate,
-        fallbackFreezeStart: selectedStudent.joinedAt,
-      }).unwrap();
+      await unfreezeStudentGroup(studentGroupId).unwrap();
       setActivateOpen(false);
-      if (dateError) {
-        const detail = describeApiError(dateError);
-        const generic = t("singleGroup.activateModal.toast.dateError");
-        toast.error(detail ? `${generic}: ${detail}` : generic);
-      } else {
-        toast.success(t("singleGroup.activateModal.toast.success"));
-      }
+      toast.success(t("singleGroup.activateModal.toast.success"));
     } catch (err) {
       const detail = describeApiError(err);
       const generic = t("singleGroup.activateModal.toast.error");
@@ -826,13 +804,12 @@ export const SingleGroup = () => {
   const isSelectedFrozen = selectedStudent?.groupStatus === "FROZEN";
   const isSelectedTrial = selectedStudent?.groupStatus === "PROBATION";
 
-  // Bringing an archived (INACTIVE/DELETED) membership back with "Activate":
-  // one PATCH /student-groups/{id} sets status ACTIVE and paymentStartDate
-  // together — the same call StudentProfile's and the Archive page's restore
-  // make — so payment accounting starts on the date staff pick (the day the
-  // student comes back), never from "now" or the old join date. Carrying the
-  // student's previous balance over is up to the backend.
-  const handleRestoreConfirm = async (paymentStartDate: string) => {
+  // Bringing an archived (INACTIVE/DELETED) membership back with "Activate": one
+  // PATCH /student-groups/{id} {status: "ACTIVE"} - the same call StudentProfile's
+  // and the Archive page's restore make. No paymentStartDate is sent: the backend
+  // decides where payment accounting starts, and carries the student's previous
+  // balance over.
+  const handleRestoreConfirm = async () => {
     const target = selectedStudent;
     setRestoreOpen(false);
     if (!target?.studentGroupId) {
@@ -840,7 +817,7 @@ export const SingleGroup = () => {
       return;
     }
     try {
-      await updateStudentGroup({ id: target.studentGroupId, status: "ACTIVE", paymentStartDate }).unwrap();
+      await updateStudentGroup({ id: target.studentGroupId, status: "ACTIVE" }).unwrap();
       toast.success(t("singleGroup.activateModal.toast.success"));
     } catch (err) {
       const detail = extractApiError(err);
@@ -869,36 +846,22 @@ export const SingleGroup = () => {
     }
   };
 
-  // Promotes a PROBATION (trial-lesson) membership to ACTIVE via the
-  // dedicated POST /student-groups/{id}/graduate-trial (Swagger: no request
-  // body) — unlike the two-step PATCH .../status + PATCH .../{id} this used
-  // to do by hand, this endpoint also activates the student's account if it
-  // was inactive and converts their lead to CONVERTED when they came in
-  // through one, neither of which the manual version ever did. Swagger
-  // shows no body for graduate-trial itself, so the admin-picked
-  // paymentStartDate is still applied as a follow-up PATCH /student-groups/
-  // {id} (same call as before) once the promotion itself has gone through.
-  const handleGraduateTrialConfirm = async (paymentStartDate: string) => {
+  // Promotes a PROBATION (trial-lesson) membership to ACTIVE via the dedicated
+  // POST /student-groups/{id}/graduate-trial (no request body). Unlike the manual
+  // PATCH .../status + PATCH .../{id} this once did, that endpoint also activates
+  // the student's account if it was inactive and converts their lead to CONVERTED
+  // when they came in through one. No billing start date is sent afterwards (no
+  // PATCH {paymentStartDate}): the backend decides where payment accounting starts.
+  const handleGraduateTrialConfirm = async () => {
     const target = selectedStudent;
     setGraduateTrialOpen(false);
     if (!target?.studentGroupId) {
       toast.error(t("singleGroup.graduateTrialModal.toast.error"));
       return;
     }
-    // Both calls are ONE mutation (see activateTrialStudentGroup), so the roster
-    // is read again once. Reported separately: once the promotion went through
-    // the student IS active, so a failure of the date step alone (`dateError`)
-    // must not read as "activation failed" (staff would retry, and the billing
-    // date would never be set).
     try {
-      const { dateError } = await activateTrialStudentGroup({ id: target.studentGroupId, paymentStartDate }).unwrap();
-      if (dateError) {
-        const detail = extractApiError(dateError);
-        const generic = t("singleGroup.graduateTrialModal.toast.dateError");
-        toast.error(detail ? `${generic}: ${detail}` : generic);
-      } else {
-        toast.success(t("singleGroup.graduateTrialModal.toast.success"));
-      }
+      await graduateTrialStudentGroup(target.studentGroupId).unwrap();
+      toast.success(t("singleGroup.graduateTrialModal.toast.success"));
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("singleGroup.graduateTrialModal.toast.error");
@@ -1301,7 +1264,7 @@ export const SingleGroup = () => {
                   <Typography fontSize={12} color="text.secondary" sx={{ minWidth: 22, flexShrink: 0 }}>
                     {i + 1}
                   </Typography>
-                  <StudentStatusDot active={s.active && s.groupStatus !== "PROBATION"} archived={s.archived} balance={s.balance} />
+                  <StudentStatusDot active={s.active && s.groupStatus !== "PROBATION"} archived={s.archived} balance={s.balance} debtor={s.debtor} />
                   {/* Name and phone share one row: the name takes the remaining
                       width and truncates, the phone always keeps its own. */}
                   <Box sx={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 1 }}>
@@ -1488,10 +1451,9 @@ export const SingleGroup = () => {
         onClose={() => setActivateOpen(false)}
         onConfirm={handleActivateConfirm}
         isSaving={isActivatingFrozen}
-        defaultDate={selectedStudent?.joinedAt}
       />
 
-      {/* Return an archived member to ACTIVE, picking the billing start date (defaults to today). */}
+      {/* Return an archived member to ACTIVE. */}
       <ActivateModal
         open={restoreOpen}
         onClose={() => setRestoreOpen(false)}
@@ -1504,7 +1466,6 @@ export const SingleGroup = () => {
         onClose={() => setGraduateTrialOpen(false)}
         onConfirm={handleGraduateTrialConfirm}
         isSaving={isActivatingTrial}
-        joinedAt={selectedStudent?.joinedAt}
       />
 
       {/* ══ EDIT GROUP DRAWER ══ */}

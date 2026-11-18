@@ -35,8 +35,8 @@ import type {
 } from "../../app/api/studentsApi/types";
 import {
   useAllGroupsQuery, useAssignStudentsToGroupMutation, useStudentGroupsQuery,
-  useFreezeStudentGroupMutation, useActivateFrozenStudentGroupMutation,
-  useUpdateStudentGroupMutation, useActivateTrialStudentGroupMutation, useLazyStudentGroupsQuery,
+  useFreezeStudentGroupMutation, useUnfreezeStudentGroupMutation,
+  useUpdateStudentGroupMutation, useGraduateTrialStudentGroupMutation, useLazyStudentGroupsQuery,
 } from "../../app/api/groupsApi";
 import type { Group, StudentGroupRecord } from "../../app/api/groupsApi/types";
 import { freezeMembership } from "../SingleGroup/freezeMembership";
@@ -1395,9 +1395,9 @@ export const StudentProfile = () => {
   const [assignStudentsToGroup, { isLoading: isAddingToGroup }] = useAssignStudentsToGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
   const [freezeStudentGroup, { isLoading: isFreezingGroup }] = useFreezeStudentGroupMutation();
-  const [activateFrozenStudentGroup, { isLoading: isUnfreezingGroup }] = useActivateFrozenStudentGroupMutation();
+  const [unfreezeStudentGroup, { isLoading: isUnfreezingGroup }] = useUnfreezeStudentGroupMutation();
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
-  const [activateTrialStudentGroup, { isLoading: isGraduatingTrial }] = useActivateTrialStudentGroupMutation();
+  const [graduateTrialStudentGroup, { isLoading: isGraduatingTrial }] = useGraduateTrialStudentGroupMutation();
   const [fetchMemberships] = useLazyStudentGroupsQuery();
 
   const { data: groupsData } = useAllGroupsQuery({ page: 1, limit: 100 });
@@ -1700,15 +1700,10 @@ export const StudentProfile = () => {
     return cached?.id;
   };
 
-  const dateOnly = (iso?: string | null) => (iso ? iso.slice(0, 10) : undefined);
-
-  // FROZEN -> ACTIVE: POST /student-groups/{id}/unfreeze {endDate}, then PATCH
-  // /student-groups/{id} {paymentStartDate} - payment accounting starts on the
-  // picked date. Both go out as ONE mutation (activateFrozenStudentGroup), so
-  // the lists are read again once instead of once per step. The freeze must END
-  // on the day billing starts (never before the freeze's own start, which the
-  // mutation looks up in GET /student-freezes, else uses the join date).
-  const handleUnfreezeConfirm = async (paymentStartDate: string) => {
+  // FROZEN -> ACTIVE: one POST /student-groups/{id}/unfreeze. No billing start
+  // date is asked for or sent (no follow-up PATCH {paymentStartDate}): the backend
+  // decides where payment accounting starts.
+  const handleUnfreezeConfirm = async () => {
     if (!activateTarget) return;
     const studentGroupId = await resolveLiveMembershipId(activateTarget.id);
     if (!studentGroupId) {
@@ -1716,31 +1711,18 @@ export const StudentProfile = () => {
       return;
     }
     try {
-      const { dateError } = await activateFrozenStudentGroup({
-        id: studentGroupId,
-        studentId: student.uid,
-        groupId: activateTarget.id,
-        paymentStartDate,
-        fallbackFreezeStart: dateOnly(activateTarget.joinedAt),
-      }).unwrap();
+      await unfreezeStudentGroup(studentGroupId).unwrap();
       setActivateTarget(null);
-      // Reported separately: the student IS active once the unfreeze went through.
-      if (dateError) {
-        const detail = extractApiError(dateError);
-        toast.error(detail ? `Activated, but the payment start date was not saved: ${detail}` : "Activated, but the payment start date was not saved");
-      } else {
-        toast.success("Group membership activated");
-      }
+      toast.success("Group membership activated");
     } catch (err) {
       const detail = extractApiError(err);
       toast.error(detail ? `Failed to activate: ${detail}` : "Failed to activate");
     }
   };
 
-  // PROBATION (trial) -> ACTIVE: POST /student-groups/{id}/graduate-trial, then
-  // PATCH {paymentStartDate} with the picked date - one mutation
-  // (activateTrialStudentGroup), one refresh of the lists.
-  const handleGraduateConfirm = async (paymentStartDate: string) => {
+  // PROBATION (trial) -> ACTIVE: one POST /student-groups/{id}/graduate-trial, no
+  // billing start date sent afterwards.
+  const handleGraduateConfirm = async () => {
     const target = graduateTarget;
     setGraduateTarget(null);
     if (!target) return;
@@ -1750,23 +1732,18 @@ export const StudentProfile = () => {
       return;
     }
     try {
-      const { dateError } = await activateTrialStudentGroup({ id: studentGroupId, paymentStartDate }).unwrap();
-      // Reported separately: the student IS active once the promotion went through.
-      if (dateError) {
-        const detail = extractApiError(dateError);
-        toast.error(detail ? `Activated, but the payment start date was not saved: ${detail}` : "Activated, but the payment start date was not saved");
-      } else {
-        toast.success("Group membership activated");
-      }
+      await graduateTrialStudentGroup(studentGroupId).unwrap();
+      toast.success("Group membership activated");
     } catch (err) {
       const detail = extractApiError(err);
       toast.error(detail ? `Failed to activate: ${detail}` : "Failed to activate");
     }
   };
 
-  // Ended (INACTIVE/DELETED) membership -> ACTIVE again, one PATCH with status
-  // + paymentStartDate (same call the Archive page's restore makes).
-  const handleRestoreConfirm = async (paymentStartDate: string) => {
+  // Ended (INACTIVE/DELETED) membership -> ACTIVE again: one PATCH with
+  // {status: "ACTIVE"} and no paymentStartDate (the backend decides where payment
+  // accounting starts).
+  const handleRestoreConfirm = async () => {
     const target = restoreTarget;
     if (!target) return;
     const row = membershipRowByGroupId.get(target.id);
@@ -1775,7 +1752,7 @@ export const StudentProfile = () => {
       return;
     }
     try {
-      await updateStudentGroup({ id: row.id, status: "ACTIVE", paymentStartDate }).unwrap();
+      await updateStudentGroup({ id: row.id, status: "ACTIVE" }).unwrap();
       toast.success("Student returned to the group");
       setRestoreTarget(null);
     } catch (err) {
@@ -2134,19 +2111,17 @@ export const StudentProfile = () => {
         open={Boolean(activateTarget)}
         onClose={() => setActivateTarget(null)}
         onConfirm={handleUnfreezeConfirm}
-        isSaving={isUnfreezingGroup || isSavingMembershipDates}
-        defaultDate={dateOnly(activateTarget?.joinedAt)}
+        isSaving={isUnfreezingGroup}
       />
 
       <GraduateTrialModal
         open={Boolean(graduateTarget)}
         onClose={() => setGraduateTarget(null)}
         onConfirm={handleGraduateConfirm}
-        isSaving={isGraduatingTrial || isSavingMembershipDates}
-        joinedAt={dateOnly(graduateTarget?.joinedAt)}
+        isSaving={isGraduatingTrial}
       />
 
-      {/* Return an ended membership to ACTIVE, picking the billing start date. */}
+      {/* Return an ended membership to ACTIVE. */}
       <ActivateModal
         open={Boolean(restoreTarget)}
         onClose={() => setRestoreTarget(null)}

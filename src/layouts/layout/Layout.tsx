@@ -5,6 +5,7 @@ import { SidebarProvider, useSidebar } from "../../Context/SidebarContext";
 import { Sidebar, SUBMENU_WIDTH, HEADER_HEIGHT, useSidebarWidth } from "../Sidebar/Sidebar";
 import { ReactNode } from "react";
 import { useBranchDetailRedirect } from "../../hooks/useBranchDetailRedirect";
+import { ServerPaymentWarning } from "../../components/ServerPaymentWarning";
 
 // ─── Page footer ──────────────────────────────────────────────────────────────
 // Sits at the bottom of each page's scrollable content (not fixed to the
@@ -72,6 +73,7 @@ const LayoutInner = ({ children }: Props) => {
           <PageFooter />
         </Box>
       </Box>
+      <ServerPaymentWarning />
     </Box>
   );
 };

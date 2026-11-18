@@ -1,5 +1,4 @@
 import { baseApi } from "../baseApi";
-import { findRunningFreezeStart } from "../studentFreezesApi";
 import { sortByName } from "../../../utils/compareNames";
 import { PATHS } from "./paths";
 import {
@@ -34,9 +33,6 @@ import {
     FreezeStudentGroupRequest,
     UnfreezeStudentGroupRequest,
     StudentGroupActionResponse,
-    ActivateStudentGroupResult,
-    ActivateTrialStudentGroupRequest,
-    ActivateFrozenStudentGroupRequest,
     UpdateStudentGroupRequest,
     UpdateStudentGroupStatusRequest,
     CourseGroup,
@@ -789,62 +785,15 @@ export const groupsApi = baseApi.injectEndpoints({
             },
             invalidatesTags: [LIVE_MEMBERSHIPS, "group", "student", "studentFreeze"],
         }),
-        // POST /student-groups/{id}/graduate-trial — PROBATION -> ACTIVE.
+        // POST /student-groups/{id}/graduate-trial — PROBATION -> ACTIVE. It takes
+        // no body, and no billing start date is sent after it: the backend decides
+        // where payment accounting starts.
         graduateTrialStudentGroup: builder.mutation<StudentGroupActionResponse, string>({
             query: (id) => ({
                 url: `${PATHS.STUDENT_GROUPS}/${id}/graduate-trial`,
                 method: "POST",
             }),
             invalidatesTags: [LIVE_MEMBERSHIPS, "group", "student"],
-        }),
-        // PROBATION -> ACTIVE with the billing start date, as ONE mutation: POST
-        // .../graduate-trial, then PATCH /student-groups/{id} {paymentStartDate}
-        // (graduate-trial takes no body). Run as two separate mutations each one
-        // made the app read the whole roster again; here the screen is refreshed
-        // once, after both. A failed date step does not fail the mutation - the
-        // student IS active by then - it comes back as `dateError` so the caller
-        // can say "activated, but the date was not saved".
-        activateTrialStudentGroup: builder.mutation<ActivateStudentGroupResult, ActivateTrialStudentGroupRequest>({
-            async queryFn({ id, paymentStartDate }, _api, _extra, baseQuery) {
-                const graduated = await baseQuery({ url: `${PATHS.STUDENT_GROUPS}/${id}/graduate-trial`, method: "POST" });
-                if (graduated.error) return { error: graduated.error };
-                const dated = await baseQuery({
-                    url: `${PATHS.STUDENT_GROUPS}/${id}`,
-                    method: "PATCH",
-                    body: appendStudentGroupFormData({ paymentStartDate }),
-                });
-                return { data: { dateError: dated.error } };
-            },
-            invalidatesTags: [LIVE_MEMBERSHIPS, "group", "student"],
-        }),
-        // FROZEN -> ACTIVE with the billing start date, as ONE mutation (same
-        // reasoning as activateTrialStudentGroup): finds when the running freeze
-        // began (GET /student-freezes, else `fallbackFreezeStart` - the join date),
-        // POST .../unfreeze {endDate}, then PATCH /student-groups/{id}
-        // {paymentStartDate}. The freeze must END on the day billing should START
-        // - but never before the freeze's own start (the backend refuses an end
-        // before the start) - so a billing start picked earlier than the freeze
-        // becomes the freeze's start date for the unfreeze call only; the PATCH
-        // still records the date that was picked.
-        activateFrozenStudentGroup: builder.mutation<ActivateStudentGroupResult, ActivateFrozenStudentGroupRequest>({
-            async queryFn({ id, studentId, groupId, paymentStartDate, fallbackFreezeStart }, api, _extra, baseQuery) {
-                const freezeStart = (await findRunningFreezeStart(api.dispatch, { studentId, groupId, studentGroupId: id }))
-                    ?? fallbackFreezeStart;
-                const endDate = freezeStart && paymentStartDate < freezeStart ? freezeStart : paymentStartDate;
-                const unfrozen = await baseQuery({
-                    url: `${PATHS.STUDENT_GROUPS}/${id}/unfreeze`,
-                    method: "POST",
-                    body: appendStudentGroupFormData({ endDate }),
-                });
-                if (unfrozen.error) return { error: unfrozen.error };
-                const dated = await baseQuery({
-                    url: `${PATHS.STUDENT_GROUPS}/${id}`,
-                    method: "PATCH",
-                    body: appendStudentGroupFormData({ paymentStartDate }),
-                });
-                return { data: { dateError: dated.error } };
-            },
-            invalidatesTags: [LIVE_MEMBERSHIPS, "group", "student", "studentFreeze"],
         }),
         updateStudentGroup: builder.mutation<StudentGroupActionResponse, UpdateStudentGroupRequest>({
             query: ({ id, ...data }) => ({
@@ -904,8 +853,6 @@ export const {
     useFreezeStudentGroupMutation,
     useUnfreezeStudentGroupMutation,
     useGraduateTrialStudentGroupMutation,
-    useActivateTrialStudentGroupMutation,
-    useActivateFrozenStudentGroupMutation,
     useUpdateStudentGroupMutation,
     useUpdateStudentGroupStatusMutation,
     useDeleteStudentGroupMutation,

@@ -1,3 +1,5 @@
+import type { ServerPaymentFields } from "../../../utils/serverPayment";
+
 export interface LoginRequest {
   identifier: string;
   password: string;
@@ -71,7 +73,9 @@ export interface MeUserBranchRef {
   };
 }
 
-export interface MeUser {
+// SUPERADMIN/CEO accounts also get the monthly server payment reminder here
+// (see utils/serverPayment.ts); every other role gets none of those keys.
+export interface MeUser extends ServerPaymentFields {
   id: string;
   name: string | null;
   email: string;

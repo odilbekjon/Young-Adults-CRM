@@ -14,8 +14,6 @@ import {
   useDashboardTeacherPerformanceQuery,
 } from "../../app/api/dashboardApi/dashboardApi";
 import type { ScheduleItem } from "../../app/api/dashboardApi/types";
-import { useAllGroupsQuery, useStudentGroupsQuery } from "../../app/api/groupsApi";
-import type { Group } from "../../app/api/groupsApi/types";
 import { useFinanceChartQuery } from "../../app/api/financeApi";
 import { SCHEDULE_COLORS, DEFAULT_LESSON_DURATION } from "../../constants/DashboardData";
 import { STATS } from "../../constants/DashboardStats";
@@ -70,31 +68,21 @@ const formatDateRange = (start: string | null | undefined, end: string | null | 
   return `${fmt.format(s)} – ${fmt.format(e)}`;
 };
 
-// GroupDetail.students (the legacy relation Group.students comes from) keeps
-// listing a student after they've been removed from the group — same quirk
-// already worked around on the Groups list page. archivedMembershipKeys
-// (confirmed-real INACTIVE/DELETED /student-groups rows) strips those back
-// out so this card's student count is the real current headcount, not a
-// stale one.
-const realStudentCount = (group: Group, archivedMembershipKeys: Set<string>): number =>
-  (group.students ?? []).filter((s) => !archivedMembershipKeys.has(`${s.id}|${group.id}`)).length;
+// A card's figures come straight from the schedule row itself (GET
+// /dashboard/schedule carries the training dates, the real headcount and the room
+// capacity under a long name and an alias), so the page makes no other request to
+// fill them in. The headcount and capacity are read through their aliases.
+const firstCount = (...values: Array<number | undefined>): number =>
+  values.find((v): v is number => typeof v === "number" && Number.isFinite(v)) ?? 0;
 
-// Enriches the backend's own schedule rows (which only carry group/course/
-// room/time/teacher — see ScheduleItem) with real data cross-referenced by
-// groupId from GET /groups: training date range, room capacity, and current
-// active headcount — the same values Groups/SingleGroup already treat as
-// authoritative, not invented placeholders.
 const toScheduleEvents = (
   items: ScheduleItem[],
-  groupById: Map<string, Group>,
-  archivedMembershipKeys: Set<string>,
   t: (key: string, options?: Record<string, unknown>) => string,
   locale: string,
 ): ScheduleEvent[] =>
   items.map((item, i) => {
-    const group = groupById.get(item.groupId);
     let daysLeftLabel: string | undefined;
-    const trainingEnd = parseDay(group?.trainingEnd);
+    const trainingEnd = parseDay(item.trainingEnd);
     if (trainingEnd) {
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const daysLeft = Math.round((trainingEnd.getTime() - today.getTime()) / MS_PER_DAY);
@@ -110,9 +98,9 @@ const toScheduleEvents = (
       groupName: item.groupName,
       courseName: item.courseName,
       teacher: item.teachers,
-      dateRange: formatDateRange(group?.trainingStart, group?.trainingEnd, locale),
-      students: group ? realStudentCount(group, archivedMembershipKeys) : 0,
-      maxStudents: group?.room?.capacity ?? 0,
+      dateRange: formatDateRange(item.trainingStart, item.trainingEnd, locale),
+      students: firstCount(item.studentsCount, item.studentCount, item.students),
+      maxStudents: firstCount(item.roomCapacity, item.maxStudents),
       color: SCHEDULE_COLORS[i % SCHEDULE_COLORS.length],
       daysLeftLabel,
       days: [mapDaysType(item.daysType)],
@@ -184,37 +172,17 @@ export const Dashboard = () => {
   const activitiesLoading = !summaryNear || activitiesQueryLoading;
   const teacherPerfLoading = !summaryNear || teacherPerfQueryLoading;
 
-  // Schedule card and the data its cards are enriched with.
+  // Schedule card: GET /dashboard/schedule alone fills it (see toScheduleEvents).
   const [scheduleRef, scheduleNear] = useNearViewport();
   const { data: scheduleData, isLoading: scheduleQueryLoading, isError: scheduleError } = useDashboardScheduleQuery(undefined, { skip: !scheduleNear });
   const scheduleLoading = !scheduleNear || scheduleQueryLoading;
-  // Enrichment source for the schedule cards below (real training dates, room
-  // capacity, current headcount) — GET /groups' own schedule endpoint
-  // (ScheduleItem) only carries group/course/room/time/teacher, nothing else.
-  const { data: scheduleGroupsData } = useAllGroupsQuery({ page: 1, limit: 100 }, { skip: !scheduleNear });
-  // Same "legacy relation keeps listing removed students" workaround already
-  // used on the Groups list page — see realStudentCount's own comment.
-  const { data: inactiveMembershipsData } = useStudentGroupsQuery({ status: "INACTIVE", branchId, limit: 1000 }, { skip: !scheduleNear });
-  const { data: deletedMembershipsData } = useStudentGroupsQuery({ status: "DELETED", branchId, limit: 1000 }, { skip: !scheduleNear });
-
   const attendance = attendanceData?.data;
   const activities = activitiesData?.data ?? [];
   const teacherPerf = teacherPerfData?.data ?? [];
 
-  const groupById = useMemo(
-    () => new Map((scheduleGroupsData?.data ?? []).map((g) => [g.id, g])),
-    [scheduleGroupsData],
-  );
-  const archivedMembershipKeys = useMemo(() => {
-    const set = new Set<string>();
-    [...(inactiveMembershipsData?.rows ?? []), ...(deletedMembershipsData?.rows ?? [])].forEach((r) => {
-      if (r.studentId && r.groupId) set.add(`${r.studentId}|${r.groupId}`);
-    });
-    return set;
-  }, [inactiveMembershipsData, deletedMembershipsData]);
   const events = useMemo(
-    () => toScheduleEvents(scheduleData?.data ?? [], groupById, archivedMembershipKeys, t, i18n.language),
-    [scheduleData, groupById, archivedMembershipKeys, t, i18n.language],
+    () => toScheduleEvents(scheduleData?.data ?? [], t, i18n.language),
+    [scheduleData, t, i18n.language],
   );
   // Navigate stat card → page (with optional ?filter=xxx). trial/paid/
   // leftActive/leftTrial land on a pre-filtered list via STAT_TARGETS.

@@ -1717,25 +1717,23 @@
     },
     "activateModal": {
       "title": "Activate student",
-      "description": "The student will be moved to ACTIVE status, and payment will start being calculated from the selected date.",
+      "description": "The student will be moved to ACTIVE status.",
       "submit": "Submit",
       "saving": "Activating...",
       "toast": {
-        "success": "Student activated, payment calculation started",
+        "success": "Student activated",
         "error": "Failed to activate the student",
-        "dateError": "Student activated, but the payment start date couldn't be saved — check their balance",
         "notFound": "No active freeze record found for this student"
       }
     },
     "graduateTrialModal": {
       "title": "Finish trial lesson",
-      "description": "The student will be moved to ACTIVE status, and payment will start being calculated from the selected date.",
+      "description": "The student will be moved to ACTIVE status.",
       "submit": "Activate",
       "saving": "Activating...",
       "toast": {
-        "success": "Student activated, payment calculation started",
-        "error": "Failed to activate the student",
-        "dateError": "Student activated, but the payment start date couldn't be saved — check their balance"
+        "success": "Student activated",
+        "error": "Failed to activate the student"
       }
     },
     "addNoteModal": {
@@ -2603,7 +2601,6 @@
           }
         },
         "restoreConfirm": {
-          "sinceLabel": "Active from (payment is calculated from this date)",
           "groupsError": "Restored, but their groups couldn't be reactivated",
           "title": "Restore from archive",
           "message": "Restore \"{{name}}\" and move them back to the active list?",
@@ -3098,6 +3095,16 @@
       "videoTutorials": "Video tutorials",
       "paymentMode": "Payment mode: Monthly (per calendar month)",
       "brand": "CRM"
+    },
+    "serverPayment": {
+      "title": "Server payment is coming up",
+      "soon": "The server payment is due soon",
+      "today": "The server payment is due today!",
+      "daysLeft": "{{days}} day(s) left until the payment",
+      "description": "Payment date: {{date}}. If the term runs out the system may stop working — please pay for the server in advance.",
+      "descriptionNoDate": "If the term runs out the system may stop working — please pay for the server in advance.",
+      "understood": "Got it",
+      "close": "Close"
     }
   }
 }

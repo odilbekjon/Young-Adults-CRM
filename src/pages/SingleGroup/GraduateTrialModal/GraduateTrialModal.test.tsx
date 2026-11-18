@@ -1,194 +1,57 @@
 import type { ComponentProps } from "react";
 import { fireEvent, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderWithStore } from "../../../test/renderWithStore";
 import { GraduateTrialModal } from "./GraduateTrialModal";
 
 type Props = ComponentProps<typeof GraduateTrialModal>;
 
-// "Today" for every test: Monday 15 June 2026, midday local time.
-const TODAY = new Date(2026, 5, 15, 12, 0);
-
 const renderModal = (overrides: Partial<Props> = {}) => {
   const props: Props = { open: true, onClose: vi.fn(), onConfirm: vi.fn(), ...overrides };
-  const view = renderWithStore(<GraduateTrialModal {...props} />);
-  const rerender = (next: Partial<Props>) => view.rerender(<GraduateTrialModal {...props} {...next} />);
-  return { props, rerender };
+  renderWithStore(<GraduateTrialModal {...props} />);
+  return { props };
 };
 
 const confirmButton = () => screen.getByRole("button", { name: /^(Activate|Activating\.\.\.)$/ }) as HTMLButtonElement;
 
-// The 42 day cells of the open calendar, in grid order.
-const dayCells = () => screen.getAllByRole("button").filter((button) => /^\d{1,2}$/.test(button.textContent ?? "")) as HTMLButtonElement[];
-// The in-month cell of `day` (the grid starts on Sunday).
-const dayCell = (year: number, monthIndex: number, day: number) => dayCells()[new Date(year, monthIndex, 1).getDay() + day - 1];
-
-beforeEach(() => {
-  // Only the date is faked, so Testing Library's own timers keep running.
-  vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(TODAY);
-});
-
+// Finishing a trial lesson is a plain confirmation: no billing start date is asked
+// for, so none can be sent.
 describe("GraduateTrialModal", () => {
-  describe("default billing start date", () => {
-    it("is today, not the day the student joined (trial lessons are free)", () => {
-      const { props } = renderModal({ joinedAt: "2026-05-01" });
+  it("asks for no date", () => {
+    renderModal();
 
-      expect(screen.getByText("15.06.2026")).toBeTruthy();
-      expect(screen.queryByText("01.05.2026")).toBeNull();
-
-      fireEvent.click(confirmButton());
-      expect(props.onConfirm).toHaveBeenCalledTimes(1);
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-15");
-    });
-
-    it("is today when the join date is unknown", () => {
-      const { props } = renderModal();
-
-      fireEvent.click(confirmButton());
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-15");
-    });
-
-    it("is today when the student joined today", () => {
-      const { props } = renderModal({ joinedAt: "2026-06-15" });
-
-      fireEvent.click(confirmButton());
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-15");
-    });
-
-    it("is the join date when that still lies ahead", () => {
-      const { props } = renderModal({ joinedAt: "2026-06-20" });
-
-      expect(screen.getByText("20.06.2026")).toBeTruthy();
-      fireEvent.click(confirmButton());
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-20");
-    });
-
-    it("reads only the date part of a full datetime join date", () => {
-      const { props } = renderModal({ joinedAt: "2026-06-20T00:00:00+05:00" });
-
-      fireEvent.click(confirmButton());
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-20");
-    });
-
-    it("is worked out again each time the dialog opens", () => {
-      const { props, rerender } = renderModal({ open: false });
-      vi.setSystemTime(new Date(2026, 5, 17, 9, 0));
-
-      rerender({ open: true });
-      fireEvent.click(confirmButton());
-
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-17");
-    });
+    expect(screen.queryByText(/^\d{2}\.\d{2}\.\d{4}$/)).toBeNull();
   });
 
-  // A student moved from another group joins "today", yet is billed from an
-  // earlier day: nothing in the past may be disabled.
-  describe("past dates", () => {
-    it("are all selectable, including days before the join date", () => {
-      renderModal({ joinedAt: "2026-06-10" });
+  it("confirms with no argument, exactly once per click", () => {
+    const { props } = renderModal();
 
-      fireEvent.click(screen.getByText("15.06.2026")); // open the picker
-
-      expect(dayCell(2026, 5, 1).disabled).toBe(false);
-      expect(dayCell(2026, 5, 9).disabled).toBe(false);
-      expect(dayCell(2026, 5, 10).disabled).toBe(false);
-      expect(dayCell(2026, 5, 20).disabled).toBe(false);
-    });
-
-    it("are selectable when the student joined today (moved from another group)", () => {
-      const { props } = renderModal({ joinedAt: "2026-06-15" });
-
-      fireEvent.click(screen.getByText("15.06.2026"));
-      expect(dayCell(2026, 5, 1).disabled).toBe(false);
-      fireEvent.click(dayCell(2026, 5, 1));
-      expect(screen.getByText("01.06.2026")).toBeTruthy();
-
-      fireEvent.click(confirmButton());
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-01");
-    });
-
-    it("are selectable even when the join date still lies ahead", () => {
-      renderModal({ joinedAt: "2026-06-20" });
-
-      fireEvent.click(screen.getByText("20.06.2026"));
-
-      expect(dayCell(2026, 5, 19).disabled).toBe(false);
-      expect(dayCell(2026, 5, 1).disabled).toBe(false);
-    });
-
-    it("reach back into earlier months, and the picked day is confirmed", () => {
-      const { props } = renderModal({ joinedAt: "2026-06-15" });
-
-      fireEvent.click(screen.getByText("15.06.2026"));
-      fireEvent.click(screen.getByText("‹")); // previous month: May 2026
-      expect(dayCell(2026, 4, 12).disabled).toBe(false);
-      fireEvent.click(dayCell(2026, 4, 12));
-      expect(screen.getByText("12.05.2026")).toBeTruthy();
-
-      fireEvent.click(confirmButton());
-      expect(props.onConfirm).toHaveBeenCalledTimes(1);
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-05-12");
-    });
-
-    it("can be picked in one click with the 'Start of the month' shortcut", () => {
-      const { props } = renderModal({ joinedAt: "2026-06-15" });
-
-      fireEvent.click(screen.getByText("15.06.2026"));
-      fireEvent.click(screen.getByText("Start of the month"));
-      expect(screen.getByText("01.06.2026")).toBeTruthy();
-
-      fireEvent.click(confirmButton());
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-01");
-    });
-
-    it("do not block Enter either", () => {
-      const { props } = renderModal({ joinedAt: "2026-06-15" });
-
-      fireEvent.click(screen.getByText("15.06.2026"));
-      fireEvent.click(dayCell(2026, 5, 3));
-      fireEvent.keyDown(screen.getByText("Finish trial lesson"), { key: "Enter" });
-
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-03");
-    });
+    fireEvent.click(confirmButton());
+    expect(props.onConfirm).toHaveBeenCalledTimes(1);
+    expect(props.onConfirm).toHaveBeenCalledWith();
   });
 
-  describe("confirming", () => {
-    it("passes the chosen date to onConfirm exactly once per click", () => {
-      const { props } = renderModal();
+  it("confirms on Enter too", () => {
+    const { props } = renderModal();
 
-      fireEvent.click(screen.getByText("15.06.2026"));
-      fireEvent.click(dayCell(2026, 5, 22));
-      fireEvent.click(confirmButton());
+    fireEvent.keyDown(screen.getByText("Finish trial lesson"), { key: "Enter" });
+    expect(props.onConfirm).toHaveBeenCalledTimes(1);
+  });
 
-      expect(props.onConfirm).toHaveBeenCalledTimes(1);
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-22");
-    });
+  it("is blocked while saving: the button is disabled, says so, and Enter does nothing", () => {
+    const { props } = renderModal({ isSaving: true });
 
-    it("submits on Enter as well, with the same date", () => {
-      const { props } = renderModal({ joinedAt: "2026-06-20" });
+    expect(confirmButton().disabled).toBe(true);
+    expect(confirmButton().textContent).toBe("Activating...");
 
-      fireEvent.keyDown(screen.getByText("Finish trial lesson"), { key: "Enter" });
+    fireEvent.click(confirmButton());
+    fireEvent.keyDown(screen.getByText("Finish trial lesson"), { key: "Enter" });
+    expect(props.onConfirm).not.toHaveBeenCalled();
+  });
 
-      expect(props.onConfirm).toHaveBeenCalledTimes(1);
-      expect(props.onConfirm).toHaveBeenCalledWith("2026-06-20");
-    });
+  it("renders nothing while closed", () => {
+    renderModal({ open: false });
 
-    it("is blocked while saving: the button is disabled, says so, and Enter does nothing", () => {
-      const { props } = renderModal({ isSaving: true });
-
-      expect(confirmButton().disabled).toBe(true);
-      expect(confirmButton().textContent).toBe("Activating...");
-
-      fireEvent.click(confirmButton());
-      fireEvent.keyDown(screen.getByText("Finish trial lesson"), { key: "Enter" });
-      expect(props.onConfirm).not.toHaveBeenCalled();
-    });
-
-    it("renders nothing while closed", () => {
-      renderModal({ open: false });
-
-      expect(screen.queryByText("Finish trial lesson")).toBeNull();
-    });
+    expect(screen.queryByText("Finish trial lesson")).toBeNull();
   });
 });

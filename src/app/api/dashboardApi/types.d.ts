@@ -37,8 +37,9 @@ export interface DashboardStatsResponse {
 }
 
 // GET /dashboard/schedule?daysType=ODD|EVEN|MIXED|OTHER&branchId= - one row per
-// group: where and when it meets and who teaches it. No dates, headcount or room
-// capacity: the Dashboard reads those from the groups list.
+// group, with everything a schedule card shows: where and when it meets, who
+// teaches it, the training dates, the real headcount and the room capacity. The
+// Dashboard needs no other request to fill its cards.
 export interface ScheduleItem {
   groupId: string;
   groupName: string;
@@ -48,6 +49,16 @@ export interface ScheduleItem {
   days: string[];
   daysType: string;
   teachers: string;
+  // Training dates, YYYY-MM-DD (null when the group has none).
+  trainingStart?: string | null;
+  trainingEnd?: string | null;
+  // The group's real headcount (members who left are not counted), under three names.
+  studentsCount?: number;
+  studentCount?: number;
+  students?: number;
+  // The room's capacity, under two names.
+  roomCapacity?: number;
+  maxStudents?: number;
 }
 
 export interface ScheduleResponse {

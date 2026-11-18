@@ -1,4 +1,7 @@
-export interface Branch {
+import type { ServerPaymentFields } from "../../../utils/serverPayment";
+
+// SUPERADMIN/CEO also get the server payment reminder keys on a branch.
+export interface Branch extends ServerPaymentFields {
   id: string;
   name: string;
   address: string;

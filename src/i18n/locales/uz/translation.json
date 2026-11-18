@@ -1717,25 +1717,23 @@
     },
     "activateModal": {
       "title": "O'quvchini faollashtirish",
-      "description": "O'quvchi ACTIVE holatiga o'tkaziladi va tanlangan sanadan boshlab to'lov hisoblanadi.",
+      "description": "O'quvchi ACTIVE holatiga o'tkaziladi.",
       "submit": "Yuborish",
       "saving": "Faollashtirilmoqda...",
       "toast": {
-        "success": "O'quvchi faollashtirildi, to'lov hisoblana boshladi",
+        "success": "O'quvchi faollashtirildi",
         "error": "O'quvchini faollashtirib bo'lmadi",
-        "dateError": "O'quvchi faollashtirildi, lekin to'lov boshlanish sanasini saqlab bo'lmadi — balansini tekshiring",
         "notFound": "Bu o'quvchi uchun aktiv muzlatish yozuvi topilmadi"
       }
     },
     "graduateTrialModal": {
       "title": "Sinov darsini yakunlash",
-      "description": "O'quvchi ACTIVE holatiga o'tkaziladi va tanlangan sanadan boshlab to'lov hisoblanadi.",
+      "description": "O'quvchi ACTIVE holatiga o'tkaziladi.",
       "submit": "Faollashtirish",
       "saving": "Faollashtirilmoqda...",
       "toast": {
-        "success": "O'quvchi faollashtirildi, to'lov hisoblana boshladi",
-        "error": "O'quvchini faollashtirib bo'lmadi",
-        "dateError": "O'quvchi faollashtirildi, lekin to'lov boshlanish sanasini saqlab bo'lmadi — balansini tekshiring"
+        "success": "O'quvchi faollashtirildi",
+        "error": "O'quvchini faollashtirib bo'lmadi"
       }
     },
     "addNoteModal": {
@@ -2603,7 +2601,6 @@
           }
         },
         "restoreConfirm": {
-          "sinceLabel": "Faol bo'lish sanasi (to'lov shu sanadan hisoblanadi)",
           "groupsError": "Tiklandi, lekin guruhlarini qayta faollashtirib bo'lmadi",
           "title": "Arxivdan tiklash",
           "message": "\"{{name}}\"ni tiklab, faol ro'yxatga qaytarishni xohlaysizmi?",
@@ -3098,6 +3095,16 @@
       "videoTutorials": "Video darsliklar",
       "paymentMode": "To'lov rejimi: Oylik (kalendar oyi bo'yicha)",
       "brand": "CRM"
+    },
+    "serverPayment": {
+      "title": "Server to'lovi yaqinlashmoqda",
+      "soon": "Server to'lov muddati yaqin",
+      "today": "Server to'lovi bugun!",
+      "daysLeft": "To'lovgacha {{days}} kun qoldi",
+      "description": "To'lov sanasi: {{date}}. Muddat tugasa tizim to'xtab qolishi mumkin — iltimos, serverni oldindan to'lang.",
+      "descriptionNoDate": "Muddat tugasa tizim to'xtab qolishi mumkin — iltimos, serverni oldindan to'lang.",
+      "understood": "Tushunarli",
+      "close": "Yopish"
     }
   }
 }

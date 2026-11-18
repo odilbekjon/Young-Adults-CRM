@@ -222,7 +222,7 @@ describe("SingleGroup: moving a student to another group", () => {
   });
 });
 
-describe("SingleGroup: a student who arrived on a trial lesson is billed from the day staff activate them", () => {
+describe("SingleGroup: activating a student who arrived on a trial lesson sends no billing start date", () => {
   // Moved here on 30 October (a trial lesson since), activated a week later on 6 November.
   const arrived = member({ studentGroupStatus: "PROBATION", joinedAt: "2026-10-30T00:00:00.000Z", paymentStartDate: null });
   const arrivedRow = membershipRow({ status: "PROBATION", joinedAt: "2026-10-30", paymentStartDate: null });
@@ -234,20 +234,18 @@ describe("SingleGroup: a student who arrived on a trial lesson is billed from th
     return screen.findByText("Finish trial lesson");
   };
 
-  it("offers today as the start - the days since the move are not billed - and sends it as the payment start date", async () => {
+  it("asks for no date and makes ONE request: POST graduate-trial, with no PATCH {paymentStartDate} after it", async () => {
     const { requests } = stubFetch(backend({ student: arrived, membership: arrivedRow }));
     renderPage();
     await openActivate();
 
-    // today (6 November), not the day they arrived (30 October)
-    expect(screen.getByText("06.11.2026")).toBeTruthy();
-    expect(screen.queryByText("30.10.2026")).toBeNull();
+    expect(screen.queryByText("06.11.2026")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Activate" }));
 
-    await waitFor(() => expect(requests.filter((r) => r.method === "PATCH" && pathOf(r) === "/student-groups/sg1")).toHaveLength(1));
-    const graduate = requests.filter((r) => r.method === "POST" && pathOf(r) === "/student-groups/sg1/graduate-trial");
-    expect(graduate).toHaveLength(1);
-    const patch = requests.find((r) => r.method === "PATCH" && pathOf(r) === "/student-groups/sg1") as SentRequest;
-    expect(await readFormData(patch)).toEqual([["paymentStartDate", "2026-11-06"]]);
+    await waitFor(() =>
+      expect(requests.filter((r) => r.method === "POST" && pathOf(r) === "/student-groups/sg1/graduate-trial")).toHaveLength(1),
+    );
+    await settle();
+    expect(requests.filter((r) => r.method === "PATCH" && pathOf(r) === "/student-groups/sg1")).toHaveLength(0);
   });
 });

@@ -29,8 +29,8 @@ import {
   useStudentGroupsQuery,
   useLazyStudentGroupsQuery,
   useFreezeStudentGroupMutation,
-  useUnfreezeStudentGroupMutation,
-  useGraduateTrialStudentGroupMutation,
+  useActivateFrozenStudentGroupMutation,
+  useActivateTrialStudentGroupMutation,
   useUpdateStudentGroupStatusMutation,
   useUpdateStudentGroupMutation,
 } from "../../app/api/groupsApi";
@@ -255,8 +255,8 @@ export const SingleGroup = () => {
   const [updateGroup, { isLoading: isSavingGroup }] = useUpdateGroupMutation();
   const [toggleGroupStatus] = useToggleGroupStatusMutation();
   const [freezeStudentGroup, { isLoading: isFreezing }] = useFreezeStudentGroupMutation();
-  const [unfreezeStudentGroup, { isLoading: isActivatingFrozen }] = useUnfreezeStudentGroupMutation();
-  const [graduateTrialStudentGroup, { isLoading: isActivatingTrial }] = useGraduateTrialStudentGroupMutation();
+  const [activateFrozenStudentGroup, { isLoading: isActivatingFrozen }] = useActivateFrozenStudentGroupMutation();
+  const [activateTrialStudentGroup, { isLoading: isActivatingTrial }] = useActivateTrialStudentGroupMutation();
   const [updateStudentGroupStatus] = useUpdateStudentGroupStatusMutation();
   const [updateStudentGroup, { isLoading: isSavingMembershipDates }] = useUpdateStudentGroupMutation();
   const [transferStudentBranch, { isLoading: isMovingBranch }] = useTransferStudentBranchMutation();
@@ -769,20 +769,48 @@ export const SingleGroup = () => {
     }
   };
 
-  // FROZEN -> ACTIVE: one POST /student-groups/{id}/unfreeze. No billing start
-  // date is asked for or sent (no follow-up PATCH {paymentStartDate}): the backend
-  // decides where payment accounting starts.
-  const handleActivateConfirm = async () => {
+  const handleActivateConfirm = async (paymentStartDate: string) => {
     if (!selectedStudent || !id) return;
     const studentGroupId = await resolveLiveMembershipId(selectedStudent);
     if (!studentGroupId) {
       toast.error(t("singleGroup.activateModal.toast.notFound"));
       return;
     }
+    // FROZEN -> ACTIVE: POST /student-groups/{id}/unfreeze {endDate} followed by
+    // PATCH /student-groups/{id} {paymentStartDate} — the same combo
+    // handleGraduateTrialConfirm uses to record which date the backend should
+    // calculate this membership's payment/debt accounting from (per PATCH
+    // .../status's own doc comment: "Agar ACTIVE qilinsa, to'lov hisobi
+    // boshlanadi"). Both go out as ONE mutation (see activateFrozenStudentGroup),
+    // so the roster is read again once, not once per step.
+    //
+    // The freeze must END on the date billing should START. It used to end
+    // "today", which made the whole [freeze start .. today] stretch a frozen
+    // (non-billable) period — a student added on the 1st and activated on the
+    // 10th with "since 1st" was still billed only from the 10th. The end date
+    // is therefore the picked date, but never before the freeze's own start
+    // (the backend rejects an end before the start): the mutation reads that
+    // start from the membership's ACTIVE freeze record, falling back to the
+    // join date.
+    //
+    // Once the unfreeze has gone through the student IS active, so a failure of
+    // the date step alone (`dateError`) must not read as "activation failed".
     try {
-      await unfreezeStudentGroup(studentGroupId).unwrap();
+      const { dateError } = await activateFrozenStudentGroup({
+        id: studentGroupId,
+        studentId: selectedStudent.realId,
+        groupId: id,
+        paymentStartDate,
+        fallbackFreezeStart: selectedStudent.joinedAt,
+      }).unwrap();
       setActivateOpen(false);
-      toast.success(t("singleGroup.activateModal.toast.success"));
+      if (dateError) {
+        const detail = describeApiError(dateError);
+        const generic = t("singleGroup.activateModal.toast.dateError");
+        toast.error(detail ? `${generic}: ${detail}` : generic);
+      } else {
+        toast.success(t("singleGroup.activateModal.toast.success"));
+      }
     } catch (err) {
       const detail = describeApiError(err);
       const generic = t("singleGroup.activateModal.toast.error");
@@ -804,12 +832,13 @@ export const SingleGroup = () => {
   const isSelectedFrozen = selectedStudent?.groupStatus === "FROZEN";
   const isSelectedTrial = selectedStudent?.groupStatus === "PROBATION";
 
-  // Bringing an archived (INACTIVE/DELETED) membership back with "Activate": one
-  // PATCH /student-groups/{id} {status: "ACTIVE"} - the same call StudentProfile's
-  // and the Archive page's restore make. No paymentStartDate is sent: the backend
-  // decides where payment accounting starts, and carries the student's previous
-  // balance over.
-  const handleRestoreConfirm = async () => {
+  // Bringing an archived (INACTIVE/DELETED) membership back with "Activate":
+  // one PATCH /student-groups/{id} sets status ACTIVE and paymentStartDate
+  // together — the same call StudentProfile's and the Archive page's restore
+  // make — so payment accounting starts on the date staff pick (the day the
+  // student comes back), never from "now" or the old join date. Carrying the
+  // student's previous balance over is up to the backend.
+  const handleRestoreConfirm = async (paymentStartDate: string) => {
     const target = selectedStudent;
     setRestoreOpen(false);
     if (!target?.studentGroupId) {
@@ -817,7 +846,7 @@ export const SingleGroup = () => {
       return;
     }
     try {
-      await updateStudentGroup({ id: target.studentGroupId, status: "ACTIVE" }).unwrap();
+      await updateStudentGroup({ id: target.studentGroupId, status: "ACTIVE", paymentStartDate }).unwrap();
       toast.success(t("singleGroup.activateModal.toast.success"));
     } catch (err) {
       const detail = extractApiError(err);
@@ -846,22 +875,36 @@ export const SingleGroup = () => {
     }
   };
 
-  // Promotes a PROBATION (trial-lesson) membership to ACTIVE via the dedicated
-  // POST /student-groups/{id}/graduate-trial (no request body). Unlike the manual
-  // PATCH .../status + PATCH .../{id} this once did, that endpoint also activates
-  // the student's account if it was inactive and converts their lead to CONVERTED
-  // when they came in through one. No billing start date is sent afterwards (no
-  // PATCH {paymentStartDate}): the backend decides where payment accounting starts.
-  const handleGraduateTrialConfirm = async () => {
+  // Promotes a PROBATION (trial-lesson) membership to ACTIVE via the
+  // dedicated POST /student-groups/{id}/graduate-trial (Swagger: no request
+  // body) — unlike the two-step PATCH .../status + PATCH .../{id} this used
+  // to do by hand, this endpoint also activates the student's account if it
+  // was inactive and converts their lead to CONVERTED when they came in
+  // through one, neither of which the manual version ever did. Swagger
+  // shows no body for graduate-trial itself, so the admin-picked
+  // paymentStartDate is still applied as a follow-up PATCH /student-groups/
+  // {id} (same call as before) once the promotion itself has gone through.
+  const handleGraduateTrialConfirm = async (paymentStartDate: string) => {
     const target = selectedStudent;
     setGraduateTrialOpen(false);
     if (!target?.studentGroupId) {
       toast.error(t("singleGroup.graduateTrialModal.toast.error"));
       return;
     }
+    // Both calls are ONE mutation (see activateTrialStudentGroup), so the roster
+    // is read again once. Reported separately: once the promotion went through
+    // the student IS active, so a failure of the date step alone (`dateError`)
+    // must not read as "activation failed" (staff would retry, and the billing
+    // date would never be set).
     try {
-      await graduateTrialStudentGroup(target.studentGroupId).unwrap();
-      toast.success(t("singleGroup.graduateTrialModal.toast.success"));
+      const { dateError } = await activateTrialStudentGroup({ id: target.studentGroupId, paymentStartDate }).unwrap();
+      if (dateError) {
+        const detail = extractApiError(dateError);
+        const generic = t("singleGroup.graduateTrialModal.toast.dateError");
+        toast.error(detail ? `${generic}: ${detail}` : generic);
+      } else {
+        toast.success(t("singleGroup.graduateTrialModal.toast.success"));
+      }
     } catch (err) {
       const detail = extractApiError(err);
       const generic = t("singleGroup.graduateTrialModal.toast.error");
@@ -1453,7 +1496,7 @@ export const SingleGroup = () => {
         isSaving={isActivatingFrozen}
       />
 
-      {/* Return an archived member to ACTIVE. */}
+      {/* Return an archived member to ACTIVE, picking the billing start date. */}
       <ActivateModal
         open={restoreOpen}
         onClose={() => setRestoreOpen(false)}

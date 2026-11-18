@@ -222,7 +222,7 @@ describe("SingleGroup: moving a student to another group", () => {
   });
 });
 
-describe("SingleGroup: activating a student who arrived on a trial lesson sends no billing start date", () => {
+describe("SingleGroup: a student who arrived on a trial lesson is billed from the day staff activate them", () => {
   // Moved here on 30 October (a trial lesson since), activated a week later on 6 November.
   const arrived = member({ studentGroupStatus: "PROBATION", joinedAt: "2026-10-30T00:00:00.000Z", paymentStartDate: null });
   const arrivedRow = membershipRow({ status: "PROBATION", joinedAt: "2026-10-30", paymentStartDate: null });
@@ -234,18 +234,26 @@ describe("SingleGroup: activating a student who arrived on a trial lesson sends 
     return screen.findByText("Finish trial lesson");
   };
 
-  it("asks for no date and makes ONE request: POST graduate-trial, with no PATCH {paymentStartDate} after it", async () => {
+  it("offers no date - staff pick it, and the button waits for them - and sends the picked day as the payment start date", async () => {
     const { requests } = stubFetch(backend({ student: arrived, membership: arrivedRow }));
     renderPage();
-    await openActivate();
+    const title = await openActivate();
+    const dialog = title.closest("[role=dialog]") as HTMLElement;
 
-    expect(screen.queryByText("06.11.2026")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Activate" }));
+    // nothing pre-picked: neither today (6 November) nor the day they arrived (30 October)
+    expect(within(dialog).getByText("No date selected")).toBeTruthy();
+    expect(within(dialog).queryByText("06.11.2026")).toBeNull();
+    expect(within(dialog).queryByText("30.10.2026")).toBeNull();
+    expect((within(dialog).getByRole("button", { name: "Activate" }) as HTMLButtonElement).disabled).toBe(true);
 
-    await waitFor(() =>
-      expect(requests.filter((r) => r.method === "POST" && pathOf(r) === "/student-groups/sg1/graduate-trial")).toHaveLength(1),
-    );
-    await settle();
-    expect(requests.filter((r) => r.method === "PATCH" && pathOf(r) === "/student-groups/sg1")).toHaveLength(0);
+    fireEvent.click(within(dialog).getByText("No date selected"));
+    fireEvent.click(screen.getByText("Today"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Activate" }));
+
+    await waitFor(() => expect(requests.filter((r) => r.method === "PATCH" && pathOf(r) === "/student-groups/sg1")).toHaveLength(1));
+    const graduate = requests.filter((r) => r.method === "POST" && pathOf(r) === "/student-groups/sg1/graduate-trial");
+    expect(graduate).toHaveLength(1);
+    const patch = requests.find((r) => r.method === "PATCH" && pathOf(r) === "/student-groups/sg1") as SentRequest;
+    expect(await readFormData(patch)).toEqual([["paymentStartDate", "2026-11-06"]]);
   });
 });

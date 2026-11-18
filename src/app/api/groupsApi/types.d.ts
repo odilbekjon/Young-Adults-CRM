@@ -419,6 +419,35 @@ export interface StudentGroupActionResponse {
   data?: unknown;
 }
 
+// What activateTrialStudentGroup / activateFrozenStudentGroup resolve with:
+// they only reject when the ACTIVATION itself failed. The follow-up step that
+// records the billing start date can fail on its own - the student is active by
+// then - and is reported here, so the caller can tell "activated, but the date
+// was not saved" apart from "could not activate".
+export interface ActivateStudentGroupResult {
+  dateError?: import("@reduxjs/toolkit/query").FetchBaseQueryError;
+}
+
+// PROBATION -> ACTIVE: POST /student-groups/{id}/graduate-trial, then PATCH
+// /student-groups/{id} {paymentStartDate}. {id} is the membership's own id.
+export interface ActivateTrialStudentGroupRequest {
+  id: string;
+  paymentStartDate: string;
+}
+
+// FROZEN -> ACTIVE: POST /student-groups/{id}/unfreeze {endDate}, then PATCH
+// /student-groups/{id} {paymentStartDate}. studentId + groupId locate the
+// membership's running freeze (GET /student-freezes) so the unfreeze never ends
+// before the freeze began; `fallbackFreezeStart` (the join date) stands in when
+// that lookup finds nothing.
+export interface ActivateFrozenStudentGroupRequest {
+  id: string;
+  studentId: string;
+  groupId: string;
+  paymentStartDate: string;
+  fallbackFreezeStart?: string;
+}
+
 // PATCH /student-groups/{id} — edits the membership's own fields (dates,
 // custom price), distinct from PATCH /student-groups/{id}/status below.
 export interface UpdateStudentGroupRequest {

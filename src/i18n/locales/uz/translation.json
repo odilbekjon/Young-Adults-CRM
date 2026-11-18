@@ -1717,23 +1717,25 @@
     },
     "activateModal": {
       "title": "O'quvchini faollashtirish",
-      "description": "O'quvchi ACTIVE holatiga o'tkaziladi.",
+      "description": "O'quvchi ACTIVE holatiga o'tkaziladi va tanlangan sanadan boshlab to'lov hisoblanadi.",
       "submit": "Yuborish",
       "saving": "Faollashtirilmoqda...",
       "toast": {
-        "success": "O'quvchi faollashtirildi",
+        "success": "O'quvchi faollashtirildi, to'lov hisoblana boshladi",
         "error": "O'quvchini faollashtirib bo'lmadi",
+        "dateError": "O'quvchi faollashtirildi, lekin to'lov boshlanish sanasini saqlab bo'lmadi — balansini tekshiring",
         "notFound": "Bu o'quvchi uchun aktiv muzlatish yozuvi topilmadi"
       }
     },
     "graduateTrialModal": {
       "title": "Sinov darsini yakunlash",
-      "description": "O'quvchi ACTIVE holatiga o'tkaziladi.",
+      "description": "O'quvchi ACTIVE holatiga o'tkaziladi va tanlangan sanadan boshlab to'lov hisoblanadi.",
       "submit": "Faollashtirish",
       "saving": "Faollashtirilmoqda...",
       "toast": {
-        "success": "O'quvchi faollashtirildi",
-        "error": "O'quvchini faollashtirib bo'lmadi"
+        "success": "O'quvchi faollashtirildi, to'lov hisoblana boshladi",
+        "error": "O'quvchini faollashtirib bo'lmadi",
+        "dateError": "O'quvchi faollashtirildi, lekin to'lov boshlanish sanasini saqlab bo'lmadi — balansini tekshiring"
       }
     },
     "addNoteModal": {
@@ -2601,6 +2603,7 @@
           }
         },
         "restoreConfirm": {
+          "sinceLabel": "Faol bo'lish sanasi (to'lov shu sanadan hisoblanadi)",
           "groupsError": "Tiklandi, lekin guruhlarini qayta faollashtirib bo'lmadi",
           "title": "Arxivdan tiklash",
           "message": "\"{{name}}\"ni tiklab, faol ro'yxatga qaytarishni xohlaysizmi?",

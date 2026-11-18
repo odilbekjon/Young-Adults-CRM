@@ -1,11 +1,15 @@
 // src/pages/groups/ActivateModal.tsx
-// Confirms bringing a member back to ACTIVE: a FROZEN one (POST
-// /student-groups/{id}/unfreeze) or an archived one (PATCH /student-groups/{id}
-// {status: "ACTIVE"}). No billing start date is asked for or sent - the backend
-// decides where payment accounting starts - so this is a plain confirmation.
+// Unfreezes a FROZEN membership (POST /student-groups/{id}/unfreeze, no
+// request body) and has staff pick the date payment calculation should
+// start from - no date is pre-picked: the field starts empty and "Submit" stays
+// disabled until staff choose one — PATCH /student-groups/{id} {paymentStartDate} as a follow-up
+// (see handleActivateConfirm in SingleGroup.tsx), same combo GraduateTrialModal
+// already uses for PROBATION -> ACTIVE.
+import { useEffect, useState } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton, Button } from "@mui/material";
 import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
+import { DatePickerField } from "../DatePickerField";
 import { submitOnEnter } from "../../../utils/submitOnEnter";
 
 export const ActivateModal = ({
@@ -13,14 +17,20 @@ export const ActivateModal = ({
 }: {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (paymentStartDate: string) => void;
   isSaving?: boolean;
 }) => {
   const { t } = useTranslation();
+  const [paymentStartDate, setPaymentStartDate] = useState("");
+
+  // Every time the dialog opens the date is empty again.
+  useEffect(() => {
+    if (open) setPaymentStartDate("");
+  }, [open]);
 
   const handleSubmit = () => {
-    if (isSaving) return;
-    onConfirm();
+    if (!paymentStartDate || isSaving) return;
+    onConfirm(paymentStartDate);
   };
 
   return (
@@ -40,27 +50,28 @@ export const ActivateModal = ({
       </DialogTitle>
 
       <DialogContent sx={{ px: 2.5, pt: 1, pb: 2 }}>
-        <Typography fontSize={13} color="var(--color-text-secondary)">
+        <Typography fontSize={13} color="var(--color-text-secondary)" mb={1.5}>
           {t("singleGroup.activateModal.description")}
         </Typography>
+        <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} shortcuts />
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: "center", pb: 3, px: 2.5 }}>
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={isSaving}
+          disabled={!paymentStartDate || isSaving}
           sx={{
             borderRadius: 999,
             textTransform: "none",
-            bgcolor: "#7a8fa6",
+            bgcolor: paymentStartDate ? "#7a8fa6" : "#c5cdd8",
             fontSize: 14,
             fontWeight: 600,
             px: 5,
             py: 1.2,
             minWidth: 140,
             boxShadow: "none",
-            "&:hover": { bgcolor: "#6b7f96", boxShadow: "none" },
+            "&:hover": { bgcolor: paymentStartDate ? "#6b7f96" : "#c5cdd8", boxShadow: "none" },
           }}
         >
           {isSaving ? t("singleGroup.activateModal.saving") : t("singleGroup.activateModal.submit")}

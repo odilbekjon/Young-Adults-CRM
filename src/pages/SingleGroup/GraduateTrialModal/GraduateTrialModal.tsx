@@ -1,11 +1,13 @@
 // src/pages/groups/GraduateTrialModal.tsx
-// Confirms promoting a PROBATION (trial-lesson) membership to ACTIVE - POST
-// /student-groups/{id}/graduate-trial (see handleGraduateTrialConfirm in
-// SingleGroup.tsx). No billing start date is asked for or sent - the backend
-// decides where payment accounting starts - so this is a plain confirmation.
+// Promotes a PROBATION (trial-lesson) membership to ACTIVE and lets staff
+// pick the date payment calculation should start from — POST
+// /student-groups/{id}/graduate-trial followed by PATCH /student-groups/{id}
+// {paymentStartDate} (see handleGraduateTrialConfirm in SingleGroup.tsx).
+import { useEffect, useState } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton, Button } from "@mui/material";
 import { MdClose } from "react-icons/md";
 import { useTranslation } from "react-i18next";
+import { DatePickerField } from "../DatePickerField";
 import { submitOnEnter } from "../../../utils/submitOnEnter";
 
 export const GraduateTrialModal = ({
@@ -13,14 +15,24 @@ export const GraduateTrialModal = ({
 }: {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (paymentStartDate: string) => void;
   isSaving?: boolean;
 }) => {
   const { t } = useTranslation();
+  // No date is pre-picked: staff choose when billing starts (any day, past ones
+  // included), and the button stays disabled until they do.
+  const [paymentStartDate, setPaymentStartDate] = useState("");
+
+  // Every time the dialog opens the date is empty again.
+  useEffect(() => {
+    if (open) setPaymentStartDate("");
+  }, [open]);
+
+  const canSubmit = Boolean(paymentStartDate);
 
   const handleSubmit = () => {
-    if (isSaving) return;
-    onConfirm();
+    if (!canSubmit || isSaving) return;
+    onConfirm(paymentStartDate);
   };
 
   return (
@@ -40,27 +52,28 @@ export const GraduateTrialModal = ({
       </DialogTitle>
 
       <DialogContent sx={{ px: 2.5, pt: 1, pb: 2 }}>
-        <Typography fontSize={13} color="var(--color-text-secondary)">
+        <Typography fontSize={13} color="var(--color-text-secondary)" mb={1.5}>
           {t("singleGroup.graduateTrialModal.description")}
         </Typography>
+        <DatePickerField value={paymentStartDate} onChange={setPaymentStartDate} shortcuts />
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: "center", pb: 3, px: 2.5 }}>
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={isSaving}
+          disabled={!canSubmit || isSaving}
           sx={{
             borderRadius: 999,
             textTransform: "none",
-            bgcolor: "#5c7fa3",
+            bgcolor: canSubmit ? "#5c7fa3" : "#c5cdd8",
             fontSize: 14,
             fontWeight: 600,
             px: 5,
             py: 1.2,
             minWidth: 140,
             boxShadow: "none",
-            "&:hover": { bgcolor: "#4a6a8a", boxShadow: "none" },
+            "&:hover": { bgcolor: canSubmit ? "#4a6a8a" : "#c5cdd8", boxShadow: "none" },
           }}
         >
           {isSaving ? t("singleGroup.graduateTrialModal.saving") : t("singleGroup.graduateTrialModal.submit")}

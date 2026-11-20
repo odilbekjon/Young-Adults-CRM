@@ -22,6 +22,17 @@ class Storage {
     localStorage.removeItem(AuthStorageKeys.REFRESH_TOKEN);
     localStorage.removeItem(AuthStorageKeys.ROLE);
     localStorage.removeItem(AuthStorageKeys.USER_ID);
+    localStorage.removeItem(AuthStorageKeys.LOGIN_DAY);
+  }
+
+  // The day this session was signed in on (see utils/dailySession). Written at
+  // login only - renewing the access token must not extend the session.
+  public setLoginDay(day: string) {
+    localStorage.setItem(AuthStorageKeys.LOGIN_DAY, day);
+  }
+
+  public getLoginDay(): string | null {
+    return localStorage.getItem(AuthStorageKeys.LOGIN_DAY);
   }
 
   // The signed-in account's id (null clears it) — kept next to the token so a

@@ -1,5 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { useStorage } from "../../utils/store/store";
+import { isSessionExpired } from "../../utils/dailySession";
+import { todayLocalISO } from "../../utils/localDate";
 import { recallBranch, rememberBranch } from "../../utils/branchMemory";
 import { hasPersistedState, restorePersistedState, stashPersistedState } from "../../hooks/usePersistedState";
 import { baseApi } from "../api/baseApi";
@@ -19,6 +21,19 @@ interface AuthState {
   // session reads and remembers.
   userId: string | null;
 }
+
+// A session that was signed in on an earlier day is not picked up: the browser is
+// opened signed out and the login page comes first (see utils/dailySession). The
+// account's page filters are put away first, exactly as a logout would, so it
+// finds them again at its next login; its branch is remembered on every change
+// already.
+const dropSessionFromEarlierDay = () => {
+  if (!isSessionExpired()) return;
+  const userId = useStorage.getUserId();
+  if (userId) stashPersistedState(userId);
+  useStorage.removeCredentials();
+};
+dropSessionFromEarlierDay();
 
 const initialState: AuthState = {
   token: useStorage.getTokens()?.accessToken ?? null,
@@ -72,6 +87,9 @@ export const loginSuccess = (token: string, refreshToken?: string, role?: string
     if (remembered) dispatch(restoreSelectedBranch(remembered));
     restorePersistedState(userId);
   }
+  // The session is good for today only; the day is written here and nowhere else,
+  // so renewing the access token later never extends it (utils/dailySession).
+  useStorage.setLoginDay(todayLocalISO());
   useStorage.setCredentials({ token, refreshToken, role });
   useStorage.setUserId(userId ?? null);
   dispatch(setUserId(userId ?? null));

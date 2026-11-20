@@ -10,6 +10,7 @@ import {
 } from "@reduxjs/toolkit/query/react";
 import i18n from "../../../i18n";
 import { logout, setToken } from "../../store/authSlice";
+import { isSessionExpired } from "../../../utils/dailySession";
 // The project migrated off the old Render-hosted backend
 // (young-adults-dj7r.onrender.com) to this dedicated host (confirmed live,
 // 2026-09-24: nginx/Ubuntu, not Render — real login, /courses, /auth/me,
@@ -309,6 +310,14 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   api,
   extraOptions
 ) => {
+  // A session from an earlier day ends here, before anything is sent: a tab left
+  // open overnight is sent to the login page by its first request of the new day
+  // (utils/dailySession). Signing in itself is never held back.
+  if (!isLoginRequest(args) && isSessionExpired()) {
+    api.dispatch(logout());
+    return { error: { status: 401, data: "Session expired" } };
+  }
+
   let result = await rawBaseQuery(args, api, extraOptions);
 
   // A 401 from POST /auth/login means wrong credentials - not an expired session.

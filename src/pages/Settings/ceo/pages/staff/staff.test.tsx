@@ -1,8 +1,9 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_BASE_URL, baseApi } from "../../../../../app/api/baseApi";
 import { store } from "../../../../../app/store";
+import { setToken } from "../../../../../app/store/authSlice";
 import { setSelectedBranchId } from "../../../../../app/store/branchSlice";
 import { BranchProvider } from "../../../../../Context/BranchContext";
 import { DataProvider } from "../../../../../Context/DataContext";
@@ -64,11 +65,20 @@ const POSITIONS = [
   { id: "rp-ceo", name: "CEO" },
 ];
 
+// Who is signed in (GET /auth/me). Most tests are about a CEO, who may hand out every
+// position; the CEO-position tests below sign in someone else.
+const CEO_ME = { id: "u-ceo", name: "Boss", role: "SUPERADMIN", roles: ["SUPERADMIN"], rolePermissions: [] };
+let me: Record<string, unknown> = CEO_ME;
+// The member the list and the edit drawer show.
+let listRow: typeof LIST_ROW = LIST_ROW;
+let forEdit: typeof FOR_EDIT = FOR_EDIT;
+
 const answer = (request: SentRequest) => {
   const p = path(request);
   if (request.method === "GET") {
-    if (p.startsWith("/users/u1/for-edit")) return jsonResponse({ success: true, data: FOR_EDIT });
-    if (p.startsWith("/users")) return jsonResponse({ success: true, data: [LIST_ROW], meta: { total: 1, page: 1, limit: 10, totalPages: 1 } });
+    if (p.startsWith("/auth/me")) return jsonResponse({ success: true, data: me });
+    if (p.startsWith("/users/u1/for-edit")) return jsonResponse({ success: true, data: forEdit });
+    if (p.startsWith("/users")) return jsonResponse({ success: true, data: [listRow], meta: { total: 1, page: 1, limit: 10, totalPages: 1 } });
     if (p.startsWith("/branches")) return jsonResponse({ success: true, data: BRANCHES });
     if (p.startsWith("/role-permissions/select")) return jsonResponse({ success: true, data: POSITIONS });
   }
@@ -104,6 +114,14 @@ const submit = () => fireEvent.click(screen.getByRole("button", { name: /^Submit
 beforeEach(() => {
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(setSelectedBranchId(null));
+  store.dispatch(setToken("tok"));
+  me = CEO_ME;
+  listRow = LIST_ROW;
+  forEdit = FOR_EDIT;
+});
+
+afterEach(() => {
+  store.dispatch(setToken(null));
 });
 
 describe("Staff page: editing", () => {
@@ -274,5 +292,108 @@ describe("Staff page: creating", () => {
 
     expect((await screen.findAllByText("Name is required")).length).toBeGreaterThan(0);
     expect(writes(requests)).toHaveLength(0);
+  });
+});
+
+// The CEO position is the top tier (every branch, every menu, every permission), so
+// only a CEO hands it out - not an administrator, not a branch director. The picker
+// keeps that honest on this side; the backend has to refuse it too.
+describe("Staff page: the CEO position", () => {
+  const administrator = {
+    id: "u-admin", name: "Admin", role: "ADMIN", roles: ["ADMIN", "Administrator"],
+    rolePermissions: [{ id: "rp-admin", name: "Administrator", permissions: [{ label: "USERS", action: "MANAGE" }] }],
+  };
+  const branchDirector = {
+    id: "u-dir", name: "Dilshod Direktor", role: "ADMIN", roles: ["ADMIN", "Filial direktori"],
+    rolePermissions: [{ id: "rp-dir", name: "Filial direktori", permissions: [{ label: "USERS", action: "MANAGE" }] }],
+  };
+  const ceoByPosition = {
+    id: "u-boss", name: "Boss", role: "ADMIN", roles: ["ADMIN", "CEO"],
+    rolePermissions: [{ id: "rp-ceo", name: "CEO", permissions: [] }],
+  };
+
+  const openAdd = async () => {
+    fireEvent.click(await screen.findByRole("button", { name: /ADD NEW/i }));
+    await screen.findByRole("checkbox", { name: "Kassa Xodimi" });
+  };
+
+  it.each([
+    ["an administrator", administrator],
+    ["a branch director", branchDirector],
+  ])("is not offered to %s when adding a member, while the other positions are", async (_who, signedIn) => {
+    me = signedIn;
+    stubFetch(answer);
+    renderStaff();
+    await openAdd();
+
+    expect(screen.getByRole("checkbox", { name: "Hisobot Ko'ruvchi" })).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: "CEO" })).toBeNull();
+  });
+
+  it("is offered to the SUPERADMIN, and to an account that holds the CEO position", async () => {
+    stubFetch(answer);
+    const first = renderStaff();
+    await openAdd();
+    expect(screen.getByRole("checkbox", { name: "CEO" })).toBeTruthy();
+    first.unmount();
+
+    store.dispatch(baseApi.util.resetApiState());
+    me = ceoByPosition;
+    stubFetch(answer);
+    renderStaff();
+    await openAdd();
+    expect(await screen.findByRole("checkbox", { name: "CEO" })).toBeTruthy();
+  });
+
+  it("is not offered while it is still unknown who is signed in", async () => {
+    stubFetch((request) => (path(request).startsWith("/auth/me") ? new Promise<Response>(() => {}) : answer(request)));
+    renderStaff();
+    await openAdd();
+
+    expect(screen.queryByRole("checkbox", { name: "CEO" })).toBeNull();
+  });
+
+  describe("held by the member being edited", () => {
+    beforeEach(() => {
+      listRow = { ...LIST_ROW, rolePermission: { id: "rp-ceo", name: "CEO" }, rolePermissions: [{ id: "rp-ceo", name: "CEO" }, { id: "rp-cashier", name: "Kassa Xodimi" }] };
+      forEdit = { ...FOR_EDIT, rolePermissionId: "rp-ceo" };
+    });
+
+    it("stays shown ticked but locked for an administrator, and saving another field leaves it alone", async () => {
+      me = administrator;
+      const { requests } = stubFetch(answer);
+      renderStaff();
+      await openEditDrawer();
+      await waitFor(() => expect(input("name").value).toBe("Jasur Aliyev"));
+
+      const ceo = screen.getByRole("checkbox", { name: "CEO" }) as HTMLInputElement;
+      expect(ceo.checked).toBe(true);
+      expect(ceo.disabled).toBe(true);
+      // The other positions can be changed as usual.
+      expect((screen.getByRole("checkbox", { name: "Kassa Xodimi" }) as HTMLInputElement).disabled).toBe(false);
+
+      // (A disabled box cannot be clicked in a browser; the request below is what proves
+      // the position was left alone.)
+      fireEvent.change(input("jobTitle"), { target: { value: "Bosh kassir" } });
+      submit();
+
+      await screen.findByText("Staff member updated");
+      expect(writes(requests).map((r) => `${r.method} ${path(r)}`)).toEqual(["PATCH /users/u1"]);
+    });
+
+    it("can be taken away by a CEO", async () => {
+      const { requests } = stubFetch(answer);
+      renderStaff();
+      await openEditDrawer();
+      await waitFor(() => expect(input("name").value).toBe("Jasur Aliyev"));
+
+      const ceo = screen.getByRole("checkbox", { name: "CEO" }) as HTMLInputElement;
+      expect(ceo.disabled).toBe(false);
+      fireEvent.click(screen.getByRole("checkbox", { name: "Kassa Xodimi" }));
+      submit();
+
+      await screen.findByText("Staff member updated");
+      expect(writes(requests).map((r) => `${r.method} ${path(r)}`)).toEqual(["DELETE /role-permissions/rp-cashier/remove-user/u1"]);
+    });
   });
 });

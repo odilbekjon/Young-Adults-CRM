@@ -65,6 +65,8 @@ import {
   useRemoveRolePermissionFromUserMutation,
 } from "../../../../../app/api/rolePermissionsApi";
 import { usePersistedState } from "../../../../../hooks/usePersistedState";
+import { useAuth } from "../../../../../hooks/useAuth";
+import { isCeoPositionName } from "../../../../../utils/permissions";
 import { resolveMediaUrl } from "../../../../../utils/mediaUrl";
 import {
   EMPTY_FORM,
@@ -109,6 +111,11 @@ export const Staff = () => {
   const navigate = useNavigate();
   const selectedBranchId = useSelector((s: RootState) => s.branch.selectedBranchId);
   const { branchLabel } = useBranch();
+  // Only a CEO (SUPERADMIN, or an account holding the "CEO" position) may hand out
+  // the CEO position: it is the top tier, full access to every branch and menu. For
+  // anyone else - an administrator, a branch director - it is not offered (below).
+  // This only keeps the picker honest; the backend has to refuse it as well.
+  const { isCeo } = useAuth();
 
   const [searchValue, setSearchValue] = usePersistedState("staff:searchValue", "");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -749,12 +756,18 @@ export const Staff = () => {
                   rolePermissionId; every other checked box is attached via
                   a separate assign-user call in handleSubmit. */}
               <Box sx={{ display: "flex", flexWrap: "wrap", columnGap: 2, rowGap: 0.5 }}>
-                {positionOptions.map((option) => (
+                {positionOptions
+                  // Not a CEO: the CEO position is left out of the choices, and where the
+                  // member being edited already holds it, it stays shown (ticked, locked)
+                  // so that saving can neither give it nor take it away.
+                  .filter((option) => isCeo || !isCeoPositionName(option.name) || form.rolePermissionIds.includes(option.id))
+                  .map((option) => (
                   <FormControlLabel
                     key={option.id}
                     control={
                       <Checkbox
                         size="small"
+                        disabled={!isCeo && isCeoPositionName(option.name)}
                         checked={form.rolePermissionIds.includes(option.id)}
                         onChange={() => {
                           clearError("rolePermissionId");

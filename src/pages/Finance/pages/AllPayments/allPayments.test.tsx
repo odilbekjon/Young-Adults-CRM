@@ -882,13 +882,125 @@ describe("AllPayments: net profit details", () => {
     expect(within(netProfitCard()).queryByText("Could not load the details.")).toBeNull();
   });
 
-  it("is not offered where there is no net profit to explain (a partial month)", async () => {
-    const { requests } = stubFetch(backend());
-    renderPage("/finance/payments?startDate=2026-11-01&endDate=2026-11-03");
-    await within(revenueCard()).findByText(money(650_000));
+  // Where there is no net profit (a day, a few days, any filter) the same dropdown
+  // splits the money RECEIVED by payment method, so a day's cash / Click / transfer
+  // can be read off the page. It adds up to the revenue card and asks for nothing more.
+  describe("where there is no net profit (one day, a partial month, a filter)", () => {
+    const captionOf = () => within(netProfitCard()).queryByTestId("details-caption")?.textContent;
+    // The backend narrows the list to the dates it is asked for, like the real one.
+    const byDate = (rows: Array<ReturnType<typeof payment>>, methods: unknown[] = METHODS) => (request: SentRequest) => {
+      const { pathname, searchParams } = new URL(request.url);
+      if (pathname.endsWith("/finance/payments")) {
+        const from = searchParams.get("startDate") ?? "";
+        const to = searchParams.get("endDate") ?? "9999-12-31";
+        return listOf(rows.filter((p) => p.date >= from && p.date <= to));
+      }
+      return backend({}, undefined, methods)(request);
+    };
+    const DAYS = [
+      payment("d1", { amount: 400_000, date: "2026-11-03" }),
+      payment("d2", { amount: 250_000, date: "2026-11-03", paymentMethod: { id: "m2", name: "Click" } }),
+      payment("d3", { amount: 120_000, date: "2026-11-03", paymentMethod: { id: "m2", name: "Click" } }),
+      payment("d4", { amount: 300_000, date: "2026-11-04", paymentMethod: { id: "m4", name: "Humo" } }),
+      payment("d5", { amount: 90_000, date: "2026-11-04", status: "REFUNDED" }),
+    ];
 
-    expect(within(netProfitCard()).getByText("—")).toBeTruthy();
-    expect(within(netProfitCard()).queryByRole("button", { name: "Details" })).toBeNull();
-    expect(outflowRequests(requests)).toEqual([]);
+    it("is offered for a single day, and shows what each method took in that day", async () => {
+      const { requests } = stubFetch(byDate(DAYS));
+      renderPage("/finance/payments?startDate=2026-11-03&endDate=2026-11-03");
+      await within(revenueCard()).findByText(money(770_000));
+
+      // No net profit (the card keeps its dash and its hint) ...
+      expect(within(netProfitCard()).getByText("—")).toBeTruthy();
+      expect(detailsButton().getAttribute("aria-expanded")).toBe("false");
+      fireEvent.click(detailsButton());
+
+      await waitFor(() => expect(lines()).toHaveLength(4));
+      expect(lines()).toEqual([
+        `Cash: ${money(400_000)} UZS`,
+        `Click: ${money(370_000)} UZS`,
+        `UZCARD: 0 UZS`,
+        `Humo: 0 UZS`,
+      ]);
+      expect(captionOf()).toBe("Income by payment method");
+      // ... and the lines are the revenue card's figure, split.
+      expect(400_000 + 370_000).toBe(770_000);
+      // Nothing but the payments was needed for it.
+      expect(outflowRequests(requests)).toEqual([]);
+      expect(requests.some((r) => new URL(r.url).pathname.endsWith("/finance/chart"))).toBe(false);
+    });
+
+    it("follows the period: another day, another split (a refunded payment is not counted)", async () => {
+      stubFetch(byDate(DAYS));
+      renderPage("/finance/payments?startDate=2026-11-04&endDate=2026-11-04");
+      await within(revenueCard()).findByText(money(300_000));
+      fireEvent.click(detailsButton());
+
+      await waitFor(() => expect(lines()).toHaveLength(4));
+      expect(lines()).toEqual([`Cash: 0 UZS`, `Click: 0 UZS`, `UZCARD: 0 UZS`, `Humo: ${money(300_000)} UZS`]);
+    });
+
+    it("lists every method at 0 for a day without payments", async () => {
+      stubFetch(byDate(DAYS));
+      renderPage("/finance/payments?startDate=2026-11-15&endDate=2026-11-15");
+      await within(revenueCard()).findByText("0");
+      fireEvent.click(detailsButton());
+
+      await waitFor(() => expect(lines()).toHaveLength(4));
+      expect(lines().every((l) => l.endsWith(": 0 UZS"))).toBe(true);
+    });
+
+    it("works for a partial month (the Dashboard link: month start to today), with no expenses read", async () => {
+      const { requests } = stubFetch(backend());
+      renderPage("/finance/payments?startDate=2026-11-01&endDate=2026-11-03");
+      await within(revenueCard()).findByText(money(650_000));
+      fireEvent.click(detailsButton());
+
+      await waitFor(() => expect(lines()).toHaveLength(4));
+      expect(lines().slice(0, 2)).toEqual([`Cash: ${money(400_000)} UZS`, `Click: ${money(250_000)} UZS`]);
+      expect(outflowRequests(requests)).toEqual([]);
+    });
+
+    it("follows the other filters too, which narrow it on this side (group, teacher, staff...)", async () => {
+      stubFetch(backend());
+      renderPage();
+      // A whole month, no filter: the net split.
+      await open();
+      await waitFor(() => expect(lines()).toHaveLength(4));
+      expect(captionOf()).toBeUndefined();
+
+      fireEvent.change((await screen.findByRole("option", { name: "Kids English" })).closest("select")!, { target: { value: "g2" } });
+      fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+
+      // Still open, and now the money received by the filtered payments.
+      await within(revenueCard()).findByText(money(250_000));
+      await waitFor(() => expect(captionOf()).toBe("Income by payment method"));
+      expect(detailsButton().getAttribute("aria-expanded")).toBe("true");
+      expect(lines()).toEqual([`Cash: 0 UZS`, `Click: ${money(250_000)} UZS`, `UZCARD: 0 UZS`, `Humo: 0 UZS`]);
+    });
+
+    it("puts a payment of a method the backend does not list into 'Other', so the lines add up", async () => {
+      const rows = [payment("x1", { amount: 100_000, date: "2026-11-03" }), payment("x2", { amount: 40_000, date: "2026-11-03", paymentMethod: { id: "gone", name: "Old card" } })];
+      stubFetch(byDate(rows));
+      renderPage("/finance/payments?startDate=2026-11-03&endDate=2026-11-03");
+      await within(revenueCard()).findByText(money(140_000));
+      fireEvent.click(detailsButton());
+
+      await waitFor(() => expect(lines()).toHaveLength(5));
+      expect(lines()[0]).toBe(`Cash: ${money(100_000)} UZS`);
+      expect(lines()[4]).toBe(`Other: ${money(40_000)} UZS`);
+    });
+
+    it("is not offered when the payments themselves could not be read", async () => {
+      stubFetch((request) =>
+        new URL(request.url).pathname.endsWith("/finance/payments")
+          ? jsonResponse({ success: false, error: ["Boom"] }, { status: 500 })
+          : backend()(request),
+      );
+      renderPage("/finance/payments?startDate=2026-11-03&endDate=2026-11-03");
+
+      await waitFor(() => expect(screen.getAllByText("Retry").length).toBeGreaterThan(0));
+      expect(within(netProfitCard()).queryByRole("button", { name: "Details" })).toBeNull();
+    });
   });
 });

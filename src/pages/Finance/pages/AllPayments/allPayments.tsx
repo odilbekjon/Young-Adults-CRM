@@ -32,7 +32,7 @@ import { usePersistedState } from "../../../../hooks/usePersistedState";
 import { todayLocalISO } from "../../../../utils/localDate";
 import { PaymentsChart } from "./PaymentsChart";
 import { fmt } from "./format";
-import { netProfitDetails } from "./netProfitDetails";
+import { incomeByMethod, netProfitDetails } from "./netProfitDetails";
 import {
   DEFAULT_SORT, EMPTY_FILTERS, buildGroupDirectory, countedPayments, createdLocalDate, createdLocalDateTime,
   filterPayments, hasClientFilters, hasPaymentFilters, sortPayments, staffKeyOf, sumAmounts, teacherNamesOf,
@@ -162,7 +162,7 @@ export const AllPayments = () => {
   const changeCreatedTo = (value: string) =>
     setDraft((prev) => ({ ...prev, createdTo: value, createdFrom: prev.createdFrom && prev.createdFrom > value ? value : prev.createdFrom }));
 
-  const { data: paymentMethodsData } = usePaymentMethodsQuery();
+  const { data: paymentMethodsData, isError: methodsError, refetch: refetchMethods } = usePaymentMethodsQuery();
   const paymentMethods = paymentMethodsData ?? [];
   // Group -> course/teachers, so a payment (which only knows its group) can be
   // filtered by course and teacher, shows its teacher, and the dropdowns have
@@ -237,19 +237,27 @@ export const AllPayments = () => {
   const netProfit = periodMonths ? periodMonths.reduce((sum, m) => sum + m.netProfit, 0) : null;
   const netProfitLoading = netProfitApplies && !chartMonths && !netProfitError;
 
-  // "Details" under the net profit: the same figure split by payment method. What each
-  // method took in is already on this page (the period's payments, which carry no filter
-  // when the net profit applies); what went out through it (expenses and withdrawals) is
-  // asked for only once the dropdown is opened.
+  // "Details" under the net profit, always there once the payments are:
+  //  - where the net profit applies (whole months, no other filter), the same figure split
+  //    by payment method. What each method took in is already on this page; what went out
+  //    through it (expenses and withdrawals) is asked for only once the dropdown is opened.
+  //  - everywhere else (one day, a few days, a group, a teacher...) there is no net profit,
+  //    because expenses and salaries cannot be filtered - but the money RECEIVED can: the
+  //    filtered payments split by method (cash, Click, bank transfer...), adding up to the
+  //    revenue card. Nothing extra is asked for.
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const netDetails = netProfit !== null;
   const {
     data: outflowsData, isError: outflowsError, refetch: refetchOutflows,
   } = useFinanceOutflowsQuery(
     { startDate: applied.startDate || undefined, endDate: applied.endDate || undefined, branchId: branchId ?? undefined },
-    { skip: !detailsOpen || netProfit === null },
+    { skip: !detailsOpen || !netDetails },
   );
+  const paymentsReady = !paymentsLoading && !paymentsError;
   const details = useMemo(() => {
-    if (netProfit === null || !periodMonths || !outflowsData || !paymentMethodsData) return null;
+    if (!paymentsReady || !paymentMethodsData) return null;
+    if (netProfit === null) return incomeByMethod({ methods: paymentMethodsData, payments: counted });
+    if (!periodMonths || !outflowsData) return null;
     return netProfitDetails({
       methods: paymentMethodsData,
       payments: counted,
@@ -257,7 +265,18 @@ export const AllPayments = () => {
       salaries: periodMonths.reduce((sum, m) => sum + m.totalSalaries, 0),
       netProfit,
     });
-  }, [netProfit, periodMonths, outflowsData, paymentMethodsData, counted]);
+  }, [paymentsReady, netProfit, periodMonths, outflowsData, paymentMethodsData, counted]);
+  // A figure that cannot be explained is not shown wrong: the net split needs the
+  // period's payments as well as the outflows, both need the method names.
+  const detailsFailed = methodsError || (netDetails && (outflowsError || paymentsError));
+  const retryDetails = () => {
+    if (methodsError) refetchMethods();
+    if (netDetails && outflowsError) refetchOutflows();
+    if (netDetails && paymentsError && tooManyPayments === null) refetchPayments();
+  };
+  // Without net profit the dropdown is about the payments, which are not there when
+  // they could not be read (the chart and the table say so).
+  const showDetails = netDetails || !paymentsError;
 
   // ── Dropdown options ─────────────────────────────────────────────────────
   // Built from every group and from the payments on screen (a payment can carry
@@ -448,8 +467,10 @@ export const AllPayments = () => {
               <FaCoins size={34} className="mt-1 shrink-0 text-[var(--color-primary)] opacity-80" />
             </div>
 
-            {/* Details: the net profit by payment method, closed until asked for. */}
-            {netProfit !== null && (
+            {/* Details: the net profit by payment method - or, where there is no net
+                profit (a day, a filter), the money received by payment method. Closed
+                until asked for. */}
+            {showDetails && (
               <div className="mt-4">
                 <button
                   type="button"
@@ -463,24 +484,31 @@ export const AllPayments = () => {
                 </button>
                 <Collapse in={detailsOpen} unmountOnExit>
                   <div id="net-profit-details" className="pt-3">
-                    {outflowsError ? (
+                    {detailsFailed ? (
                       <div className="flex items-center gap-3 text-[13px] text-gray-500 dark:text-gray-400">
                         <FiAlertCircle size={15} className="shrink-0 text-red-400" />
                         <span>{t("finance.allPayments.stats.detailsError")}</span>
-                        <button onClick={() => refetchOutflows()} className="rounded border border-gray-200 dark:border-gray-700 px-3 py-1 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <button onClick={retryDetails} className="rounded border border-gray-200 dark:border-gray-700 px-3 py-1 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-800">
                           {t("finance.allPayments.chart.retry")}
                         </button>
                       </div>
                     ) : !details ? (
                       <CircularProgress size={18} aria-label={t("finance.allPayments.stats.details")} />
                     ) : (
-                      <ul className="list-disc space-y-1.5 pl-8 text-[15px] font-semibold text-gray-900 dark:text-gray-100">
-                        {details.map((line) => (
-                          <li key={line.key} data-testid="net-profit-line">
-                            {line.kind === "method" ? line.name : t(`finance.allPayments.stats.${line.kind}`)}: {fmt(line.amount)} UZS
-                          </li>
-                        ))}
-                      </ul>
+                      <>
+                        {!netDetails && (
+                          <p data-testid="details-caption" className="mb-2 text-[12px] font-medium text-gray-500 dark:text-gray-400">
+                            {t("finance.allPayments.stats.incomeByMethod")}
+                          </p>
+                        )}
+                        <ul className="list-disc space-y-1.5 pl-8 text-[15px] font-semibold text-gray-900 dark:text-gray-100">
+                          {details.map((line) => (
+                            <li key={line.key} data-testid="net-profit-line">
+                              {line.kind === "method" ? line.name : t(`finance.allPayments.stats.${line.kind}`)}: {fmt(line.amount)} UZS
+                            </li>
+                          ))}
+                        </ul>
+                      </>
                     )}
                     <div className="mt-4 border-t border-gray-200 dark:border-gray-700" />
                   </div>

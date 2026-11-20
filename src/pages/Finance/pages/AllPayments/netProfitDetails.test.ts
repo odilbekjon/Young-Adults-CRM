@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PaymentMethod, PaymentRow } from "../../../../app/api/financeApi/types";
-import { netProfitDetails } from "./netProfitDetails";
+import { incomeByMethod, netProfitDetails } from "./netProfitDetails";
 
 const method = (id: string, name: string, over: Partial<PaymentMethod> = {}): PaymentMethod => ({ id, name, ...over });
 const payment = (amount: number, methodId: string | null, methodName = ""): PaymentRow => ({
@@ -103,5 +103,40 @@ describe("netProfitDetails", () => {
     expect(netProfitDetails({ methods: [], payments: [payment(10, "m1")], outflows: [], salaries: 0, netProfit: 10 })).toEqual([
       { key: "other", name: "", amount: 10, kind: "other" },
     ]);
+  });
+});
+
+// The money received, split by method: works for any period and any filters.
+describe("incomeByMethod", () => {
+  it("is what each method took in, in the backend's order, with the methods that took nothing at 0", () => {
+    const lines = incomeByMethod({ methods: METHODS, payments: [payment(900_000, "m1"), payment(14_307_000, "m2"), payment(3_765_000, "m3"), payment(100_000, "m2")] });
+
+    expect(lines.map((l) => [l.name, l.amount])).toEqual([
+      ["Bank account", 900_000], ["Cash", 14_407_000], ["Click", 3_765_000], ["UZCARD", 0], ["Payme", 0],
+    ]);
+    expect(lines.every((l) => l.kind === "method")).toBe(true);
+  });
+
+  it("knows no outflows: a method that only paid something out is not shown negative", () => {
+    expect(incomeByMethod({ methods: METHODS, payments: [] }).every((l) => l.amount === 0)).toBe(true);
+  });
+
+  it("lists a method once however many times the backend lists it, and finds a payment by name too", () => {
+    const methods = [method("m1", "Cash"), method("m2", "Click"), method("m2b", "click")];
+    const lines = incomeByMethod({ methods, payments: [payment(10, "m2"), payment(20, "m2b"), payment(5, null, " CLICK ")] });
+
+    expect(lines.map((l) => [l.name, l.amount])).toEqual([["Cash", 0], ["Click", 35]]);
+  });
+
+  it("puts a payment of a method that is not on the list into one 'other' line, so the lines add up to the payments", () => {
+    const payments = [payment(100, "m1"), payment(40, "gone", "Old card"), payment(2, null)];
+    const lines = incomeByMethod({ methods: METHODS, payments });
+
+    expect(lines.filter((l) => l.kind === "other")).toEqual([{ key: "other", name: "", amount: 42, kind: "other" }]);
+    expect(lines.reduce((sum, l) => sum + l.amount, 0)).toBe(142);
+  });
+
+  it("is empty when there are no methods and no payments", () => {
+    expect(incomeByMethod({ methods: [], payments: [] })).toEqual([]);
   });
 });
